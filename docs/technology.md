@@ -506,6 +506,12 @@ table_io, xlsx_rs renamed and widened on 2 October 2026 to read every
 format of the individuals file by the rules this reader had, which moved
 into it; the light worker loads its package for every file, 0.34 MB
 gzipped at the first read, a CSV included, where a CSV loaded nothing.
+The light worker is ended after every read, for the memory the package
+keeps, as the plan of the input page measured on 9 October 2026, so
+every read loads the package again: from the browser's cache in
+Chromium, and in WebKit 26.6 its `.wasm` from the site, 0.33 MB, at
+every read (`docs/specs/worker/individuals.md`, "Loading the files wasm
+on first need").
 The reader in TypeScript goes, but the inference of the types of the
 columns of the project, which stays ours. The reason: one reader of
 those rules, shared with Vavilov Explorer, where there were two to keep

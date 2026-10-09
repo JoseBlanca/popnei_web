@@ -97,7 +97,8 @@ written, so `001` stays `001` and matches the variants.
 3. The files wasm is loaded, on the first read of the worker
    ("Loading the files wasm on first need", below). When it cannot be,
    the read fails with `readerNotLoaded`, the browser's message for the
-   console.
+   console. Since the client ends the worker after every read of a file
+   that is not empty, each such read is the first of its worker.
 4. `importTable(bytes, MAX_INDIVIDUALS_FILE_BYTES, MAX_SHEET_CELLS,
    encoding, separator, decimal)`: the bytes as a `Uint8Array`, never an
    `ArrayBuffer`, which table_io reads as no bytes; `MAX_SHEET_CELLS`,
@@ -509,16 +510,29 @@ built):
   `ImportTable` given. A later read awaits the same promise.
 - **When it fails**, the promise is forgotten, `filesReady = null`, the
   read fails as `readerNotLoaded` with the browser's message, written to
-  the console, and the worker goes on; the next read tries again, at
+  the console, and the worker goes on; the next read in the same worker,
+  which follows only the read of an empty file, since the client ends
+  the worker after any other, tries again, at
   another address after a failed `import()`, `?retry=‹n›`, as for
   xlsx_rs (the check `isFilesWasm` asks for `default` and `importTable`),
   since Chromium 153 keeps a failed import failed for the life of the
   worker and WebKit 26.6 does not.
-- **A worker started again** imports it again, which the browser's
-  cache serves. The client of the light worker ends it after a read of a
-  large file, for the memory the wasm keeps (`docs/specs/worker/client.md`,
-  "The light worker started again after a large read"), and the next
-  read compiles the package again.
+- **A worker started again** imports it again. The client of the light
+  worker ends it after every read of a file that is not empty, for the
+  memory the wasm keeps (`docs/specs/worker/client.md`, "The light worker
+  started again after a large read"), so every read imports the package
+  and compiles it. Where the browser takes it from was seen on 9 October
+  2026, three reads on the old page from the built site served with the
+  headers GitHub Pages sends, `Cache-Control: max-age=600` and an ETag:
+  Chromium 153 asked the server for each file once, at the first read,
+  and took them from its cache after; WebKit 26.6 asked once for the
+  JavaScript and three times for the `.wasm`, in full and with no
+  question of whether it had changed, so a user of Safari downloads
+  0.33 MB at every read of an individuals file; whether a read made with
+  no connection then fails as `readerNotLoaded` was not tried. From vite preview, which sends
+  `Cache-Control: no-cache`, Chromium asks again at each read and is
+  answered with no body, WebKit the same for the JavaScript and the
+  `.wasm` in full.
 
 The download is the `.wasm`, 651,680 bytes and 330,416 gzipped with
 `gzip -9`, and its JavaScript, 37,489 and 6,758, measured on the release
@@ -572,13 +586,11 @@ MB of short cells, and 335.8 MB for 100 columns of `0`; a common file,
 memory of a wasm grows and never shrinks, so the light worker keeps what
 its largest read took until it is ended; the client ends it after a read
 of a file above `READ_RESTART_BYTES` (`docs/specs/worker/client.md`),
-2,000,000 bytes. The plan's rule, applied to the measurement below,
-gives 0, the worker ended after every read of a file that is not empty,
-since the file of 1 MB of empty cells already gives back 50 MB or more
-in both engines; 0 is not set yet, because four flows of the reader
-expect a second read to download nothing and the light worker to be
-there after a read, which a restart after every read breaks (the plan,
-work package 2).
+0, so after every read of a file that is not empty. The plan's rule,
+applied to the measurement below, gives 0, since the file of 1 MB of
+empty cells already gives back 50 MB or more in both engines. So each
+read starts a new light worker, which imports and compiles table_io's
+package again (the browser serves it from its cache).
 
 What was measured on 9 October 2026, by `IN2 D2` of `e2e/measure.spec.ts`
 (the plan of the input page, work package 2), on the owner's Mac, an
@@ -659,11 +671,15 @@ With Playwright, in the flows of the Individuals step of `popgen.html`
 and of `popgen2.html` (`docs/specs/steps/popgen2-input.md`), in Chromium
 and WebKit: a CSV read; the network log with one request of the
 package's JavaScript and one of its `.wasm` at the first read, a CSV
-included, and none before it; a second file adding none; the `.wasm`
-answered with an error by the test, the words of `readerNotLoaded`, and
-the route removed and the file opened again, the table; the package's
-JavaScript answered with an error, the same, with a second request at
-another address in Chromium; `encrypted.xlsx` its words; and
+included, and none before it; a second file read by a new worker, which
+asks for each once more; the light worker ended after a read; the
+`.wasm` answered with an error by the test, the words of
+`readerNotLoaded`, and the route removed and the file opened again, the
+table; the package's JavaScript answered with an error, the same, and
+the next file read by a new worker, which asks at the address of the
+build; and after the read of an empty file, which keeps its worker, the
+next file read by that worker, with its second request at another
+address in Chromium; `encrypted.xlsx` its words; and
 `individuals_10000.xlsx`, the time from the pick to the table, written
 in the report of the plan.
 

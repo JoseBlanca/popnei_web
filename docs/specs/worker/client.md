@@ -5,8 +5,10 @@ the owner that day, which made table_io's package the reader of the
 individuals file (`docs/specs/worker/individuals.md`): a refusal of the reader, `refused`, carries the format of
 the file; and the light worker is started again after a read of a file
 larger than `READ_RESTART_BYTES`, for the memory table_io's wasm keeps
-(below, "The light worker started again after a large read"). No code of
-the revision yet.
+(below, "The light worker started again after a large read"). Revised
+again on 9 October 2026: `READ_RESTART_BYTES` is 0, the worker ended
+after every read of a file that is not empty, set by the measurement of
+the plan of the input page.
 
 25 September 2026, approved by the owner on 25 September 2026, and built
 with the walking skeleton; revised on 26 September 2026 for stage 3 of
@@ -391,17 +393,43 @@ failure, as it does the calculation worker after a large write:
    do, since a read is short.
 3. It starts a new light worker when the next read is asked, or at once
    when reads wait in the queue, which go to it once it is `ready`. The
-   new worker holds no files wasm, and its first read imports it again,
-   from the browser's cache, and compiles it, a time not measured.
+   new worker holds no files wasm, and its first read imports it again
+   and compiles it. Where the browser takes the package from was seen on
+   9 October 2026, from a server that sends the headers GitHub Pages
+   sends, `Cache-Control: max-age=600` and an ETag: Chromium 153 from
+   its cache, both files; WebKit 26.6 its JavaScript from its cache and
+   its `.wasm` from the server, in full, at every read, 651,680 bytes,
+   330 KB gzipped (`docs/specs/worker/individuals.md`, "Loading the
+   files wasm on first need").
 
 A file of `READ_RESTART_BYTES` or less leaves the worker as it is. The
 size is the `File`'s, known to the client from the request, before any
 byte is read, so a file refused as `tooLarge` ends the worker too, which
 costs only the next read's compiling. `READ_RESTART_BYTES` is a constant
-of `client.ts`, 2,000,000 bytes until the plan measures the memory of
-the light worker after reads of 1, 5 and 20 MB in Chromium and WebKit,
-and sets it there; the design's estimate is that a file of 2 MB, about
-20,000 rows of 10 columns, takes tens of MB, which a worker may keep.
+of `client.ts`, 0: every read of a file that is not empty ends the
+worker. The plan of the input page (`docs/plans/input-page.md`, work
+package 2) measured it on 9 October 2026, on the owner's Mac, an Apple
+M5 Pro of 64 GB, in Chromium 153 and WebKit 26.6: CSVs of 1, 5 and 20
+MB of 100 columns, read on the old page, and what the engine's processes
+held 3 s after the read with the worker kept, less what they held with
+it ended, the median of three reads. A file of 1 MB whose 99 cells a row
+are empty gives back 76.0 MB in Chromium and 51.9 MB in WebKit, and the
+same rows of `0` 47.0 and 32.4 MB; a file of 20 MB of empty cells 816.6
+MB and 3,326.7 MB. The plan's rule ends the worker after every read when
+the file of 1 MB already gives back 50 MB or more in both engines, the
+bound by which the plan of the download kept the restart after a write.
+What it costs is the next read's start of a worker and its import of
+table_io's package from the browser's cache: a read of `panel_pops.csv`
+took 30 ms in Chromium either way, and 31 ms in WebKit against 15 ms
+with the worker kept; one of `individuals_10000.xlsx` 344 ms against 235
+ms in Chromium, and 272 ms against 257 ms in WebKit, the medians of
+five, from the server of the built site on the same machine. The
+constant stays, at 0, rather than a restart after every read with no
+size: the measurement is run again by setting it, the tests of the
+client keep both sides of the bound, and an empty file, the one read
+that keeps its worker, is the one way left to a second import in the
+same worker, which the retry at another address of
+`docs/specs/worker/individuals.md` is for.
 
 ### A large PCA, and the restart after it
 
@@ -650,8 +678,9 @@ export const WRITE_RESTART_BYTES = 25_000_000;
 
 /** Above it, the light worker is started again after a read of the
     individuals file (The light worker started again after a large read,
-    above); 2 MB until the measurement of the plan sets it. */
-export const READ_RESTART_BYTES = 2_000_000;
+    above); 0, every read of a file that is not empty, set by the
+    measurement of the plan of the input page. */
+export const READ_RESTART_BYTES = 0;
 
 /** Above it, the calculation worker is started again after a run of the
     principal components (A large PCA, and the restart after it, above);
@@ -896,7 +925,7 @@ walking skeleton, a diversity `Job` and a CSV.
   `crashed` that starts "popnei_web defect: ", and a `reopenFailed` does
   not; a result of a diversity ends no worker.
 - **The light worker started again after a large read**, under `IN2
-  D1`: a read of a `File` of `READ_RESTART_BYTES` + 1 bytes, 2,000,001,
+  D1`: a read of a `File` of `READ_RESTART_BYTES` + 1 bytes, 1,
   answered with a table gives the read its table, and then the worker is
   ended, its handlers taken off first, and no new one is made while no
   read waits; the next read makes a new worker, and is sent to it once
@@ -909,7 +938,8 @@ walking skeleton, a diversity `Job` and a CSV.
   exactly `READ_RESTART_BYTES` ends nothing, and the next read goes to
   the same worker. A large read cancelled while it runs is answered
   `cancelled` at once, the worker not ended; when its answer comes, it
-  is ended. The `File`s are real ones, `new File([new
+  is ended. With `READ_RESTART_BYTES` at 0, the file of the bound is
+  an empty one. The `File`s are real ones, `new File([new
   Uint8Array(READ_RESTART_BYTES + 1)], …)`, since the client takes the
   size from the `File` of the request.
 - **Progress**: two `progress` of a run's id, then its `result`: its

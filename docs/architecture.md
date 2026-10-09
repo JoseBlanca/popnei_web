@@ -1857,7 +1857,10 @@ core and the reader describe it in one way.
   reader does not check it, since it does not know the variants.
 
 With a CSV, the light worker loaded no wasm at all until 9 October 2026;
-it now loads table_io's for every file.
+it now loads table_io's for every file, and is ended after every read of
+a file that is not empty, for the memory that wasm keeps
+(`docs/specs/worker/client.md`, "The light worker started again after a
+large read").
 
 What was revised on 9 October 2026, from `docs/designs/input-page.md`,
 approved by the owner that day. On `popgen2.html` the bullet

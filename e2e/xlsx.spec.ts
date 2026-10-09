@@ -11,11 +11,21 @@
  * header_error.xlsx, which is ours (its entry in REFUSALS says how it was
  * made).
  *
+ * The client ends the light worker after every read of a file that is
+ * not empty (docs/specs/worker/client.md, "The light worker started again
+ * after a large read"), so each such read is made by a new worker, which
+ * asks for the package again; the flows count one request of each of its
+ * two files per read. Whether the browser's cache answers them is not
+ * checked here: vite preview sends `Cache-Control: no-cache`, which
+ * GitHub Pages does not (docs/specs/worker/individuals.md, "Loading the
+ * files wasm on first need").
+ *
  * The HTML standard lets an engine keep a failed import() as failed for
- * the life of the worker, as Chromium 153 does, so a second try after
- * the JavaScript of the reader failed to download asks for it at
- * another address; the flow checks that the file is read in both
- * engines.
+ * the life of the worker, as Chromium 153 does, so a second try in the
+ * same worker after the JavaScript of the reader failed to download asks
+ * for it at another address. Only the read of an empty file keeps its
+ * worker, so that is the flow of the retry; the flows check that the
+ * file is read in both engines.
  */
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
@@ -58,11 +68,14 @@ function fileButton(page: Page): Locator {
   return zone(page).getByRole("button", { name: /^(Choose|Replace) .*…$/ });
 }
 
-/** Picks a fixture, or the bytes of one under another name, with the
-    file button, as a user does. */
+/** Picks a fixture, the bytes of one under another name, or an empty
+    file, with the file button, as a user does. */
 async function pick(
   page: Page,
-  file: string | { readonly name: string; readonly fixture: string },
+  file:
+    | string
+    | { readonly name: string; readonly fixture: string }
+    | { readonly name: string; readonly empty: true },
 ): Promise<void> {
   const chooser = page.waitForEvent("filechooser");
   await fileButton(page).click();
@@ -71,12 +84,14 @@ async function pick(
   ).setFiles(
     typeof file === "string"
       ? join(FIXTURES, file)
-      : {
-          name: file.name,
-          mimeType:
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          buffer: await readFile(join(FIXTURES, file.fixture)),
-        },
+      : "empty" in file
+        ? { name: file.name, mimeType: "text/csv", buffer: Buffer.alloc(0) }
+        : {
+            name: file.name,
+            mimeType:
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            buffer: await readFile(join(FIXTURES, file.fixture)),
+          },
   );
 }
 
@@ -85,6 +100,7 @@ async function pick(
     of its wasm. */
 function xlsxRequests(page: Page): {
   readonly js: () => number;
+  readonly jsAddresses: () => readonly string[];
   readonly wasm: () => number;
   readonly wasmTypes: () => readonly string[];
 } {
@@ -103,6 +119,11 @@ function xlsxRequests(page: Page): {
       .length;
   return {
     js: count(XLSX_JS),
+    jsAddresses: () =>
+      seen
+        .map((request) => new URL(request.url()))
+        .filter((url) => XLSX_JS.test(url.pathname))
+        .map((url) => url.pathname.replace(/^.*\//, "") + url.search),
     wasm: count(XLSX_WASM),
     wasmTypes: () => wasmTypes,
   };
@@ -139,7 +160,7 @@ async function expectExcelEn(page: Page, name: string): Promise<void> {
   ).toBeVisible();
 }
 
-test("IP9 D2 excel_en.xlsx is read from its first sheet, with no options of a CSV, and the reader of tables is downloaded once, on the first file", async ({
+test("IP9 D2 excel_en.xlsx is read from its first sheet, with no options of a CSV, and the reader of tables is downloaded at the first file, and asked for once more by the new worker of each later file", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -161,15 +182,16 @@ test("IP9 D2 excel_en.xlsx is read from its first sheet, with no options of a CS
   expect(requests.wasm()).toBe(1);
   await expectNoViolations(makeAxeBuilder);
 
-  // A second xlsx downloads nothing more.
+  // A second xlsx is read by a new worker, which asks for the package
+  // again, its two files once each.
   await pick(page, { name: "second.xlsx", fixture: "excel_en.xlsx" });
   await expect(fileButton(page)).toHaveText("Replace second.xlsx…");
   await expectExcelEn(page, "second.xlsx");
-  expect(requests.js()).toBe(1);
-  expect(requests.wasm()).toBe(1);
+  expect(requests.js()).toBe(2);
+  expect(requests.wasm()).toBe(2);
 });
 
-test("IN1 D4 a CSV read downloads the reader of tables at its first read, its JavaScript and its wasm once, the wasm as application/wasm, and a second file nothing more; the card has no line of a sheet", async ({
+test("IN1 D4 a CSV read downloads the reader of tables at its first read, its JavaScript and its wasm once, the wasm as application/wasm, and a second file is read by a new worker that asks for each once more; the card has no line of a sheet", async ({
   page,
 }) => {
   const requests = xlsxRequests(page);
@@ -187,8 +209,12 @@ test("IN1 D4 a CSV read downloads the reader of tables at its first read, its Ja
 
   await pick(page, "panel_meta.csv");
   await expect(zone(page).getByText("200 rows, 3 columns")).toBeVisible();
-  expect(requests.js()).toBe(1);
-  expect(requests.wasm()).toBe(1);
+  expect(requests.js()).toBe(2);
+  expect(requests.wasm()).toBe(2);
+  expect(requests.wasmTypes()).toEqual([
+    "application/wasm",
+    "application/wasm",
+  ]);
 });
 
 test("IN1 D4 the wasm of the reader answered with an error: the words of a reader not downloaded for a CSV, and the file loaded again is read", async ({
@@ -207,15 +233,15 @@ test("IN1 D4 the wasm of the reader answered with an error: the words of a reade
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
-  // The light worker goes on: the route removed, the file loaded again
-  // is read, the wasm asked for again.
+  // The route removed, the file loaded again is read by a new worker,
+  // which asks for the wasm again.
   await page.unroute(XLSX_WASM);
   await pick(page, "panel_pops.csv");
   await expect(zone(page).getByText("200 rows, 2 columns")).toBeVisible();
   expect(requests.wasm()).toBe(2);
 });
 
-test("IN1 D4 the JavaScript of the reader answered with an error: the words of a reader not downloaded for a CSV, and a file loaded again is read, at another address where the engine keeps the failure", async ({
+test("IN1 D4 the JavaScript of the reader answered with an error: the words of a reader not downloaded for a CSV, and a file loaded again is read by a new worker, which asks for the JavaScript at its own address", async ({
   page,
 }) => {
   const requests = xlsxRequests(page);
@@ -229,16 +255,44 @@ test("IN1 D4 the JavaScript of the reader answered with an error: the words of a
   ).toBeVisible();
   expect(requests.wasm()).toBe(0);
 
+  // The worker that failed was ended with its read; the new one has no
+  // failure kept, and asks at the address of the build, with no retry.
   await page.unroute(XLSX_JS);
   await pick(page, { name: "again.xlsx", fixture: "excel_en.xlsx" });
   await expectExcelEn(page, "again.xlsx");
-  expect(requests.js()).toBe(2);
+  expect(requests.jsAddresses()).toHaveLength(2);
+  expect(
+    requests.jsAddresses().every((address) => !address.includes("?")),
+  ).toBe(true);
   expect(requests.wasm()).toBe(1);
+});
 
-  // A third xlsx downloads nothing more.
-  await pick(page, { name: "third.xlsx", fixture: "excel_en.xlsx" });
-  await expectExcelEn(page, "third.xlsx");
-  expect(requests.js()).toBe(2);
+test("IN1 D4 the JavaScript of the reader answered with an error at the read of an empty file, which keeps its worker: a file loaded again is read by that worker, at another address where the engine keeps the failure", async ({
+  page,
+}) => {
+  const requests = xlsxRequests(page);
+  await page.route(XLSX_JS, (route) =>
+    route.fulfill({ status: 404, body: "Not Found" }),
+  );
+  await openIndividuals(page);
+  await pick(page, { name: "empty.csv", empty: true });
+  await expect(
+    zone(page).getByText(notLoadedText("empty.csv"), { exact: true }),
+  ).toBeVisible();
+  expect(requests.js()).toBe(1);
+
+  await page.unroute(XLSX_JS);
+  await pick(page, { name: "again.xlsx", fixture: "excel_en.xlsx" });
+  await expectExcelEn(page, "again.xlsx");
+  // Chromium 153 names the address in its message, and the retry adds
+  // ?retry=1 to it; WebKit 26.6 names none, and asks again at the same.
+  const second = requests.jsAddresses()[1];
+  expect(requests.jsAddresses()).toHaveLength(2);
+  if (test.info().project.name === "chromium") {
+    expect(second).toMatch(/\?retry=1$/);
+  } else {
+    expect(second).not.toContain("?");
+  }
   expect(requests.wasm()).toBe(1);
 });
 

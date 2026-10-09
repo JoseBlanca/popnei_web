@@ -49,8 +49,12 @@ moved under the tab and otherwise unchanged; their terms are used here.
 - **The light worker** is the second thread of the tab that reads the
   individuals file with table_io, the owner's reader of tables, whose
   package it downloads at its first read, 0.34 MB gzipped, measured on
-  the release `js-v0.2.0-dev.1`; the page does not freeze while it
-  reads.
+  the release `js-v0.2.0-dev.1`; it is ended after each read and a new
+  one started at the next, for the memory the package keeps, and that
+  one takes the package from the browser's cache, in Safari the `.wasm`
+  from the site again, 0.33 MB (`docs/specs/worker/individuals.md`,
+  "Loading the files wasm on first need"); the page does not freeze
+  while it reads.
 - **Unclassified**: an individual of the variants file with no
   population, because there is no individuals file, no column is chosen,
   its cell in the column is empty, `NA` or `-`, or it is not in the
@@ -569,7 +573,8 @@ core and of the entry in their module specs.
 - a progress of the pass draws the box of the individuals file no
   more, counted in Vitest with the store and a fake worker;
 - the network: table_io's JavaScript and `.wasm` requested once, at the
-  first read, a CSV included, and served as `application/wasm`;
+  first read, a CSV included, and served as `application/wasm`, and
+  once more at each later read, by its new light worker;
 - 320 px wide: no sideways scroll of the page, the boxes one above the
   other, the two labels of the tabs visible;
 - axe on each state of the box and of the tab, in light and in dark.

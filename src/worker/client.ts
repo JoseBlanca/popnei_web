@@ -69,10 +69,13 @@ export const WRITE_RESTART_BYTES = 25_000_000;
     individuals file, whatever its answer, to give back the memory
     table_io's wasm took for it, which a wasm never gives back (client.md,
     "The light worker started again after a large read"); the next read
-    starts a new one. 2 MB, about 20,000 rows of 10 columns, which the
-    design of the input page estimates at tens of MB, until the plan of
-    the input page measures it (its work package 2). */
-export const READ_RESTART_BYTES = 2_000_000;
+    starts a new one. 0, every read of a file that is not empty: a CSV of
+    1 MB of 100 columns, its cells empty, left 76.0 MB in Chromium 153 and
+    51.9 MB in WebKit 26.6 that the restart gave back, more than the 50 MB
+    by which the restart after a write was kept, and one of 20 MB 816.6 MB
+    and 3,326.7 MB; the next read's new worker costs 30 ms or less for
+    panel_pops.csv (individuals.md, "How it runs"). */
+export const READ_RESTART_BYTES = 0;
 
 /** Above it, in individuals, the calculation worker is started again after
     a run of the principal components, done or refused by popnei, to give

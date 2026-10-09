@@ -134,12 +134,23 @@ async function withoutTwelve(): Promise<string> {
 const MISSING_REASON =
   "12 individuals of panel.nei are not in pops.csv: s031, s044 and 10 more. Add them to pops.csv and load it again.";
 
-test("WS8 D1 panel_pops.csv is read with the three options found, its columns and their types are shown, and the light worker fetches table_io's wasm and not popnei's", async ({
+test("WS8 D1 panel_pops.csv is read with the three options found, its columns and their types are shown, and the read fetches table_io's wasm and not popnei's, in a light worker ended after it", async ({
   page,
   makeAxeBuilder,
 }) => {
   const workers: Worker[] = [];
-  page.on("worker", (worker) => workers.push(worker));
+  const closed = new Set<Worker>();
+  page.on("worker", (worker) => {
+    workers.push(worker);
+    worker.on("close", () => closed.add(worker));
+  });
+  const wasms: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path.endsWith(".wasm")) {
+      wasms.push(path.replace(/^.*\//, ""));
+    }
+  });
   await openIndividuals(page);
   await expect(fileButton(page)).toHaveText("Choose a metadata file…");
   await expect(
@@ -148,6 +159,20 @@ test("WS8 D1 panel_pops.csv is read with the three options found, its columns an
     ),
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
+  const calculation = workers.find((w) => w.url().includes("runnerWorker"));
+  if (calculation === undefined) {
+    throw new Error("the page did not start the calculation worker");
+  }
+  // The calculation worker fetched popnei's wasm, from its own list of
+  // resources, before any file is picked.
+  expect(
+    await calculation.evaluate(() =>
+      performance
+        .getEntriesByType("resource")
+        .some((entry) => entry.name.endsWith(".wasm")),
+    ),
+  ).toBe(true);
+  const wasmsBefore = wasms.length;
 
   await pick(page, "panel_pops.csv");
 
@@ -207,26 +232,17 @@ test("WS8 D1 panel_pops.csv is read with the three options found, its columns an
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
-  // What each worker fetched, from its own list of resources: the
-  // calculation worker fetched popnei's wasm, and the light worker
-  // table_io's alone, which reads a CSV since 9 October 2026.
-  const light = workers.find((w) => w.url().includes("filesRunner"));
-  const calculation = workers.find((w) => w.url().includes("runnerWorker"));
-  if (light === undefined || calculation === undefined) {
-    throw new Error("the page did not start both workers");
-  }
-  const fetchedBy = (worker: Worker): Promise<string[]> =>
-    worker.evaluate(() =>
-      performance.getEntriesByType("resource").map((entry) => entry.name),
-    );
-  expect(
-    (await fetchedBy(calculation)).some((name) => name.endsWith(".wasm")),
-  ).toBe(true);
-  expect(
-    (await fetchedBy(light))
-      .filter((name) => name.endsWith(".wasm"))
-      .map((name) => /table_io_bg-[^/]*\.wasm$/.test(name)),
-  ).toEqual([true]);
+  // The read fetched table_io's wasm alone, which reads a CSV since 9
+  // October 2026, and the light worker that made it was ended after it
+  // (docs/specs/worker/client.md, "The light worker started again after a
+  // large read"), so the network log of the page counts it, not the
+  // worker's own list.
+  expect(wasms.slice(wasmsBefore)).toEqual([
+    expect.stringMatching(/^table_io_bg-[^/]*\.wasm$/),
+  ]);
+  const light = workers.filter((w) => w.url().includes("filesRunner"));
+  expect(light).toHaveLength(1);
+  await expect.poll(() => light.every((w) => closed.has(w))).toBe(true);
 });
 
 test("WS8 D1 the column popcat chosen lists the populations p0, p2 and p1 with their individuals, read in words and copied as shown", async ({

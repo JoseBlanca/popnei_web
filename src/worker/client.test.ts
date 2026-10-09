@@ -126,6 +126,13 @@ const FILE_A = new File(["NEI A"], "panel.nei");
 const FILE_B = new File(["NEI B"], "other.nei");
 const FILE_C = new File(["NEI C"], "third.nei");
 const CSV_FILE = new File(["id,pop\ni1,p0\n"], "individuals.csv");
+/** A file of READ_RESTART_BYTES, whose read leaves the light worker as it
+    is, for the tests of what happens to that worker after a read; empty
+    while READ_RESTART_BYTES is 0. */
+const KEPT_CSV_FILE = new File(
+  [new Uint8Array(READ_RESTART_BYTES)],
+  "kept.csv",
+);
 const NEI = { format: "nei", readOptions: null } as const;
 const CSV = { encoding: "auto", separator: "auto", decimal: "auto" } as const;
 
@@ -546,7 +553,7 @@ describe("WS2 D3 the client: cancelling", () => {
 
   test("the read of the individuals file that runs is cancelled at once, and its answer goes to no one", async () => {
     const env = setUp();
-    env.client.addFile("ind", CSV_FILE);
+    env.client.addFile("ind", KEPT_CSV_FILE);
     const first = env.client.readIndividuals("ind", CSV);
     const second = env.client.readIndividuals("ind", CSV);
     const worker = last(env.light);
@@ -561,7 +568,7 @@ describe("WS2 D3 the client: cancelling", () => {
     const sent = sentToLight(worker);
     expect(sent).toHaveLength(2);
     const next = sent.at(-1);
-    expect(next?.file).toBe(CSV_FILE);
+    expect(next?.file).toBe(KEPT_CSV_FILE);
     emit(worker, { kind: "individuals", id: next?.id, read: TABLE_READ });
     expect(await now(second.outcome)).toEqual(TABLE_READ);
   });
@@ -2306,7 +2313,7 @@ describe("WS2 D3 the client: what the test review found", () => {
 
   test("a read of the individuals file answered sets the count back: after one slow start, one idle crash starts the light worker again", () => {
     const env = setUp();
-    env.client.addFile("ind", CSV_FILE);
+    env.client.addFile("ind", KEPT_CSV_FILE);
     env.client.readIndividuals("ind", CSV);
     vi.advanceTimersByTime(WORKER_READY_TIMEOUT_MS);
     const second = last(env.light);
@@ -3513,7 +3520,7 @@ describe("IN2 D1 the light worker started again after a large read", () => {
   }
 
   test("a read of READ_RESTART_BYTES + 1 bytes answered with a table gives it, then the worker is ended, and the next read goes to a new one", async () => {
-    expect(LARGE.size).toBe(2_000_001);
+    expect(LARGE.size).toBe(1);
     const env = oneRead("large");
     emit(env.worker, {
       kind: "individuals",
@@ -3600,7 +3607,7 @@ describe("IN2 D1 the light worker started again after a large read", () => {
   });
 
   test("a read of exactly READ_RESTART_BYTES ends nothing, and the next read goes to the same worker", async () => {
-    expect(AT_BOUND.size).toBe(2_000_000);
+    expect(AT_BOUND.size).toBe(0);
     const env = oneRead("bound");
     emit(env.worker, {
       kind: "individuals",
