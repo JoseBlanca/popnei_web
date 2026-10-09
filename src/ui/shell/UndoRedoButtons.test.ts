@@ -24,6 +24,7 @@ import { StoreProvider } from "../store.tsx";
 import { RunGateProvider } from "../variants/runGate.tsx";
 import { createRunGate, gatedStore } from "../variants/thresholdRun.ts";
 import type { RunGate } from "../variants/thresholdRun.ts";
+import { DIALOG_MARK } from "../widgets/dialogMark.ts";
 import { AnnouncerProvider } from "./announcer.tsx";
 import { createAnnouncer } from "./status.ts";
 import { UndoRedoButtons } from "./UndoRedoButtons.tsx";
@@ -39,6 +40,10 @@ const MAF_CHANGED = "the MAF filter changed";
 /** The reason Undo and Redo wait, as the page gives it while a PCA
     runs. */
 const WAITS = "Stop the PCA to change the filters.";
+
+/** The words of a button of the page beside Undo and Redo, which holds
+    the focus away from them. */
+const ELSEWHERE = "Elsewhere";
 
 let container: HTMLElement;
 let root: Root;
@@ -85,6 +90,7 @@ async function draw(props: UndoRedoButtonsProps, gated = true): Promise<Page> {
     null,
     createElement("h1", { tabIndex: -1 }, "Popnei"),
     createElement(UndoRedoButtons, props),
+    createElement("button", { type: "button" }, ELSEWHERE),
   );
   const tree = createElement(
     StrictMode,
@@ -169,6 +175,15 @@ async function press(element: HTMLElement): Promise<void> {
 function heading(): HTMLElement {
   const found = container.querySelector("h1");
   if (found === null) throw new Error("the page has no h1");
+  return found;
+}
+
+/** The button of the page beside Undo and Redo. */
+function elsewhere(): HTMLButtonElement {
+  const found = [...container.querySelectorAll("button")].find(
+    (b) => b.textContent === ELSEWHERE,
+  );
+  if (found === undefined) throw new Error("no button beside Undo and Redo");
   return found;
 }
 
@@ -363,17 +378,14 @@ describe("AP4 D1 the focus when a button of popgen2.html goes", () => {
     expect(document.activeElement).toBe(heading());
   });
 
-  test("a button removed while the focus is elsewhere leaves the focus there", async () => {
+  test("Ctrl+Z pressed on another control at the last step leaves the focus there", async () => {
     const { store } = await draw({ onlyWithStep: true });
     await changeMaf(store, 0.9);
-    heading().focus();
-    await act(async () => {
-      store.undo();
-      await Promise.resolve();
-    });
-    await settled();
-    expect(document.activeElement).toBe(heading());
+    elsewhere().focus();
+    expect(await pressKeys("undo", elsewhere())).toBe(true);
     expect(button("Undo")).toBeNull();
+    expect(button("Redo")).not.toBeNull();
+    expect(document.activeElement).toBe(elsewhere());
   });
 });
 
@@ -398,9 +410,13 @@ describe("AP4 D1 popgen.html's Undo and Redo, unchanged", () => {
   });
 });
 
-/** Presses Ctrl+Z, or Ctrl+Y for `redo`, on the heading, as the keyboard
-    does; gives whether the page took it from the browser. */
-async function pressKeys(which: "undo" | "redo"): Promise<boolean> {
+/** Presses Ctrl+Z, or Ctrl+Y for `redo`, on `target`, the heading when
+    absent, as the keyboard does; gives whether the page took it from the
+    browser. */
+async function pressKeys(
+  which: "undo" | "redo",
+  target?: HTMLElement,
+): Promise<boolean> {
   const event = new KeyboardEvent("keydown", {
     key: which === "undo" ? "z" : "y",
     code: which === "undo" ? "KeyZ" : "KeyY",
@@ -409,7 +425,7 @@ async function pressKeys(which: "undo" | "redo"): Promise<boolean> {
     cancelable: true,
   });
   await act(async () => {
-    heading().dispatchEvent(event);
+    (target ?? heading()).dispatchEvent(event);
     await Promise.resolve();
   });
   await settled();
@@ -446,6 +462,29 @@ describe("AP4 D2 the keys of Undo and Redo on popgen2.html, caught on the whole 
     expect(store.getState().project).toBe(after);
     expect(await pressKeys("redo")).toBe(true);
     expect(store.getState().project).toBe(after);
+  });
+});
+
+describe("AP4 D2 Ctrl+Z while a dialog is open on popgen2.html", () => {
+  test("Ctrl+Z in the dialog, or on the heading under it, is taken from the browser and undoes nothing", async () => {
+    const { store } = await draw({ onlyWithStep: true });
+    await changeMaf(store, 0.9);
+    const after = store.getState().project;
+    const dialog = document.createElement("div");
+    dialog.setAttribute(DIALOG_MARK, "");
+    const inDialog = document.createElement("button");
+    dialog.append(inDialog);
+    document.body.append(dialog);
+    try {
+      inDialog.focus();
+      expect(await pressKeys("undo", inDialog)).toBe(true);
+      expect(store.getState().project).toBe(after);
+      expect(await pressKeys("undo")).toBe(true);
+      expect(store.getState().project).toBe(after);
+      expect(button("Undo")).not.toBeNull();
+    } finally {
+      dialog.remove();
+    }
   });
 });
 
