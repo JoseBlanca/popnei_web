@@ -2637,6 +2637,56 @@ test("VS7 D4 the table at 10,000 individuals: the page frozen when the column Ke
 // popgen2.html, sorted by a header (IN6 D4, the plan of the input page),
 // beside the sort of the 10,000 rows of the statistics of VS7 D4.
 
+/** What a sort of the table took, in milliseconds from the click: to the
+    first frame drawn after it, to the end of the task after the frame
+    that shows the rows sorted, and the longest stretch between two
+    frames, in which the page answered nothing. */
+interface SortTimes {
+  readonly firstFrame: number;
+  readonly sorted: number;
+  readonly longest: number;
+}
+
+/** The times of a sort of the table by a click on `header`: the rows are
+    sorted when the header's `aria-sort` has changed and the grid is not
+    `aria-busy`; until then a frame is asked for after each frame. */
+async function sortTimes(header: Locator): Promise<SortTimes> {
+  return header.evaluate(async (element) => {
+    if (!(element instanceof HTMLElement)) {
+      throw new Error("the header is not an HTML element");
+    }
+    const grid = element.closest('[role="grid"]');
+    if (grid === null) throw new Error("the header is in no grid");
+    const before = element.getAttribute("aria-sort");
+    const t0 = performance.now();
+    let last = t0;
+    let longest = 0;
+    // The times of the frames from the click.
+    const frames: number[] = [];
+    element.click();
+    const sortedAt = await new Promise<number>((resolve) => {
+      const tick = (): void => {
+        const now = performance.now();
+        longest = Math.max(longest, now - last);
+        last = now;
+        frames.push(now - t0);
+        const done =
+          element.getAttribute("aria-sort") !== before &&
+          grid.getAttribute("aria-busy") !== "true";
+        if (done) {
+          setTimeout(() => {
+            resolve(performance.now() - t0);
+          }, 0);
+        } else {
+          requestAnimationFrame(tick);
+        }
+      };
+      requestAnimationFrame(tick);
+    });
+    return { firstFrame: frames[0] ?? sortedAt, sorted: sortedAt, longest };
+  });
+}
+
 test("IN6 D4 the table of individuals_10000.xlsx under the tab Individuals file of popgen2.html: the page frozen when a header sorts it", async ({
   page,
   browser,
@@ -2663,17 +2713,74 @@ test("IN6 D4 the table of individuals_10000.xlsx under the tab Individuals file 
   const header = table.getByRole("columnheader").nth(1);
   // The first sort, which makes the order of the column, is left out, as
   // the first of VS7 D4 is.
-  await frozenBy(header);
-  const sorted: number[] = [];
+  await sortTimes(header);
+  const times: SortTimes[] = [];
   for (let k = 0; k < REPEATS; k++) {
-    sorted.push(await frozenBy(header));
+    times.push(await sortTimes(header));
   }
   await expect(header).toHaveAttribute("aria-sort", /ascending|descending/u);
+  const rows = [
+    [
+      "the first frame after the click",
+      ...stats(
+        times.map((t) => t.firstFrame),
+        ms,
+      ),
+    ],
+    [
+      "the rows sorted on screen",
+      ...stats(
+        times.map((t) => t.sorted),
+        ms,
+      ),
+    ],
+    [
+      "the longest stretch with no frame",
+      ...stats(
+        times.map((t) => t.longest),
+        ms,
+      ),
+    ],
+  ];
+  // The processor slowed 4 times, as a slower machine than the owner's,
+  // which only Chromium can do.
+  if (browserName === "chromium") {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+    const slow: SortTimes[] = [];
+    for (let k = 0; k < 3; k++) {
+      slow.push(await sortTimes(header));
+    }
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+    rows.push(
+      [
+        "slowed 4 times, the first frame",
+        ...stats(
+          slow.map((t) => t.firstFrame),
+          ms,
+        ),
+      ],
+      [
+        "slowed 4 times, the rows sorted",
+        ...stats(
+          slow.map((t) => t.sorted),
+          ms,
+        ),
+      ],
+      [
+        "slowed 4 times, the longest stretch",
+        ...stats(
+          slow.map((t) => t.longest),
+          ms,
+        ),
+      ],
+    );
+  }
   report(
     "The table of individuals_10000.xlsx under the tab Individuals file of popgen2.html",
-    `${machine(browser, browserName)}; ${String(drawn)} rows of the table in the page, its header among them; each time from the click to the end of the task after the next frame, ${String(REPEATS)} times but the first`,
-    ["change", "median", "range"],
-    [["a header sorts the rows", ...stats(sorted, ms)]],
+    `${machine(browser, browserName)}; ${String(drawn)} rows of the table in the page, its header among them; each time from the click, ${String(REPEATS)} times but the first${browserName === "chromium" ? ", and 3 times with the processor slowed" : ""}`,
+    ["a sort by a header", "median", "range"],
+    rows,
   );
 });
 
