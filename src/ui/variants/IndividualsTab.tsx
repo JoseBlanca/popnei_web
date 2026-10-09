@@ -17,12 +17,14 @@
  * the tab is shown again.
  */
 import {
+  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  useTransition,
 } from "react";
 
 import { escaped, individualsCheck } from "../../core/project.ts";
@@ -45,7 +47,6 @@ import {
   detectedText,
   encodingItems,
   separatorItems,
-  sizeText,
   undecodedText,
 } from "../steps/individuals/words.ts";
 import { useAppState, useStore } from "../store.tsx";
@@ -65,6 +66,7 @@ import {
   individualsTabShows,
   notInFileHeading,
   tableLabel,
+  tableSizeText,
 } from "./individualsWords.ts";
 
 /** What the tab is drawn with. */
@@ -340,9 +342,26 @@ interface ScrollPlace {
 
 /** The size of the table, and the table, sorted by a click on a header
     or Enter on it, which keeps its sort and its place through a turn of
-    the tabs. */
+    the tabs. A sort is drawn as a transition of React, which first
+    paints "Sorting…" beside the size and marks the grid busy, and then
+    draws the rows sorted. At 10,000 rows of 20 columns the rows took a
+    median of 268 ms in Chromium 153 and 382 ms in WebKit 26.6 with
+    nothing on screen to say the click was taken, and a second click then
+    sorted the other way; as a transition, "Sorting…" is painted 11 and
+    6 ms after the click, and the rows 311 and 382 ms after it (IN6 D4 of
+    e2e/measure.spec.ts, 9 October 2026). A click while a sort is drawn
+    asks again for the same one, since the header still holds the sort
+    before it. */
 function FileTable({ read, name, shown }: FileTableProps): React.JSX.Element {
   const [sort, setSort] = useState<TableSort<TableColumnId> | null>(null);
+  const [sorting, startSorting] = useTransition();
+  // The same function at each drawing, so that "Sorting…" does not draw
+  // the grid again.
+  const sortBy = useCallback((next: TableSort<TableColumnId>): void => {
+    startSorting(() => {
+      setSort(next);
+    });
+  }, []);
   const columns = useMemo(() => individualsTableColumns(read), [read]);
   // The same objects in every order, so that a sort only reorders them:
   // 10,000 rows made anew at each sort would be the slowness react.md,
@@ -355,15 +374,18 @@ function FileTable({ read, name, shown }: FileTableProps): React.JSX.Element {
   useScrollPlace(frame, shown);
   return (
     <div className={classOf(styles, "table")}>
-      <p className={classOf(styles, "line")}>{sizeText(read.table)}</p>
+      <p className={classOf(styles, "line")}>
+        {tableSizeText(read.table, sorting)}
+      </p>
       <div ref={frame}>
         <SortableTable
           label={tableLabel(name)}
           columns={columns}
           rows={rows}
           sort={sort}
-          onSortChange={setSort}
+          onSortChange={sortBy}
           headingLines={1}
+          busy={sorting}
         />
       </div>
     </div>

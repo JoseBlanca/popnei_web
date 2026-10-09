@@ -1149,6 +1149,55 @@ test("IN6 D3 at the missing rate of the individuals 0.03, the counts and the unc
   expect(sum).toBe(116);
 });
 
+test("IN6 D2 individuals_10000.xlsx sorted by a header: in the first frame after the click, Sorting… in the line of its size and the grid busy; a second click before the rows are drawn sorts them once, up; then the line and the grid as before", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pickIndividuals(page, "individuals_10000.xlsx");
+  await tab(page, "Individuals file").click();
+  const grid = page.getByRole("grid", {
+    name: "The table of individuals_10000.xlsx",
+  });
+  await expect(grid).toBeVisible({ timeout: 60_000 });
+  const line = page.getByText("10,000 rows, 20 columns", { exact: true });
+  await expect(line).toBeVisible();
+  const header = grid.getByRole("columnheader").nth(1);
+  const lineHandle = await line.elementHandle();
+  // The click, the first frame after it, a second click then, and the
+  // frames until the header says the sort, read in the page, where
+  // Playwright's own waits would come too late for the first frame.
+  const seen = await header.evaluate(async (element, sizeLine) => {
+    if (!(element instanceof HTMLElement)) {
+      throw new Error("the header is not an HTML element");
+    }
+    const table = element.closest('[role="grid"]');
+    const frame = (): Promise<void> =>
+      new Promise((resolve) => {
+        requestAnimationFrame(() => {
+          resolve();
+        });
+      });
+    element.click();
+    await frame();
+    const first = {
+      line: sizeLine.textContent,
+      busy: table?.getAttribute("aria-busy") ?? null,
+      sort: element.getAttribute("aria-sort"),
+    };
+    element.click();
+    while (element.getAttribute("aria-sort") === first.sort) await frame();
+    return first;
+  }, lineHandle);
+  expect(seen).toEqual({
+    line: "10,000 rows, 20 columns. Sorting…",
+    busy: "true",
+    sort: "none",
+  });
+  await expect(header).toHaveAttribute("aria-sort", "ascending");
+  await expect(grid).not.toHaveAttribute("aria-busy", "true");
+  await expect(line).toHaveText("10,000 rows, 20 columns");
+});
+
 test("IN6 D2 individuals_10000.xlsx at 320 pixels: the table of 20 columns scrolls sideways in its box, and the page does not", async ({
   page,
 }) => {

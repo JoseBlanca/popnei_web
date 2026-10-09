@@ -30,8 +30,12 @@ import type {
   VariantSource,
 } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
-import type { JobResult, TableFormat } from "../../worker/protocol.ts";
-import { firstSheetText } from "../steps/individuals/words.ts";
+import type {
+  IndividualsTable,
+  JobResult,
+  TableFormat,
+} from "../../worker/protocol.ts";
+import { firstSheetText, sizeText } from "../steps/individuals/words.ts";
 import { chainButton, chainStatuses } from "./chain.ts";
 
 /** The heading of the box of the individuals file, and the label of its
@@ -422,6 +426,16 @@ export function notInFileHeading(
     reader. */
 export function tableLabel(name: string): string {
   return `The table of ${escaped(name)}`;
+}
+
+/** The line over the table of the individuals file, its size, "200
+    rows, 2 columns", with "Sorting…" after it while a sort is drawn,
+    which takes tenths of a second at 10,000 rows. */
+export function tableSizeText(
+  table: IndividualsTable,
+  sorting: boolean,
+): string {
+  return sorting ? `${sizeText(table)}. Sorting…` : sizeText(table);
 }
 
 /**

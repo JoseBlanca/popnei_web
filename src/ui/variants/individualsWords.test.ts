@@ -53,6 +53,7 @@ import {
   notInFileHeading,
   removeLabel,
   tableLabel,
+  tableSizeText,
 } from "./individualsWords.ts";
 import type { PassWait } from "./individualsWords.ts";
 
@@ -731,6 +732,18 @@ describe("IN5 D1 what the tab Individuals file shows", () => {
     );
     expect(tableLabel("panel_pops.csv")).toBe("The table of panel_pops.csv");
     expect(tableLabel("a\u202eb.csv")).toBe("The table of a\\u202eb.csv");
+  });
+
+  test("the line over the table: its size, and Sorting… after it while a sort is drawn", () => {
+    const table = {
+      columns: ["IID", "pop"],
+      rows: [
+        ["s0", "p0"],
+        ["s1", "p1"],
+      ],
+    };
+    expect(tableSizeText(table, false)).toBe("2 rows, 2 columns");
+    expect(tableSizeText(table, true)).toBe("2 rows, 2 columns. Sorting…");
   });
 });
 

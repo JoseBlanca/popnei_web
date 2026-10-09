@@ -31,7 +31,7 @@
  * each column is as wide as a share of the box, and not narrower than
  * its `minWidth`, beyond which the box scrolls sideways.
  */
-import { useMemo } from "react";
+import { memo, useLayoutEffect, useMemo, useRef } from "react";
 import {
   Cell,
   Column,
@@ -100,17 +100,56 @@ export interface SortableTableProps<Id extends string> {
       not measure the header, as it did not on a page 320 pixels wide in
       Chromium 153, which left the header of one line 81 pixels high. */
   readonly headingLines?: number;
+  /** Whether the screen is drawing another sort of the rows, which the
+      grid then tells a screen reader with `aria-busy`. */
+  readonly busy?: boolean;
 }
 
 /** A table sorted by any of its columns, in a box that scrolls. */
 export function SortableTable<Id extends string>({
+  busy = false,
+  ...props
+}: SortableTableProps<Id>): React.JSX.Element {
+  const grid = useRef<HTMLTableElement>(null);
+  // React Aria's Table passes no aria-busy to its element, so it is set
+  // on the element itself, before the frame is painted.
+  useLayoutEffect(() => {
+    const element = grid.current;
+    if (element === null) return;
+    if (busy) {
+      element.setAttribute("aria-busy", "true");
+    } else {
+      element.removeAttribute("aria-busy");
+    }
+  }, [busy]);
+  return <SortableGrid {...props} grid={grid} />;
+}
+
+/** What the grid is drawn with: the props of the table but `busy`, and
+    the ref of its element. */
+interface SortableGridProps<Id extends string> extends Omit<
+  SortableTableProps<Id>,
+  "busy"
+> {
+  readonly grid: React.RefObject<HTMLTableElement | null>;
+}
+
+/** The grid of the table, drawn again only when one of its props
+    changes, and not when the table turns busy: drawn again, the 10,000
+    rows of individuals_10000.xlsx kept the first frame after a click on a
+    header from the screen for 96 ms in Chromium 153. */
+const SortableGrid = memo(SortableGridOf) as typeof SortableGridOf;
+
+/** The grid of the table. */
+function SortableGridOf<Id extends string>({
   label,
   columns,
   rows,
   sort,
   onSortChange,
   headingLines = 3,
-}: SortableTableProps<Id>): React.JSX.Element {
+  grid,
+}: SortableGridProps<Id>): React.JSX.Element {
   // The same object while the lines are the same, since the Virtualizer
   // lays the table out again for other options.
   const layoutOptions = useMemo(
@@ -133,6 +172,7 @@ export function SortableTable<Id extends string>({
   return (
     <Virtualizer layout={TableLayout} layoutOptions={layoutOptions}>
       <AriaTable
+        ref={grid}
         aria-label={label}
         className={classOf(styles, "table")}
         {...(sort !== null && { sortDescriptor: sort })}

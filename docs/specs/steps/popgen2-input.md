@@ -332,8 +332,15 @@ down with the row of the headers kept in view and sideways when the
 columns are wider than the page; only the rows in view and those just
 beyond drawn; a click on a header, or Enter on it, sorts by that column,
 ascending then descending, numbers by value, texts by their code units,
-missing values last. At 320 px the box scrolls sideways and the page
-does not. The types of the columns are not shown.
+missing values last. While a sort is drawn, which took about a third
+of a second at 10,000 rows of 20 columns on the owner's Mac, the line
+over the table reads "10,000 rows, 20 columns. Sorting…" and the grid is
+marked busy (`aria-busy`), which tells a screen reader that its rows are
+changing; both are painted in the first frame after the click, before
+the rows, so that the user sees the click was taken. A click on a header
+while a sort is drawn asks for the same sort again, since the header
+still shows the sort before it. At 320 px the box scrolls sideways and
+the page does not. The types of the columns are not shown.
 
 ### Both tabs kept drawn
 
@@ -440,6 +447,7 @@ the project's (`docs/architecture.md`, section 7).
 | a worker that could not start, or a page of another build than its workers | "panel_pops.csv could not be read: the page could not start the part that reads files. Reload the page and open the file again." |
 | the end of every other refusal of a file | "Open a corrected file." |
 | a read that failed in the worker, a crash | "panel_pops.csv could not be read: the page stopped while it read it. Open the file again." |
+| the line over the table of the file, and while a sort is drawn | "200 rows, 2 columns"; "200 rows, 2 columns. Sorting…" |
 | the status region, a file read | "panel_pops.csv read: 200 rows, the populations from popcat."; with no column chosen, "panel_pops.csv read: 200 rows, no column chosen for the populations." |
 | the status region, a file refused | the words of the box |
 | the status region, the names copied | the old step's, "4 names copied." |
@@ -559,12 +567,20 @@ core and of the entry in their module specs.
   moved, the other tab shown and back: the threshold, its line and the
   plots as they were; the table sorted and scrolled, the other tab and
   back: the same;
-- `individuals_10000.xlsx`, its table sorted by a header: the time the
-  page does not answer, as `e2e/measure.spec.ts` measures it, less being
-  better, written in the report of the plan beside the median of 149 ms
-  in Chromium and 107 ms in WebKit that a sort of the 10,000 rows of the
-  same file took on the old page, measured on the owner's Mac (the case
-  VS7 D4 of that file);
+- `individuals_10000.xlsx`, its table sorted by a header: in the first
+  frame after the click, "Sorting…" in the line over the table and the
+  grid busy; a second click then sorts it once, ascending; afterwards
+  the line and the grid as before;
+- `individuals_10000.xlsx`, its table sorted by a header: the time from
+  the click to the first frame, to the rows sorted on screen, and the
+  longest stretch with no frame, as `e2e/measure.spec.ts` measures them
+  (the case IN6 D4 of that file), less being better, written in the
+  report of the plan beside the median of 149 ms in Chromium and 107 ms
+  in WebKit that a sort of the 10,000 rows of the statistics of each
+  individual, 4 columns, took on the old page, measured on the owner's
+  Mac (the case VS7 D4). On 9 October 2026, on the built site, the first
+  frame came 11 ms after the click in Chromium 153 and 6 ms in WebKit
+  26.6, and the rows sorted 311 and 382 ms after it;
 - a long file name, 80 characters, at 320 px: "Remove …", the name in the
   box and the warnings wrap and the page does not scroll sideways
   (1.4.10, "Reflow");
