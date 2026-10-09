@@ -81,6 +81,13 @@ export interface TabsProps<Id extends string> {
   /** Whether the panels not shown stay drawn, inert and hidden, rather
       than being taken out of the page; false when absent. */
   readonly keepHidden?: boolean;
+  /** Whether this is the row of the page's tabs, the five of
+      popgen2.html: the tabs that open are drawn in the colour of the
+      text, so that a greyed tab stands apart from them, and each label is
+      as wide as in bold, so that the labels do not move when the tab
+      shown changes. False when absent, as the plot and the table of the
+      bins of popgen.html have it, which keep their look. */
+  readonly pageRow?: boolean;
 }
 
 /** A row of labels, and the panel of the one chosen. */
@@ -90,6 +97,7 @@ export function Tabs<Id extends string>({
   selected,
   onChange,
   keepHidden = false,
+  pageRow = false,
 }: TabsProps<Id>): React.JSX.Element {
   const reasonsId = useId();
   const reasonId = (id: Id): string => `${reasonsId}-${id}`;
@@ -137,7 +145,11 @@ export function Tabs<Id extends string>({
       <TabList
         ref={listRef}
         aria-label={label}
-        className={classOf(styles, "list")}
+        className={
+          pageRow
+            ? `${classOf(styles, "list")} ${classOf(styles, "pageRow")}`
+            : classOf(styles, "list")
+        }
       >
         {tabs.map((tab) => (
           <WithTooltip
@@ -162,7 +174,16 @@ export function Tabs<Id extends string>({
                 })}
                 {...(isGreyed(tab) && { [GREYED_ATTRIBUTE]: "true" })}
               >
-                {tab.label}
+                {pageRow ? (
+                  <span
+                    className={classOf(styles, "label")}
+                    data-label={tab.label}
+                  >
+                    {tab.label}
+                  </span>
+                ) : (
+                  tab.label
+                )}
               </Tab>
             )}
           </WithTooltip>

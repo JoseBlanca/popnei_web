@@ -80,6 +80,7 @@ export function PageTabs({
       selected={tab}
       onChange={onTabChange}
       keepHidden
+      pageRow
       tabs={[
         {
           id: "variants",

@@ -146,6 +146,7 @@ function Harness({
   const [selected, setSelected] = useState<Three>(first);
   return createElement(Tabs<Three>, {
     label: "Files and analyses",
+    pageRow: true,
     selected,
     onChange: (id: Three) => {
       chosen.push(id);
@@ -392,6 +393,17 @@ describe("AP1 D2 a greyed tab is reached, refused and said", () => {
     expect(() => {
       drawGreyed("first", "");
     }).toThrow(/^popnei_web defect: /u);
+  });
+
+  test("the row of the page draws each label with its bold copy, for its width, and popgen.html's tabs draw their words alone", () => {
+    drawGreyed("first");
+    const label = tabElement("first").querySelector("[data-label]");
+    expect(label?.getAttribute("data-label")).toBe("The first");
+    expect(tabElement("first").textContent).toBe("The first");
+    draw("first", null);
+    for (const element of container.querySelectorAll('[role="tab"]')) {
+      expect(element.querySelector("[data-label]")).toBeNull();
+    }
   });
 
   test("without greyed tabs, as popgen.html uses the widget, no tab carries aria-disabled or a description", () => {

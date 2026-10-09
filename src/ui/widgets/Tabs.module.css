@@ -36,14 +36,47 @@
   font-weight: 600;
 }
 
-/* A greyed tab (greyed of Tabs.tsx), in the colour of a control that
-   cannot be used, and never with the bar and the weight of the tab shown,
-   even while it is shown, so that it is not told by colour alone (WCAG
-   1.4.1; docs/specs/steps/popgen2-pca.md, "The row of tabs"). */
+/* The row of the page's tabs (pageRow of Tabs.tsx): a tab that opens in
+   the colour of the text, 3.39:1 from a greyed one in the light theme and
+   3.26:1 in the dark, where the muted colour was 1.34:1 and 1.69:1. */
+.pageRow .tab {
+  color: var(--color-text);
+}
+
+/* Each label as wide as in bold: its bold copy, with no height and
+   hidden, so that the labels do not move when the tab shown changes;
+   hidden, it is not read by a screen reader nor in the label's text. */
+.label {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.label::after {
+  content: attr(data-label);
+  block-size: 0;
+  overflow: hidden;
+  font-weight: 600;
+  visibility: hidden;
+}
+
+/* A greyed tab (greyedReason of Tabs.tsx), in the colour of a control
+   that cannot be used, and never with the weight of the tab shown, so
+   that it is not told by colour alone (WCAG 1.4.1;
+   docs/specs/steps/popgen2-pca.md, "The row of tabs"). */
 .tab[data-greyed],
-.tab[data-greyed][data-hovered],
-.tab[data-greyed][data-selected] {
+.tab[data-greyed][data-hovered] {
   border-block-end-color: transparent;
+  color: var(--color-text-disabled);
+  font-weight: normal;
+  cursor: default;
+}
+
+/* A tab greyed while it is shown keeps its bar, in the greyed colour,
+   its words not in bold, so that the user can tell which tab they are
+   on. */
+.tab[data-greyed][data-selected] {
+  border-block-end-color: var(--color-text-disabled);
   color: var(--color-text-disabled);
   font-weight: normal;
   cursor: default;

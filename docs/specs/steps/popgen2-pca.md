@@ -246,8 +246,14 @@ one pass has ended, with a threshold of the individuals on, the tab
 follows the counts before the thresholds.
 
 **A greyed tab** is drawn in the colour of a control that cannot be
-used, and has neither the bar under its label nor the weight of its
-words that mark the tab shown. The arrow keys move the focus onto it,
+used, the tabs that open in the colour of the text, so that the two
+stand apart, 3.39:1 in the light theme and 3.26:1 in the dark; it never
+has the weight of the words that marks the tab shown, nor its bar in the
+colour of the tab shown. Each label is as wide as it is in bold, so that
+the labels do not move when the tab shown changes. (Since 9 October
+2026, by the review of the first work package of the plan: the tabs
+that open were in the muted colour of the text, 1.34:1 and 1.69:1 from a
+greyed one.) The arrow keys move the focus onto it,
 and stop there, and its tooltip then shows; the mouse resting on it
 shows it too, and so does a click, a tap, Enter or Space on it, which
 show nothing else: the content under the row stays that of the tab
@@ -262,9 +268,12 @@ would otherwise leave the user without the reason (since 9 October
 and shows the tab it reaches if that one is not greyed.
 
 **A tab that becomes greyed while it is shown**, the PCA tab while
-another variants file is opened, stays shown, greyed, and its content is
-its reason, in the words of its tooltip, in place of the options. When
-the tab is no longer greyed, its content comes back.
+another variants file is opened, stays shown, greyed, with its bar kept
+in the greyed colour and its words not in bold, so that the user can
+tell which tab they are on; and its content is its reason, in the words
+of its tooltip, in place of the options, which stay drawn, hidden, with
+what the user left in them. When the tab is no longer greyed, its
+content comes back as it was.
 
 **At 320 px** the five labels wrap to two lines, as the row's style lets
 them; the tab shown keeps its bar and its weight on whichever line it
@@ -633,8 +642,9 @@ at its start, so that at 320 px the tooltip of a tab on the first line
 does not hide the second. The tab shown keeps "selected" for a screen
 reader while the focus rests on a greyed one, so the user can tell
 which content is under the row. A greyed tab is not told by colour
-alone (1.4.1): it never has the bar and the weight of the tab shown,
-and a screen reader says "dimmed". Its contrast is exempt from 1.4.3 as
+alone (1.4.1): it never has the weight of the tab shown, nor its bar
+but in the greyed colour while it is shown, and a screen reader says
+"dimmed". Its contrast is exempt from 1.4.3 as
 that of a control that cannot be used.
 
 **What is said without moving the focus** (4.1.3): an undo or a redo; a
