@@ -1090,6 +1090,22 @@ describe("AP2 D2 pcaColours and pcaCoordinatesCsv on popgen2.html", () => {
     );
   });
 
+  test("an individuals file of none of the individuals: every point unclassified, with no note", () => {
+    const table = panelPops();
+    const rows = table.rows.map(([name, ...cells]): Cell[] => [
+      `other_${String(name)}`,
+      ...cells,
+    ]);
+    // The populations of the file keep their marks, with no individual.
+    const c = groupsOf(pcaColours(r, withPops({ ...table, rows }), "popgen2"));
+    expect(c.names).toEqual(["p0", "p2", "p1"]);
+    expect(c.counts).toEqual([0, 0, 0]);
+    expect(c.numNone).toBe(200);
+    expect(c.noneName).toBe("Unclassified");
+    expect(c.note).toBeNull();
+    expect(c.group.every((g) => g === NO_COLOUR_GROUP)).toBe(true);
+  });
+
   test("popcat: p0 48, p2 84, p1 68, none unclassified", () => {
     const c = groupsOf(pcaColours(r, withPops(panelPops()), "popgen2"));
     expect(c.names).toEqual(["p0", "p2", "p1"]);
@@ -1184,6 +1200,16 @@ describe("AP2 D2 pcaColours and pcaCoordinatesCsv on popgen2.html", () => {
     ).toBe(true);
     expect(lines).toHaveLength(202);
     expect(lines.at(-1)).toBe("");
+  });
+
+  test("pcaCoordinatesCsv quotes a name that holds a new line or a carriage return", () => {
+    const named = result(["a\nb", "c\rd", "e"], 2);
+    expect(pcaCoordinatesCsv(named).startsWith("individual,PC1,PC2\n")).toBe(
+      true,
+    );
+    expect(pcaCoordinatesCsv(named)).toContain('\n"a\nb",');
+    expect(pcaCoordinatesCsv(named)).toContain('\n"c\rd",');
+    expect(pcaCoordinatesCsv(named)).toContain("\ne,");
   });
 
   test("pcaCoordinatesCsv writes each name as the variants file does, with no ' before it", () => {

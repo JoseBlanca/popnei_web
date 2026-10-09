@@ -569,6 +569,19 @@ describe("AP2 D2 the key of the PCA on popgen2.html", () => {
     expect(keyOfPca(withMaf(0.85), "0.2.2", pcaOnPopgen2)).not.toBe(first);
   });
 
+  test("an individuals file of none of the individuals: the key of no individuals file", () => {
+    const others = individualsOf(300).slice(200);
+    const options = {
+      ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
+    };
+    const withoutFile = project({ individualsFile: "none", options });
+    const withOthers = project({ individualsFile: tableOf(others), options });
+    expect(keyOfPca(withOthers, "0.2.2", pcaOnPopgen2)).toBe(
+      keyOfPca(withoutFile, "0.2.2", pcaOnPopgen2),
+    );
+    expect(pcaOnPopgen2.needs(withOthers)).toBeNull();
+  });
+
   test("the key holds the filters the narrowing gives, the Variants tab's 0.03 in the place of the PCA's 0.05", () => {
     expect(pcaOnPopgen2.keyInputs(at(0.03))).toEqual({
       method: "pca",
@@ -816,6 +829,39 @@ describe("IP6 D4 run", () => {
     expect(() => pca.run(project({ options: ownLd(null) }), client)).toThrow(
       /^popnei_web defect: a job was given the LD filter with no distance/,
     );
+  });
+});
+
+describe("AP2 D1 run and script of pcaOnPopgen2, the filters narrowed", () => {
+  /** The Variants tab's missing data at 0.03, the PCA's own at 0.05, and
+      its LD pruning within 50,000. */
+  const narrowed = (): Project =>
+    project({
+      filters: [missing(0.03)],
+      options: {
+        missingData: { follow: false, maxAllowedMissingRate: 0.05 },
+        ...ownLd(50_000),
+      },
+    });
+
+  test("the job carries the Variants tab's 0.03, the stricter, and the LD pruning", () => {
+    const { client, jobs } = recordingClient(null);
+    pcaOnPopgen2.run(narrowed(), client);
+    expect(jobs.map((job) => job.filters)).toEqual([
+      [{ kind: "missing_data", maxAllowedMissingRate: 0.03 }, ld(0.1, 50_000)],
+    ]);
+  });
+
+  test("the script filters at 0.03, the stricter, and then by LD", () => {
+    expect(
+      pcaOnPopgen2
+        .script(narrowed())
+        .split("\n")
+        .filter((line) => line.startsWith("pca_variants.filter")),
+    ).toEqual([
+      "pca_variants.filter_by_missing_data(0.03)",
+      "pca_variants.filter_by_ld(0.1, 50000)",
+    ]);
   });
 });
 
