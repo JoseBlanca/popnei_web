@@ -77,7 +77,7 @@ download of the filtered variants on popgen2.html
 variants", approved by the owner that day), with popnei 0.2.2: the
 write gives popnei's `onBytes` to `writeVars` for a `.nei` file and to
 `writeVcf` for a VCF compressed with bgzip, gathers the pieces into one
-`Blob` in parts of 64 MiB, and reads the last byte of the `Blob` before
+`Blob` in parts of 16 MiB, and reads the last byte of the `Blob` before
 it answers, where it made the `Blob` of the one array of the whole file
 (below, "The written file", "What a write holds" and "How it is
 verified"). No code of it yet. The
@@ -988,18 +988,18 @@ with popnei 0.2.2:
    of `passOf`, so that what it throws is a defect of ours and not
    popnei's refusal.
 2. Gathers the pieces: they are kept in a list until they hold
-   `WRITE_PART_BYTES`, 64 MiB, 67,108,864 bytes, 64 pieces, which become
+   `WRITE_PART_BYTES`, 16 MiB, 16,777,216 bytes, 16 pieces, which become
    one `Blob`, a part, and the list is emptied; at the end of the pass
    the pieces left become the last part, and the file is one `Blob` of
-   the parts, `new Blob(parts)`. So the worker holds at most 64 MiB of
+   the parts, `new Blob(parts)`. So the worker holds at most 16 MiB of
    pieces beside the parts, and not the file twice. Chromium refers to
    the bytes of the parts and does not copy them, by the description of
-   its storage of `Blob`s; whether WebKit and Firefox copy them is
-   measured in the plan of the download, and if one does, the parts are
-   kept as a list and the `Blob` made once of them all
-   (`docs/specs/analyses/writeVariants.md`, "What is measured in the
-   plan"). The value of the parts is a `RunnerOptions`, so that a test
-   makes a part of each piece.
+   its storage of `Blob`s, and neither Chromium nor WebKit held the file
+   twice: writing a file of 2,004,062,114 bytes, the engine's processes
+   grew by 1.07 and 1.08 times the file, on 9 October 2026
+   (`docs/specs/analyses/writeVariants.md`, "What was measured"); Firefox
+   is not measured. The value of the parts, set by the same measurement,
+   is a `RunnerOptions`, so that a test makes a part of each piece.
 3. Reads the last byte of the `Blob`, with `FileReaderSync`, which a
    worker of the browser has, before it answers. A `Blob` that
    Chromium's storage could not take is made at once, with its `size`,
@@ -1331,7 +1331,7 @@ export interface Runner {
 
 export interface RunnerOptions {
   readonly soFarEvery?: number; // popnei's 2 seconds when not given; tests give 0
-  readonly writePartBytes?: number;          // WRITE_PART_BYTES, 64 MiB, when not given; a test gives 1 MiB
+  readonly writePartBytes?: number;          // WRITE_PART_BYTES, 16 MiB, when not given; a test gives 1 MiB
   readonly readLastByte?: (file: Blob) => void; // throws when the Blob cannot be read; the worker's script
                                                  // gives FileReaderSync's read, which runnerWorker.test.ts checks;
                                                  // nothing is read when absent, as in the runner's tests in node
@@ -1557,7 +1557,7 @@ that `writeVars` makes of it in batches of 1,000.
 ### What a write holds
 
 From 8 October 2026, with the pieces, a write of a file of F bytes holds
-the `Blob`, F, where the browser keeps it, up to 64 MiB of pieces in
+the `Blob`, F, where the browser keeps it, up to 16 MiB of pieces in
 the worker, and one block of the file in the memory of wasm, about 10
 MB of genotypes for 1,000 individuals; the plan of the download
 measures it (`docs/specs/analyses/writeVariants.md`, "What a write

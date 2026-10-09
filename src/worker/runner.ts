@@ -431,10 +431,13 @@ export interface RunnerOptions {
 }
 
 /** The bytes of the pieces of a written file that make one part, a `Blob`,
-    64 MiB, 64 of popnei's pieces: the worker holds at most this many bytes
+    16 MiB, 16 of popnei's pieces: the worker holds at most this many bytes
     of pieces beside the parts, and not the file twice
-    (docs/specs/worker/runner.md, "The written file"). */
-export const WRITE_PART_BYTES = 67_108_864;
+    (docs/specs/worker/runner.md, "The written file"). 16 MiB wrote the
+    file of 2 GB as fast as 64 and 256, within 0.6%, in Chromium and
+    WebKit on 9 October 2026 (docs/specs/analyses/writeVariants.md, "What
+    was measured"). */
+export const WRITE_PART_BYTES = 16_777_216;
 
 /** A runner holding nothing; `loadPopnei` has to have given `ok`. */
 export function createRunner(options: RunnerOptions = {}): Runner {

@@ -290,7 +290,7 @@ describe("DL2 D1 the written file, by pieces: a file of several pieces, a part o
     },
   );
 
-  test("with parts of 64 MiB, the default, the .nei file of the VCF of 3,000 variants is the same bytes", async () => {
+  test("with parts of 16 MiB, the default, the .nei file of the VCF of 3,000 variants is the same bytes", async () => {
     const { bytes } = await writtenOf(
       opened(VCF, bigVcf).write(writeJob("nei", []), ignore),
     );

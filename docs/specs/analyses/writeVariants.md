@@ -62,7 +62,7 @@ filtered variants", approved by the owner that day with its decisions
 popnei 0.2.2, installed that day, whose `writeVars` and `writeVcf` hand
 the file over in pieces of 1 MiB through `onBytes`. The write takes a
 format, `"nei"` or `"vcf"`, the VCF always compressed with bgzip; the
-runner gathers the pieces into one `Blob` in parts of 64 MiB, so that
+runner gathers the pieces into one `Blob` in parts of 16 MiB, so that
 the memory of wasm no longer holds the file, and reads its last byte
 before it posts it; `writtenName` takes the format; a function of core,
 `noVariantForCertain`, tells from the one pass of popgen2.html when the
@@ -135,7 +135,7 @@ VCF. popnei writes the file as its pass reads, holding one block of it
 in the memory of wasm, and gives `onBytes` each piece of 1 MiB, the last
 one shorter, then returns the counts of its pass alone. The worker
 gathers the pieces into a `Blob`, the browser's object for a file made
-in the page, in parts of 64 MiB (`docs/specs/worker/runner.md`, "The
+in the page, in parts of 16 MiB (`docs/specs/worker/runner.md`, "The
 written file"), reads its last byte, and posts it; the `Blob` crosses to
 the page as a handle, with no copy:
 
@@ -390,6 +390,91 @@ write; its page's process, where the worker runs, was 80 MB larger 3 s
 after. Every file saved was whole: its size was the size of the `Blob`,
 and pyarrow read every batch, with the variants and the 1,000
 individuals it was written with.
+
+#### The download of popgen2.html, 9 October 2026
+
+These are measurements of the write by pieces, popnei 0.2.2 handing the
+file over 1 MiB at a time and the worker gathering it into a `Blob` of
+parts (`docs/specs/worker/runner.md`, "The written file"), made by
+`DL8 D1` to `DL8 D4` of `e2e/measure.spec.ts` for work package 8 of the
+plan of the download, on the site built with `POPNEI_TEST_PAGES=1 npm
+run build` on the branch `download` at 80c66fc, in Chromium
+153.0.8010.12 (Playwright's headless shell) and WebKit 26.6, with
+Playwright 1.63.0, on the owner's Mac, an Apple M5 Pro with 64 GB of
+memory and macOS 27.0.1, alone on the machine at a load of 2 to 5. Each
+file is the `.nei` file of a gzipped VCF of `e2e/bigVcf.ts`, 1,000
+diploid individuals and a variant every 1,000 bp, downloaded from
+`popgen2.html` with its first project, the FILTER box on and the
+missing rate of the variants at 0.1, which keep every variant; one
+write of each size in each engine, on a new page, from the press of
+Download in the dialog to the browser's download. The memory is the
+footprint of the engine's processes summed, as above, and "above
+before" is less what they held just before Download. A file saved was
+read back with pyarrow, every batch. Firefox cannot be launched by
+Playwright on that Mac and was not measured.
+
+Playwright opens each page in a context off the record, as a private
+window is, and there Chromium keeps every `Blob` in its own process,
+with no copy on the disk; so Chromium was measured also with a profile
+of its own, as a user's ordinary window is, where it moves `Blob`s past
+2 GB to the disk.
+
+| file written | Chromium, off the record | Chromium, a profile of its own | WebKit |
+|---|---|---|---|
+| 1,820,000 variants, 2,004,062,114 bytes, from a VCF of 1.16 GB | saved whole in 27.3 s; peak 2.15 GB above before, 1.07 times the file; 3 s after, 2.03 GB, in the browser's process | not run | saved whole in 27.1 s; peak 2.17 GB, 1.08 times the file; 3 s after, 1.96 GB, in the network process |
+| 3,640,000 variants, 4,008,131,338 bytes, from 2.32 GB | not written, twice: the words of the worker stopped with no answer after 57 s, the `Blob` unreadable; peak 2.36 GB | saved whole in 55.6 s; peak 2.21 GB; 3 s after, 1.86 GB | saved whole in 54.5 s; peak 4.16 GB, 1.04 times the file; 3 s after, 3.96 GB |
+| 7,270,000 variants, 8,005,214,850 bytes, from 4.64 GB | not written, twice, as at 4 GB, after 111 s; peak 2.42 GB | saved, its bytes those of the `Blob`, in 109 s; peak 2.26 GB; 3 s after, 1.69 GB | saved, its bytes those of the `Blob`, in 109 s; peak 8.20 GB, 1.02 times the file; 3 s after, 7.97 GB |
+
+No tab closed, and no engine's processes passed 8.7 GB, under the bound
+of 32 GB at which the test closes the page. The file of 8 GB downloaded
+from WebKit cannot be read by its footer: pyarrow fails at batch 782 of
+1,454, the first that starts past 4 GiB, "Message metadata too long by
+572 bytes", while its batches read in their order, as a stream, hold
+the 7,270,000 variants, the last at 7,270,000,000. The footer of a
+`.nei` file holds the place of each batch, and the writer of popnei's
+dependency arrow-ipc 60 counts it in a `usize`, 32 bits in wasm, so it
+wraps past 4 GiB: every `.nei` file larger than 4 GiB that the
+application writes has a footer that points to the wrong bytes. It is
+popnei's to fix; a VCF has no footer.
+
+Whether an engine copies the bytes of a `Blob` made of `Blob`s
+(`DL8 D2`): at the file of 2 GB the peak was 1.07 times the file in
+Chromium and 1.08 in WebKit, under the 1.5 at which the bytes would be
+taken as copied, so the parts stay `Blob`s.
+
+What a write leaves (`DL8 D3`), three writes of each, the median; the
+page's process is the one the calculation worker runs in, Chromium's
+renderer and WebKit's WebContent process, 3 s after the download, above
+what it held before Download:
+
+| write | Chromium | WebKit |
+|---|---|---|
+| the `.nei` file of 20,000 variants from itself, 19,161,818 bytes, under the bound of the restart | 35.1 MB | 52.5 MB |
+| 200,000 variants, 220,241,754 bytes, the worker started again | −77.3 MB | −98.6 MB |
+| the same, the old worker kept beside the new one | 77.1 MB | −54.0 MB |
+
+The difference of the last two rows, the old worker with what the
+write and the one pass left in it, is 154 MB in Chromium and 45 MB in
+WebKit; it counts the new worker in the row of the old one kept, about
+35 MB in Chromium by the growth of that row from the download to 3 s
+after, so the restart gives back about 120 MB in Chromium and less than
+45 MB in WebKit. The plan dropped the restart only below 50 MB in both
+engines, so it stays.
+
+The value of the parts (`DL8 D4`): the file of 2 GB written from builds
+with `WRITE_PART_BYTES` of 16, 64 and 256 MiB, the time from Download
+to the download, in ms, without the read back:
+
+| parts | Chromium | WebKit |
+|---|---|---|
+| 16 MiB | 27,955, 27,874 | 27,457, 27,090 |
+| 64 MiB | 27,335, 28,831, 27,855 | 27,111, 27,146, 26,825 |
+| 256 MiB | 28,710, 27,967 | 27,548, 27,221 |
+
+The medians are within 1.7% of each other in each engine, 16 MiB 0.2%
+above the best in Chromium and 0.6% in WebKit; by the plan's rule, the
+smallest value within 2% of the best, the parts are 16 MiB from 9
+October 2026, which holds 48 MiB less in the worker than 64.
 
 ### The functions of core
 
@@ -736,7 +821,7 @@ itself and its "Save it again", as the owner decided on 8 October 2026
 ### What a write holds
 
 A write of a file of F bytes holds, from 8 October 2026, the `Blob`, F,
-up to 64 MiB of pieces in the worker before they become a part of it,
+up to 16 MiB of pieces in the worker before they become a part of it,
 and one block of the file in the memory of wasm, about 10 MB of
 genotypes for 1,000 individuals at the size popnei writes (the design,
 "What popnei 0.2.2 gives"), where the write before held 4.1F to 6.1F
@@ -791,7 +876,8 @@ and "Whether a limit of size is needed"), on the built site:
 - one write timed with the bar and without it;
 - what a write leaves in the tab, with and without the restart after
   `WRITE_RESTART_BYTES`, which is dropped if it gives back nothing;
-- the value of the parts, 64 MiB, `WRITE_PART_BYTES` of the runner.
+- the value of the parts, `WRITE_PART_BYTES` of the runner, 64 MiB
+  until the measurement set it to 16 MiB.
 
 ## How it is verified
 
