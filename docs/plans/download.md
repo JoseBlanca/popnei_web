@@ -263,7 +263,7 @@ Deliverables:
 
 Tasks:
 
-- [ ] 1.1 The trial and its run. Both deliverables.
+- [x] 1.1 The trial and its run. Both deliverables.
 
 What could go wrong: Playwright accepts downloads for the page under
 test, and its build of Chromium may bypass the question that Chrome asks
@@ -306,11 +306,11 @@ Deliverables:
 
 Tasks:
 
-- [ ] 2.1 `WriteJob` and `Written` of `src/worker/protocol.ts`, the
+- [x] 2.1 `WriteJob` and `Written` of `src/worker/protocol.ts`, the
   checks of `src/worker/messages.ts` and `PROTOCOL_VERSION` 15
   (`protocol.md`, the interfaces `WriteJob` and `Written`; `messages.md`,
   the bullet of `write` and "The checks"). Deliverable 2.
-- [ ] 2.2 The write in `src/worker/runner.ts`, `onBytes`, the parts,
+- [x] 2.2 The write in `src/worker/runner.ts`, `onBytes`, the parts,
   `writePartBytes` and `readLastByte` of `RunnerOptions`, and the
   runner's options in `src/worker/runnerWorker.ts` (`runner.md`, "The
   written file", "What a write holds", the interface `RunnerOptions`).
@@ -356,12 +356,12 @@ Deliverables:
 
 Tasks:
 
-- [ ] 3.1 `writtenName` and its callers in `src/ui/shell/words.ts`,
+- [x] 3.1 `writtenName` and its callers in `src/ui/shell/words.ts`,
   `src/ui/shell/ProjectButtons.tsx`, `src/ui/steps/variants/writeParts.ts`,
   `WriteSection.tsx` and `writeWords.ts`; `keptNoneReason`
   (`writeVariants.md`, "The functions of core"; `individualsKept.md`, the
   interface). Deliverables 1 and 2.
-- [ ] 3.2 `noVariantForCertain`, its fixture and its tests
+- [x] 3.2 `noVariantForCertain`, its fixture and its tests
   (`writeVariants.md`, "The functions of core", the paragraphs of
   `noVariantForCertain`). Deliverable 3. A certain answer where popnei
   keeps a variant would tell the user there is nothing to download when
@@ -411,16 +411,16 @@ handled.
 
 Tasks, in order, since all are in `src/core/store.ts`:
 
-- [ ] 4.1 The format of the write: `STATE_FORMAT` goes, the store holds
+- [x] 4.1 The format of the write: `STATE_FORMAT` goes, the store holds
   the format `startWrite` sets, the key and every state carry it
   (`store.md`, "The writing of the filtered variants", the paragraph
   "The format", and the interface `WriteStatus`). Deliverable 1. A key of
   the write without the format would give the VCF's state to a `.nei`
   write, silently; so this is a commit of its own, guarded by
   deliverable 1.
-- [ ] 4.2 The file kept in `saved` (`store.md`, the bullet "The file is
+- [x] 4.2 The file kept in `saved` (`store.md`, the bullet "The file is
   kept until the project gives another key"). Deliverable 2.
-- [ ] 4.3 `src/ui/popgen2Store.ts`, the function that reads
+- [x] 4.3 `src/ui/popgen2Store.ts`, the function that reads
   `perIndividual` of the one pass's result, and what `src/ui/popgen2.tsx`
   gives it (`store.md`, "The individuals kept"; `writeVariants.md`, "On
   popgen2.html", "What it asks of core"). Deliverables 3 and 4.
@@ -463,7 +463,7 @@ Deliverables:
 
 Tasks:
 
-- [ ] 5.1 The measurement and its run. Both deliverables.
+- [x] 5.1 The measurement and its run. Both deliverables.
 
 ## Work package 6: from the button to the file downloaded
 
@@ -519,16 +519,16 @@ Deliverables:
 
 Tasks:
 
-- [ ] 6.1 `Dialog.tsx`'s prop (the screen spec, "While the file is
+- [x] 6.1 `Dialog.tsx`'s prop (the screen spec, "While the file is
   written", the paragraph of Escape). Deliverable 1.
-- [ ] 6.2 The words (the screen spec, "Its words"; `writeVariants.md`,
+- [x] 6.2 The words (the screen spec, "Its words"; `writeVariants.md`,
   "Its words on popgen2.html"). Deliverable 2.
-- [ ] 6.3 The button, the dialog, the write and its end, in
+- [x] 6.3 The button, the dialog, the write and its end, in
   `src/ui/variants/` beside `StatsSection.tsx` (the screen spec, "The
   button", "The dialog", "While the file is written", "When the write
   ends", "When the write fails", "Accessibility"; "What it sends and
   reads"). Deliverables 3, 4 and 5.
-- [ ] 6.4 The screenshots. Deliverable 6.
+- [x] 6.4 The screenshots. Deliverable 6.
 
 What could go wrong:
 
@@ -582,13 +582,13 @@ Deliverables:
 
 Tasks:
 
-- [ ] 7.1 The sentences, the store's `done` and `noVariant` on the page,
+- [x] 7.1 The sentences, the store's `done` and `noVariant` on the page,
   the status region, the gate of a run before the dialog (the screen
   spec, "The button", "The dialog" first paragraph, "When the write
   ends" the paragraph of a download that throws, "The text stays until a
   filter or the file changes", "When the filters keep no variant").
   Deliverables 1 and 2.
-- [ ] 7.2 The screenshots. Deliverable 3.
+- [x] 7.2 The screenshots. Deliverable 3.
 
 What could go wrong: the drop and the paste while the dialog is open.
 The screen spec expects the modal dialog to keep them out ("The
@@ -670,20 +670,20 @@ Deliverables:
 
 Tasks:
 
-- [ ] 8.1 The measurements of deliverables 1 to 4, in that order, run
+- [x] 8.1 The measurements of deliverables 1 to 4, in that order, run
   one at a time. Deliverables 1 to 5.
-- [ ] 8.2 Only if deliverable 2 says so: the parts as a list. Its own
+- [x] 8.2 Only if deliverable 2 says so: the parts as a list. Its own
   commit, with the runner's tests of work package 2 passing.
-- [ ] 8.3 Only if deliverable 3 says so: the restart dropped.
+- [x] 8.3 Only if deliverable 3 says so: the restart dropped.
 
 ## Work package 9: the end
 
-- [ ] 9.1 The session's own look: it reads every screenshot of work
+- [x] 9.1 The session's own look: it reads every screenshot of work
   packages 6 and 7 with `Read`, state by state, in both themes and both
   widths, and the old page's screens of the write, and checks that each
   state of the screen spec's table "The states" is there and readable;
   what it finds is a fix sent to a subagent, test first, before 9.2.
-- [ ] 9.2 The checks of the `coding` skill on the last commit, and the
+- [x] 9.2 The checks of the `coding` skill on the last commit, and the
   browser check of the whole suite in Chromium and WebKit, in chunks of
   spec files that each end within a foreground command: the old page's
   flows of the write and the shell; the old page's steps of the
@@ -691,7 +691,7 @@ Tasks:
   `fileStats`, `openVariants` with the rest, split again if a chunk
   passes 9 minutes. The counts of each chunk, and the screens run,
   recorded below; a flaky test is run again three times and named.
-- [ ] 9.3 The documents: `docs/architecture.md`, sections 5, 6 and 7, as
+- [x] 9.3 The documents: `docs/architecture.md`, sections 5, 6 and 7, as
   the design's "What changes in `docs/architecture.md`" lists for the
   download (the VCF beside the `.nei` file, the pieces gathered in parts
   of 16 MiB, a file of F bytes held as about F, no estimate, warning or
@@ -701,7 +701,7 @@ Tasks:
   whole file; `docs/functionality.md` checked against what was built;
   each spec of this plan says it is built on the branch `download`, with
   what a round changed; "What was done" complete.
-- [ ] 9.4 The report to the owner, as the `building` skill says, with the
+- [x] 9.4 The report to the owner, as the `building` skill says, with the
   stops met first, if any; the three measurements and what each decided;
   what the review found and fixed and what it did not take; the browsers
   the screens were seen in, Chromium in the screenshots and Chromium and
@@ -933,3 +933,22 @@ in popnei's writer of the vars file under wasm32; the session has it
 reproduced under node before an issue of popnei is drafted. A VCF has
 no footer. The VCF of 2 GB for the owner's try in Firefox is in the
 session's scratchpad, `big/dl8_1820000.vcf.gz`, 1,161,482,233 bytes.
+
+### Work package 9, 9 October 2026
+
+8ae8764 (the draft of popnei's issue of the footer above 4 GiB,
+reproduced under node: a file of 4,624,805,178 bytes, 4,200,000
+variants, has every batch from 782 listed 4,294,967,296 bytes too low,
+and popnei's `openVars` fails on it at that batch, while a control of
+4,239,358,674 bytes reads whole; the cause, arrow-ipc 60.0.0's
+`block_offsets: usize`, 32 bits in wasm, wrapping with the release
+build's overflow checks off), 34eaf20 (the documents: architecture,
+functionality, use cases, the design and this plan at parts of 16 MiB,
+the specs' status lines, `technology.md`), 584519a (the cause said as
+found). The final checks at 8ae8764: typecheck, lint and format clean;
+Vitest 4,444; the whole browser suite 677 in Chromium and 677 in
+WebKit, none failed or rerun; screens of popgen2 180 and of the old
+page's write 40. Seen by the session, besides those of packages 6 and
+7: the button that waits (320 px, dark), a failed write (light), a
+file written that the browser was not handed (dark). Not run in Firefox,
+Safari or VoiceOver: work package 10, the owner's.
