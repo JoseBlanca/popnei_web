@@ -298,8 +298,9 @@ export interface Unclassified {
 
 /** What the box of the individuals file of popgen2.html counts. */
 export interface PopulationCounts {
-  /** The column the populations are taken from, a column of the table
-      but its first, or null: no column chosen, or none of that name. */
+  /** The column the populations are taken from, a column the list
+      offers (`populationColumnChoices`), or null: no column chosen, none
+      of that name, or one the list does not offer. */
   readonly column: string | null;
   /** The different values of the column in the file, missing ones left
       out; 0 with no column. */

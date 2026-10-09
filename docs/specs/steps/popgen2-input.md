@@ -519,8 +519,9 @@ core and of the entry in their module specs.
 - a CSV with a column of 21 values: its warning, and no table;
 - "None" chosen: "All 200 individuals kept are unclassified, …"; the
   separator changed afterwards: the page chooses `popcat` again;
-- with the missing rate of the individuals at 0.1: the counts change to
-  those of `individualsKept` for 0.1, which the flow reads from popnei
+- with the missing rate of the individuals at 0.03: the counts change to
+  those of `individualsKept` for 0.03, p0 29, p2 51 and p1 36, which the
+  flow reads from popnei
   under node as the fixtures of `popgen2-filters.md` do; while the pass
   is held (`e2e/holdWorker.ts`), "…" and the line of waiting; after Stop,
   the line of a Stop; at Start again's end, the counts;

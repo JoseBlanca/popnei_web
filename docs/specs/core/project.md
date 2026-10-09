@@ -1084,7 +1084,10 @@ they share, which no other module needs; and `populations.ts` holds no
 constant made when it loads, so that it and the modules it imports can
 never find one of the other not yet made (above, "The populations").
 
-- **The counts**, `populationCounts(p, kept)`: before the variants file
+- **The counts**, `populationCounts(p, kept)`: `null` with no
+  individuals file, or one not read, pending or refused, the box then
+  showing its words of no file or of `individualsBoxNeeds`. With a file
+  read, before the variants file
   is read, the column, its number of different values and whether they
   are too many, with no population and nothing else counted, since the
   box warns of too many values as soon as the individuals file is read;
@@ -1099,8 +1102,7 @@ never find one of the other not yet made (above, "The populations").
   kept, with how many of them have a missing cell in the column and the
   names of those not in the individuals file, kept, in the order of the
   variants file, `null` while the list is not known. Those not in the individuals file, all of them, before the
-  filters, in the order of the variants file, `individualsCheck(p).missing`,
-  or every individual of the variants file without a file read. The rows
+  filters, in the order of the variants file, `individualsCheck(p).missing`. The rows
   of the individuals file whose individual the variants file does not
   have, `individualsCheck(p).ignoredRows`. Whether none of the
   individuals of the variants file is in the individuals file, with the
@@ -1186,7 +1188,8 @@ The rules of the counts against what a reader would expect:
   them, and a key of the list by its reference would miss at every press
   of an arrow key on a threshold. So `populationCounts` keeps its last
   answer with what it was made from, and gives it again when the table,
-  the column and the read of the variants file are the same objects and
+  its decimal mark, the column and the read of the variants file are the
+  same, the table and the read as objects, and
   the new list holds the same individuals in the same order, compared
   one by one, a walk of at most the individuals of the file, or is
   unknown, or removes nobody, as the last; otherwise it counts again. A
@@ -1226,8 +1229,9 @@ export interface PopulationCount {
 }
 
 export interface PopulationCounts {
-  /** The column the populations are taken from, a column of the table,
-      or null: no file read, no column chosen, or none of that name. */
+  /** The column the populations are taken from, a column the list
+      offers, or null: no column chosen, none of that name, or one the
+      list does not offer. */
   column: string | null;
   /** The different values of the column in the file; 0 with no column. */
   numValues: number;
@@ -1248,11 +1252,10 @@ export interface PopulationCounts {
   unclassified: { kept: number; missingCell: number;
     notInFile: string[] } | null;   // the kept not in the file, in the order of the variants file
   /** The individuals of the variants file not in the individuals file,
-      before the filters, in the order of the variants file; every one
-      with no file read. */
+      before the filters, in the order of the variants file. */
   notInFile: string[];
   /** The rows of the individuals file whose individual the variants file
-      does not have; null with no file read. */
+      does not have; null before the variants file is read. */
   rowsNotInVariants: number | null;
   /** A file read none of whose individuals is in the variants file, with
       the first name of each; null otherwise. */
@@ -1261,7 +1264,7 @@ export interface PopulationCounts {
 
 /** The counts of the box of popgen2.html; null with no individuals file
     read. The same frozen object as the call before for the same table,
-    column and read of the variants file, and a list of the individuals
+    decimal mark, column and read of the variants file, and a list of the individuals
     kept that holds the same individuals, compared one by one, or is
     unknown both times; see below. In src/core/populations.ts. */
 export function populationCounts(p: Project, kept: IndividualsKept | null): PopulationCounts | null;
@@ -1295,9 +1298,13 @@ table made `S000` give `noneInFile` with `s000` and `S000`; a column of
 kept unclassified, and `populationsOf` `null`; with a threshold of the
 individuals on and no statistics, `known` false and each count `null`;
 with the statistics of `panel.nei`'s one pass and the missing rate at
-0.1, each count equal to the length of the population of
-`populationsKept` with the list of `individualsKept`, a population
-emptied at 0; a threshold of the variants changed gives the same object;
+0.03, each count equal to the length of the population of
+`populationsKept` with the list of `individualsKept`, p0 29, p2 51 and
+p1 36 (at 0.1 it removes nobody, the missing rates of `panel.nei`'s
+individuals being 0.0175 to 0.0442); a population
+emptied at 0; another table with the same column and the same read of
+the variants file, or the same table read with the other decimal mark,
+a new object with the new counts; a threshold of the variants changed gives the same object;
 the same inputs twice, the same object by `===`. At
 `defaultPopulationsColumn`: `popcat` for `panel_pops.csv`, `popcat` and
 not `altitude`, numbers, for `panel_meta.csv`, `pop`, two values, for
