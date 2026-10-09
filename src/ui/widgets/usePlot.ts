@@ -17,10 +17,22 @@ import type { RefObject } from "react";
 
 import type { Chart, ChartHandle } from "../../charts/types.ts";
 
+/** What `usePlot` gives: the ref of the element the plot is drawn in,
+    and the handle of the plot. */
+export interface PlotMount<Data> {
+  /** The ref to give the element of the plot. */
+  readonly ref: RefObject<HTMLDivElement | null>;
+  /** The handle of the plot, null before it is created and after it is
+      destroyed: for the exports of the menu "Download…", read at the
+      choice, never during a render. */
+  readonly handle: RefObject<ChartHandle<Data> | null>;
+}
+
 /**
  * Mounts the plot `create` makes of `data` in the element given the ref
- * it returns. `create` is a function of src/charts, the same at every
- * render; `data` is the same object until something in it changes, so
+ * it returns, and gives the handle of the plot beside it. `create` is a
+ * function of src/charts, the same at every render; `data` is the same
+ * object until something in it changes, so
  * that the plot is not drawn again on every render. `events`, those of
  * the first render, are given to the plot when it is created, as
  * charts.md has it: their handlers must not depend on values that
@@ -30,7 +42,7 @@ export function usePlot<Data, Events = object>(
   create: Chart<Data, Events>,
   data: Data,
   events?: Events,
-): RefObject<HTMLDivElement | null> {
+): PlotMount<Data> {
   const containerRef = useRef<HTMLDivElement>(null);
   const plotRef = useRef<ChartHandle<Data> | null>(null);
   const eventsRef = useRef(events);
@@ -52,5 +64,5 @@ export function usePlot<Data, Events = object>(
     };
   }, []);
 
-  return containerRef;
+  return { ref: containerRef, handle: plotRef };
 }

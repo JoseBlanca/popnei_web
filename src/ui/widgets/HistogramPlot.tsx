@@ -7,11 +7,16 @@
  * shape it is given: the histograms of the Variants step, wide, and those
  * of the spectrum of the diversity, taller, so that the label of their
  * vertical axis, "Share of the variants with both alleles", fits along it
- * at the width of a phone.
+ * at the width of a phone. Given a download, it draws the menu
+ * "Download…" above the plot, whose images come from the plot's handle
+ * (docs/specs/widgets/downloads.md, "A plot"); popgen.html gives none.
  */
 import { createHistogram } from "../../charts/histogram.ts";
 import type { HistogramData, HistogramFrame } from "../../charts/histogram.ts";
 import { classOf } from "../classOf.ts";
+import { plotItems } from "./downloadItems.ts";
+import type { PlotDownload } from "./downloadItems.ts";
+import { DownloadMenu } from "./DownloadMenu.tsx";
 import styles from "./HistogramPlot.module.css";
 import { usePlot } from "./usePlot.ts";
 
@@ -32,6 +37,9 @@ export interface HistogramPlotProps {
       of the first render is kept, so it must not depend on values that
       change. */
   readonly onFrame?: (frame: HistogramFrame) => void;
+  /** The download of the plot, which draws the menu "Download…" above
+      it; none when absent, as on popgen.html. */
+  readonly download?: PlotDownload;
 }
 
 /** The element of a histogram, and the plot in it. */
@@ -39,11 +47,23 @@ export function HistogramPlot({
   data,
   shape = "wide",
   onFrame,
+  download,
 }: HistogramPlotProps): React.JSX.Element {
-  const containerRef = usePlot(
+  const { ref, handle } = usePlot(
     createHistogram,
     data,
     onFrame === undefined ? {} : { onFrame },
   );
-  return <div ref={containerRef} className={classOf(styles, shape)} />;
+  const plot = <div ref={ref} className={classOf(styles, shape)} />;
+  if (download === undefined) return plot;
+  return (
+    <div className={classOf(styles, "withDownload")}>
+      <DownloadMenu
+        what={download.what}
+        items={plotItems(download, handle)}
+        waiting={download.waiting}
+      />
+      {plot}
+    </div>
+  );
 }

@@ -53,7 +53,7 @@ type HeatmapLengths = React.CSSProperties &
 /** The frame of the heatmap, and the heatmap in it. */
 export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
   const frameRef = useRef<HTMLDivElement>(null);
-  const containerRef = usePlot(createHeatmap, data);
+  const { ref: containerRef } = usePlot(createHeatmap, data);
   // Whether the heatmap is wider than its frame, which the browser
   // measures and React does not, and what the frame is then.
   const frame = useSidewaysFrame(frameRef);

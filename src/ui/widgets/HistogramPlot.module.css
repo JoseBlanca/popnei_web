@@ -19,3 +19,11 @@
   aspect-ratio: 4 / 3;
   min-block-size: 18rem;
 }
+
+/* A histogram given a download: the menu "Download…" above the plot's
+   end. */
+.withDownload {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}

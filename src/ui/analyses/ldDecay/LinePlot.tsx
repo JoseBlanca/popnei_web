@@ -51,7 +51,7 @@ type LegendLengths = React.CSSProperties &
 /** The frame of the line plot, and the plot in it. */
 export function LinePlot({ data }: LinePlotProps): React.JSX.Element {
   const frameRef = useRef<HTMLDivElement>(null);
-  const containerRef = usePlot(createLine, data);
+  const { ref: containerRef } = usePlot(createLine, data);
   const legend = useMemo((): LegendLengths => {
     const room = lineLegendRoom(data);
     return {
