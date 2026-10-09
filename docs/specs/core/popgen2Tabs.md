@@ -42,6 +42,7 @@ The reasons of Distances, in the order they are asked:
 | no individuals file | `noIndividuals` |
 | the individuals file read `pending` | `individualsReading`, with its name |
 | the individuals file refused or failed | `individualsFailed`, with its name |
+| the individuals file `notGiven`, named by a project file that did not hold it, which `popgen2.html`, opening no project file, never has | `individualsFailed`, with its name: the user opens the file again, as after a failed read |
 | read, and no column of the populations | `noColumn` |
 | read, the column of more values than a column of populations can have, `tooMany` | `tooManyValues`, with the column and its number of values |
 | read, fewer than two populations with an individual in the variants file | `fewPopulations`, with the column, the number, 0 or 1, and the name of the variants file |
@@ -126,7 +127,8 @@ With Vitest, on frozen projects made with the commands of
   `variantsOpening` with "panel.nei"; failed: `variantsFailed`.
 - `panel.nei` read, no individuals file: PCA and Populations `null`,
   Distances `noIndividuals`; `panel_pops.csv` pending:
-  `individualsReading`; refused: `individualsFailed`.
+  `individualsReading`; refused: `individualsFailed`; `notGiven`, made
+  by `parseProject` from a project file: `individualsFailed`.
 - Read, `popcat` chosen, `kept` `null`: the three `null`. None chosen:
   `noColumn`. A column of one value for every individual:
   `fewPopulations` with 1 and "panel.nei".
@@ -134,6 +136,21 @@ With Vitest, on frozen projects made with the commands of
   `fewKept` with 1; one that keeps none: `fewKept` with 0.
 - The same inputs twice: the same object, compared with `toBe`; a list
   kept that changes but leaves the same reasons: the same object.
+
+## When Distances is built on popgen2.html
+
+Core has two rules for "fewer than two populations" today: Distances'
+tab here, through `populationCounts` of `src/core/populations.ts`,
+which takes no column of booleans as a column of populations; and the
+lock of the distances of the old page, `popDists.needs` of
+`src/core/analyses/popDists.ts`, through `populationsColumnOf`, which
+looks at no type. On a column of booleans the tab would be greyed while
+the analysis could run. When Distances is built on `popgen2.html`, its
+tab and the lock of its Run call one function of `populations.ts` for
+"fewer than two populations", so that a tab is never greyed while its
+analysis could run, nor open while its Run is locked for that reason.
+Noted on 9 October 2026, by the review of the first work package of
+`docs/plans/analyses-pca.md`; nothing changes in the code for it now.
 
 ## Not in this spec
 

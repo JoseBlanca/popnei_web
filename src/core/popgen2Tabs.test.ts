@@ -10,9 +10,30 @@ import { describe, expect, test } from "vitest";
 import { individualsKept } from "./individualsKept.ts";
 import type { IndividualsKept } from "./individualsKept.ts";
 import { analysisTabs } from "./popgen2Tabs.ts";
-import type { Project, IndividualsRead, TableRead } from "./project.ts";
+import {
+  FORMAT_VERSION,
+  emptyProject,
+  loadIndividuals,
+  loadVariants,
+  parseProject,
+  recordIndividualsRead,
+  recordVariantsRead,
+  setGrouping,
+  setIndividualFilter,
+} from "./project.ts";
+import type {
+  Grouping,
+  IndividualsReadGiven,
+  Project,
+  TableRead,
+} from "./project.ts";
 import { deepFreeze } from "./testSupport.ts";
-import type { Cell, IndividualsTable } from "../worker/protocol.ts";
+import type {
+  Cell,
+  CsvOptions,
+  IndividualFilter,
+  IndividualsTable,
+} from "../worker/protocol.ts";
 
 /** The table of `panel_pops.csv`, every cell a text. */
 function panelPops(): IndividualsTable {
@@ -73,67 +94,111 @@ function panelPopsWith(cellOf: (index: number) => Cell): IndividualsTable {
     failed, or read. */
 type VariantsState = "none" | "pending" | "failed" | "read";
 
-/** A frozen project of popgen2.html: `panel.nei` in the state `variants`,
-    named `variantsName`, and the individuals file `panel_pops.csv` with
-    the read `read`, or none with `null`, its column `popcat` chosen or
-    the grouping `grouping`, with the filters of individuals
-    `individualFilters`. */
+/** The load id of the variants file, and of the individuals file. */
+const VARIANTS_ID = "00112233445566778899aabbccddeeff";
+const INDIVIDUALS_ID = "ffeeddccbbaa99887766554433221100";
+
+/** How the individuals file is read: every option found by the
+    reader. */
+const CSV: CsvOptions = {
+  encoding: "auto",
+  separator: "auto",
+  decimal: "auto",
+};
+
+/**
+ * A frozen project of popgen2.html, made with the commands of
+ * docs/specs/core/project.md as the page makes it: `panel.nei` loaded
+ * and in the state `variants`, named `variantsName`; the individuals file
+ * `panel_pops.csv` loaded with the read `read`, left pending with
+ * `{ kind: "pending" }`, or none with `null`, and then the grouping
+ * `grouping`, the column `popcat` when absent; the filters of individuals
+ * `individualFilters`. With no individuals file the grouping is the
+ * empty project's, no column, as the page leaves it.
+ */
 function project(
   options: {
     readonly variants?: VariantsState;
     readonly variantsName?: string;
-    readonly read?: IndividualsRead | null;
-    readonly grouping?: Project["grouping"];
-    readonly individualFilters?: Project["individualFilters"];
+    readonly read?: IndividualsReadGiven | { readonly kind: "pending" } | null;
+    readonly grouping?: Grouping;
+    readonly individualFilters?: readonly IndividualFilter[];
   } = {},
 ): Project {
   const variants = options.variants ?? "read";
   const read = options.read === undefined ? readOf(PANEL_POPS) : options.read;
-  return deepFreeze<Project>({
-    app: "popgen",
-    variants:
-      variants === "none"
-        ? null
-        : {
-            fileId: "00112233445566778899aabbccddeeff",
-            name: options.variantsName ?? "panel.nei",
-            size: 261_490,
-            format: "nei",
-            readOptions: null,
-            read:
-              variants === "pending"
-                ? { kind: "pending" }
-                : variants === "failed"
-                  ? {
-                      kind: "failed",
-                      error: { kind: "popnei", message: "not a file" },
-                    }
-                  : {
-                      kind: "read",
-                      individuals: PANEL_INDIVIDUALS,
-                      ploidy: 2,
-                      numVars: null,
-                      keepsPassed: false,
-                    },
-          },
-    filters: [],
-    filtersOff: [],
-    individualFilters: options.individualFilters ?? [],
-    individualFiltersOff: [],
-    individuals:
-      read === null
-        ? null
-        : {
-            fileId: "ffeeddccbbaa99887766554433221100",
-            name: "panel_pops.csv",
-            csv: { encoding: "auto", separator: "auto", decimal: "auto" },
-            typesSet: [],
-            read,
-          },
-    grouping: options.grouping ?? { kind: "populations", column: "popcat" },
-    analyses: [],
-    reference: null,
-  });
+  let p = emptyProject("popgen");
+  if (variants !== "none") {
+    p = loadVariants(p, {
+      fileId: VARIANTS_ID,
+      name: options.variantsName ?? "panel.nei",
+      size: 261_490,
+      format: "nei",
+      readOptions: null,
+    });
+  }
+  if (variants === "failed") {
+    p = recordVariantsRead(p, VARIANTS_ID, {
+      kind: "failed",
+      error: { kind: "popnei", message: "not a file" },
+    });
+  }
+  if (variants === "read") {
+    p = recordVariantsRead(p, VARIANTS_ID, {
+      kind: "read",
+      individuals: PANEL_INDIVIDUALS,
+      ploidy: 2,
+      numVars: null,
+      keepsPassed: false,
+    });
+  }
+  if (read !== null) {
+    p = loadIndividuals(p, {
+      fileId: INDIVIDUALS_ID,
+      name: "panel_pops.csv",
+      csv: CSV,
+    });
+    if (read.kind !== "pending") {
+      p = recordIndividualsRead(p, INDIVIDUALS_ID, CSV, read);
+    }
+    p = setGrouping(
+      p,
+      options.grouping ?? { kind: "populations", column: "popcat" },
+    );
+  }
+  for (const filter of options.individualFilters ?? []) {
+    p = setIndividualFilter(p, filter);
+  }
+  return deepFreeze(p);
+}
+
+/** `p`, its variants file read, with its individuals file's read made
+    `notGiven`, as only the opening of a project file makes it: `p`
+    written as a project file holds it, with no `keepsPassed`, which no
+    project file holds, and read back by `parseProject`. */
+function withIndividualsNotGiven(p: Project): Project {
+  const { variants, individuals } = p;
+  if (variants?.read.kind !== "read" || individuals === null) {
+    throw new Error(
+      "the project has no variants file read or no individuals file",
+    );
+  }
+  const { kind, individuals: names, ploidy, numVars } = variants.read;
+  const read = { kind, individuals: names, ploidy, numVars };
+  const written: unknown = JSON.parse(
+    JSON.stringify({
+      ...p,
+      variants: { ...variants, read },
+      individuals: { ...individuals, read: { kind: "notGiven" } },
+    }),
+  );
+  const parsed = parseProject(written, "popgen", FORMAT_VERSION, []);
+  if (!parsed.ok) {
+    throw new Error(
+      `the project file was refused: ${JSON.stringify(parsed.error)}`,
+    );
+  }
+  return deepFreeze(parsed.value);
 }
 
 /** The individuals kept of `p`, whose filters need no statistics. */
@@ -174,16 +239,24 @@ describe("AP1 D1 which tab of the analyses is greyed, and why", () => {
     });
   });
 
-  test("another variants file opened over panel.nei greys the three tabs with the new name", () => {
-    const p = project();
-    expect(analysisTabs(p, keptOf(p)).pca).toBeNull();
+  test("another variants file opened over panel.nei being opened greys the three tabs with the new name", () => {
+    const first = analysisTabs(project({ variants: "pending" }), null);
+    expect(first.pca).toEqual({ kind: "variantsOpening", name: "panel.nei" });
+    const other = deepFreeze(
+      loadVariants(project({ variants: "pending" }), {
+        fileId: "aabbccddeeff00112233445566778899",
+        name: "other.vcf.gz",
+        size: 1_000,
+        format: "vcf",
+        readOptions: { ploidy: 2, onlyPassed: false },
+      }),
+    );
     const opening = { kind: "variantsOpening", name: "other.vcf.gz" };
-    expect(
-      analysisTabs(
-        project({ variants: "pending", variantsName: "other.vcf.gz" }),
-        null,
-      ),
-    ).toEqual({ pca: opening, populations: opening, distances: opening });
+    expect(analysisTabs(other, null)).toEqual({
+      pca: opening,
+      populations: opening,
+      distances: opening,
+    });
   });
 
   test("panel.nei read with no individuals file: PCA and Populations open, Distances noIndividuals", () => {
@@ -207,6 +280,16 @@ describe("AP1 D1 which tab of the analyses is greyed, and why", () => {
     const p = project({
       read: { kind: "failed", error: { kind: "empty" }, format: "text" },
     });
+    expect(analysisTabs(p, keptOf(p))).toEqual({
+      pca: null,
+      populations: null,
+      distances: { kind: "individualsFailed", name: "panel_pops.csv" },
+    });
+  });
+
+  test("panel_pops.csv named by a project file that did not hold it, notGiven, greys Distances with individualsFailed and its name", () => {
+    const p = withIndividualsNotGiven(project());
+    expect(p.individuals?.read).toEqual({ kind: "notGiven" });
     expect(analysisTabs(p, keptOf(p))).toEqual({
       pca: null,
       populations: null,
@@ -328,6 +411,29 @@ describe("AP1 D1 which tab of the analyses is greyed, and why", () => {
       individualFilters: [{ kind: "missing_data", maxAllowedMissingRate: 0.5 }],
     });
     expect(analysisTabs(p, keptOf(p)).distances).toBeNull();
+  });
+
+  test("two columns of too many values in a row give the second column and its count", () => {
+    const table: IndividualsTable = {
+      columns: [...PANEL_POPS.columns, "region"],
+      rows: PANEL_POPS.rows.map((row, index) => [
+        row[0] ?? "",
+        `c${String(index % 35)}`,
+        `r${String(index % 25)}`,
+      ]),
+    };
+    expect(
+      analysisTabs(project({ read: readOf(table) }), null).distances,
+    ).toEqual({ kind: "tooManyValues", column: "popcat", numValues: 35 });
+    expect(
+      analysisTabs(
+        project({
+          read: readOf(table),
+          grouping: { kind: "populations", column: "region" },
+        }),
+        null,
+      ).distances,
+    ).toEqual({ kind: "tooManyValues", column: "region", numValues: 25 });
   });
 
   test("the same inputs twice give the same object", () => {

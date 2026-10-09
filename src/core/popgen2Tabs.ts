@@ -10,6 +10,7 @@
  * need.
  */
 
+import { defect } from "./analyses/words.ts";
 import type { IndividualsKept } from "./individualsKept.ts";
 import { populationCounts } from "./populations.ts";
 import type { Project } from "./project.ts";
@@ -75,15 +76,7 @@ export function analysisTabs(
   p: Project,
   kept: IndividualsKept | null,
 ): AnalysisTabs {
-  const variants = variantsGreyed(p);
-  const made: AnalysisTabs =
-    variants === null
-      ? {
-          pca: null,
-          populations: null,
-          distances: distancesGreyed(p, p.variants?.name ?? "", kept),
-        }
-      : { pca: variants, populations: variants, distances: variants };
+  const made = tabsOf(p, kept);
   const last = lastTabs;
   if (last !== null && sameTabs(last, made)) {
     return last;
@@ -103,21 +96,30 @@ export function analysisTabs(
     the first call, so that this module makes nothing when it loads. */
 let lastTabs: AnalysisTabs | null = null;
 
-/** Why every tab of the analyses is greyed for the variants file, or
-    `null` when one is open. */
-function variantsGreyed(p: Project): TabGreyed | null {
+/** Each tab's reason, worked out anew: the three greyed alike while no
+    variants file is open, and then Distances alone by its own reasons. */
+function tabsOf(p: Project, kept: IndividualsKept | null): AnalysisTabs {
   const variants = p.variants;
   if (variants === null) {
-    return { kind: "noVariants" };
+    return alike({ kind: "noVariants" });
   }
   switch (variants.read.kind) {
     case "pending":
-      return { kind: "variantsOpening", name: variants.name };
+      return alike({ kind: "variantsOpening", name: variants.name });
     case "failed":
-      return { kind: "variantsFailed", name: variants.name };
+      return alike({ kind: "variantsFailed", name: variants.name });
     case "read":
-      return null;
+      return {
+        pca: null,
+        populations: null,
+        distances: distancesGreyed(p, variants.name, kept),
+      };
   }
+}
+
+/** The three tabs greyed for the same `reason`. */
+function alike(reason: TabGreyed): AnalysisTabs {
+  return { pca: reason, populations: reason, distances: reason };
 }
 
 /** Why the tab Distances is greyed, with the variants file
@@ -223,9 +225,4 @@ function fieldOf(reason: TabGreyed, field: string): unknown {
 /** `reason` frozen, or `null`. */
 function frozenReason(reason: TabGreyed | null): TabGreyed | null {
   return reason === null ? null : Object.freeze(reason);
-}
-
-/** An error for a state the code makes impossible. */
-function defect(message: string): Error {
-  return new Error(`popnei_web defect: ${message}`);
 }
