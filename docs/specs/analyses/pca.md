@@ -2077,6 +2077,7 @@ filter and the missing data at 0.1:
 | missing data off | following | LD alone |
 | MAF 0.95 | own MAF 0.9 | missing data 0.1, MAF 0.9, LD |
 | MAF off | own MAF 0.9 | missing data 0.1, MAF 0.9, LD |
+| MAF 0.85 | own MAF 0.9 | missing data 0.1, MAF 0.85, LD |
 | any | LD following | no LD |
 | FILTER and observed heterozygosity 0.5 on | `PCA2_DEFAULTS` | FILTER, missing data 0.1, observed heterozygosity 0.5, LD, in that order |
 
@@ -2086,6 +2087,8 @@ the old rows of "How it is verified", above, unchanged.
 - **The key** with page `"popgen2"`: the Variants tab's missing data
   from 0.1 to 0.08 while the PCA's own is 0.05, the same key; from 0.1
   to 0.03, another; back to 0.1, the first.
+  The Variants tab's MAF from 0.95 to 0.92 while the PCA's own is 0.9,
+  the same key; to 0.85, another.
 - **`needs`** of `pcaOnPopgen2`: an individuals file pending, refused,
   or lacking individuals of the variants file, no reason; `PCA2_DEFAULTS`
   with no distance, the words above; 50000, none; 9,382 individuals,

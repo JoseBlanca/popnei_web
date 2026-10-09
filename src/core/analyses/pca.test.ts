@@ -446,6 +446,20 @@ describe("AP2 D1 pcaFilters on popgen2.html, the table of 'On popgen2.html'", ()
     ]);
   });
 
+  test("MAF 0.85 and the PCA's own 0.9: missing data 0.1, MAF 0.85, LD", () => {
+    expect(
+      pcaFilters(
+        [missing(0.1), { kind: "maf", maxAllowedMaf: 0.85 }],
+        options2(ownMaf(0.9)),
+        "popgen2",
+      ),
+    ).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "maf", maxAllowedMaf: 0.85 },
+      ldNoDistance,
+    ]);
+  });
+
   test("any Variants tab and the LD following: no LD", () => {
     const following = options2({
       ld: { follow: true, maxAllowedR2: 0.1, maxDist: 50_000 },
@@ -539,6 +553,20 @@ describe("AP2 D2 the key of the PCA on popgen2.html", () => {
     expect(keyOfPca(at(0.08), "0.2.2", pcaOnPopgen2)).toBe(first);
     expect(keyOfPca(at(0.03), "0.2.2", pcaOnPopgen2)).not.toBe(first);
     expect(keyOfPca(at(0.1), "0.2.2", pcaOnPopgen2)).toBe(first);
+  });
+
+  test("the Variants tab's MAF from 0.95 to 0.92 while the PCA's own is 0.9: the same key; to 0.85, another", () => {
+    const withMaf = (maf: number): Project =>
+      project({
+        filters: [missing(0.1), { kind: "maf", maxAllowedMaf: maf }],
+        options: {
+          maf: { follow: false, maxAllowedMaf: 0.9 },
+          ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
+        },
+      });
+    const first = keyOfPca(withMaf(0.95), "0.2.2", pcaOnPopgen2);
+    expect(keyOfPca(withMaf(0.92), "0.2.2", pcaOnPopgen2)).toBe(first);
+    expect(keyOfPca(withMaf(0.85), "0.2.2", pcaOnPopgen2)).not.toBe(first);
   });
 
   test("the key holds the filters the narrowing gives, the Variants tab's 0.03 in the place of the PCA's 0.05", () => {
