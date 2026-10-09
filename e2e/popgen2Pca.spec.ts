@@ -46,9 +46,21 @@ const LOCKED = "Stop the PCA to change the filters.";
 const READING =
   "Run once panel.nei is read to the end: the reading under way in the box Variants file and the PCA cannot run at once.";
 
-/** The words of Run locked by the LD pruning with no distance. */
-const NO_DISTANCE =
+/** The words beside Run locked by the LD pruning with no distance. */
+const NO_DISTANCE = "Type the LD distance above, or turn the LD pruning off.";
+
+/** The reason of the LD pruning with no distance, in full, under the
+    field of the distance. */
+const NO_DISTANCE_FULL =
   "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off.";
+
+/** The line under the field of the distance, on how to choose it. */
+const DISTANCE_HINT =
+  "Choose the distance beyond which the r² between two variants falls to its background level in your species, as studies of its LD decay report.";
+
+/** The line under a field made stricter while the Variants tab has its
+    threshold off. */
+const ONE_KEEPS_ALL = "1 keeps every variant: type a lower value to filter.";
 
 /** The label of the field of the distance. */
 const DISTANCE =
@@ -294,8 +306,52 @@ test("AP6 D3 the PCA tab opened during the one pass, held: Run disabled with the
   });
   await expect(run(page)).toBeDisabled();
   await expect(distance(page)).toHaveAccessibleDescription(
-    new RegExp(`^${NO_DISTANCE.replace(/[.()]/gu, "\\$&")}`, "u"),
+    new RegExp(`^${NO_DISTANCE_FULL.replace(/[.()]/gu, "\\$&")}`, "u"),
   );
+  await expect(distance(page)).toHaveAccessibleDescription(
+    new RegExp(`${DISTANCE_HINT.replace(/[.()]/gu, "\\$&")}$`, "u"),
+  );
+  // Said once on the page, under the field, as a line and not a problem;
+  // and the short line beside Run.
+  const full = shown(page).getByText(NO_DISTANCE_FULL, { exact: true });
+  await expect(full).toHaveCount(1);
+  await expect(full.locator("svg")).toHaveCount(0);
+  await expect(shown(page).getByText(NO_DISTANCE, { exact: true })).toHaveCount(
+    1,
+  );
+  await expect(
+    shown(page).getByText(DISTANCE_HINT, { exact: true }),
+  ).toBeVisible();
+
+  // The MAF made stricter while the Variants tab has its threshold off:
+  // its field at 1, and the line that 1 is no filter.
+  const maf = group(
+    page,
+    "Filter the variants by major allele frequency (MAF)",
+  );
+  await maf
+    .locator("label")
+    .filter({ hasText: "Stricter for the PCA" })
+    .click();
+  const mafBox = shown(page).getByRole("textbox", {
+    name: /^Maximum major allele frequency/u,
+  });
+  await expect(mafBox).toHaveValue("1");
+  await expect(
+    shown(page).getByText(ONE_KEEPS_ALL, { exact: true }),
+  ).toBeVisible();
+  await expect(mafBox).toHaveAccessibleDescription(
+    new RegExp(`^${ONE_KEEPS_ALL.replace(/[.]/gu, "\\$&")}`, "u"),
+  );
+  await mafBox.fill("0.9");
+  await mafBox.press("Enter");
+  await expect(
+    shown(page).getByText(ONE_KEEPS_ALL, { exact: true }),
+  ).toHaveCount(0);
+  await maf
+    .locator("label")
+    .filter({ hasText: "As in the Variants tab" })
+    .click();
 
   await typeDistance(page, "50000");
   await expect(run(page)).toHaveAccessibleDescription("");
@@ -1040,6 +1096,37 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     // The one pass and the PCA, and nothing for the individuals file.
     expect(await runsPosted(page)).toBe(2);
     await expectAxeBothSchemes(page, makeAxeBuilder);
+  });
+
+  test("AP6 D3 the table of the individuals cut at the right says so, in its words and to a screen reader, until it is scrolled sideways to PC10, at 1280 and at 320 px", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const MORE = "More columns: scroll sideways.";
+    for (const width of [1280, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      if (width === 1280) {
+        await openReady(page);
+        await runToResult(page);
+      }
+      const grid = individualsGrid(page);
+      await grid.scrollIntoViewIfNeeded();
+      const cue = shown(page).getByText(MORE, { exact: true });
+      await expect(cue).toBeVisible();
+      await expect(grid).toHaveAccessibleDescription(MORE);
+      await grid.evaluate((element) => {
+        element.scrollTo({ left: element.scrollWidth });
+      });
+      await expect(
+        grid.getByRole("columnheader", { name: "PC10" }),
+      ).toBeInViewport();
+      await expect(cue).toHaveCount(0);
+      await expect(grid).toHaveAccessibleDescription("");
+      await grid.evaluate((element) => {
+        element.scrollTo({ left: 0 });
+      });
+      await expect(cue).toBeVisible();
+    }
   });
 
   test("AP6 D3 its filters: the missing data stricter at 0.05, 532 variants and PC1 3.58%; 0.2 refused, nothing sent; the Variants tab at 0.03 and back; the MAF at 0.9, 510 variants and PC1 3.68%; the LD pruning off, 1,200 variants, PC1 7.61% and its warning", async ({

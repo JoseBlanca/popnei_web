@@ -562,7 +562,13 @@ function PcaResultOf({
         </div>
       )}
       {drawn !== "none" && (
-        <div className={classOf(styles, "plotArea")}>
+        <div
+          className={
+            onPopgen2
+              ? `${classOf(styles, "plotArea")} ${classOf(styles, "legendBelow")}`
+              : classOf(styles, "plotArea")
+          }
+        >
           {data3d !== null ? (
             <Pca3dView
               data={data3d}
@@ -666,6 +672,7 @@ function PcaResultOf({
               sort={sort}
               onSortChange={setSort}
               headingLines={1}
+              moreColumnsCue
               download={{
                 what: pcaDownloadWhat("table", method),
                 fileName: downloadName(stem, `${method}.table`, "csv"),

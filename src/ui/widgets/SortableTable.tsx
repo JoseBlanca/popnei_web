@@ -31,7 +31,15 @@
  * each column is as wide as a share of the box, and not narrower than
  * its `minWidth`, beyond which the box scrolls sideways.
  */
-import { memo, useLayoutEffect, useMemo, useRef } from "react";
+import {
+  memo,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Cell,
   Column,
@@ -128,7 +136,19 @@ export interface SortableTableLook<Id extends string> {
   /** Whether the screen is drawing another sort of the rows, which the
       grid then tells a screen reader with `aria-busy`. */
   readonly busy?: boolean;
+  /** Whether the table says, while columns are cut off at its right,
+      "More columns: scroll sideways.", in words under it and as its
+      description, with a fade over its right edge: macOS draws no
+      scrollbar until a scroll, so a user read the PCA's table cut in the
+      middle of PC5 with nothing to tell them PC6 to PC10 were there (the
+      review of work package 6 of docs/plans/analyses-pca.md, 10 October
+      2026). As on the PCA tab of popgen2.html; false when absent, as on
+      popgen.html. */
+  readonly moreColumnsCue?: boolean;
 }
+
+/** The words of a table cut off at its right. */
+export const MORE_COLUMNS_TEXT = "More columns: scroll sideways.";
 
 /** A table sorted by any of its columns, in a box that scrolls. */
 export function SortableTable<Id extends string>(
@@ -147,6 +167,8 @@ export function SortableTable<Id extends string>(
       element.removeAttribute("aria-busy");
     }
   }, [busy]);
+  const more = useMoreColumns(grid, props.moreColumnsCue === true);
+  const moreId = useId();
   // The grid is the same element with a download and without, so that
   // one given or taken away after the first draw keeps its scroll and its
   // focus: the menu is a line of its own before it, and nothing wraps the
@@ -170,31 +192,82 @@ export function SortableTable<Id extends string>(
       </div>
     );
   }
+  const sortableGrid = (
+    <SortableGrid
+      label={props.label}
+      columns={props.columns}
+      rows={props.rows}
+      sort={props.sort}
+      onSortChange={props.onSortChange}
+      {...(props.headingLines !== undefined && {
+        headingLines: props.headingLines,
+      })}
+      {...(more && { describedBy: moreId })}
+      grid={grid}
+    />
+  );
   return (
     <>
       {menuLine}
-      <SortableGrid
-        label={props.label}
-        columns={props.columns}
-        rows={props.rows}
-        sort={props.sort}
-        onSortChange={props.onSortChange}
-        {...(props.headingLines !== undefined && {
-          headingLines: props.headingLines,
-        })}
-        grid={grid}
-      />
+      {props.moreColumnsCue === true ? (
+        // The fade is placed over the right edge of the grid's box.
+        <div className={classOf(styles, "frame")}>
+          {sortableGrid}
+          {more && (
+            <div aria-hidden="true" className={classOf(styles, "fade")} />
+          )}
+        </div>
+      ) : (
+        sortableGrid
+      )}
+      {more && (
+        <p id={moreId} className={classOf(styles, "more")}>
+          {MORE_COLUMNS_TEXT}
+        </p>
+      )}
     </>
   );
+}
+
+/** Whether the grid `grid` has columns cut off at its right, followed
+    through its scroll and its size while `follows`; false otherwise. */
+function useMoreColumns(
+  grid: React.RefObject<HTMLTableElement | null>,
+  follows: boolean,
+): boolean {
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const element = grid.current;
+    if (!follows || element === null) return;
+    const measure = (): void => {
+      // A pixel of rounding is no column.
+      setMore(
+        element.scrollLeft + element.clientWidth < element.scrollWidth - 1,
+      );
+    };
+    measure();
+    element.addEventListener("scroll", measure, { passive: true });
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    // The rows the Virtualizer draws give the grid its scroll width.
+    for (const child of element.children) observer.observe(child);
+    return () => {
+      element.removeEventListener("scroll", measure);
+      observer.disconnect();
+    };
+  }, [grid, follows]);
+  return follows && more;
 }
 
 /** What the grid is drawn with: the look of the table but `busy`, its
     rows, and the ref of its element. */
 interface SortableGridProps<Id extends string> extends Omit<
   SortableTableLook<Id>,
-  "busy"
+  "busy" | "moreColumnsCue"
 > {
   readonly rows: readonly SortableRow[];
+  /** The id of the words that describe the grid, or none. */
+  readonly describedBy?: string;
   readonly grid: React.RefObject<HTMLTableElement | null>;
 }
 
@@ -212,6 +285,7 @@ function SortableGridOf<Id extends string>({
   sort,
   onSortChange,
   headingLines = 3,
+  describedBy,
   grid,
 }: SortableGridProps<Id>): React.JSX.Element {
   // The same object while the lines are the same, since the Virtualizer
@@ -238,6 +312,7 @@ function SortableGridOf<Id extends string>({
       <AriaTable
         ref={grid}
         aria-label={label}
+        {...(describedBy !== undefined && { "aria-describedby": describedBy })}
         className={classOf(styles, "table")}
         {...(sort !== null && { sortDescriptor: sort })}
         onSortChange={onSort}

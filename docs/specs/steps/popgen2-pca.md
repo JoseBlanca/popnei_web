@@ -539,7 +539,19 @@ column).
   was needed, the old panel's line that says so.
 - **The table of the individuals**, as the old panel's, the second
   column headed "Population" or the column's name, "Unclassified" for an
-  individual with no population.
+  individual with no population. While columns are cut off at its right, a fade
+  over its right edge and the words under it, "More columns: scroll
+  sideways.", which also describe the table to a screen reader, say
+  that there are more, since macOS draws no scrollbar until a scroll;
+  they go once the table is scrolled to its last column (since 10
+  October 2026, by the review of work package 6 of the plan, which
+  found the table cut in the middle of PC5 at 1280 px with nothing to
+  say PC6 to PC10 were there). The review asked for the column of the
+  individuals frozen as well; it is not: React Aria's Virtualizer, which
+  draws the rows, places every cell in a box of its own with its place
+  and its layer written on it, which a style cannot pin.
+- **At less than 30rem wide**, a phone, the legend stands under the
+  plot, where over it it hid most of the points it named.
 - **The warnings**, above the plot, with their count on the heading:
   those of the old panel with this page's words, below, "Its words".
 - **The notes** and **the line of the versions**, as the old panel.
@@ -716,6 +728,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | its menu | "Table as CSV"; "Image as SVG"; "Image as PNG"; "Data as CSV" |
 | a histogram's menu waiting, and the menu of the counts per population | "Download once panel.nei is read to the end."; once the user stopped the one pass, "Download once panel.nei is read to the end: its reading was stopped; start it again in the box Variants file."; once it failed, "Nothing to download: panel.nei could not be read to the end; the box Variants file says why." |
 | the PCA's menu while three.js downloads | "Download once the 3D view is drawn." |
+| the table of the individuals cut off at its right | "More columns: scroll sideways." |
 | the result while its code downloads | "Loading the result…" |
 | the result whose code could not be downloaded | "The result of the PCA could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page, open panel.nei again and run the PCA again."; "PCoA" under the PCoA; its button "Try again" |
 | the status region, a file handed to the browser | "Saving panel.pca.coordinates.csv." |

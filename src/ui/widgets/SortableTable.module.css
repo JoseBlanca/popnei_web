@@ -155,3 +155,29 @@
 .menuLine {
   margin-block-end: var(--space-2);
 }
+
+/* A table that says when columns are cut off at its right: its box, and
+   over the right edge of the box, inside its border, a fade to the
+   background, which lets the clicks through; and the words under it, at
+   its end. */
+.frame {
+  position: relative;
+  display: grid;
+  min-inline-size: 0;
+}
+
+.fade {
+  position: absolute;
+  inset-block: 1px;
+  inset-inline-end: 1px;
+  inline-size: var(--space-8);
+  background: linear-gradient(to right, transparent, var(--color-background));
+  pointer-events: none;
+}
+
+.more {
+  justify-self: end;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}

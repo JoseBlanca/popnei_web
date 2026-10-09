@@ -104,6 +104,26 @@
   background: var(--color-background);
 }
 
+/* On popgen2.html, on a page narrower than 30rem, a phone, the legend
+   under the plot, at the width of its entries: over the plot it hid
+   most of the population it named in the PCoA and half of it in the 2D
+   plot at 320 pixels (the review of work package 6 of
+   docs/plans/analyses-pca.md, 10 October 2026). popgen.html keeps it
+   over the plot. */
+@media (width < 30em) {
+  .legendBelow {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .legendBelow .legend {
+    position: static;
+    justify-self: start;
+    max-block-size: none;
+    max-inline-size: 100%;
+  }
+}
+
 .legendTitle {
   margin: 0;
   padding-inline: var(--space-2);

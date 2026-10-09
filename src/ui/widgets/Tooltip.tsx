@@ -124,13 +124,7 @@ export function WithTooltip({
       >
         {children(text === null ? undefined : id)}
         {held === undefined ? (
-          <AriaTooltip
-            className={classOf(styles, "tooltip")}
-            placement="bottom"
-            offset={TOOLTIP_OFFSET_PX}
-          >
-            {text}
-          </AriaTooltip>
+          <StillTooltipBox>{text}</StillTooltipBox>
         ) : (
           <HeldTooltipBox held={held}>{text}</HeldTooltipBox>
         )}
@@ -141,6 +135,34 @@ export function WithTooltip({
         </span>
       )}
     </>
+  );
+}
+
+/** React Aria's tooltip under its trigger, given a state of its trigger
+    with no animation, as `HeldTooltipBox` below says why. */
+function StillTooltipBox({
+  children,
+}: {
+  readonly children: React.ReactNode;
+}): React.JSX.Element {
+  const state = useContext(TooltipTriggerStateContext);
+  if (state === null) {
+    throw new Error(
+      "popnei_web defect: a tooltip was drawn outside its trigger.",
+    );
+  }
+  return (
+    <TooltipTriggerStateContext.Provider
+      value={{ ...state, shouldSkipAnimation: true }}
+    >
+      <AriaTooltip
+        className={classOf(styles, "tooltip")}
+        placement="bottom"
+        offset={TOOLTIP_OFFSET_PX}
+      >
+        {children}
+      </AriaTooltip>
+    </TooltipTriggerStateContext.Provider>
   );
 }
 
