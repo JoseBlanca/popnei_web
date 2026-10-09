@@ -1,19 +1,16 @@
 /* The tokens are those of src/ui/tokens.css. */
 
-/* The opening: the zone. */
+/* The opening: the zone, at the end of the box of the variants file. */
 .section {
   display: grid;
   align-content: start;
 }
 
-/* The box of the file: a solid border, where the zone's is dashed. */
-.box {
+/* The lines of the file, in the box of the variants file
+   (VariantsPage.module.css), above its zone. */
+.summary {
   display: grid;
   gap: var(--space-2);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
 }
 
 /* The lines of one load of the file, one under the other. */

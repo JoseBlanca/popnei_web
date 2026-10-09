@@ -10,7 +10,7 @@
 import { StrictMode, act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { loadVariants } from "../../core/project.ts";
 import { summaryResult } from "../../core/testSupport.ts";
@@ -210,4 +210,99 @@ test("live-stats 2 after a throw while the box of one file is drawn, the box of 
   expect(
     [...container.querySelectorAll("button")].map((b) => b.textContent),
   ).toContain("Stop");
+});
+
+/** The region of the page named `name`, or null. */
+function region(name: string): Element | null {
+  return container.querySelector(
+    `section[aria-labelledby="${CSS.escape(headingIdOf(name))}"]`,
+  );
+}
+
+/** The id of the heading of the level 2 whose words are `name`. */
+function headingIdOf(name: string): string {
+  const heading = [...container.querySelectorAll("h2")].find(
+    (h) => h.textContent === name,
+  );
+  return heading?.id ?? `<no heading ${name}>`;
+}
+
+/** The button whose words are `words`, or null. */
+function buttonOf(words: string): HTMLButtonElement | null {
+  return (
+    [...container.querySelectorAll("button")].find(
+      (b) => b.textContent === words,
+    ) ?? null
+  );
+}
+
+describe("IN3 the page in two boxes and two tabs", () => {
+  test("with no file: the two boxes with their words of no file, the zone in the box of the variants file, then the two tabs with the variants file's shown", async () => {
+    await drawPage();
+    const variantsBox = region("Variants file");
+    const individualsBox = region("Individuals file");
+    expect(variantsBox).not.toBeNull();
+    expect(individualsBox).not.toBeNull();
+    expect(variantsBox?.contains(buttonOf("Open variants file…"))).toBe(true);
+    expect(individualsBox?.textContent).toBe(
+      "Individuals fileNo individuals file: every individual is unclassified.",
+    );
+    const tabs = [...container.querySelectorAll('[role="tab"]')];
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      "Variants file",
+      "Individuals file",
+    ]);
+    expect(tabs.map((tab) => tab.getAttribute("aria-selected"))).toEqual([
+      "true",
+      "false",
+    ]);
+    expect(
+      container.querySelector('[role="tablist"]')?.getAttribute("aria-label"),
+    ).toBe("The files");
+    // The boxes come before the row of the tabs in the page.
+    const tabList = container.querySelector('[role="tablist"]');
+    expect(
+      individualsBox !== null &&
+        tabList !== null &&
+        (individualsBox.compareDocumentPosition(tabList) &
+          Node.DOCUMENT_POSITION_FOLLOWING) !==
+          0,
+    ).toBe(true);
+    expect(container.textContent).toContain(
+      "No variants file open. Open one in the box Variants file.",
+    );
+    // The tab not shown is drawn, inert.
+    const hidden = [...container.querySelectorAll("[inert]")];
+    expect(hidden.map((element) => element.textContent)).toEqual([
+      "No individuals file open.",
+    ]);
+  });
+
+  test("with a variants file read, the box of the individuals file says how many individuals of it are unclassified", async () => {
+    const { store } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+    expect(region("Individuals file")?.textContent).toBe(
+      "Individuals fileNo individuals file: all 2 individuals of first.nei are unclassified, and the analyses per population will take them as one population.",
+    );
+    expect(container.textContent).not.toContain("No variants file open.");
+  });
+
+  test("the zone is outside the boundary made for each file: its button is the same element after a throw in the box of one file and the opening of the next", async () => {
+    const { store, requests } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+    const button = buttonOf("Open another variants file…");
+    expect(button).not.toBeNull();
+    inject.throwAt = 3;
+    await act(async () => {
+      requests
+        .at(-1)
+        ?.soFar(summaryResult(["1", "2", "3"], [100, 100, 100], ["i1", "i2"]));
+      await Promise.resolve();
+    });
+    expect(caught).toHaveLength(1);
+    expect(buttonOf("Open another variants file…")).toBe(button);
+    await open(store, "b".repeat(32), "second.nei");
+    expect(buttonOf("Open another variants file…")).toBe(button);
+    expect(region("Variants file")?.contains(button)).toBe(true);
+  });
 });

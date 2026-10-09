@@ -1,31 +1,54 @@
 /**
- * The body of popgen2.html, the first of the new screens
- * (docs/plans/open-variants.md; the owner's layouts of 6 October 2026):
- * the page's one heading, "Popnei"; the box of the file open, with what
- * went wrong with it; under it the statistics of the open file
- * (docs/plans/file-stats.md); and at the bottom the opening of the
- * variants file, which the owner put after the statistics on 6 October
- * 2026, and which is alone under the heading before a file is opened.
- * Each is in a boundary of errors that draws its name alone in its place,
- * those of the box and of the statistics made again for each file; and
- * the status region
- * says what changes away from the focus. The page holds the words of the last file
- * not opened, which the opening says and the box shows.
+ * The body of popgen2.html (docs/specs/steps/popgen2-input.md, "The order
+ * of the page"): the page's one heading, "Popnei"; under it the two boxes
+ * of the files, side by side from 720 pixels and one above the other
+ * below, the variants file's first; and under them the two tabs, "Variants
+ * file" and "Individuals file", the first shown when the page opens and
+ * never changed by the page. Both tabs stay drawn, the one not shown inert
+ * and hidden, so that a turn to the other and back finds the plots and the
+ * thresholds as they were ("Both tabs kept drawn").
+ *
+ * The box of the variants file holds the lines of the file open, in a
+ * boundary of errors made again for each file, which draws their name
+ * alone in their place when they throw, and ends with the zone that opens
+ * a variants file, moved there from the end of the page. The zone is
+ * outside that boundary: inside it, it would be drawn anew at each
+ * opening, and the button the user pressed, which holds the focus, would
+ * be replaced, leaving the focus on nothing. The tab "Variants file" holds
+ * the statistics of the file open (docs/plans/file-stats.md), and the
+ * status region says what changes away from the focus, whichever tab is
+ * shown. The page holds the words of the last file not opened, which the
+ * opening says and the box shows, and the tab shown, which is the
+ * screen's and not the project's.
  */
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { StatusRegion } from "../shell/StatusRegion.tsx";
 import { useAppState } from "../store.tsx";
+import { Tabs } from "../widgets/Tabs.tsx";
+import { IndividualsBox } from "./IndividualsBox.tsx";
+import {
+  INDIVIDUALS_BOX_NAME,
+  NO_INDIVIDUALS_FILE_TAB,
+} from "./individualsWords.ts";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
 import type { StatsShown } from "./announceChanges.ts";
 import { StatsSection } from "./StatsSection.tsx";
 import styles from "./VariantsPage.module.css";
 import { VariantsSummary } from "./VariantsSummary.tsx";
-import { INFO_NAME, OPENING_NAME } from "./words.ts";
+import {
+  FILES_TABS_LABEL,
+  INFO_NAME,
+  NO_VARIANTS_FILE_TAB,
+  OPENING_NAME,
+} from "./words.ts";
+
+/** The ids of the two tabs of the files. */
+type FileTab = "variants" | "individuals";
 
 /** What the page is drawn with. */
 export interface VariantsPageProps {
@@ -48,6 +71,8 @@ export function VariantsPage({
 }: VariantsPageProps): React.JSX.Element {
   const openButton = useRef<HTMLButtonElement>(null);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
+  const [tab, setTab] = useState<FileTab>("variants");
+  const variantsHeadingId = useId();
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
   return (
     <>
@@ -66,25 +91,70 @@ export function VariantsPage({
             the FILTER box as commands with their descriptions, a run of
             the keys made a change before any other command (runGate.tsx,
             thresholdRun.ts), and the words of an undo (undoRedo.ts). */}
-        {/* Another load is another boundary, which has caught nothing, so
-            that a throw while the box of one file is drawn leaves the
-            next file its box, its Stop and its Start again. */}
-        <ErrorBoundary key={fileId ?? "none"} heading={INFO_NAME} level={2}>
-          <VariantsSummary
-            autoRuns={autoRuns}
-            openButton={openButton}
-            onCountButton={onCountButton}
-            refusal={refusal}
-          />
-        </ErrorBoundary>
-        <StatsSection
-          autoRuns={autoRuns}
-          openButton={openButton}
-          onShown={onStatsShown}
+        <div className={classOf(styles, "boxes")}>
+          <section
+            aria-labelledby={variantsHeadingId}
+            className={classOf(styles, "box")}
+          >
+            <h2
+              id={variantsHeadingId}
+              className={classOf(styles, "boxHeading")}
+            >
+              {OPENING_NAME}
+            </h2>
+            {/* Another load is another boundary, which has caught
+                nothing, so that a throw while the lines of one file are
+                drawn leaves the next file its lines, its Stop and its
+                Start again. */}
+            <ErrorBoundary key={fileId ?? "none"} heading={INFO_NAME} level={3}>
+              <VariantsSummary
+                autoRuns={autoRuns}
+                openButton={openButton}
+                onCountButton={onCountButton}
+                refusal={refusal}
+              />
+            </ErrorBoundary>
+            <ErrorBoundary heading={OPENING_NAME} level={3}>
+              <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
+            </ErrorBoundary>
+          </section>
+          <IndividualsBox />
+        </div>
+        <Tabs<FileTab>
+          label={FILES_TABS_LABEL}
+          selected={tab}
+          onChange={setTab}
+          keepHidden
+          tabs={[
+            {
+              id: "variants",
+              label: OPENING_NAME,
+              content: (
+                <>
+                  {fileId === null && (
+                    <p className={classOf(styles, "boxLine")}>
+                      {NO_VARIANTS_FILE_TAB}
+                    </p>
+                  )}
+                  <StatsSection
+                    autoRuns={autoRuns}
+                    openButton={openButton}
+                    onShown={onStatsShown}
+                  />
+                </>
+              ),
+            },
+            {
+              id: "individuals",
+              label: INDIVIDUALS_BOX_NAME,
+              content: (
+                <p className={classOf(styles, "boxLine")}>
+                  {NO_INDIVIDUALS_FILE_TAB}
+                </p>
+              ),
+            },
+          ]}
         />
-        <ErrorBoundary heading={OPENING_NAME} level={2}>
-          <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
-        </ErrorBoundary>
       </main>
       <StatusRegion />
     </>

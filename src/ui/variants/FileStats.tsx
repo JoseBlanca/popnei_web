@@ -1,7 +1,7 @@
 /**
- * The statistics of the open file on popgen2.html, between the box of
- * the file and the open button, which the owner put at the bottom of the
- * page (docs/plans/file-stats.md, "The design" and "Round 1 with the
+ * The statistics of the open file on popgen2.html, under the tab
+ * "Variants file" (docs/specs/steps/popgen2-input.md, "The tab Variants
+ * file"; docs/plans/file-stats.md, "The design" and "Round 1 with the
  * owner"; steps 3 and 4 of case 2 of docs/use-cases.md). Two parts, each
  * under its heading, both from the result of the summary of the variants
  * file, whose one pass counts the variants and calculates them
@@ -50,7 +50,7 @@
  * user may be about to click or have the focus (the review of work
  * package 7 of docs/plans/filters.md, 8 October 2026). The download of
  * the table of the individuals comes with the result alone, the code of
- * the plots there or not, and moves the open button down by its height.
+ * the plots there or not, and moves what follows it down by its height.
  *
  * The code of the plots, with D3, SectionPlots.tsx, is downloaded apart
  * from the page's, from the moment a file is picked, so that the page's

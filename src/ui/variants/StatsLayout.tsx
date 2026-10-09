@@ -6,9 +6,9 @@
  * under it, and the download of the individuals. The room of the plots
  * is kept while the pass has given none yet, so that what is under them
  * does not move down as they arrive (FileStats.tsx); the download is
- * given no room, and the open button under the section moves down as it
- * arrives, which the owner chose over empty space
- * (docs/plans/live-stats.md, "The open widget moves with the plots").
+ * given no room, and what follows it moves down as it arrives, which the
+ * owner chose over empty space (docs/plans/live-stats.md, "The open
+ * widget moves with the plots"), when the opening was under the section.
  *
  * Apart from SectionPlots.tsx, and with no D3, since FileStats.tsx draws
  * the section with it while the code of the plots downloads: the page's

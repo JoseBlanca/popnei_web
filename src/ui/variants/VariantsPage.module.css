@@ -12,3 +12,43 @@
   margin: 0;
   font-size: var(--text-xl);
 }
+
+/* The two boxes of the files, one above the other, each the width of the
+   page less its margins, at 320 pixels included. */
+.boxes {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* From 720 pixels, 45em at the browser's 16 pixels, side by side, each
+   half the width; minmax(0, 1fr) keeps a long name of a file from
+   widening its box past its half (docs/specs/steps/popgen2-input.md,
+   "The order of the page"). */
+@media (width >= 45em) {
+  .boxes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* The box of a file: its heading, what it shows of the file, and the
+   zone that opens one at its end. A solid border, where the zone's is
+   dashed. */
+.box {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.boxHeading {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.boxLine {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

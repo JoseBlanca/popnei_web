@@ -27,7 +27,6 @@ import {
   FOLDER_DROPPED,
   OPEN_ANOTHER_LABEL,
   OPEN_LABEL,
-  OPENING_NAME,
   PASTE_LABEL,
   SEVERAL_DROPPED,
   TEXT_DROPPED,
@@ -111,7 +110,8 @@ export function OpenVariants({
   };
 
   return (
-    <section aria-label={OPENING_NAME} className={classOf(styles, "section")}>
+    // In the box of the variants file, whose heading names it.
+    <div className={classOf(styles, "section")}>
       <FileZone
         pasteLabel={PASTE_LABEL}
         buttonLabel={variants === null ? OPEN_LABEL : OPEN_ANOTHER_LABEL}
@@ -122,6 +122,6 @@ export function OpenVariants({
         }}
         buttonRef={buttonRef}
       />
-    </section>
+    </div>
   );
 }

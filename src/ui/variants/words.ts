@@ -52,9 +52,18 @@ export const OPEN_ANOTHER_LABEL = "Open another variants file…";
 /** The name of the zone's hidden button that takes a pasted file. */
 export const PASTE_LABEL = "Paste a variants file";
 
-/** The name of the widget that opens a variants file, which has no
-    heading of its own. */
+/** The heading of the box of the variants file, at the top of the page,
+    which ends with the zone that opens one, and the label of its tab. */
 export const OPENING_NAME = "Variants file";
+
+/** The name of the row of the two tabs of the files, which a screen
+    reader reads before their labels. */
+export const FILES_TABS_LABEL = "The files";
+
+/** What the tab of the variants file says before a variants file is
+    open. */
+export const NO_VARIANTS_FILE_TAB =
+  "No variants file open. Open one in the box Variants file.";
 
 /** What the page says when several files are dropped or pasted at once. */
 export const SEVERAL_DROPPED = "Open one variants file at a time.";
@@ -70,9 +79,10 @@ export function notOpenedText(name: string): string {
   return `${escaped(name)} was not opened: a variants file is a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a .nei file. If it is one of them, rename it.`;
 }
 
-/** The name of the box of the file open, above the open button, which
-    has no heading: what a screen reader calls it, and the heading drawn
-    in its place when it fails. */
+/** The name of the lines of the file open, in the box of the variants
+    file above its zone, which have no heading of their own: what a
+    screen reader calls them, and the heading drawn in their place when
+    they fail. */
 export const INFO_NAME = "File information";
 
 /** The first line of the box: "panel.vcf.gz · 87 KB". */

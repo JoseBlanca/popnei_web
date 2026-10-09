@@ -20,6 +20,9 @@ import {
   refusalText,
   variantsLine,
   FAILURES_COUNTING,
+  FILES_TABS_LABEL,
+  NO_VARIANTS_FILE_TAB,
+  OPENING_NAME,
   FAILURES_NOT_COUNTED,
   failuresLineOf,
 } from "./words.ts";
@@ -463,5 +466,21 @@ describe("popnei-0.2.2 3 the line of the FILTER failures", () => {
     );
     expect(failuresLineOf(ready, true, false)).toBeNull();
     expect(failuresLineOf(error, false, false)).toBeNull();
+  });
+});
+
+describe("IN3 the words of the boxes and the tabs of the files", () => {
+  test("the heading of the box of the variants file and the label of its tab", () => {
+    expect(OPENING_NAME).toBe("Variants file");
+  });
+
+  test("the name of the row of the tabs, for a screen reader", () => {
+    expect(FILES_TABS_LABEL).toBe("The files");
+  });
+
+  test("the tab of the variants file with no file", () => {
+    expect(NO_VARIANTS_FILE_TAB).toBe(
+      "No variants file open. Open one in the box Variants file.",
+    );
   });
 });

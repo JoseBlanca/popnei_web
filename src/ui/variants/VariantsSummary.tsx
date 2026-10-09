@@ -1,6 +1,7 @@
 /**
- * The box of the variants file on popgen2.html, above the open button
- * (docs/plans/open-variants.md, "Two widgets" and "Round 3"; the owner's
+ * The lines of the variants file on popgen2.html, in its box above the
+ * zone that opens one (docs/specs/steps/popgen2-input.md, "The box of
+ * the variants file"; docs/plans/open-variants.md, "Two widgets" and "Round 3"; the owner's
  * layouts and decisions of 6 October 2026). It says what is known of the
  * file open, line by line: its name and size, its individuals, its
  * variants, the variants that failed their FILTER, its chromosomes and
@@ -22,7 +23,8 @@
  * adds to it, after the lines: a file popnei could not read, in place of
  * all the lines but the first; a count refused; a file refused by its
  * name, or several files at once, after the lines of the file still open,
- * or alone with none. There is no box before a file is opened or refused.
+ * or alone with none. There are no lines before a file is opened or
+ * refused, and the box holds its heading and the zone alone.
  */
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 
@@ -102,7 +104,7 @@ export function VariantsSummary({
       : null;
   if (variants === null && refusalText === null) return null;
   return (
-    <section aria-label={INFO_NAME} className={classOf(styles, "box")}>
+    <section aria-label={INFO_NAME} className={classOf(styles, "summary")}>
       {variants !== null && (
         // Another load is other lines, so that those before go, with
         // the focus they held.
