@@ -186,24 +186,87 @@ async function runHeld(page: Page): Promise<void> {
   ).toHaveAttribute("aria-valuenow", /^[1-9]\d*$/u, { timeout: 30_000 });
 }
 
+/** Expects one tooltip shown, with the reason of the lock, under
+    `anchor`, the visible part of the control it belongs to, and
+    overlapping it from left to right. */
+async function expectTooltipUnder(page: Page, anchor: Locator): Promise<void> {
+  const tip = page.getByRole("tooltip");
+  await expect(tip).toHaveCount(1);
+  await expect(tip).toHaveText(LOCKED);
+  const tipBox = await tip.boundingBox();
+  const anchorBox = await anchor.boundingBox();
+  if (tipBox === null || anchorBox === null) {
+    throw new Error("no box of the tooltip or of its control");
+  }
+  expect(tipBox.y).toBeGreaterThanOrEqual(anchorBox.y + anchorBox.height - 1);
+  expect(tipBox.x).toBeLessThan(anchorBox.x + anchorBox.width);
+  expect(tipBox.x + tipBox.width).toBeGreaterThan(anchorBox.x);
+}
+
 /** Expects `control` to wait with the reason of the lock: marked
-    `aria-disabled`, its tooltip shown when the Tab key reaches it. */
-async function expectWaiting(page: Page, control: Locator): Promise<void> {
+    `aria-disabled`, and its tooltip, alone, shown under `anchor`, its
+    visible part, when the Tab key reaches it from the control before it,
+    once, with no tooltip shown before the key. */
+async function expectWaiting(
+  page: Page,
+  control: Locator,
+  anchor: Locator = control,
+): Promise<void> {
   await expect(control).toHaveAttribute("aria-disabled", "true");
-  // Out and back by the keyboard, which is what shows a tooltip. Between
-  // two fields that wait, the tooltip of the field reached did not show
-  // once in 13 runs of Chromium 153, the one left closing after it; so
-  // the move is made again until it shows.
-  await expect(async () => {
-    await control.focus();
-    await page.keyboard.press("Shift+Tab");
-    await page.keyboard.press("Tab");
-    await expect(control).toBeFocused();
-    await expect(page.getByRole("tooltip")).toHaveText(LOCKED, {
-      timeout: 1_000,
-    });
-  }).toPass({ timeout: 10_000 });
+  await control.focus();
+  await page.keyboard.press("Shift+Tab");
   await page.keyboard.press("Escape");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await page.keyboard.press("Tab");
+  await expect(control).toBeFocused();
+  await expectTooltipUnder(page, anchor);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+}
+
+/** The label of a radio button, a switch or a check box, whose words
+    and mark the user sees, around its input. */
+function labelOf(control: Locator): Locator {
+  return control.locator("xpath=ancestor::label[1]");
+}
+
+/** The controls of the PCA tab that wait while a PCA runs, each with its
+    visible part, the tooltip's anchor: the radio buttons (anchored on
+    their group), the switch (on its label) and the number boxes (on
+    themselves). The missing data and the MAF made stricter, so that
+    their boxes are drawn. */
+async function pcaTabControls(
+  page: Page,
+): Promise<readonly { readonly control: Locator; readonly anchor: Locator }[]> {
+  const controls: { control: Locator; anchor: Locator }[] = [];
+  for (const radioGroup of await shown(page).getByRole("radiogroup").all()) {
+    for (const radio of await radioGroup.getByRole("radio").all()) {
+      controls.push({ control: radio, anchor: radioGroup });
+    }
+  }
+  for (const toggle of await shown(page).getByRole("switch").all()) {
+    controls.push({ control: toggle, anchor: labelOf(toggle) });
+  }
+  for (const box of await shown(page).getByRole("textbox").all()) {
+    controls.push({ control: box, anchor: box });
+  }
+  return controls;
+}
+
+/** Makes the missing data and the MAF of the PCA stricter, at the upper
+    end of their fields, which changes no variant the PCA reads, so that
+    their boxes are drawn. */
+async function makeBothStricter(page: Page): Promise<void> {
+  for (const name of [
+    "Filter the variants by missing data",
+    "Filter the variants by major allele frequency (MAF)",
+  ]) {
+    await group(page, name)
+      .locator("label")
+      .filter({ hasText: "Stricter for the PCA" })
+      .click();
+  }
+  await expect(shown(page).getByRole("textbox")).toHaveCount(4);
 }
 
 test("AP6 D3 the PCA tab opened during the one pass, held: Run disabled with the reading under way; after it, with the reason of the LD pruning with no distance; a distance typed, Run; axe light and dark in each", async ({
@@ -239,122 +302,288 @@ test("AP6 D3 the PCA tab opened during the one pass, held: Run disabled with the
   await expectAxeBothSchemes(page, makeAxeBuilder);
 });
 
-test("AP6 D3 a PCA held running: the bar moves; the PCA's options, the thresholds and the FILTER box greyed, aria-disabled, reached by the Tab key with their reason; a press, a key or a drag changes nothing; axe light and dark; all back after Stop", async ({
-  page,
-  makeAxeBuilder,
-}) => {
-  test.setTimeout(90_000);
-  await openHeld(page, "panel.vcf.gz");
-  await typeDistance(page, "50000");
-  await runHeld(page);
-  await expectAxeBothSchemes(page, makeAxeBuilder);
+test.describe("AP6 D3 the locks while a PCA runs", () => {
+  // Tall enough that a control reached by the Tab key is never at the
+  // bottom of the window, where React Aria would turn its tooltip above
+  // it.
+  test.use({ viewport: { width: 1280, height: 3_000 } });
 
-  // The PCA's own options.
-  const method = group(page, "Method");
-  const pcaRadio = method.getByRole("radio", { name: "PCA of the genotypes" });
-  const missing = group(page, "Filter the variants by missing data");
-  const ld = shown(page).getByRole("switch", {
-    name: "Prune the variants by linkage disequilibrium (LD)",
+  test("AP6 D3 a PCA held running: the bar moves; every option of the PCA tab, every threshold box and line of the Variants tab and the FILTER box greyed, aria-disabled, with their reason as description, and its tooltip alone under each reached by the Tab key; a press, a key or a drag changes nothing; axe light and dark; all back after Stop", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    test.setTimeout(120_000);
+    await openHeld(page, "panel.vcf.gz");
+    await typeDistance(page, "50000");
+    await makeBothStricter(page);
+    await runHeld(page);
+    await expectAxeBothSchemes(page, makeAxeBuilder);
+
+    // Every option of the PCA tab: 6 radio buttons, the switch and 4
+    // boxes.
+    const controls = await pcaTabControls(page);
+    expect(controls).toHaveLength(11);
+    for (const radioGroup of await shown(page).getByRole("radiogroup").all()) {
+      await expect(radioGroup).toHaveAccessibleDescription(
+        new RegExp(`${LOCKED.replace(/[.]/gu, "\\.")}$`, "u"),
+      );
+    }
+    for (const { control, anchor } of controls) {
+      const role = await control.getAttribute("type");
+      if (role !== "radio") {
+        await expect(control).toHaveAccessibleDescription(
+          new RegExp(LOCKED, "u"),
+        );
+      }
+      // A radio button not chosen is no stop of the Tab key, which
+      // reaches its group at the one chosen.
+      if (role === "radio" && !(await control.isChecked())) {
+        await expect(control).toHaveAttribute("aria-disabled", "true");
+      } else {
+        await expectWaiting(page, control, anchor);
+      }
+    }
+
+    // Pressed though they say they wait, as a user may: Playwright would
+    // not press a control marked aria-disabled.
+    const method = group(page, "Method");
+    const pcaRadio = method.getByRole("radio", {
+      name: "PCA of the genotypes",
+    });
+    const missing = group(page, "Filter the variants by missing data");
+    const ld = shown(page).getByRole("switch", {
+      name: "Prune the variants by linkage disequilibrium (LD)",
+    });
+    await method
+      .locator("label")
+      .filter({ hasText: "PCoA" })
+      .click({ force: true });
+    await expect(pcaRadio).toBeChecked();
+    await missing
+      .locator("label")
+      .filter({ hasText: "As in the Variants tab" })
+      .click({ force: true });
+    await expect(
+      missing.getByRole("radio", { name: "Stricter for the PCA" }),
+    ).toBeChecked();
+    await labelOf(ld).click({ force: true });
+    await expect(ld).toBeChecked();
+    await distance(page).focus();
+    await page.keyboard.press("End");
+    await page.keyboard.type("5");
+    await page.keyboard.press("ArrowUp");
+    await page.keyboard.press("Enter");
+    await expect(distance(page)).toHaveValue("50000");
+    await expect(stop(page)).toBeVisible();
+
+    // The five thresholds of the Variants tab, each its box and its line,
+    // and the FILTER box.
+    await tab(page, "Variants").click();
+    const boxes = await stats(page).getByRole("textbox").all();
+    const lines = await stats(page).getByRole("slider").all();
+    expect(boxes).toHaveLength(5);
+    expect(lines).toHaveLength(5);
+    for (const control of [...boxes, ...lines]) {
+      await expect(control).toHaveAccessibleDescription(
+        new RegExp(LOCKED, "u"),
+      );
+      await expectWaiting(page, control);
+    }
+    const rate = histogram(page, "Proportion of missing genotypes");
+    const before = await rate.slider.inputValue();
+    await rate.box.focus();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.type("2");
+    await page.keyboard.press("Enter");
+    await expect(rate.box).toHaveValue("0.1");
+    await rate.slider.focus();
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("PageDown");
+    await expect(rate.slider).toHaveValue(before);
+    // Ctrl+Z after the keys, in the box and on the line: no run of the
+    // keys was started to be made a change, and Undo waits.
+    for (const control of [rate.box, rate.slider]) {
+      await control.focus();
+      await page.keyboard.press("ArrowDown");
+      await page.keyboard.press("ControlOrMeta+z");
+      await control.blur();
+    }
+    await expect(rate.box).toHaveValue("0.1");
+    await expect(rate.slider).toHaveValue(before);
+    await expect(
+      page.getByRole("button", { name: "Undo", exact: true }),
+    ).toHaveAccessibleDescription(LOCKED);
+    const thumb = rate.slider.locator("xpath=../..");
+    await thumb.scrollIntoViewIfNeeded();
+    const box = await thumb.boundingBox();
+    if (box === null) throw new Error("no thumb");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x - 100, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await expect(rate.slider).toHaveValue(before);
+    await expect(rate.box).toHaveValue("0.1");
+
+    const filter = stats(page).getByRole("checkbox", {
+      name: "Leave out the variants that failed their FILTER",
+    });
+    await expect(filter).toHaveAccessibleDescription(new RegExp(LOCKED, "u"));
+    await expectWaiting(page, filter, labelOf(filter));
+    await labelOf(filter).click({ force: true });
+    await expect(filter).toBeChecked();
+    await expectAxeBothSchemes(page, makeAxeBuilder);
+
+    await tab(page, "PCA").click();
+    await stop(page).click();
+    await expect(run(page)).toBeEnabled();
+    for (const { control } of await pcaTabControls(page)) {
+      await expect(control).not.toHaveAttribute("aria-disabled");
+    }
+    await tab(page, "Variants").click();
+    for (const control of [...boxes, ...lines, filter]) {
+      await expect(control).not.toHaveAttribute("aria-disabled");
+    }
   });
-  for (const control of [
-    pcaRadio,
-    missing.getByRole("radio", { name: "As in the Variants tab: 0.1" }),
-    ld,
-    distance(page),
-  ]) {
-    await expect(control).toHaveAttribute("aria-disabled", "true");
-  }
-  await expect(method).toHaveAccessibleDescription(LOCKED);
-  await expect(ld).toHaveAccessibleDescription(new RegExp(LOCKED, "u"));
-  await expect(distance(page)).toHaveAccessibleDescription(
-    new RegExp(LOCKED, "u"),
-  );
-  await expectWaiting(page, distance(page));
-  await expectWaiting(page, ld);
 
-  // Pressed though they say they wait, as a user may: Playwright would
-  // not press a control marked aria-disabled.
-  await method
-    .locator("label")
-    .filter({ hasText: "PCoA" })
-    .click({ force: true });
-  await expect(pcaRadio).toBeChecked();
-  await missing
-    .locator("label")
-    .filter({ hasText: "Stricter for the PCA" })
-    .click({ force: true });
-  await expect(
-    missing.getByRole("radio", { name: "As in the Variants tab: 0.1" }),
-  ).toBeChecked();
-  await shown(page)
-    .locator("label")
-    .filter({ hasText: "Prune the variants by linkage disequilibrium (LD)" })
-    .click({ force: true });
-  await expect(ld).toBeChecked();
-  await distance(page).focus();
-  await page.keyboard.press("End");
-  await page.keyboard.type("5");
-  await page.keyboard.press("ArrowUp");
-  await page.keyboard.press("Enter");
-  await expect(distance(page)).toHaveValue("50000");
-  await expect(stop(page)).toBeVisible();
-
-  // The thresholds and the FILTER box of the Variants tab.
-  await tab(page, "Variants").click();
-  const rate = histogram(page, "Proportion of missing genotypes");
-  await expect(rate.box).toHaveAttribute("aria-disabled", "true");
-  await expect(rate.slider).toHaveAttribute("aria-disabled", "true");
-  await expect(rate.box).toHaveAccessibleDescription(new RegExp(LOCKED, "u"));
-  await expectWaiting(page, rate.box);
-  await expectWaiting(page, rate.slider);
-  const before = await rate.slider.inputValue();
-  await rate.box.focus();
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.type("2");
-  await page.keyboard.press("Enter");
-  await expect(rate.box).toHaveValue("0.1");
-  await rate.slider.focus();
-  await page.keyboard.press("ArrowLeft");
-  await page.keyboard.press("PageDown");
-  await expect(rate.slider).toHaveValue(before);
-  const thumb = rate.slider.locator("xpath=../..");
-  await thumb.scrollIntoViewIfNeeded();
-  const box = await thumb.boundingBox();
-  if (box === null) throw new Error("no thumb");
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(box.x - 100, box.y + box.height / 2, { steps: 8 });
-  await page.mouse.up();
-  await expect(rate.slider).toHaveValue(before);
-  await expect(rate.box).toHaveValue("0.1");
-
-  const filter = stats(page).getByRole("checkbox", {
-    name: "Leave out the variants that failed their FILTER",
+  test("AP6 D3 a PCA held running: 20 moves of the Tab key over the options of the PCA tab, each with no tooltip before it and the reason alone under the control after it", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await openHeld(page, "panel.nei");
+    await typeDistance(page, "50000");
+    await makeBothStricter(page);
+    await runHeld(page);
+    // The stops of the Tab key in their order: the radio button chosen of
+    // each group, the box of each filter made stricter, the switch, r²
+    // and the distance.
+    const stops: { control: Locator; anchor: Locator }[] = [];
+    for (const { control, anchor } of await pcaTabControls(page)) {
+      const isRadio = (await control.getAttribute("type")) === "radio";
+      if (!isRadio || (await control.isChecked())) {
+        stops.push({ control, anchor });
+      }
+    }
+    const order = await Promise.all(
+      stops.map(({ control }) =>
+        control.evaluate((element) => {
+          const all = [...document.querySelectorAll("input")];
+          return all.indexOf(element as HTMLInputElement);
+        }),
+      ),
+    );
+    const inOrder = stops
+      .map((one, i) => ({ ...one, at: order[i] ?? 0 }))
+      .toSorted((a, b) => a.at - b.at);
+    expect(inOrder).toHaveLength(8);
+    const first = inOrder[0];
+    if (first === undefined) throw new Error("no stop");
+    await first.control.focus();
+    await page.keyboard.press("Escape");
+    let at = 0;
+    let step = 1;
+    for (let move = 0; move < 20; move += 1) {
+      if (at + step < 0 || at + step >= inOrder.length) step = -step;
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("tooltip")).toHaveCount(0);
+      await page.keyboard.press(step > 0 ? "Tab" : "Shift+Tab");
+      at += step;
+      const reached = inOrder[at];
+      if (reached === undefined) throw new Error("no stop reached");
+      await expect(reached.control).toBeFocused();
+      await expectTooltipUnder(page, reached.anchor);
+    }
   });
-  await expect(filter).toHaveAttribute("aria-disabled", "true");
-  await expect(filter).toHaveAccessibleDescription(new RegExp(LOCKED, "u"));
-  await stats(page)
-    .locator("label")
-    .filter({ hasText: "Leave out the variants that failed their FILTER" })
-    .click({ force: true });
-  await expect(filter).toBeChecked();
-  await expectAxeBothSchemes(page, makeAxeBuilder);
 
-  await tab(page, "PCA").click();
-  await stop(page).click();
-  await expect(run(page)).toBeEnabled();
-  await expect(distance(page)).not.toHaveAttribute("aria-disabled");
-  await expect(pcaRadio).not.toHaveAttribute("aria-disabled");
-  await tab(page, "Variants").click();
-  await expect(rate.box).not.toHaveAttribute("aria-disabled");
-  await expect(rate.slider).not.toHaveAttribute("aria-disabled");
-  await expect(filter).not.toHaveAttribute("aria-disabled");
+  test("AP6 D3 a PCA held running: the mouse resting on each option of the PCA tab and on the FILTER box shows the reason, and a click on it shows it too", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await openHeld(page, "panel.vcf.gz");
+    await typeDistance(page, "50000");
+    await makeBothStricter(page);
+    await runHeld(page);
+    const targets: { target: Locator; anchor: Locator }[] = [];
+    for (const { control, anchor } of await pcaTabControls(page)) {
+      const kind = await control.getAttribute("role");
+      const isBox =
+        (await control.getAttribute("type")) !== "radio" && kind !== "switch";
+      targets.push({ target: isBox ? control : labelOf(control), anchor });
+    }
+    const check = async (
+      targetsHere: readonly { target: Locator; anchor: Locator }[],
+    ): Promise<void> => {
+      for (const { target, anchor } of targetsHere) {
+        await page.mouse.move(0, 0);
+        await expect(page.getByRole("tooltip")).toHaveCount(0);
+        await target.hover({ force: true });
+        await expectTooltipUnder(page, anchor);
+        await page.mouse.move(0, 0);
+        await expect(page.getByRole("tooltip")).toHaveCount(0);
+        await target.click({ force: true });
+        await expectTooltipUnder(page, anchor);
+        await page.keyboard.press("Escape");
+        await expect(page.getByRole("tooltip")).toHaveCount(0);
+        // The focus the click left in the control taken out, which would
+        // keep the next tooltip of the same group through the mouse
+        // leaving it.
+        await page.evaluate(() => {
+          const focused = document.activeElement;
+          if (focused instanceof HTMLElement) focused.blur();
+        });
+      }
+    };
+    await check(targets);
+    await tab(page, "Variants").click();
+    const filter = stats(page).getByRole("checkbox", {
+      name: "Leave out the variants that failed their FILTER",
+    });
+    await check([{ target: labelOf(filter), anchor: labelOf(filter) }]);
+  });
+});
+
+test.describe("AP6 D3 the locks on a touch screen", () => {
+  test.use({ hasTouch: true, viewport: { width: 1280, height: 3_000 } });
+
+  test("AP6 D3 a PCA held running: a tap on each option of the PCA tab and on the FILTER box shows the reason", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await openHeld(page, "panel.vcf.gz");
+    await typeDistance(page, "50000");
+    await makeBothStricter(page);
+    await runHeld(page);
+    const targets: { target: Locator; anchor: Locator }[] = [];
+    for (const { control, anchor } of await pcaTabControls(page)) {
+      const kind = await control.getAttribute("role");
+      const isBox =
+        (await control.getAttribute("type")) !== "radio" && kind !== "switch";
+      targets.push({ target: isBox ? control : labelOf(control), anchor });
+    }
+    const check = async (
+      targetsHere: readonly { target: Locator; anchor: Locator }[],
+    ): Promise<void> => {
+      for (const { target, anchor } of targetsHere) {
+        await page.keyboard.press("Escape");
+        await expect(page.getByRole("tooltip")).toHaveCount(0);
+        await target.tap({ force: true });
+        await expectTooltipUnder(page, anchor);
+      }
+    };
+    await check(targets);
+    await tab(page, "Variants").click();
+    const filter = stats(page).getByRole("checkbox", {
+      name: "Leave out the variants that failed their FILTER",
+    });
+    await check([{ target: labelOf(filter), anchor: labelOf(filter) }]);
+  });
 });
 
 test("AP6 D3 Run pressed within the second of an arrow key on a threshold: the PCA runs on the threshold the key gave, and is not stopped when the second passes", async ({
   page,
 }) => {
   test.setTimeout(90_000);
+  // The page's clock, which the flow moves on past the quiet second.
+  await page.clock.install();
   await openHeld(page, "panel.nei");
   await typeDistance(page, "50000");
   await tab(page, "Variants").click();
@@ -376,8 +605,9 @@ test("AP6 D3 Run pressed within the second of an arrow key on a threshold: the P
     }),
   ).toBeChecked();
   // Past the quiet second after the key, a timer of the page, when a run
-  // of the keys left waiting would have changed the threshold.
-  await page.waitForTimeout(1_500);
+  // of the keys left waiting would have changed the threshold: the
+  // page's clock moved on by 1.5 s, its timers run.
+  await page.clock.runFor(1_500);
   await expect(stop(page)).toBeVisible();
   await expect(
     shown(page).getByRole("progressbar", { name: "Calculating the PCA" }),
@@ -427,6 +657,76 @@ test("AP6 D3 while a PCA runs Undo is greyed with the reason and Ctrl+Z undoes n
   await expect(run(page)).toBeEnabled({ timeout: 30_000 });
   await expect(distance(page)).toHaveValue("50000");
   await expect(undo).toHaveCount(0);
+});
+
+/** Expects what a running PCA locks open again: the options of the PCA
+    tab, Undo, and, in the Variants tab, the boxes and lines of the
+    thresholds, the FILTER box when drawn, and the download of the
+    filtered variants. Leaves the Variants tab shown. */
+async function expectUnlocked(page: Page): Promise<void> {
+  await tab(page, "PCA").click();
+  for (const { control } of await pcaTabControls(page)) {
+    await expect(control).not.toHaveAttribute("aria-disabled");
+  }
+  const undo = page.getByRole("button", { name: "Undo", exact: true });
+  await expect(undo).not.toHaveAttribute("aria-disabled");
+  await expect(undo).toHaveAccessibleDescription(/^Undo: /u);
+  await tab(page, "Variants").click();
+  for (const control of [
+    ...(await stats(page).getByRole("textbox").all()),
+    ...(await stats(page).getByRole("slider").all()),
+    ...(await stats(page).getByRole("checkbox").all()),
+  ]) {
+    await expect(control).not.toHaveAttribute("aria-disabled");
+  }
+  await expect(downloadButton(page)).toBeEnabled();
+  await expect(downloadButton(page)).toHaveAccessibleDescription("");
+}
+
+test("AP6 D3 a PCA that ends with its result gives back the options of the PCA, the thresholds, the FILTER box, Undo and the download of the filtered variants", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await openHeld(page, "panel.vcf.gz");
+  await typeDistance(page, "50000");
+  await runHeld(page);
+  await release(page, "pca");
+  await expect(stop(page)).toHaveCount(0, { timeout: RESULT_TIMEOUT });
+  await expect(tableCaptionOf(page)).toBeVisible({ timeout: RESULT_TIMEOUT });
+  await expectUnlocked(page);
+});
+
+test("AP6 D3 a PCA that fails: its words in the tab and in the status region, Run offered again, the filters, Undo and the download given back; axe light and dark", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  test.setTimeout(90_000);
+  await recordAnnouncements(page);
+  await openHeld(page, "panel.vcf.gz");
+  await typeDistance(page, "50000");
+  await runHeld(page);
+  await release(page, "crash");
+  const words =
+    "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.vcf.gz again in the box Variants file.";
+  await expect(shown(page).getByText(words, { exact: true })).toBeVisible({
+    timeout: RESULT_TIMEOUT,
+  });
+  await expect
+    .poll(
+      async () =>
+        // The region may say it with what comes in the same pause.
+        (await announced(page)).some((text) =>
+          text.includes(
+            `The PCA of panel.vcf.gz could not be calculated: ${words}`,
+          ),
+        ),
+      { timeout: 10_000 },
+    )
+    .toBe(true);
+  await expect(run(page)).toBeEnabled();
+  await expect(stop(page)).toHaveCount(0);
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+  await expectUnlocked(page);
 });
 
 test("AP6 D3 the download of the filtered variants waits while a PCA is held, with its words, and comes back after Stop; the PCoA's words; the text after a download stays during a run; axe light and dark", async ({
@@ -1039,6 +1339,9 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     await typeDistance(page, "50000");
     await runHeld(page);
     await tab(page, "Variants").click();
+    const view3d = page.waitForResponse(/\/pca3d-[^/]*\.js$/u, {
+      timeout: RESULT_TIMEOUT,
+    });
     await release(page, "pca");
     await expect
       .poll(
@@ -1049,8 +1352,11 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
         { timeout: 30_000 },
       )
       .toBe(true);
-    // Time for three.js to download while the tab is hidden.
-    await page.waitForTimeout(1_000);
+    // three.js downloaded, and the 3D view drawn in the hidden tab.
+    await view3d;
+    await expect(page.locator("canvas")).toHaveCount(1, {
+      timeout: RESULT_TIMEOUT,
+    });
     expect(
       (await announced(page)).some((text) =>
         text.includes("Loading the 3D view…"),
@@ -1078,7 +1384,17 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
 
     await tab(page, "Variants").click();
     await expect(canvas).toBeHidden();
-    await page.waitForTimeout(500);
+    // Two frames, by which the browser has told the view its box is gone.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              resolve();
+            });
+          });
+        }),
+    );
     await tab(page, "PCA").click();
     await expect(view).toBeVisible();
     await canvas.scrollIntoViewIfNeeded();

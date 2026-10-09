@@ -666,6 +666,32 @@ describe("AP6 D3 the download waits while a PCA runs", () => {
     expect(placeOf(store)).toStrictEqual({ kind: "enabled" });
   });
 
+  test("the button is back when the PCA ends with its result, and when it fails", () => {
+    for (const ending of ["done", "failed"] as const) {
+      const { store, jobs } = storeOfPanel();
+      finishPass(store, jobs, pass(false));
+      startPca(store);
+      const pca = sentAt(jobs, jobs.length - 1);
+      expect(pca.job.analysis).toBe("pca");
+
+      store.runEnded(
+        pca.run.id,
+        ending === "done"
+          ? { kind: "done", key: pca.key, result: pcaOf(548) }
+          : {
+              kind: "failed",
+              error: { kind: "workerFailed", message: "a crash" },
+            },
+      );
+
+      expect(
+        store.getState().analyses.find((a) => a.id === "pca")?.status.kind,
+      ).toBe(ending === "done" ? "done" : "error");
+      expect(runningAnalysisOf(store.getState())).toBeNull();
+      expect(placeOf(store)).toStrictEqual({ kind: "enabled" });
+    }
+  });
+
   test("under the PCoA, the words name the PCoA", () => {
     const { store, jobs } = storeOfPanel();
     finishPass(store, jobs, pass(false));
@@ -740,3 +766,20 @@ describe("AP6 D3 the download waits while a PCA runs", () => {
     ).toStrictEqual(WAITS);
   });
 });
+
+/** A result of the PCA of `s000` and `s001`, from `numVars` variants. */
+function pcaOf(numVars: number): JobResult {
+  return {
+    analysis: "pca",
+    method: "pca",
+    individuals: ["s000", "s001"],
+    numComps: 1,
+    numCompsFound: 1,
+    projections: Float64Array.from([1, -1]),
+    explainedVariancePercent: Float64Array.from([100]),
+    numVarsUsed: numVars,
+    lingoesConstant: null,
+    negativeEigenvaluesPercent: null,
+    passStats: { numVars, filtering: {} },
+  };
+}
