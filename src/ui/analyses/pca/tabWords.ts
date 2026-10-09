@@ -1,0 +1,193 @@
+/**
+ * The words of the PCA tab of popgen2.html around its options
+ * (docs/specs/steps/popgen2-pca.md, "The PCA tab", "Run and Stop" and
+ * "Its words"): its heading and its name in a sentence, by the method;
+ * the line of the individuals it will run on; the lock of Run, the PCA's
+ * limit of the file before the one pass and the one pass before the
+ * store's other reasons; the words of its errors, in this page's words;
+ * and what the status region says when a run ends, whichever tab is
+ * shown. Pure, so that a test in node checks them; `pcaTabPanel` and the
+ * page's announcements draw and say them.
+ */
+
+import {
+  PCA_MAX_INDIVIDUALS,
+  crashText,
+  pcaOnPopgen2,
+  pcaOptions,
+  refusalText,
+  statisticsFailedText,
+} from "../../../core/analyses/pca.ts";
+import type { Failure } from "../../../core/analyses/individualChecks.ts";
+import type { IndividualsKept } from "../../../core/individualsKept.ts";
+import { escaped } from "../../../core/project.ts";
+import type { Project } from "../../../core/project.ts";
+import type {
+  AnalysisError,
+  AnalysisStatus,
+  AppState,
+} from "../../../core/store.ts";
+import type { JobResult, PcaMethod } from "../../../worker/protocol.ts";
+import {
+  WAITS_FOR_STATISTICS_TEXT,
+  failedText,
+  popgen2FailureText,
+} from "../words.ts";
+import type { FailedWords } from "../words.ts";
+import { passLockText } from "./passLock.ts";
+import type { PassLock } from "./passLock.ts";
+import { individualsRunOn, methodName, readyLines } from "./words.ts";
+
+/** The heading of the tab, its `<h2>`: "PCA" or "PCoA". */
+export function pcaTabTitle(method: PcaMethod): string {
+  return methodName(method);
+}
+
+/** The analysis in the middle of a sentence, which names the bar of a
+    run under way: "the PCA", "the PCoA". */
+export function pcaTabName(method: PcaMethod): string {
+  return `the ${methodName(method)}`;
+}
+
+/**
+ * The line of the individuals the PCA will run on, "200 individuals of
+ * panel.nei", or "111 of the 200 individuals of panel.nei, those the
+ * filters of individuals keep", as on the old panel; without the old
+ * panel's line that Run calculates the statistics of each individual
+ * first, since on this page the one pass calculates them and Run waits
+ * for its end. None without a variants file read or individuals kept.
+ */
+export function pcaTabReadyLines(
+  p: Project,
+  kept: IndividualsKept | null,
+): readonly string[] {
+  return readyLines(p, kept).filter(
+    (line) => line !== WAITS_FOR_STATISTICS_TEXT,
+  );
+}
+
+/**
+ * The lock of Run that the page adds to the store's, in `p`, from the
+ * lock of the one pass, `lock` of `passLock`: its words, "Run once
+ * panel.nei is read to the end: …"; `null` while the pass locks nothing,
+ * and for a PCA of the genotypes of a file of more individuals than its
+ * limit, which the store says first, since the opening already tells
+ * it and no reading of the file would free Run
+ * (docs/specs/steps/popgen2-pca.md, "Run and Stop", the first of the
+ * locks).
+ */
+export function pcaTabLock(p: Project, lock: PassLock | null): string | null {
+  const variants = p.variants;
+  if (lock === null || variants === null) return null;
+  const method = pcaOptions(p, "popgen2").method;
+  if (
+    method === "pca" &&
+    variants.read.kind === "read" &&
+    variants.read.individuals.length > PCA_MAX_INDIVIDUALS
+  ) {
+    return null;
+  }
+  return passLockText(lock, variants.name, method);
+}
+
+/** The words the PCA tab gives its errors, as `AnalysisUi` takes
+    them. */
+export const PCA_TAB_ERRORS = Object.freeze({
+  refusalText: (message: string, p: Project): string =>
+    refusalText(message, p, "popgen2"),
+  statisticsFailedText: (
+    error: AnalysisError,
+    p: Project,
+    failureText: (failure: Failure) => string,
+    waited: boolean,
+  ): string => statisticsFailedText(error, p, failureText, waited, "popgen2"),
+  workerFailedText: (p: Project, kept: IndividualsKept | null): string =>
+    crashText(p, individualsRunOn(p, kept), "popgen2"),
+  failureText: popgen2FailureText,
+});
+
+/** The words of the PCA tab's errors, for `failedText`, given the
+    individuals kept `kept` of the state of the store. */
+function errorWords(kept: IndividualsKept | null): FailedWords {
+  return {
+    refusalText: PCA_TAB_ERRORS.refusalText,
+    workerFailedText: (p: Project): string =>
+      PCA_TAB_ERRORS.workerFailedText(p, kept),
+    failureText: PCA_TAB_ERRORS.failureText,
+  };
+}
+
+/**
+ * What the PCA tab says of the error `status` in `p`, with the
+ * individuals kept `kept`: the words the tab draws, those of the
+ * statistics of each individual when a Run waited for them, `ofStatistics`.
+ */
+export function pcaTabErrorText(
+  status: Extract<AnalysisStatus<JobResult>, { readonly kind: "error" }>,
+  p: Project,
+  kept: IndividualsKept | null,
+): string {
+  const method = pcaOptions(p, "popgen2").method;
+  const words = errorWords(kept);
+  return failedText(
+    status.error,
+    p,
+    pcaTabTitle(method),
+    status.ofStatistics
+      ? {
+          ...words,
+          statisticsFailedText: (error, project, failureText) =>
+            PCA_TAB_ERRORS.statisticsFailedText(
+              error,
+              project,
+              failureText,
+              status.waited,
+            ),
+        }
+      : words,
+  );
+}
+
+/** The state of the PCA in `s`; a defect when the store has none. */
+function pcaStatusOf(
+  s: AppState<JobResult, unknown>,
+): AnalysisStatus<JobResult> {
+  const status = s.analyses.find((a) => a.id === pcaOnPopgen2.id)?.status;
+  if (status === undefined) {
+    throw new Error("popnei_web defect: the store of popgen2.html has no PCA.");
+  }
+  return status;
+}
+
+/**
+ * What the status region says as the store goes from `before` to
+ * `after`, when a run of the PCA ends, whichever tab is shown, since the
+ * user may have turned to another (docs/specs/steps/popgen2-pca.md,
+ * "Accessibility"): "PCA of panel.nei calculated.", "PCoA of panel.nei
+ * calculated."; "The PCA of panel.nei could not be calculated: " and the
+ * words of its error. `null` for any other change: a run stopped, or one
+ * left behind by another variants file, ends with no result and no
+ * error; a result brought back by an undo did not run.
+ */
+export function pcaEndAnnouncement(
+  before: AppState<JobResult, unknown>,
+  after: AppState<JobResult, unknown>,
+): string | null {
+  const then = pcaStatusOf(before);
+  const now = pcaStatusOf(after);
+  const variants = after.project.variants;
+  if (then.kind !== "running" || variants === null) return null;
+  const method = methodName(pcaOptions(after.project, "popgen2").method);
+  const name = escaped(variants.name);
+  switch (now.kind) {
+    case "done":
+      return `${method} of ${name} calculated.`;
+    case "error":
+      return `The ${method} of ${name} could not be calculated: ${pcaTabErrorText(now, after.project, after.individualsKept)}`;
+    case "locked":
+    case "ready":
+    case "removed":
+    case "running":
+      return null;
+  }
+}

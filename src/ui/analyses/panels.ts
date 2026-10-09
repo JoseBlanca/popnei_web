@@ -58,7 +58,11 @@ import { PcaResults } from "./pca/PcaResults.tsx";
 import { PopDistsOptionsPart } from "./popDists/PopDistsOptionsPart.tsx";
 import { PopDistsResults } from "./popDists/PopDistsResults.tsx";
 import { readyLines as popDistsReadyLines } from "./popDists/words.ts";
-import { decompositionLine, readyLines as pcaReadyLines } from "./pca/words.ts";
+import {
+  decompositionLine,
+  individualsRunOn,
+  readyLines as pcaReadyLines,
+} from "./pca/words.ts";
 import { titleOf } from "./titles.ts";
 
 /** What the component of a result is drawn with. */
@@ -124,6 +128,15 @@ export interface AnalysisUi {
       analysis shares. */
   readonly workerFailedText:
     ((p: Project, kept: IndividualsKept | null) => string) | null;
+  /** The words of a failure that is not popnei's refusal, of the page
+      the panel is on: `popgen2FailureText` of words.ts on popgen2.html,
+      which names the box Variants file and saves no project; those of
+      `failureText`, which name the Variants step, when absent. */
+  readonly failureText?: (
+    failure: Failure,
+    variantsName: string,
+    again?: string,
+  ) => string;
 }
 
 /** The panel of the diversity (docs/specs/analyses/diversity.md, "The
@@ -297,25 +310,6 @@ const LD_DECAY: AnalysisUi = Object.freeze({
     p.variants === null ? null : fitLine(p.variants.name),
   workerFailedText: (p: Project): string => ldDecayCrashText(p),
 });
-
-/** The individuals a calculation of the project `p` ran on, those the
-    filters of individuals keep, `kept` of the state of the store under
-    the same filters as its key: the known list, or every individual of
-    the variants file when the filters remove none; those the lists keep
-    should the statistics a threshold needs have left the cache since. A
-    defect with no variants file read, or no individuals kept, which lock
-    the analysis before any calculation. */
-function individualsRunOn(p: Project, kept: IndividualsKept | null): number {
-  const read = p.variants?.read;
-  if (kept === null || read?.kind !== "read") {
-    throw new Error(
-      "popnei_web defect: the principal components failed with no individuals kept.",
-    );
-  }
-  return kept.list.kind === "known"
-    ? (kept.list.individuals?.length ?? read.individuals.length)
-    : kept.byLists.length;
-}
 
 /** The panel of every analysis of the Analyses step, by its id. */
 export const PANELS: ReadonlyMap<AnalysisId, AnalysisUi> = new Map([

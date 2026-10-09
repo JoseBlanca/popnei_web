@@ -8,6 +8,16 @@
  * the button in every state, since they are what the user may change
  * (docs/specs/analyses/pca.md, "The states").
  *
+ * popgen2.html draws the same frame in its PCA tab, given the page's
+ * panel, `page` (docs/plans/analyses-pca.md, work package 6): its own
+ * words and parts, by the method; a lock of its own, the one pass of the
+ * variants file that has not read the file to the end, which takes the
+ * place of the store's reason, or makes a ready Run a locked one; and the
+ * line of the individuals the PCA will run on before the button, in the
+ * locked state as well as the ready one
+ * (docs/specs/steps/popgen2-pca.md, "The PCA tab"). popgen.html gives
+ * none of it, and its panels are drawn as before.
+ *
  * - locked: Run, disabled, with the reason beside it as its description;
  * - ready: Run, and what it will run on, the individuals the filters
  *   keep, or, while a threshold waits for the statistics of each
@@ -48,26 +58,51 @@ import type { AnalysisUi } from "./panels.ts";
 import { RunButton } from "./RunButton.tsx";
 import { Running } from "./Running.tsx";
 import { buttonOf, statusOf, stoppedNotice } from "./status.ts";
+import type { ButtonOf } from "./status.ts";
 import { Warnings } from "./Warnings.tsx";
 import { removedText, stoppedText } from "./words.ts";
+
+/** The panel of an analysis on a page other than popgen.html. */
+export interface PagePanel {
+  /** The panel, its words and its parts, in the place of `panelOf`'s. */
+  readonly ui: AnalysisUi;
+  /** The reason of a lock of the page beyond the store's, which then
+      locks a Run the store offers and takes the place of the store's
+      reason; `null` when the page locks nothing. */
+  readonly lock: string | null;
+}
 
 /** What the panel of an analysis is drawn with. */
 export interface AnalysisPanelProps {
   /** The id of the analysis. */
   readonly id: AnalysisId;
+  /** The panel of the page, popgen2.html's; absent on popgen.html, whose
+      panel is `panelOf(id)`, with no lock of its own and the lines of
+      what a run will take after the button. */
+  readonly page?: PagePanel;
 }
 
 /** The panel of the analysis `id`, in the state the store gives it. */
-export function AnalysisPanel({ id }: AnalysisPanelProps): React.JSX.Element {
-  const ui = panelOf(id);
+export function AnalysisPanel({
+  id,
+  page,
+}: AnalysisPanelProps): React.JSX.Element {
+  const ui = page?.ui ?? panelOf(id);
   const store = useStore();
   const status = useAppState((s) => statusOf(s, id));
   const notice = useAppState((s) => s.notice);
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
 
-  const button = buttonOf(status);
+  const button = lockedBy(buttonOf(status), page?.lock ?? null);
   const stoppedBy = stoppedNotice(status, notice, id);
+  // On popgen2.html the line of the individuals stands before the button,
+  // also while it is locked.
+  const linesFirst =
+    page !== undefined &&
+    (status.kind === "ready" ||
+      status.kind === "removed" ||
+      status.kind === "locked");
 
   return (
     <section aria-labelledby={headingId} className={classOf(styles, "panel")}>
@@ -87,6 +122,7 @@ export function AnalysisPanel({ id }: AnalysisPanelProps): React.JSX.Element {
         </p>
       )}
       {ui.Options !== null && <ui.Options />}
+      {linesFirst && <Ready ui={ui} />}
       <Above ui={ui} status={status} />
       {button !== null && (
         <RunButton
@@ -103,9 +139,18 @@ export function AnalysisPanel({ id }: AnalysisPanelProps): React.JSX.Element {
           }}
         />
       )}
-      <Below id={id} ui={ui} status={status} />
+      <Below id={id} ui={ui} status={status} linesDrawn={linesFirst} />
     </section>
   );
+}
+
+/** The button `button` with the page's lock `lock`: a Run, enabled or
+    locked by the store, locked with the page's reason; Stop, and no
+    button, as they are. */
+function lockedBy(button: ButtonOf, lock: string | null): ButtonOf {
+  return lock !== null && button?.kind === "run"
+    ? { kind: "run", reason: lock }
+    : button;
 }
 
 /** What the parts above and below the button are drawn with. */
@@ -136,6 +181,9 @@ function Above({ ui, status }: PartProps): React.JSX.Element | null {
             name={ui.title}
             refusalText={ui.refusalText}
             {...workerFailed}
+            {...(ui.failureText !== undefined && {
+              failureText: ui.failureText,
+            })}
           />
         );
       }
@@ -155,6 +203,9 @@ function Above({ ui, status }: PartProps): React.JSX.Element | null {
           statisticsFailedText={(error, p, failureText) =>
             statisticsFailedText(error, p, failureText, status.waited)
           }
+          {...(ui.failureText !== undefined && {
+            failureText: ui.failureText,
+          })}
         />
       );
     }
@@ -166,13 +217,18 @@ function Above({ ui, status }: PartProps): React.JSX.Element | null {
   }
 }
 
-/** What comes after the button: what a run will take, when it can run,
-    the calculation under way, or the result. */
+/** What comes after the button: what a run will take, when it can run
+    and the page has not drawn it before the button, `linesDrawn`; the
+    calculation under way; or the result. */
 function Below({
   id,
   ui,
   status,
-}: PartProps & { readonly id: AnalysisId }): React.JSX.Element | null {
+  linesDrawn,
+}: PartProps & {
+  readonly id: AnalysisId;
+  readonly linesDrawn: boolean;
+}): React.JSX.Element | null {
   // Why the numbers of a result are not compared with those of the
   // project file, when the variants file loaded is of the other format
   // than the reference's, or its VCF was read with other read options.
@@ -181,7 +237,7 @@ function Below({
   switch (status.kind) {
     case "ready":
     case "removed":
-      return <Ready ui={ui} />;
+      return linesDrawn ? null : <Ready ui={ui} />;
     case "running":
       // A new run is a new clock.
       return (

@@ -10,10 +10,17 @@
  */
 
 import { pcaOptions } from "../../../core/analyses/pca.ts";
+import { variantBinsRounded } from "../../../core/analyses/variantChecks.ts";
 import { THRESHOLD_OFF_AT } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
-import { VARIANT_THRESHOLD_DECIMALS } from "../../../core/thresholds.ts";
-import type { PcaMethod } from "../../../worker/protocol.ts";
+import {
+  VARIANT_THRESHOLD_DECIMALS,
+  thresholdStep,
+} from "../../../core/thresholds.ts";
+import type {
+  PcaMethod,
+  VariantsSummaryResult,
+} from "../../../worker/protocol.ts";
 import { numberText } from "../../widgets/committedNumber.ts";
 import type { NumberRefusal } from "../../widgets/committedNumber.ts";
 import { thresholdRefusedText } from "../../steps/variants/words.ts";
@@ -151,4 +158,33 @@ function decimalsOf(value: number): number {
   const text = numberText(value);
   const point = text.indexOf(".");
   return point === -1 ? 0 : text.length - point - 1;
+}
+
+/**
+ * The decimals of the step of the Variants tab's box of the threshold
+ * `kind`, which the axis of its histogram gives, from the result of the
+ * one pass `result` over individuals of ploidy `ploidy`: the step of
+ * `thresholdStep` over the axis that `variantBinsRounded` rounds out, as
+ * the histogram draws it, 3 for the missing rate of `panel.nei`, whose
+ * axis goes from 0 to 0.1. For `stricterBound`, once the one pass has
+ * read the file to the end.
+ */
+export function stepDecimalsOf(
+  result: VariantsSummaryResult,
+  kind: StricterKind,
+  ploidy: number,
+): number {
+  const { edges } = variantBinsRounded(
+    result.perVar,
+    kind === "missing_data" ? "missingRate" : "maf",
+    { numIndividuals: result.perIndividual.individuals.length, ploidy },
+  );
+  const low = edges[0];
+  const high = edges.at(-1);
+  if (low === undefined || high === undefined) {
+    throw new Error(
+      "popnei_web defect: a histogram of the variants with no edges.",
+    );
+  }
+  return thresholdStep(low, high).decimals;
 }

@@ -12,9 +12,13 @@ import { PCA2_DEFAULTS, pcaOnPopgen2 } from "../../../core/analyses/pca.ts";
 import type { PcaOptions } from "../../../core/analyses/pca.ts";
 import { setAnalysisOptions } from "../../../core/project.ts";
 import type { Project, ProjectVariantFilter } from "../../../core/project.ts";
-import { deepFreeze, sampleProject } from "../../../core/testSupport.ts";
+import {
+  deepFreeze,
+  sampleProject,
+  summaryResult,
+} from "../../../core/testSupport.ts";
 import type { NumberRefusal } from "../../widgets/committedNumber.ts";
-import { stricterBound, stricterLines } from "./stricter.ts";
+import { stepDecimalsOf, stricterBound, stricterLines } from "./stricter.ts";
 
 /** The sample project with the Variants tab's filters `filters` and the
     options of the PCA of popgen2.html, PCA2_DEFAULTS with `change` over
@@ -207,5 +211,34 @@ describe("AP6 D1 stricterLines, the line of a refusal and the line of the Varian
     ).toBe(
       "The Variants tab keeps at most 0.0035, stricter than the 0.05 set here, so the PCoA uses 0.0035.",
     );
+  });
+});
+
+describe("AP6 D1 stepDecimalsOf, the decimals of the step of the Variants tab's box", () => {
+  test("the missing rate up to 0.1 steps by 0.001, three decimals; the MAF from 0.5 to 1 by 0.01, two", () => {
+    const pass = summaryResult(
+      ["1"],
+      [1200],
+      Array.from({ length: 200 }, (_, i) => `s${String(i)}`),
+    );
+    // Of popnei's 1,000 fine bins, the variants in the first and in the
+    // one ending at 0.1 for the missing rate, in the one from 0.5 and
+    // the last for the MAF.
+    const missing = new Uint32Array(1000);
+    missing[0] = 600;
+    missing[99] = 600;
+    const maf = new Uint32Array(1000);
+    maf[500] = 600;
+    maf[999] = 600;
+    const result = {
+      ...pass,
+      perVar: {
+        ...pass.perVar,
+        missingRate: { mean: 0.05, counts: missing },
+        maf: { mean: 0.75, counts: maf },
+      },
+    };
+    expect(stepDecimalsOf(result, "missing_data", 2)).toBe(3);
+    expect(stepDecimalsOf(result, "maf", 2)).toBe(2);
   });
 });

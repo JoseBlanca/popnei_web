@@ -449,8 +449,9 @@ describe("IN3 the boundary of the zone that opens a variants file", () => {
       "H3 Opening a variants file",
       "H2 Individuals file",
       // The heading of the PCA tab, greyed, drawn hidden under its
-      // reason.
+      // reason, with the heading of its filters.
       "H2 PCA",
+      "H3 Filters of the variants for the PCA",
     ]);
   });
 

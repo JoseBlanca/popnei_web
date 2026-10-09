@@ -266,6 +266,28 @@ export function readyLines(
   return waits ? [line, WAITS_FOR_STATISTICS_TEXT] : [line];
 }
 
+/** The individuals a calculation of the project `p` ran on, those the
+    filters of individuals keep, `kept` of the state of the store under
+    the same filters as its key: the known list, or every individual of
+    the variants file when the filters remove none; those the lists keep
+    should the statistics a threshold needs have left the cache since. A
+    defect with no variants file read, or no individuals kept, which lock
+    the analysis before any calculation. */
+export function individualsRunOn(
+  p: Project,
+  kept: IndividualsKept | null,
+): number {
+  const read = p.variants?.read;
+  if (kept === null || read?.kind !== "read") {
+    throw new Error(
+      "popnei_web defect: the principal components failed with no individuals kept.",
+    );
+  }
+  return kept.list.kind === "known"
+    ? (kept.list.individuals?.length ?? read.individuals.length)
+    : kept.byLists.length;
+}
+
 /** The line under the bar of a calculation under way: the bar does not
     move while the components are calculated, which popnei tells nothing
     of. */

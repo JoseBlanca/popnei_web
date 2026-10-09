@@ -38,6 +38,7 @@ import type { AnalysisDef } from "../../../core/store.ts";
 import type { Job, JobResult, PcaResult } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { downloadText } from "../../download.ts";
+import { summaryStatsOf } from "../../popgen2Store.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
@@ -169,8 +170,18 @@ function PcaResultOf({
   const announcer = useAnnouncer();
   const project = useAppState((s) => s.project);
   const popneiVersion = useAppState((s) => s.popneiVersion);
+  // The statistics of each individual: on popgen.html the result of
+  // their own analysis; on popgen2.html that of the one pass, which
+  // calculates them, the store of that page having no other.
   const checks = useAppState((s) =>
-    resultOf(statusOf(s, "individualChecks"), "individualChecks"),
+    page === "popgen"
+      ? resultOf(statusOf(s, "individualChecks"), "individualChecks")
+      : null,
+  );
+  const summary = useAppState((s) =>
+    page === "popgen2"
+      ? resultOf(statusOf(s, "variantsSummary"), "variantsSummary")
+      : null,
   );
   const options = pcaOptions(project, page);
   const commandPage = commandPageOf(page, options.method);
@@ -181,7 +192,12 @@ function PcaResultOf({
   const shownAxes = axesShown(options, result);
   const axes = shownAxes.axes;
   const axesKey = axes.join(",");
-  const stats = checks === null ? null : individualStatsOf(checks);
+  const stats =
+    checks !== null
+      ? individualStatsOf(checks)
+      : summary !== null
+        ? summaryStatsOf(summary)
+        : null;
   const notes = notesOf(result, project, stats, page);
 
   const [pressed, setPressed] = useState<Pressed | null>(null);

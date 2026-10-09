@@ -21,8 +21,10 @@ import {
   namesOf,
   saying,
 } from "../../core/project.ts";
+import type { Failure } from "../../core/analyses/individualChecks.ts";
 import { loosenText } from "../../core/populations.ts";
-import type { Notice } from "../../core/store.ts";
+import type { Project } from "../../core/project.ts";
+import type { AnalysisError, Notice } from "../../core/store.ts";
 import type { Pops, Progress, RunError } from "../../worker/protocol.ts";
 import { capitalized, undoneOrRedone } from "../sentences.ts";
 import { numberText } from "../widgets/committedNumber.ts";
@@ -270,6 +272,71 @@ export function popgen2FailureText(
     case "protocolMismatch":
       return `The page is out of date. Reload the page and open ${name} again.`;
   }
+}
+
+/** The words a panel gives the errors of its analysis, for `failedText`. */
+export interface FailedWords {
+  /** The words of popnei's refusal `message`, for the project `p`. */
+  readonly refusalText: (message: string, p: Project) => string;
+  /** The sentence that asks for the calculation again; "Run it again."
+      when absent. */
+  readonly again?: string;
+  /** Given when the error is the failure of the statistics of each
+      individual that a Run waited for: its words, from the error, the
+      project, and the words of the failures that are not popnei's
+      refusal. */
+  readonly statisticsFailedText?: (
+    error: AnalysisError,
+    p: Project,
+    failureText: (failure: Failure) => string,
+  ) => string;
+  /** The words of a worker that stopped with no answer, when the
+      analysis has its own; those of `failureText` when absent. */
+  readonly workerFailedText?: (p: Project) => string;
+  /** The words of a failure that is not popnei's refusal, of the page:
+      `popgen2FailureText` on popgen2.html; `failureText` when absent. */
+  readonly failureText?: (
+    failure: Failure,
+    variantsName: string,
+    again?: string,
+  ) => string;
+}
+
+/**
+ * What an analysis in error says went wrong and what to do, in the
+ * project `p`, `name` being the analysis in a sentence: the words of the
+ * statistics of each individual when `words` gives them, those of
+ * popnei's refusal, those of a worker that stopped when the analysis has
+ * its own, and otherwise those of a failure that is not popnei's refusal,
+ * in the words of the page. The panel draws them, and popgen2.html says
+ * them in its status region at the end of a run. A defect with no
+ * variants file, since an error is keyed by its load.
+ */
+export function failedText(
+  error: AnalysisError,
+  p: Project,
+  name: string,
+  words: FailedWords,
+): string {
+  const variants = p.variants;
+  if (variants === null) {
+    throw new Error(
+      `popnei_web defect: ${name} is in error with no variants file.`,
+    );
+  }
+  const ofFailure = words.failureText ?? failureText;
+  if (words.statisticsFailedText !== undefined) {
+    return words.statisticsFailedText(error, p, (failure) =>
+      ofFailure(failure, variants.name, words.again),
+    );
+  }
+  if (error.kind === "refused") {
+    return words.refusalText(error.message, p);
+  }
+  return error.error.kind === "workerFailed" &&
+    words.workerFailedText !== undefined
+    ? words.workerFailedText(p)
+    : ofFailure(error.error, variants.name, words.again);
 }
 
 /** The populations a run will take, with their sizes, the noun with

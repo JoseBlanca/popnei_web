@@ -13,7 +13,7 @@ import type { Project } from "../../core/project.ts";
 import type { AnalysisError } from "../../core/store.ts";
 import { useAppState } from "../store.tsx";
 import { Problem } from "../widgets/Problem.tsx";
-import { failureText } from "./words.ts";
+import { failedText } from "./words.ts";
 
 /** What the words of a failure are drawn with. */
 export interface FailedProps {
@@ -49,6 +49,14 @@ export interface FailedProps {
       (docs/specs/analyses/pca.md, "Its words"); those of `failureText`
       when absent. */
   readonly workerFailedText?: (p: Project) => string;
+  /** The words of a failure that is not popnei's refusal, of the page
+      the panel is on: `popgen2FailureText` on popgen2.html, which names
+      the box Variants file; `failureText` of words.ts when absent. */
+  readonly failureText?: (
+    failure: Failure,
+    variantsName: string,
+    again?: string,
+  ) => string;
 }
 
 /** What went wrong, and what to do. */
@@ -60,27 +68,16 @@ export function Failed({
   statisticsFailedText,
   asShown,
   workerFailedText,
+  failureText,
 }: FailedProps): React.JSX.Element {
-  const text = useAppState((s) => {
-    const variants = s.project.variants;
-    // A calculation is keyed by the load of the variants file, so an
-    // error has one.
-    if (variants === null) {
-      throw new Error(
-        `popnei_web defect: ${name} is in error with no variants file.`,
-      );
-    }
-    if (statisticsFailedText !== undefined) {
-      return statisticsFailedText(error, s.project, (failure) =>
-        failureText(failure, variants.name, again),
-      );
-    }
-    if (error.kind === "refused") {
-      return refusalText(error.message, s.project);
-    }
-    return error.error.kind === "workerFailed" && workerFailedText !== undefined
-      ? workerFailedText(s.project)
-      : failureText(error.error, variants.name, again);
-  });
+  const text = useAppState((s) =>
+    failedText(error, s.project, name, {
+      refusalText,
+      ...(again !== undefined && { again }),
+      ...(statisticsFailedText !== undefined && { statisticsFailedText }),
+      ...(workerFailedText !== undefined && { workerFailedText }),
+      ...(failureText !== undefined && { failureText }),
+    }),
+  );
   return <Problem>{asShown === undefined ? text : asShown(text)}</Problem>;
 }

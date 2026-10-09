@@ -1,0 +1,47 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.options {
+  display: grid;
+  gap: var(--space-4);
+  inline-size: 100%;
+}
+
+.filters {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.filter {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* The fields of a filter set for the analysis, set in under its radio
+   buttons, as the fields of a filter are under its switch. */
+.own {
+  display: grid;
+  gap: var(--space-2);
+  padding-inline-start: var(--space-6);
+}
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}

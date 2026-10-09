@@ -1,13 +1,15 @@
 /**
  * What the status region of popgen2.html says of each change of the
  * store, away from the focus: the file read, its count, the statistics
- * of the open file, and the sentence of no variant that takes the place
- * of the button of the download after a change of the filters. The
+ * of the open file, the sentence of no variant that takes the place
+ * of the button of the download after a change of the filters, and the
+ * end of a run of the PCA, whichever tab is shown. The
  * entry calls it once, before the page is drawn; a test calls it over the
  * store of the page and the section alone.
  */
 import type { AppState, Store } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
+import { pcaEndAnnouncement } from "../analyses/pca/tabWords.ts";
 import type { Announcer } from "../shell/status.ts";
 import { noVariantAnnouncement } from "./downloadState.ts";
 import { statsAnnouncementsOf } from "./statsWords.ts";
@@ -60,9 +62,11 @@ export function announceChanges(
       focusOnCountButton: button !== null && document.activeElement === button,
     });
     const noVariant = noVariantAnnouncement(before, after);
+    const pcaEnd = pcaEndAnnouncement(before, after);
     before = after;
     for (const text of texts) announcer.announce(text);
     if (noVariant !== null) announcer.announce(noVariant);
+    if (pcaEnd !== null) announcer.announce(pcaEnd);
     const fileId = fileIdOf(after);
     if (fileId !== null && fileId === shownFor) {
       sayStats(after);

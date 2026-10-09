@@ -11,6 +11,9 @@
  * left in it, a number half typed, the sort of a table, is there when
  * the tab opens again.
  *
+ * The PCA tab holds the PCA's panel, `PcaTab`, in a boundary of errors
+ * of its own.
+ *
  * Its own component, so that the page draws it inside a boundary of
  * errors: a defect thrown by `analysisTabs` costs the row alone, and the
  * two boxes of the files stay.
@@ -21,6 +24,7 @@ import type {
   PageTab,
   TabGreyed,
 } from "../../core/popgen2Tabs.ts";
+import { PcaTab } from "../analyses/pca/PcaTab.tsx";
 import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
@@ -118,7 +122,11 @@ export function PageTabs({
         analysisTab(
           "pca",
           tabReasons.pca,
-          <h2 className={classOf(styles, "boxHeading")}>{PCA_HEADING}</h2>,
+          // A defect in the tab costs the tab alone, the rest of the page
+          // stays.
+          <ErrorBoundary heading={PCA_HEADING} level={2}>
+            <PcaTab autoRuns={autoRuns} />
+          </ErrorBoundary>,
         ),
         analysisTab(
           "populations",
