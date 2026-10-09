@@ -502,6 +502,17 @@ export interface Store<R, F = never> {
       waiting before the opening (src/ui/variants/thresholdRun.ts) opens
       from the project with that change. */
   open(make: (current: Project) => Project): void;
+  /** Applies `command` to the current project as `apply` does, stopping
+      what it leaves behind, and then starts the history afresh at the
+      project it gives, with nothing to undo or redo, counting one in
+      `historyMoves`; nothing changes when it gives the project it was
+      given. popgen2.html sends through it the changes of its
+      individuals file, which are no steps of its Undo
+      (docs/specs/core/store.md, "On popgen2.html: no notice, and a
+      history of the filters"). A defect on a store made without
+      `stopLeftBehind`, where a change can make a notice that offers an
+      Undo this leaves nothing for. */
+  applyAfresh(command: (p: Project) => Project): void;
   /** Closes the notice, and stops the calculations it left behind. */
   dismissNotice(): void;
 
@@ -2451,6 +2462,28 @@ export function createStore<J, R, F = never>(
       history = opened;
       historyMoves += 1;
       changed();
+    },
+    applyAfresh: (command) => {
+      if (!stopLeftBehind) {
+        throw defect(
+          "applyAfresh was called on a store made without stopLeftBehind, where a change can make a notice that names its cause and offers an Undo that applyAfresh leaves nothing for.",
+        );
+      }
+      const present = history.present.project;
+      const next = command(present);
+      if (next === present) {
+        return;
+      }
+      // A history of its own, applied as a command is: what it leaves
+      // behind is stopped and no notice is made, since the setting is on.
+      historyMoves += 1;
+      changedByUser(
+        startHistory(freezeProject(next), history.maxSteps),
+        () => ({
+          kind: "command",
+          description: "",
+        }),
+      );
     },
     dismissNotice: () => {
       if (notice === null) {

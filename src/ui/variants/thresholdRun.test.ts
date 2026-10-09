@@ -6,7 +6,11 @@
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { setThreshold, thresholdValue } from "../../core/project.ts";
+import {
+  loadIndividuals,
+  setThreshold,
+  thresholdValue,
+} from "../../core/project.ts";
 import type { Project } from "../../core/project.ts";
 import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
 import {
@@ -264,6 +268,108 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
     expect(thresholdValue(project, maf)).toBe(0.05);
     expect(thresholdValue(project, missing)).toBe(0.25);
     expect(store.getState().undo).toBeNull();
+  });
+});
+
+describe("AP3 D2 the gate before applyAfresh", () => {
+  /** The store of the page through a gate, and the gate. */
+  const gated = (): {
+    readonly store: ReturnType<typeof createPopgen2Store>;
+    readonly gate: ReturnType<typeof createRunGate>;
+  } => {
+    const gate = createRunGate();
+    const store = gatedStore(
+      createPopgen2Store({
+        send: () => unsent(),
+        sendWrite: () => {
+          throw new Error("popnei_web defect: no write is sent here");
+        },
+        appVersion: "0.1.0",
+      }),
+      gate,
+    );
+    return { store, gate };
+  };
+  const maf = { of: "variants", kind: "maf" } as const;
+  const missing = { of: "variants", kind: "missing_data" } as const;
+  /** Loads pops.csv as the individuals file. */
+  const loadPops = (p: Project): Project =>
+    loadIndividuals(p, {
+      fileId: "d".repeat(32),
+      name: "pops.csv",
+      csv: null,
+    });
+
+  test("a run of the arrow keys waiting, then applyAfresh: the run's change made first, then nothing to undo", () => {
+    const { store, gate } = gated();
+    const run = createThresholdRun({
+      gate,
+      change: (to) => {
+        store.apply("the MAF filter was turned on", (p) =>
+          setThreshold(p, maf, to),
+        );
+      },
+      describe: () => "the MAF filter was turned on",
+      ended: () => undefined,
+    });
+    run.press(1, 0.05);
+    store.applyAfresh(loadPops);
+    const state = store.getState();
+    expect(run.waiting()).toBe(false);
+    expect(thresholdValue(state.project, maf)).toBe(0.05);
+    expect(state.project.individuals?.name).toBe("pops.csv");
+    expect(state.undo).toBeNull();
+    // The quiet second then makes no change of its own.
+    vi.advanceTimersByTime(RUN_QUIET_MS);
+    expect(store.getState()).toBe(state);
+  });
+
+  test("a number typed in a box and not applied, then applyAfresh: the number applied first, then nothing to undo", () => {
+    const { store, gate } = gated();
+    gate.typing(() => {
+      store.apply("the missing data filter changed", (p) =>
+        setThreshold(p, missing, 0.25),
+      );
+    });
+    store.applyAfresh(loadPops);
+    const state = store.getState();
+    expect(thresholdValue(state.project, missing)).toBe(0.25);
+    expect(state.project.individuals?.name).toBe("pops.csv");
+    expect(state.undo).toBeNull();
+  });
+
+  test("the run ended and the number applied before the store's applyAfresh, in that order", () => {
+    const gate = createRunGate();
+    const order: string[] = [];
+    const store = gatedStore(
+      {
+        ...createPopgen2Store({
+          send: () => unsent(),
+          sendWrite: () => {
+            throw new Error("popnei_web defect: no write is sent here");
+          },
+          appVersion: "0.1.0",
+        }),
+        applyAfresh: () => {
+          order.push("applyAfresh");
+        },
+      },
+      gate,
+    );
+    const run = createThresholdRun({
+      gate,
+      change: () => {
+        order.push("run");
+      },
+      describe: () => "the MAF filter was turned on",
+      ended: () => undefined,
+    });
+    gate.typing(() => {
+      order.push("typed");
+    });
+    run.press(0.5, 0.4);
+    store.applyAfresh((p) => p);
+    expect(order).toEqual(["run", "typed", "applyAfresh"]);
   });
 });
 

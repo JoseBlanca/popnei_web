@@ -8510,3 +8510,78 @@ describe("AP3 D1 stopLeftBehind on the store of popgen2.html", () => {
     expect(made.store.getState().notice?.leftBehind).toEqual(["pca"]);
   });
 });
+
+describe("AP3 D1 applyAfresh on the store of popgen2.html", () => {
+  /** Loads pops.csv as the individuals file. */
+  const loadPops = (p: Project): Project =>
+    loadIndividuals(p, { fileId: INDIVIDUALS_ID, name: "pops.csv", csv: CSV });
+
+  test("applyAfresh of loadIndividuals after two threshold steps: the file in the project, nothing to undo or redo, one move more, the one pass in flight not cancelled", () => {
+    const made = popgen2Store(true);
+    made.store.startRun("variantsSummary");
+    moveMissing(made.store, 0.2);
+    moveMissing(made.store, 0.3);
+    made.store.undo();
+    const before = made.store.getState();
+    expect(before.undo).not.toBeNull();
+    expect(before.redo).not.toBeNull();
+
+    made.store.applyAfresh(loadPops);
+
+    const after = made.store.getState();
+    expect(after.project.individuals?.name).toBe("pops.csv");
+    expect(after.undo).toBeNull();
+    expect(after.redo).toBeNull();
+    expect(after.historyMoves).toBe(before.historyMoves + 1);
+    expect(after.notice).toBeNull();
+    expect(made.sent[0]?.cancels()).toBe(0);
+    const summary = after.analyses.find(
+      (view) => view.id === "variantsSummary",
+    );
+    expect(summary?.status.kind).toBe("running");
+  });
+
+  test("applyAfresh of a command that gives the project it was given: the state the same object, the history kept", () => {
+    const made = popgen2Store(true);
+    moveMissing(made.store, 0.2);
+    const before = made.store.getState();
+    made.store.applyAfresh((p) => p);
+    expect(made.store.getState()).toBe(before);
+  });
+
+  test("a PCA in flight, applyAfresh of loadIndividuals, which its key does not hold: no cancel(), still running, nothing to undo", () => {
+    const made = popgen2Store(true);
+    passDone(made);
+    made.store.apply("the colour of the points changed", (p) =>
+      setAnalysisOptions(p, pcaOnPopgen2, { ...PCA2_OPTIONS, colourBy: "pop" }),
+    );
+    made.store.startRun("pca");
+    expect(made.store.getState().undo).not.toBeNull();
+    made.store.applyAfresh(loadPops);
+    expect(made.sent[1]?.cancels()).toBe(0);
+    const after = made.store.getState();
+    expect(pcaOf(after).kind).toBe("running");
+    expect(after.undo).toBeNull();
+  });
+
+  test("a PCA in flight, applyAfresh of a change it reads: stopped at once as a command would, ready, no notice, nothing to undo", () => {
+    const made = popgen2Store(true);
+    passDone(made);
+    made.store.startRun("pca");
+    made.store.applyAfresh((p) => setThreshold(p, MISSING_THRESHOLD, 0.2));
+    expect(made.sent[1]?.cancels()).toBe(1);
+    const after = made.store.getState();
+    expect(pcaOf(after).kind).toBe("ready");
+    expect(after.notice).toBeNull();
+    expect(after.undo).toBeNull();
+  });
+
+  test("applyAfresh on a store made without the setting: a defect, and nothing changed", () => {
+    const made = popgen2Store(false);
+    const before = made.store.getState();
+    expect(() => {
+      made.store.applyAfresh(loadPops);
+    }).toThrow(/^popnei_web defect: applyAfresh/);
+    expect(made.store.getState()).toBe(before);
+  });
+});

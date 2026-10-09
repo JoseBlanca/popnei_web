@@ -12,9 +12,10 @@
  * And the gate of the page, which makes a run waiting a change before
  * any other command reaches the project: Undo, Redo, a click of the
  * FILTER box, another threshold, an opening by the button, a drop or a
- * paste (the spec, "A run waiting is made a change before any other
- * command"). The page's store is wrapped by `gatedStore`, so that every
- * command of a screen passes the gate; an opening also commits a number
+ * paste, a change of the individuals file (the spec, "A run waiting is
+ * made a change before any other command"). The page's store is wrapped
+ * by `gatedStore`, so that every command of a screen passes the gate; an
+ * opening, and a change of the individuals file, also commit a number
  * typed in the box of a threshold and not yet committed, as the old page
  * does before an opening.
  */
@@ -116,7 +117,8 @@ export function createRunGate(): RunGate {
 
 /** `store` with every command of a screen passing `gate` first: `apply`,
     `undo` and `redo` after every run held is made a change, and `open`
-    after that and after what is typed in a box is committed. Each takes
+    and `applyAfresh` after that and after what is typed in a box is
+    committed, so that the fresh history drops their steps. Each takes
     a function of the project and not a project, or nothing, so that none
     is given a project made before the gate changed it. The rest is the
     store's own. */
@@ -142,6 +144,11 @@ export function gatedStore<R, F>(
       gate.endAll();
       gate.commitTyped();
       store.open(make);
+    },
+    applyAfresh: (command) => {
+      gate.endAll();
+      gate.commitTyped();
+      store.applyAfresh(command);
     },
   };
 }
