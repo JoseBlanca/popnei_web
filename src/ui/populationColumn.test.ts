@@ -81,6 +81,17 @@ const NAMES_ALONE: IndividualsTable = {
   rows: PANEL_POPS.rows.map((row) => [`${String(row[0])},${String(row[1])}`]),
 };
 
+/** A read that failed because the light worker crashed, which the read
+    after its restart replaces. */
+const WORKER_FAILED: IndividualsReadGiven = {
+  kind: "failed",
+  error: {
+    kind: "worker",
+    error: { kind: "workerFailed", message: "the worker crashed" },
+  },
+  format: null,
+};
+
 /** The load id of the `n`th file opened. */
 function loadId(n: number): string {
   return n.toString(16).padStart(32, "0");
@@ -403,6 +414,91 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
     expect(said).toEqual([
       "panel_pops.csv read: 200 rows, the populations from popcat.",
     ]);
+  });
+
+  test("an undo of a change of separator whose read still waits says nothing", async () => {
+    const { store, said, chosen } = page();
+    openVariants(store);
+    openIndividuals(store, loadId(1));
+    await recorded(store, loadId(1), readOf(PANEL_POPS));
+    setSeparator(store, ";");
+    store.undo();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(store.getState().project.individuals?.read.kind).toBe("read");
+    expect(chosen()).toBe(1);
+    expect(said).toEqual([
+      "panel_pops.csv read: 200 rows, the populations from popcat.",
+    ]);
+  });
+
+  test("a read that failed in its worker is said once, and a change of a threshold after it says nothing", async () => {
+    const { store, said, chosen } = page();
+    openVariants(store);
+    openIndividuals(store, loadId(1));
+    await recorded(store, loadId(1), WORKER_FAILED);
+    store.apply("the threshold of the missing genotypes changed", (p) =>
+      setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.03),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(chosen()).toBe(0);
+    expect(said).toEqual([
+      "panel_pops.csv could not be read: the page stopped while it read it. Open the file again.",
+    ]);
+  });
+
+  test("the read after the worker's restart, over a read that failed in it, chooses the column and is said", async () => {
+    const { store, said, chosen } = page();
+    openVariants(store);
+    openIndividuals(store, loadId(1));
+    await recorded(store, loadId(1), WORKER_FAILED);
+    await recorded(store, loadId(1), readOf(PANEL_POPS));
+    expect(chosen()).toBe(1);
+    expect(columnOf(store.getState().project)).toBe("popcat");
+    expect(said).toEqual([
+      "panel_pops.csv could not be read: the page stopped while it read it. Open the file again.",
+      "panel_pops.csv read: 200 rows, the populations from popcat.",
+    ]);
+  });
+
+  test("a read replaced by another before the entry's turn is not acted on: only the last is", async () => {
+    const { store, said, chosen } = page();
+    openVariants(store);
+    openIndividuals(store, loadId(1));
+    store.individualsRead(loadId(1), AUTO, readOf(PANEL_POPS));
+    setSeparator(store, ";");
+    await recorded(store, loadId(1), readOf(NAMES_ALONE));
+    expect(chosen()).toBe(0);
+    expect(columnOf(store.getState().project)).toBeNull();
+    expect(said).toEqual([
+      "panel_pops.csv read: 200 rows, no column chosen for the populations. Warning: none of the 200 individuals of panel.nei is in panel_pops.csv, so all of them are unclassified. The first column of panel_pops.csv has to hold their names as panel.nei writes them: panel.nei starts with s000, and panel_pops.csv with s000,p0. No column of panel_pops.csv holds text with 20 different values or fewer, so none was chosen as the column of the populations. Choose it in the list.",
+    ]);
+  });
+
+  test("a grouping of every individual in one population is never changed", async () => {
+    const { store, said, chosen } = page();
+    openVariants(store);
+    openIndividuals(store, loadId(1));
+    store.apply("the grouping changed", (p) =>
+      setGrouping(p, { kind: "onePopulation" }),
+    );
+    await recorded(store, loadId(1), readOf(PANEL_POPS));
+    expect(chosen()).toBe(0);
+    expect(store.getState().project.grouping).toEqual({
+      kind: "onePopulation",
+    });
+    expect(said).toEqual([
+      "panel_pops.csv read: 200 rows, no column chosen for the populations.",
+    ]);
+  });
+
+  test("stopped after a read is recorded and before its turn, it sends and says nothing", async () => {
+    const { store, said, chosen, stop } = page();
+    openIndividuals(store, loadId(1));
+    store.individualsRead(loadId(1), AUTO, readOf(PANEL_POPS));
+    stop();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(chosen()).toBe(0);
+    expect(said).toEqual([]);
   });
 
   test("once stopped, it sends and says nothing", async () => {
