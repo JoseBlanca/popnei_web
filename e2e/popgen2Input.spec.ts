@@ -938,7 +938,7 @@ test("IN6 D2 a CSV of semicolons read with the comma: the refusal of its row in 
   await chooseIn(page, panel, "Separator", "Semicolon");
   await expect(
     individualsBox(page).getByText(
-      "No column of panel_pops.csv holds text with 20 different values or fewer, so none was chosen as the column of the populations. Choose it in the list.",
+      "panel_pops.csv has no column to choose as the column of the populations besides the names of the individuals. If it has more, choose its separator in the Individuals tab.",
       { exact: true },
     ),
   ).toBeVisible({ timeout: 20_000 });

@@ -59,7 +59,7 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
     expect(
       greyedText("pca", { kind: "variantsFailed", name: "panel.nei" }),
     ).toBe(
-      "The PCA needs a variants file: panel.nei could not be opened. Open another in the box Variants file.",
+      "The PCA needs a variants file: panel.nei could not be opened; the box Variants file says why and what to do.",
     );
   });
 
@@ -75,7 +75,7 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
     expect(
       greyedText("populations", { kind: "variantsFailed", name: "panel.nei" }),
     ).toBe(
-      "The analyses of the populations need a variants file: panel.nei could not be opened. Open another in the box Variants file.",
+      "The analyses of the populations need a variants file: panel.nei could not be opened; the box Variants file says why and what to do.",
     );
   });
 
@@ -91,7 +91,7 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
     expect(
       greyedText("distances", { kind: "variantsFailed", name: "panel.nei" }),
     ).toBe(
-      "The distances between populations need a variants file: panel.nei could not be opened. Open another in the box Variants file.",
+      "The distances between populations need a variants file: panel.nei could not be opened; the box Variants file says why and what to do.",
     );
   });
 
@@ -113,7 +113,7 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
         name: "panel_pops.csv",
       }),
     ).toBe(
-      "The distances between populations need at least two populations: panel_pops.csv could not be read. Open another in the box Individuals file.",
+      "The distances between populations need at least two populations: panel_pops.csv could not be read; the box Individuals file says why and what to do.",
     );
   });
 
@@ -132,9 +132,30 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
     );
   });
 
+  test("Distances with no column to choose but the names of the individuals, of a text file and of an xlsx", () => {
+    expect(
+      greyedText("distances", {
+        kind: "noColumnToChoose",
+        name: "panel_pops.csv",
+        textFile: true,
+      }),
+    ).toBe(
+      "The distances between populations need at least two populations, and panel_pops.csv has no column to choose besides the names of the individuals. If it has more, choose its separator in the Individuals tab.",
+    );
+    expect(
+      greyedText("distances", {
+        kind: "noColumnToChoose",
+        name: "panel_pops.xlsx",
+        textFile: false,
+      }),
+    ).toBe(
+      "The distances between populations need at least two populations, and panel_pops.xlsx has no column to choose besides the names of the individuals. Add a column of the populations to it and open it again in the box Individuals file.",
+    );
+  });
+
   test("Distances with fewer than two populations among the individuals of the variants file", () => {
     expect(greyedText("distances", fewPopulations(1, false))).toBe(
-      "The distances between populations need at least two populations, and popcat gives 1 among the individuals of panel.nei. Choose another column in the box Individuals file.",
+      "The distances between populations need at least two populations, and popcat gives 1 population among the individuals of panel.nei. Choose another column in the box Individuals file.",
     );
     expect(greyedText("distances", fewPopulations(0, true))).toBe(
       "The distances between populations need at least two populations, and no individual of panel.nei is in panel_pops.csv. Check that panel_pops.csv names the individuals as panel.nei does.",
@@ -159,7 +180,7 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
 
   test("a name of the user's files is escaped, and a column cut", () => {
     expect(
-      greyedText("pca", { kind: "variantsOpening", name: "pan‮el.nei" }),
+      greyedText("pca", { kind: "variantsOpening", name: "pan\u202eel.nei" }),
     ).toBe("The PCA needs a variants file: pan\\u202eel.nei is being opened.");
     expect(
       greyedText("distances", {
@@ -169,6 +190,70 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
       }),
     ).toBe(
       `The distances between populations need at least two populations, and ${"c".repeat(40)}… has 1,234 values, more than the 20 a column of populations can have. Choose another column in the box Individuals file.`,
+    );
+  });
+
+  test("the name of the variants file is escaped in a failed opening, of each tab", () => {
+    for (const [tab, subject] of [
+      ["pca", "The PCA needs"],
+      ["populations", "The analyses of the populations need"],
+      ["distances", "The distances between populations need"],
+    ] as const) {
+      expect(
+        greyedText(tab, { kind: "variantsFailed", name: "pan\u202eel.nei" }),
+      ).toBe(
+        `${subject} a variants file: pan\\u202eel.nei could not be opened; the box Variants file says why and what to do.`,
+      );
+    }
+  });
+
+  test("the name of the individuals file is escaped while it is read, when it failed, and when it has no column to choose", () => {
+    const start =
+      "The distances between populations need at least two populations";
+    expect(
+      greyedText("distances", {
+        kind: "individualsReading",
+        name: "pops\u202e.csv",
+      }),
+    ).toBe(`${start}: pops\\u202e.csv is being read.`);
+    expect(
+      greyedText("distances", {
+        kind: "individualsFailed",
+        name: "pops\u202e.csv",
+      }),
+    ).toBe(
+      `${start}: pops\\u202e.csv could not be read; the box Individuals file says why and what to do.`,
+    );
+    expect(
+      greyedText("distances", {
+        kind: "noColumnToChoose",
+        name: "pops\u202e.csv",
+        textFile: true,
+      }),
+    ).toBe(
+      `${start}, and pops\\u202e.csv has no column to choose besides the names of the individuals. If it has more, choose its separator in the Individuals tab.`,
+    );
+  });
+
+  test("the names of the files and the column are escaped in the reasons of fewer than two populations", () => {
+    const start =
+      "The distances between populations need at least two populations";
+    const reason = (numPopulations: 0 | 1, noneInFile: boolean): TabGreyed => ({
+      kind: "fewPopulations",
+      column: "pop\u202ecat",
+      numPopulations,
+      variantsName: "pan\u202eel.nei",
+      individualsName: "pops\u202e.csv",
+      noneInFile,
+    });
+    expect(greyedText("distances", reason(1, false))).toBe(
+      `${start}, and pop\\u202ecat gives 1 population among the individuals of pan\\u202eel.nei. Choose another column in the box Individuals file.`,
+    );
+    expect(greyedText("distances", reason(0, true))).toBe(
+      `${start}, and no individual of pan\\u202eel.nei is in pops\\u202e.csv. Check that pops\\u202e.csv names the individuals as pan\\u202eel.nei does.`,
+    );
+    expect(greyedText("distances", reason(0, false))).toBe(
+      `${start}, and no individual of pan\\u202eel.nei has a value in pop\\u202ecat. Choose another column in the box Individuals file.`,
     );
   });
 });

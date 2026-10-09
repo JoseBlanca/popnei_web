@@ -337,7 +337,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
         }),
       ),
     ).toBe(
-      "No column of panel_pops.csv holds text with 20 different values or fewer, so none was chosen as the column of the populations. Choose it in the list.",
+      "panel_pops.csv has no column to choose as the column of the populations besides the names of the individuals. If it has more, choose its separator in the Individuals tab.",
     );
     // A column that qualifies, or a column chosen, gives no line.
     expect(
@@ -368,6 +368,23 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       "No column of panel_pops.csv holds text with 20 different values or fewer, so none was chosen as the column of the populations. Choose it in the list.",
     );
     expect(noColumnQualifiedText(project({ read: null }))).toBeNull();
+  });
+
+  test("the line of no column to choose of an xlsx of the names alone asks for a column, not a separator", () => {
+    const names: IndividualsTable = {
+      columns: ["IID"],
+      rows: PANEL_INDIVIDUALS.map((name) => [name]),
+    };
+    expect(
+      noColumnQualifiedText(
+        project({
+          read: tableRead(names, false),
+          grouping: { kind: "populations", column: null },
+        }),
+      ),
+    ).toBe(
+      "panel_pops.csv has no column to choose as the column of the populations besides the names of the individuals. Add a column of the populations to it and open it again.",
+    );
   });
 
   test("the caption, the headers and the counts, a count not known written … and read not counted yet", () => {
@@ -775,7 +792,7 @@ describe("IN5 D1 what the status region says of a read of the individuals file",
       grouping: { kind: "populations", column: null },
     });
     expect(individualsReadAnnouncement(names, keptOf(names))).toBe(
-      "panel_pops.csv read: 200 rows, no column chosen for the populations. No column of panel_pops.csv holds text with 20 different values or fewer, so none was chosen as the column of the populations. Choose it in the list.",
+      "panel_pops.csv read: 200 rows, no column chosen for the populations. panel_pops.csv has no column to choose as the column of the populations besides the names of the individuals. If it has more, choose its separator in the Individuals tab.",
     );
   });
 

@@ -75,13 +75,19 @@ export function greyedText(tab: AnalysisTabId, reason: TabGreyed): string {
     case "variantsOpening":
       return `${subject} a variants file: ${escaped(reason.name)} is being opened.`;
     case "variantsFailed":
-      return `${subject} a variants file: ${escaped(reason.name)} could not be opened. Open another in the box Variants file.`;
+      return `${subject} a variants file: ${escaped(reason.name)} could not be opened; the box Variants file says why and what to do.`;
     case "noIndividuals":
       return `${TWO_POPULATIONS}. Open an individuals file that assigns the individuals to them.`;
     case "individualsReading":
       return `${TWO_POPULATIONS}: ${escaped(reason.name)} is being read.`;
     case "individualsFailed":
-      return `${TWO_POPULATIONS}: ${escaped(reason.name)} could not be read. Open another in the box Individuals file.`;
+      return `${TWO_POPULATIONS}: ${escaped(reason.name)} could not be read; the box Individuals file says why and what to do.`;
+    case "noColumnToChoose":
+      return `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column to choose besides the names of the individuals. ${
+        reason.textFile
+          ? "If it has more, choose its separator in the Individuals tab."
+          : "Add a column of the populations to it and open it again in the box Individuals file."
+      }`;
     case "noColumn":
       return `${TWO_POPULATIONS}, and no column of the populations is chosen. Choose one in the box Individuals file.`;
     case "tooManyValues":
@@ -102,7 +108,7 @@ function fewPopulationsText(
 ): string {
   const variants = escaped(reason.variantsName);
   if (reason.numPopulations === 1) {
-    return `${shown(reason.column)} gives 1 among the individuals of ${variants}. ${ANOTHER_COLUMN}`;
+    return `${shown(reason.column)} gives 1 population among the individuals of ${variants}. ${ANOTHER_COLUMN}`;
   }
   if (reason.noneInFile) {
     const individuals = escaped(reason.individualsName);

@@ -30,6 +30,7 @@ import type {
 import { deepFreeze } from "./testSupport.ts";
 import type {
   Cell,
+  CsvFound,
   CsvOptions,
   IndividualFilter,
   IndividualsTable,
@@ -79,6 +80,14 @@ function readOf(table: IndividualsTable): TableRead {
       undecodedLine: null,
     },
   };
+}
+
+/** What the read `read` found of its CSV. */
+function foundOf(read: TableRead): CsvFound {
+  if (read.found === null) {
+    throw new Error("the read is of an xlsx");
+  }
+  return read.found;
 }
 
 /** `panel_pops.csv` with its column `popcat` given the cells `cellOf`
@@ -317,6 +326,37 @@ describe("AP1 D1 which tab of the analyses is greyed, and why", () => {
   test("no column chosen greys Distances with noColumn", () => {
     const p = project({ grouping: { kind: "populations", column: null } });
     expect(analysisTabs(p, keptOf(p)).distances).toEqual({ kind: "noColumn" });
+  });
+
+  test("panel_pops.csv read with the semicolon, a table of the names alone, gives noColumnToChoose of a text file; an xlsx of the names alone, not of a text file", () => {
+    const names: IndividualsTable = {
+      columns: ["IID,popcat"],
+      rows: PANEL_POPS.rows.map((row) => [
+        `${String(row[0])},${String(row[1])}`,
+      ]),
+    };
+    const semicolon: TableRead = {
+      ...readOf(names),
+      found: { ...foundOf(readOf(names)), separator: ";" },
+    };
+    const p = project({
+      read: semicolon,
+      grouping: { kind: "populations", column: null },
+    });
+    expect(analysisTabs(p, keptOf(p)).distances).toEqual({
+      kind: "noColumnToChoose",
+      name: "panel_pops.csv",
+      textFile: true,
+    });
+    const xlsx = project({
+      read: { ...readOf(names), found: null },
+      grouping: { kind: "populations", column: null },
+    });
+    expect(analysisTabs(xlsx, keptOf(xlsx)).distances).toEqual({
+      kind: "noColumnToChoose",
+      name: "panel_pops.csv",
+      textFile: false,
+    });
   });
 
   test("a column the list does not offer gives noColumn", () => {

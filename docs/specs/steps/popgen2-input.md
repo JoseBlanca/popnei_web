@@ -191,7 +191,16 @@ stays through a change of the options of a CSV until another file is
 opened, and opening another variants file changes nothing. When no column qualifies, the list
 stays on "None" and the line under it says "No column of panel_pops.csv
 holds text with 20 different values or fewer, so none was chosen as the
-column of the populations. Choose it in the list."
+column of the populations. Choose it in the list." When the list offers
+no column at all, the table holding nothing but the names of the
+individuals and columns of booleans, as a file of semicolons read with
+the comma gives, the line says instead "panel_pops.csv has no column to
+choose as the column of the populations besides the names of the
+individuals. If it has more, choose its separator in the Individuals
+tab.", and for an xlsx, "… besides the names of the individuals. Add a
+column of the populations to it and open it again." (since 9 October
+2026: "Choose it in the list" sent the user to a list that offers only
+"None").
 
 **The counts.** With a variants file read and a column chosen whose
 values are 20 or fewer, a table of two columns, "Population" and

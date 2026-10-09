@@ -12,7 +12,7 @@
 
 import { defect } from "./analyses/words.ts";
 import type { IndividualsKept } from "./individualsKept.ts";
-import { populationCounts } from "./populations.ts";
+import { populationColumnChoices, populationCounts } from "./populations.ts";
 import type { Project } from "./project.ts";
 
 /** The ids of the three tabs of the analyses. */
@@ -33,6 +33,16 @@ export type TabGreyed =
   | { readonly kind: "individualsReading"; readonly name: string }
   /** The individuals file `name` was refused, or its read failed. */
   | { readonly kind: "individualsFailed"; readonly name: string }
+  /** The list of the populations offers no column: the table of the
+      individuals file `name` holds nothing but the names of the
+      individuals and columns of booleans, as a file of semicolons read
+      with the comma gives. */
+  | {
+      readonly kind: "noColumnToChoose";
+      readonly name: string;
+      /** A CSV or a TSV, whose separator the user can choose. */
+      readonly textFile: boolean;
+    }
   /** No column of the populations is chosen, or the one chosen is not
       among those the list offers. */
   | { readonly kind: "noColumn" }
@@ -150,7 +160,13 @@ function distancesGreyed(
     throw defect("an individuals file read gave no counts.");
   }
   if (counts.column === null) {
-    return { kind: "noColumn" };
+    return populationColumnChoices(individuals.read).length === 0
+      ? {
+          kind: "noColumnToChoose",
+          name: individuals.name,
+          textFile: individuals.read.found !== null,
+        }
+      : { kind: "noColumn" };
   }
   if (counts.tooMany) {
     return {

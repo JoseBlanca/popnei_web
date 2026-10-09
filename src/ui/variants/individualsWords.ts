@@ -115,14 +115,27 @@ export function columnShown(p: Project): string | null {
 
 /** The line under the list when the page found no column to choose,
     `defaultPopulationsColumn` of core, and the list is on "None"; null
-    otherwise, and while the file is not read. */
+    otherwise, and while the file is not read. When the list offers no
+    column at all, as a file of semicolons read with the comma gives, the
+    line names the separator of a text file, or asks for a column in an
+    xlsx, since "Choose it in the list" would send the user to a list of
+    "None" alone. */
 export function noColumnQualifiedText(p: Project): string | null {
   const individuals = p.individuals;
   if (individuals?.read.kind !== "read" || columnShown(p) !== null) {
     return null;
   }
-  return defaultPopulationsColumn(individuals.read) === null
-    ? `No column of ${escaped(individuals.name)} holds text with 20 different values or fewer, so none was chosen as the column of the populations. Choose it in the list.`
+  const read = individuals.read;
+  const name = escaped(individuals.name);
+  if (populationColumnChoices(read).length === 0) {
+    const end =
+      read.found === null
+        ? "Add a column of the populations to it and open it again."
+        : "If it has more, choose its separator in the Individuals tab.";
+    return `${name} has no column to choose as the column of the populations besides the names of the individuals. ${end}`;
+  }
+  return defaultPopulationsColumn(read) === null
+    ? `No column of ${name} holds text with 20 different values or fewer, so none was chosen as the column of the populations. Choose it in the list.`
     : null;
 }
 
