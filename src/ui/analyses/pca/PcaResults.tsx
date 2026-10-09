@@ -407,21 +407,23 @@ function PcaResultOf({
           <h3 className={classOf(styles, "title")}>
             {pcaResultTitle(method, variantsName)}
           </h3>
-          <DownloadMenu
-            what={pcaDownloadWhat("plot", method)}
-            items={plotItems(
-              {
-                what: pcaDownloadWhat("plot", method),
-                stem,
-                imageWhat: method,
-                csvWhat: `${method}.coordinates`,
-                csv: () => pcaCoordinatesCsv(result),
-                waiting: null,
-              },
-              plotHandle,
-            )}
-            waiting={drawn === "3d" && handle === null ? PLOT_WAITS_3D : null}
-          />
+          <div className={classOf(styles, "titleMenu")}>
+            <DownloadMenu
+              what={pcaDownloadWhat("plot", method)}
+              items={plotItems(
+                {
+                  what: pcaDownloadWhat("plot", method),
+                  stem,
+                  imageWhat: method,
+                  csvWhat: `${method}.coordinates`,
+                  csv: () => pcaCoordinatesCsv(result),
+                  waiting: null,
+                },
+                plotHandle,
+              )}
+              waiting={drawn === "3d" && handle === null ? PLOT_WAITS_3D : null}
+            />
+          </div>
         </div>
       )}
       <div className={classOf(styles, "bar")}>

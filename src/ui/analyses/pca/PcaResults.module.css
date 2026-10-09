@@ -188,3 +188,9 @@
   font-weight: 600;
   overflow-wrap: anywhere;
 }
+
+/* The menu at the end of the line, also when it wraps under the title
+   on a narrow page. */
+.titleMenu {
+  margin-inline-start: auto;
+}

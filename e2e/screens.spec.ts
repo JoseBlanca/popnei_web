@@ -5850,6 +5850,66 @@ for (const theme of ["light", "dark"] as const) {
         });
       }
 
+      for (const shot of ["3d", "2d", "pcoa", "menu"] as const) {
+        test(`the PCA tab done: ${shot === "pcoa" ? "the PCoA with its warning" : shot === "menu" ? "the menu of the plot open" : `in ${shot.toUpperCase()}`}`, async ({
+          page,
+        }) => {
+          await pickOnNewPage(page, "panel.nei");
+          await pickIndividualsOnNewPage(page, "panel_pops.csv");
+          await page
+            .getByRole("tablist", { name: "Files and analyses" })
+            .getByRole("tab", { name: "PCA", exact: true })
+            .click();
+          const panel = page.getByRole("tabpanel");
+          const run = panel.getByRole("button", { name: "Run", exact: true });
+          await expect(run).toHaveAccessibleDescription(/^The LD pruning/u, {
+            timeout: 20_000,
+          });
+          if (shot === "pcoa") {
+            await panel
+              .getByRole("radiogroup", { name: "Method" })
+              .locator("label")
+              .filter({ hasText: "PCoA" })
+              .click();
+          }
+          const field = panel.getByRole("textbox", {
+            name: /^Distance within which variants are compared/u,
+          });
+          await field.fill("50000");
+          await field.press("Enter");
+          await run.click();
+          await expect(
+            panel.getByText(/^The place of each of the 200 individuals/u),
+          ).toBeVisible({ timeout: 30_000 });
+          await expect(
+            panel.getByRole("radio", { name: "p0 (48)" }),
+          ).toBeVisible({ timeout: 20_000 });
+          if (shot === "2d" || shot === "pcoa") {
+            await panel.getByRole("radio", { name: "2D", exact: true }).click();
+            await expect(panel.locator("svg.chart-scatter")).toBeVisible();
+          } else {
+            await expect(
+              panel.getByRole("img", {
+                name: "Principal components, PC1, PC2 and PC3",
+              }),
+            ).toBeVisible({ timeout: 30_000 });
+          }
+          const menu = panel.getByRole("button", {
+            name: /^Download the plot of the PC/u,
+          });
+          await expect(menu).not.toHaveAttribute("aria-disabled", {
+            timeout: 30_000,
+          });
+          if (shot === "menu") {
+            await menu.click();
+            await expect(page.getByRole("menu")).toBeVisible();
+          } else {
+            await page.mouse.move(0, 0);
+          }
+          await save(page, `popgen2-pca-${shot}${at}-${theme}`);
+        });
+      }
+
       test("a VCF whose ploidy could not be read", async ({ page }) => {
         await pickOnNewPage(page, "no_ploidy.vcf.gz");
         await expect(
