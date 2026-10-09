@@ -4480,6 +4480,47 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-empty${at}-${theme}`);
       });
 
+      test("the row of tabs before a file, the focus on the greyed PCA with its tooltip", async ({
+        page,
+      }) => {
+        const row = page.getByRole("tablist", { name: "Files and analyses" });
+        await row.getByRole("tab", { name: "Variants", exact: true }).focus();
+        await page.keyboard.press("End");
+        await page.keyboard.press("ArrowLeft");
+        await page.keyboard.press("ArrowLeft");
+        await expect(
+          row.getByRole("tab", { name: "PCA", exact: true }),
+        ).toBeFocused();
+        await expect(page.getByRole("tooltip")).toBeVisible();
+        await save(page, `popgen2-tabs-greyed${at}-${theme}`);
+      });
+
+      test("the row of tabs with panel.nei open, Distances greyed", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        const row = page.getByRole("tablist", { name: "Files and analyses" });
+        await expect(
+          row.getByRole("tab", { name: "PCA", exact: true }),
+        ).not.toHaveAttribute("aria-disabled");
+        await row.getByRole("tab", { name: "Variants", exact: true }).focus();
+        await page.keyboard.press("End");
+        await expect(page.getByRole("tooltip")).toBeVisible();
+        await save(page, `popgen2-tabs-open${at}-${theme}`);
+      });
+
+      test("the Populations tab shown, not built yet", async ({ page }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "Populations", exact: true })
+          .click();
+        await expect(page.getByText(/^Not built yet: /u)).toBeVisible();
+        await save(page, `popgen2-tabs-not-built${at}-${theme}`);
+      });
+
       test("the input page with no file, each tab shown", async ({ page }) => {
         await save(page, `popgen2-input-no-file${at}-${theme}`);
         await page
