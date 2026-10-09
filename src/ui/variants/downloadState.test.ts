@@ -7,8 +7,11 @@
  */
 import { describe, expect, test, vi } from "vitest";
 
+import { pcaOnPopgen2 } from "../../core/analyses/pca.ts";
+import type { PcaOptions } from "../../core/analyses/pca.ts";
 import * as noVariantKept from "../../core/noVariantKept.ts";
 import {
+  setAnalysisOptions,
   setThreshold,
   setVariantFilter,
   turnOffVariantFilter,
@@ -31,6 +34,7 @@ import {
   downloadPlace,
   endOfWrite,
   noVariantAnnouncement,
+  runningPcaOf,
   saveAgain,
 } from "./downloadState.ts";
 import type { DownloadPlace } from "./downloadState.ts";
@@ -125,6 +129,7 @@ function placeOf(store: Store<JobResult, Blob>): DownloadPlace {
     state.write,
     state.project,
     state.individualsKept,
+    runningPcaOf(state),
   );
 }
 
@@ -424,6 +429,7 @@ describe("DL7 D1 when there is nothing to download, and a file written and not h
         { kind: "locked", reason: "The store's words." },
         state.project,
         state.individualsKept,
+        null,
       ),
     ).toStrictEqual({ kind: "sentence", text: "The store's words." });
   });
@@ -439,6 +445,7 @@ describe("DL7 D1 when there is nothing to download, and a file written and not h
         { kind: "locked", reason: "Open a project first." },
         state.project,
         state.individualsKept,
+        null,
       ),
     ).toThrow(
       "popnei_web defect: the write of popgen2.html is locked once the one pass is finished, for another reason than no individual kept: Open a project first.",
@@ -613,5 +620,116 @@ describe("DL7 D1 the status region says the sentence of no variant once", () => 
     writeEnded(store, writes, vcfWritten(0));
     expect(placeOf(store).kind).toBe("sentence");
     expect(noVariantAnnouncement(ready, store.getState())).toBeNull();
+  });
+});
+
+/** Sets the PCA's options of the store's project to PCA2_DEFAULTS with
+    the LD pruning within 50,000 and `change` over them, and starts it,
+    which the fake worker never ends. */
+function startPca(
+  store: Store<JobResult, Blob>,
+  change: Partial<PcaOptions> = {},
+): void {
+  store.apply("the LD pruning of the PCA changed", (p) =>
+    setAnalysisOptions(p, pcaOnPopgen2, {
+      ...pcaOnPopgen2.defaults,
+      ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
+      ...change,
+    }),
+  );
+  store.startRun("pca");
+  expect(
+    store.getState().analyses.find((a) => a.id === "pca")?.status.kind,
+  ).toBe("running");
+}
+
+describe("AP6 D3 the download waits while a PCA runs", () => {
+  test("the button, enabled once the one pass is finished, waits with its words while the PCA runs, and is back when it is stopped", () => {
+    const { store, jobs } = storeOfPanel();
+    finishPass(store, jobs, pass(false));
+    expect(runningPcaOf(store.getState())).toBeNull();
+    expect(placeOf(store)).toStrictEqual({ kind: "enabled" });
+
+    startPca(store);
+
+    expect(runningPcaOf(store.getState())).toBe("pca");
+    expect(placeOf(store)).toStrictEqual({
+      kind: "disabled",
+      reason: "Waits for the PCA to end; or stop it in the PCA tab.",
+    });
+    store.cancelRun("pca");
+    expect(runningPcaOf(store.getState())).toBeNull();
+    expect(placeOf(store)).toStrictEqual({ kind: "enabled" });
+  });
+
+  test("under the PCoA, the words name the PCoA", () => {
+    const { store, jobs } = storeOfPanel();
+    finishPass(store, jobs, pass(false));
+
+    startPca(store, { method: "pcoa" });
+
+    expect(runningPcaOf(store.getState())).toBe("pcoa");
+    expect(placeOf(store)).toStrictEqual({
+      kind: "disabled",
+      reason: "Waits for the PCoA to end; or stop it in the PCA tab.",
+    });
+  });
+
+  test("after a write that failed, the button waits too, since Download writes again", () => {
+    const { store, jobs, writes } = storeOfPanel();
+    finishPass(store, jobs, pass(false));
+    store.startWrite("vcf");
+    store.runEnded(sentAt(writes, 0).run.id, {
+      kind: "failed",
+      error: { kind: "workerFailed", message: "a crash" },
+    });
+
+    startPca(store);
+
+    expect(store.getState().write?.kind).toBe("error");
+    expect(placeOf(store)).toStrictEqual({
+      kind: "disabled",
+      reason: "Waits for the PCA to end; or stop it in the PCA tab.",
+    });
+  });
+
+  test("the text after a download stays while a PCA runs, since Save it again sends the worker nothing", () => {
+    const { store, jobs, writes } = storeOfPanel();
+    finishPass(store, jobs, pass(false));
+    writeEnded(store, writes, vcfWritten());
+    endOfWrite(store, () => undefined);
+    const before = placeOf(store);
+    expect(before.kind).toBe("file");
+
+    startPca(store);
+
+    expect(store.getState().write?.kind).toBe("saved");
+    expect(placeOf(store)).toStrictEqual(before);
+  });
+
+  test("the sentence of no variant, certain before any write, stays while a PCA runs", () => {
+    const { store, jobs } = storeOfPanel();
+    finishPass(store, jobs, pass(true));
+    const before = placeOf(store);
+    expect(before.kind).toBe("sentence");
+
+    startPca(store);
+
+    expect(placeOf(store)).toStrictEqual(before);
+  });
+
+  test("while the one pass runs, the wait of the pass is said, not that of the PCA", () => {
+    const { store } = storeOfPanel();
+    store.startRun("variantsSummary");
+
+    expect(
+      downloadPlace(
+        summaryStatus(store.getState()),
+        store.getState().write,
+        store.getState().project,
+        store.getState().individualsKept,
+        "pca",
+      ),
+    ).toStrictEqual(WAITS);
   });
 });

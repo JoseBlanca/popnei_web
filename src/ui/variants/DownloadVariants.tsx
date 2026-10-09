@@ -45,7 +45,12 @@ import { whenNoDialog } from "../widgets/dialogMark.ts";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import { RadioGroup } from "../widgets/RadioGroup.tsx";
 import styles from "./DownloadVariants.module.css";
-import { downloadPlace, endOfWrite, saveAgain } from "./downloadState.ts";
+import {
+  downloadPlace,
+  endOfWrite,
+  runningPcaOf,
+  saveAgain,
+} from "./downloadState.ts";
 import { useRunGate } from "./runGate.tsx";
 import type { DownloadPlace, WriteEnd } from "./downloadState.ts";
 import {
@@ -117,7 +122,8 @@ export function DownloadVariants(): React.JSX.Element {
   // of a write stopped does nothing.
   const attempt = useRef(0);
 
-  const place = downloadPlace(summary, write, project, kept);
+  const pcaRunning = useAppState(runningPcaOf);
+  const place = downloadPlace(summary, write, project, kept, pcaRunning);
 
   // Listened to on the element itself, not through React, whose events
   // come up from the dialog drawn elsewhere in the page.
@@ -270,6 +276,7 @@ export function DownloadVariants(): React.JSX.Element {
               now.write,
               now.project,
               now.individualsKept,
+              runningPcaOf(now),
             ).kind !== "enabled"
           ) {
             focusFrom.current = "enabled";

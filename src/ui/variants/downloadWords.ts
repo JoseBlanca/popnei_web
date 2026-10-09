@@ -18,6 +18,7 @@ import { sizeText } from "../../core/writeEstimate.ts";
 import type {
   IndividualFilterKind,
   PassStats,
+  PcaMethod,
   VariantFilterKind,
 } from "../../worker/protocol.ts";
 import type { WriteFormat } from "../../core/keys.ts";
@@ -37,6 +38,14 @@ export const DOWNLOAD_WAITS =
     one pass, whose words the box of the file says. */
 export const DOWNLOAD_NEEDS =
   "The download needs the statistics of the file, which could not be calculated.";
+
+/** Why the button is disabled while a PCA runs, once the one pass is
+    finished, by the method of the project: "Waits for the PCA to end; or
+    stop it in the PCA tab." (docs/specs/steps/popgen2-download.md, "While
+    a PCA runs"). */
+export function pcaWaitsText(method: PcaMethod): string {
+  return `Waits for the ${method === "pca" ? "PCA" : "PCoA"} to end; or stop it in the PCA tab.`;
+}
 
 /** The heading of the dialog, which is also its name. */
 export const DIALOG_HEADING = "Download filtered variants";
