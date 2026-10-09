@@ -46,6 +46,7 @@ import type { SortDescriptor } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
 import styles from "./SortableTable.module.css";
+import { bodyKey } from "./tableSort.ts";
 import type { TableSort } from "./tableSort.ts";
 
 /** A column of the table, whose id is of the union `Id`. */
@@ -168,15 +169,15 @@ export function SortableTable<Id extends string>({
             </Column>
           )}
         </TableHeader>
-        {/* Keyed by the sort, so that a sort draws the rows in view anew
-            rather than have React move every row of the collection to its
-            new place: with 10,000 rows, keyed, the median freeze of a sort
-            went from 279 to 149 ms in Chromium 153 and from 381 to 107 ms
-            in WebKit 26.6, on 27 September 2026 (VS7 D4 of
-            e2e/measure.spec.ts). The focus stays on the header sorted,
-            which is not in the body. */}
+        {/* Keyed by the sort up to MOST_COLUMNS_REDRAWN columns, so that
+            a sort draws the rows in view anew rather than have React move
+            every row of the collection to its new place; past them,
+            where React Aria's building of the hidden list of every cell
+            again costs more than the move, keyed once (tableSort.ts,
+            `bodyKey`, with the times). The focus stays on the header
+            sorted, which is not in the body. */}
         <TableBody
-          key={sort === null ? "unsorted" : `${sort.column} ${sort.direction}`}
+          key={bodyKey(sort, columns.length)}
           items={rows}
           dependencies={[columns]}
         >
