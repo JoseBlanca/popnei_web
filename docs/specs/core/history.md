@@ -3,7 +3,12 @@
 24 September 2026, approved by the owner on 24 September 2026; revised
 on 25 September 2026 for the specs of stage 2 the owner approved that
 day, as `docs/specs/stage-2-open-points.md`, "Changes to approved
-files", lists. The code is in `src/core/history.ts`. The history keeps the projects the user has had, so that an undo
+files", lists. Revised on 9 October 2026 for `popgen2.html`, whose Undo
+and Redo come back that day (`docs/designs/analyses-pca.md`, "Undo and
+Redo"): on that page the opening of a variants file, and every change
+of the individuals file but the column the user chooses, start a new
+history, by the store's `open` and `applyAfresh`, which call
+`startHistory`; nothing in this module changes. The code is in `src/core/history.ts`. The history keeps the projects the user has had, so that an undo
 gives back the previous one and a redo the one after it. Because a result
 is found by the key that a project gives it (`docs/architecture.md`,
 section 3), an undo also brings back the results of the previous project,
@@ -44,6 +49,16 @@ whose file was read long ago.
   2026 that an opening starts a new history. The option not taken was
   to make the opening a step of undo, which would have brought back the
   work before it at no cost.
+- **On `popgen2.html` an opening of either file starts a new history**,
+  with no dialog, since that page saves no project and an opening there
+  keeps the filters: the owner decided on 8 October 2026 that an Undo of
+  the opening of a file is "not necessary", and on 9 October 2026 that
+  Undo serves the thresholds, the FILTER box, the column of the
+  populations and the options of the PCA. The opening, the removal, a
+  change of an option of the reader of the individuals file, and the
+  column the page chooses at the end of its read, each start one too
+  (`docs/specs/core/store.md`, "On popgen2.html: no notice, and a history
+  of the filters"). The steps before them are gone.
 - **A record of a read changes every project of the history that holds
   that load**, and makes no step (`docs/architecture.md`, section 6, step
   3). A pick of the variants file is a step; the read of the file that

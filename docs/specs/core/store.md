@@ -115,7 +115,17 @@ individuals kept"). Built on the branch `download`, work packages 4 and
 changed that a write of the other format, stopped and answering after
 its cancel, no longer marks the current write dropped, and gave the
 store of popgen2.html the setting `keptNoneStep`, so that its words of
-no individual kept end "Loosen them.". The store is the one object of core that
+no individual kept end "Loosen them.". Revised on 9 October 2026 for
+the PCA tab of popgen2.html (`docs/designs/analyses-pca.md`, approved
+by the owner that day with its answers 3 and 8): a setting of
+`createStore`, `stopLeftBehind`, under which a change makes no notice
+and stops at once every calculation it leaves behind, given by that
+page alone; and a third way to change the project, `applyAfresh`, a
+command after which the history starts afresh, through which that page
+sends the changes of its individuals file, so that they are no steps
+of its Undo, which comes back the same day, and stop nothing that a
+command would not (below, "On popgen2.html: no notice, and a history of
+the filters"). No code yet. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -370,6 +380,66 @@ the workers and joins them, and change what the screens show without a
 step of undo: the
 version of popnei, the reads of the files, recorded into every project of
 the history that holds their load, and the end of a calculation.
+
+### On popgen2.html: no notice, and a history of the filters
+
+From 9 October 2026 the PCA reads the filters on `popgen2.html`, the
+first calculation of that page that does, so a change of a threshold
+can take its result off the screen or leave its calculation behind.
+That page draws no notice, as the owner decided on 8 October 2026, so a
+PCA left running for an Undo would go on out of sight, with the
+calculation worker and up to 3 GB of the tab, and the download of the
+filtered variants would wait for it with words that send the user to a
+Stop the PCA tab no longer shows.
+
+**`stopLeftBehind`**, a setting of `createStore`, true on that page and
+absent on `popgen.html`. With it, after a command, an undo, a redo or
+an `applyAfresh`, the store:
+
+- makes no notice: `notice` stays `null`, and an analysis whose result
+  left the screen is in the state its key gives, `ready` when it can
+  run, never `removed`, which only a notice lists;
+- stops at once, with the `cancel()` of its handle, every calculation
+  in flight whose key the new project does not give, every Run that
+  waits for the statistics under such a key, and a write of such a key;
+  each is then as after the user's Stop, but that it keeps no result so
+  far, since the key it would show it under is no longer the project's.
+
+An undo that gives a key back finds its result in the cache, if the
+cache holds it, and starts nothing: a calculation stopped so is run
+again by the user. A calculation of the key that the change kept goes
+on. A result that a stopped request gives after its `cancel()` is
+cached under its own key, as any late result is ("The cases"), and is
+shown when the project gives that key again. The setting changes
+nothing of `open`, which already stops every calculation.
+
+The one pass of that page, its summary of the variants file, reads no
+filter, so no command changes its key and the setting never stops it.
+
+**`applyAfresh(command)`**, beside `apply` and `open`. It applies the
+command to the current project as `apply` does: removes from the
+screen and stops what a command would, by the rules above or those of
+the notice on a page without the setting. Then the history starts
+afresh at the new project, with nothing to undo or redo, and
+`historyMoves` counts one, as an opening does. A command that gives the
+project it was given changes nothing, the history included. It takes
+no description, since it makes no step to name.
+
+`popgen2.html` sends through it every change of its individuals file
+(`docs/specs/steps/popgen2-input.md`, "What it sends and reads"): the
+opening, the removal, a change of an option of its reader, and the
+column the page chooses at the end of a read (`docs/specs/entry.md`).
+The owner decided on 8 and 9 October 2026 that an opening of a file is
+no step of Undo. `open` does not do for them: it stops every
+calculation, the one pass among them, which reads the variants file and
+does not depend on the individuals file. Not taken: `open` with a
+setting that stops nothing, which would give one command two meanings.
+
+On that page the screens reach the store through a gate,
+`gatedStore` of `src/ui/variants/thresholdRun.ts`, which makes a run of
+the arrow keys on a threshold a change before `apply`, `undo`, `redo`
+and `open`. It wraps `applyAfresh` too, so the run is made a change and
+the fresh history then drops its step.
 
 ### The notice, and the calculations it stops
 
@@ -1241,6 +1311,10 @@ export function createStore<J, R, F = never>(config: {
   /** The step the reason of a lock for no individual kept sends the user to, the third argument of
       `keptNoneReason`: the Variants step when absent; null on popgen2.html, which has no steps. */
   readonly keptNoneStep?: string | null;
+  /** Whether a change makes no notice and stops at once every calculation, wait and write it leaves
+      behind (above, "On popgen2.html: no notice, and a history of the filters"); true on
+      popgen2.html, false when absent. */
+  readonly stopLeftBehind?: boolean;
 }): Store<R, F>;
 
 /** What the store takes from the pass of a result. */
@@ -1280,6 +1354,10 @@ export interface Store<R, F = never> {
       current one, so that a page that commits a change before an opening
       opens from it (popgen2.html's runs of the arrow keys). */
   open(make: (current: Project) => Project): void;
+  /** Applies `command` as `apply` does, and then starts the history afresh at the project it
+      gives, with nothing to undo or redo, counting one in `historyMoves`; nothing changes when
+      it gives the project it was given. */
+  applyAfresh(command: (p: Project) => Project): void;
   /** Closes the notice, and stops the calculations it left behind. */
   dismissNotice(): void;
 
@@ -1802,6 +1880,29 @@ whose file is a text.
 The tests in the browser, of the walking skeleton, check the same through
 the screens, since core reaches them through the store
 (`.claude/skills/coding/testing.md`).
+
+**`stopLeftBehind` and `applyAfresh`**, with Vitest, on the store of
+`popgen2.html` made by `createPopgen2Store` with a fake `send` that
+records each request and its `cancel()`, and the PCA among its
+analyses:
+
+- A PCA done under a threshold, the threshold moved: `notice` `null`,
+  the PCA `ready` under the new key; undo: the PCA `done` with the same
+  result object, and no request sent.
+- A PCA in flight, the threshold moved: its `cancel()` called once, at
+  once; the PCA `ready`, with `stopped` `null`; undo: `ready`, not
+  `running`, and no request sent; its result given after the cancel:
+  cached, and `done` after a redo and an undo bring its key back.
+- A PCA in flight, the colour of the points changed, which its key does
+  not hold: no `cancel()`, still `running`.
+- The same three on a store made without the setting: the notices of
+  the old page, unchanged.
+- `applyAfresh` of `loadIndividuals` after two threshold steps: the
+  project has the individuals file, `undo` and `redo` `null`,
+  `historyMoves` one more; the one pass in flight not cancelled. A
+  command that gives the same project: the state the same object.
+- Through the gate of the page, a run of the arrow keys waiting and
+  `applyAfresh`: the run's change made first, then nothing to undo.
 
 ## Open points
 
