@@ -12,7 +12,15 @@
 import { StrictMode, act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 
 import { loadVariants } from "../../core/project.ts";
 import { summaryResult } from "../../core/testSupport.ts";
@@ -81,8 +89,30 @@ let container: HTMLElement;
 let root: Root;
 let caught: unknown[];
 
+beforeAll(async () => {
+  // The code of the plots, which the page loads by import() once a file
+  // is read, made ready before the tests, so that every run draws the
+  // plots: alone, the file was read before its first transform ended, and
+  // the plots were never drawn; in the whole suite, on the runner of
+  // GitHub with node 24, they were, and threw for want of a
+  // ResizeObserver, twelve errors more than the one injected.
+  await import("./SectionPlots.tsx");
+});
+
 beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  // jsdom has no ResizeObserver, which the plots ask for their size.
+  globalThis.ResizeObserver = class {
+    observe(): void {
+      // Nothing is laid out in jsdom.
+    }
+    unobserve(): void {
+      // Nothing is laid out in jsdom.
+    }
+    disconnect(): void {
+      // Nothing is laid out in jsdom.
+    }
+  };
   inject.throwAt = null;
   inject.zoneThrows = false;
   container = document.createElement("div");
@@ -222,7 +252,7 @@ test("live-stats 2 after a throw while the box of one file is drawn, the box of 
       ?.soFar(summaryResult(["1", "2", "3"], [100, 100, 100], ["i1", "i2"]));
     await Promise.resolve();
   });
-  expect(caught).toHaveLength(1);
+  expect(caught).toEqual([new Error("a line of the box could not be drawn")]);
   expect(box()).toBeNull();
   expect(container.textContent).toContain("File information");
 
@@ -323,7 +353,7 @@ describe("IN3 the page in two boxes and two tabs", () => {
         ?.soFar(summaryResult(["1", "2", "3"], [100, 100, 100], ["i1", "i2"]));
       await Promise.resolve();
     });
-    expect(caught).toHaveLength(1);
+    expect(caught).toEqual([new Error("a line of the box could not be drawn")]);
     expect(buttonOf("Open another variants file…")).toBe(button);
     await open(store, "b".repeat(32), "second.nei");
     expect(buttonOf("Open another variants file…")).toBe(button);
@@ -347,7 +377,7 @@ async function drawWithZoneThrowing(
 ): Promise<Store<JobResult, Blob>> {
   inject.zoneThrows = true;
   const { store } = await drawPage(pickedId);
-  expect(caught).toHaveLength(1);
+  expect(caught).toEqual([new Error("the zone could not be drawn")]);
   expect(buttonOf("Open variants file…")).toBeNull();
   inject.zoneThrows = false;
   return store;
