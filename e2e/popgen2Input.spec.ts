@@ -1079,7 +1079,34 @@ test("IN6 D2 axe on the box and the tab with no file, a file being read, a file 
   await pick(page, "panel.nei");
   await expect(page.locator("svg.chart")).toHaveCount(6, { timeout: 20_000 });
   await expectAxeBothSchemes(page, makeAxeBuilder);
+
+  // The read held: table_io's wasm, which the light worker fetches at
+  // its first read, is answered only once axe has run on the box and the
+  // tab of a file being read.
+  let answer = (): void => undefined;
+  const held = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  await page.route(/table_io[^/]*\.wasm$/u, async (route) => {
+    await held;
+    await route.continue();
+  });
   await pickIndividuals(page, "panel_pops.csv");
+  await expect(
+    individualsBox(page).getByText("Reading panel_pops.csv.", { exact: true }),
+  ).toBeVisible();
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+  await tab(page, "Individuals file").click();
+  await expect(
+    page
+      .getByRole("tabpanel", { name: "Individuals file" })
+      .getByText("Reading panel_pops.csv.", { exact: true }),
+  ).toBeVisible();
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+  await expect(columnList(page)).toHaveCount(0);
+  answer();
+  await tab(page, "Variants file").click();
+
   await expectCounts(page, ALL_COUNTS);
   await expectAxeBothSchemes(page, makeAxeBuilder);
   await tab(page, "Individuals file").click();
