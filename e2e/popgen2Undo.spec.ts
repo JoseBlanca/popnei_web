@@ -8,9 +8,12 @@
  * is opened, which start the history afresh; each named by its step in
  * its tooltip, and an undo or a redo said in the status region; the keys
  * of Undo and Redo on the heading, on a line and in a box with nothing
- * typed, and the box's own with something typed; the focus handed from a
- * button that goes to the other, or to the heading; no notice at any of
- * it. A file opened while the pass of the file before it runs starts its
+ * typed, and the box's own with something typed; a run of the arrow keys
+ * in a box or on a line taken back by the keys or by a click of Undo, a
+ * drag one step, a run that ends where it began none, and a run kept as a
+ * step through a crash of the worker; the browser's own undo of a box
+ * held back; the focus handed from a button that goes to the other, or
+ * to the heading; no notice at any of it. A file opened while the pass of the file before it runs starts its
  * own pass, and is never said to be stopped.
  *
  * The flows of the PCA, an Undo that brings its result back and a change
@@ -28,6 +31,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { writeBigVcf } from "./bigVcf.ts";
 import { dropFiles } from "./dropFiles.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 
@@ -44,6 +48,13 @@ const MISSING_CHANGED = "the filter of the variants by missing data changed";
 const MAF_ON = "the MAF filter was turned on";
 /** The description of a column of the populations chosen. */
 const COLUMN_CHANGED = "the column of the populations changed";
+/** The title of the histogram of the observed heterozygosity, whose
+    threshold is off when a file opens. */
+const OBS_HET_TITLE = "Observed heterozygosity";
+/** The description of the observed heterozygosity's threshold turned on
+    from off. */
+const OBS_HET_ON =
+  "the filter of the variants by observed heterozygosity was turned on";
 
 async function openPage(page: Page): Promise<void> {
   await page.goto("popgen2.html");
@@ -170,13 +181,31 @@ async function openAndUntick(page: Page): Promise<void> {
   await expect(undoButton(page)).toHaveAccessibleDescription(`Undo: ${KEPT}`);
 }
 
-/** The group of the histogram titled `title`, its box and its line. */
+/** The group of the histogram titled `title`, its box, its line, and
+    the thumb of its line, which the mouse drags. */
 function threshold(
   page: Page,
   title: string,
-): { readonly box: Locator; readonly slider: Locator } {
+): {
+  readonly box: Locator;
+  readonly slider: Locator;
+  readonly thumb: Locator;
+} {
   const group = stats(page).getByRole("group", { name: title, exact: true });
-  return { box: group.getByRole("textbox"), slider: group.getByRole("slider") };
+  const slider = group.getByRole("slider");
+  return {
+    box: group.getByRole("textbox"),
+    slider,
+    // The input is in a hidden box inside the thumb.
+    thumb: slider.locator("xpath=../.."),
+  };
+}
+
+/** Freezes the page's timers, so that a run of the arrow keys waits
+    until the flow ends it, whatever the speed of the machine. */
+async function freezeTimers(page: Page): Promise<void> {
+  await page.clock.install();
+  await page.clock.pauseAt(Date.now() + 1000);
 }
 
 /** The missing rate of the variants, typed at `value` and applied. */
@@ -470,6 +499,204 @@ test("AP4 D3 0.9 typed in the box of the MAF and not applied, Ctrl+Z: the box ba
   await expect(undoButton(page)).toHaveAccessibleDescription(`Undo: ${KEPT}`);
 });
 
+test("AP4 D3 Ctrl+Z in a box within a run of arrow presses in it makes the run a change and undoes it, and Ctrl+Shift+Z brings it back; Meta+Z and Meta+Shift+Z the same", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, "panel.vcf.gz");
+  await expectDone(page, "panel.vcf.gz");
+  const missing = threshold(page, MISSING_TITLE);
+  await expect(missing.box).toHaveValue("0.1");
+  // A promise of StatsHistogram.tsx: the keys of Undo in the box during
+  // its run take the run back as they do on the line.
+  await freezeTimers(page);
+  await missing.box.focus();
+  for (let press = 0; press < 3; press += 1) {
+    await page.keyboard.press("ArrowDown");
+  }
+  await expect(missing.box).toHaveValue("0.097");
+  await page.keyboard.press("Control+z");
+  await expect(missing.box).toHaveValue("0.1");
+  await expect(missing.slider).toHaveValue("0.1");
+  await expect(missing.box).toBeFocused();
+  await expect(undoButton(page)).toHaveCount(0);
+  await expect(redoButton(page)).toHaveAccessibleDescription(
+    `Redo: ${MISSING_CHANGED}`,
+  );
+  await page.keyboard.press("Control+Shift+z");
+  await expect(missing.box).toHaveValue("0.097");
+  await expect(redoButton(page)).toHaveCount(0);
+
+  await page.keyboard.press("ArrowDown");
+  await expect(missing.box).toHaveValue("0.096");
+  await page.keyboard.press("Meta+z");
+  await expect(missing.box).toHaveValue("0.097");
+  await page.keyboard.press("Meta+Shift+z");
+  await expect(missing.box).toHaveValue("0.096");
+  await expect(notice(page)).toHaveCount(0);
+});
+
+test("AP4 D3 while a run of the arrow keys waits, a click of Undo with the mouse makes the run a change and undoes it, and Redo brings it back", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, "panel.vcf.gz");
+  await expectDone(page, "panel.vcf.gz");
+  const missing = threshold(page, MISSING_TITLE);
+  await freezeTimers(page);
+  await missing.slider.focus();
+  for (let press = 0; press < 3; press += 1) {
+    await page.keyboard.press("ArrowLeft");
+  }
+  await expect(missing.box).toHaveValue("0.097");
+  await expect(undoButton(page)).toHaveAccessibleDescription(
+    `Undo: ${MISSING_CHANGED}`,
+  );
+  await expect(redoButton(page)).toHaveCount(0);
+  // WebKit gives a clicked button no focus, so the run is ended by the
+  // press itself, not by the line losing the focus.
+  await undoButton(page).click();
+  await expect(missing.box).toHaveValue("0.1");
+  await expect(missing.slider).toHaveValue("0.1");
+  await expect(undoButton(page)).toHaveCount(0);
+  await expect(redoButton(page)).toHaveAccessibleDescription(
+    `Redo: ${MISSING_CHANGED}`,
+  );
+  await redoButton(page).click();
+  await expect(missing.box).toHaveValue("0.097");
+  await expect(missing.slider).toHaveValue("0.097");
+});
+
+test("AP4 D3 a drag of a line is one step, made at the release, and Undo moves the line and the box back", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, "panel.vcf.gz");
+  await expectDone(page, "panel.vcf.gz");
+  const het = threshold(page, OBS_HET_TITLE);
+  await expect(het.box).toHaveValue("1");
+  await expect(het.slider).toHaveValue("0.7");
+
+  await het.thumb.scrollIntoViewIfNeeded();
+  const box = await het.thumb.boundingBox();
+  if (box === null) throw new Error("no thumb");
+  const y = box.y + box.height / 2;
+  const x = box.x + box.width / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x - 140, y, { steps: 8 });
+  // Dragged and not let go: the box follows the line, and no step yet.
+  const dragged = await het.slider.inputValue();
+  expect(Number(dragged)).toBeLessThan(0.7);
+  await expect(het.box).toHaveValue(dragged);
+  await expect(undoOrRedo(page)).toHaveCount(0);
+  await page.mouse.up();
+  await expect(undoButton(page)).toHaveAccessibleDescription(
+    `Undo: ${OBS_HET_ON}`,
+  );
+
+  await undoButton(page).click();
+  await expect(het.box).toHaveValue("1");
+  await expect(het.slider).toHaveValue("0.7");
+  await expect(undoButton(page)).toHaveCount(0);
+  await expect(redoButton(page)).toHaveAccessibleDescription(
+    `Redo: ${OBS_HET_ON}`,
+  );
+  await redoButton(page).click();
+  await expect(het.box).toHaveValue(dragged);
+  await expect(het.slider).toHaveValue(dragged);
+  await expect(redoButton(page)).toHaveCount(0);
+});
+
+test("AP4 D3 a run of Down then Up on a line that is off leaves no step, and the filter off", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, "panel.vcf.gz");
+  await expectDone(page, "panel.vcf.gz");
+  const het = threshold(page, OBS_HET_TITLE);
+  await het.slider.focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(het.slider).toHaveValue("0.69");
+  await page.keyboard.press("ArrowRight");
+  await expect(het.slider).toHaveValue("0.7");
+  // The run ends as the focus leaves.
+  await page.keyboard.press("Tab");
+  await expect(het.box).toHaveValue("1");
+  await expect(undoOrRedo(page)).toHaveCount(0);
+});
+
+test("AP4 D3 a crash of the worker while a run of the arrow keys waits keeps the run as a step: Undo named by it", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const vcf = testInfo.outputPath("stats.vcf.gz");
+  await writeBigVcf(vcf, 30_000);
+  await holdSummary(page);
+  await openPage(page);
+  const chooser = page.waitForEvent("filechooser");
+  await openButton(page).click();
+  await (await chooser).setFiles(vcf);
+  await expect(
+    page.getByText("Calculating the statistics of the variants… 100%"),
+  ).toBeVisible({ timeout: 60_000 });
+  await release(page, "oneSoFar");
+  const missing = threshold(page, MISSING_TITLE);
+  await expect(missing.box).toHaveValue("0.1", { timeout: 60_000 });
+  await missing.slider.focus();
+  for (let press = 0; press < 3; press += 1) {
+    await page.keyboard.press("ArrowLeft");
+  }
+  await expect(missing.box).toHaveValue("0.097");
+  await release(page, "crash");
+  await expect(
+    stats(page).getByText("Not calculated.", { exact: true }).first(),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(undoButton(page)).toHaveAccessibleDescription(
+    `Undo: ${MISSING_CHANGED}`,
+  );
+  await expect(redoButton(page)).toHaveCount(0);
+});
+
+test("AP4 D3 0.9 typed in a box and committed, another file opened: Ctrl+Z and Meta+Z in the box and on the heading, with no step to undo, leave the box at 0.9", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, "panel.vcf.gz");
+  await expectDone(page, "panel.vcf.gz");
+  const maf = threshold(page, "Major allele frequency");
+  // 0.9 typed over the 1 of a threshold that is off, and committed.
+  await maf.box.fill("0.9");
+  await maf.box.press("Enter");
+  await expect(maf.slider).toHaveValue("0.9");
+  await pick(page, "panel.nei");
+  await expectDone(page, "panel.nei");
+  await expect(undoOrRedo(page)).toHaveCount(0);
+  await expect(maf.box).toHaveValue("0.9");
+
+  // The browser's own undo of the box's text would take it back to the
+  // 1 that 0.9 was typed over, which Chromium did even from the heading,
+  // moving the focus into the box (NumberField.tsx).
+  const expectKept = async (): Promise<void> => {
+    await expect(maf.box).toHaveValue("0.9");
+    await expect(maf.slider).toHaveValue("0.9");
+    await expect(maf.box).not.toHaveAttribute("data-muted");
+  };
+  for (const keys of ["Control+z", "Meta+z"]) {
+    await maf.box.focus();
+    await page.keyboard.press(keys);
+    await expectKept();
+    await heading(page).focus();
+    await page.keyboard.press(keys);
+    await expectKept();
+  }
+  // The box committed again as the focus leaves it: still 0.9, on.
+  await maf.box.focus();
+  await page.keyboard.press("Tab");
+  await expectKept();
+  await expect(undoOrRedo(page)).toHaveCount(0);
+});
+
 test("AP4 D3 Redo with the focus, removed by an individuals file dropped on its box, which leaves the focus where it was: the focus on the heading; a click of the FILTER box takes the focus off Redo before its command, in Chromium and WebKit alike", async ({
   page,
 }) => {
@@ -493,15 +720,15 @@ test("AP4 D3 Redo with the focus, removed by an individuals file dropped on its 
   await expect(undoOrRedo(page)).toHaveCount(0);
   await expect(heading(page)).toBeFocused();
 
-  // The click of the FILTER box: the press of the mouse on its words, no
-  // control, takes the focus off Redo before the command removes it, so
-  // the next Tab starts from the box, as after any click.
+  // The click of the FILTER box: the press of the mouse on its words
+  // gives the focus to the box before the command removes Redo, so the
+  // focus stays on the box, as after any click.
   await clickBox(page);
   await undoButton(page).click();
   await redoButton(page).focus();
   await clickBox(page);
   await expect(redoButton(page)).toHaveCount(0);
-  await expect(heading(page)).not.toBeFocused();
+  await expect(filterBox(page)).toBeFocused();
 });
 
 test("AP4 D3 the Tab key goes from Undo to Redo and then into the box of the variants file, and Shift+Tab from Undo leaves the line", async ({
