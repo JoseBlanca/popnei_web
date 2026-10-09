@@ -8,6 +8,7 @@
  */
 import { describe, expect, test } from "vitest";
 
+import { tableCsv } from "../../core/csv.ts";
 import type { TableRead } from "../../core/project.ts";
 import type { Cell, IndividualsTable } from "../../worker/protocol.ts";
 import {
@@ -111,6 +112,45 @@ describe("IN6 D1 the table of the individuals file", () => {
       ["s2", "B", "9", "false"],
       ["s3", "", "1,75", ""],
       ["s4", "a", "", "true"],
+    ]);
+  });
+
+  test("AP5 D4 the values its download writes are the cells as the file holds them, not the texts shown: a number read with the decimal comma written with a point, a control character as it is, a missing value empty", () => {
+    const table: IndividualsTable = {
+      columns: ["IID", "pop", "h", "ok"],
+      rows: [
+        ["s1", "b\u202e", 1.75, true],
+        ["s2", null, -0.5, null],
+      ] satisfies Cell[][],
+    };
+    const read = readOf(table, ",");
+    const rows = individualsTableRows(read);
+    expect(rows.map((row) => row.cells)).toEqual([
+      ["s1", "b\\u202e", "1,75", "true"],
+      ["s2", "", "-0,5", ""],
+    ]);
+    expect(rows.map((row) => row.values)).toEqual([
+      ["s1", "b\u202e", 1.75, true],
+      ["s2", null, -0.5, null],
+    ]);
+    expect(
+      tableCsv(
+        individualsTableColumns(read).map((c) => c.csvLabel ?? c.label),
+        rows.map((row) => row.values),
+      ),
+    ).toBe("IID,pop,h,ok\ns1,b\u202e,1.75,true\ns2,,-0.5,\n");
+  });
+
+  test("AP5 D4 the header its download writes is the names of the columns as the file holds them, a line break of an Excel header a line break and not the two characters \\n shown", () => {
+    const table: IndividualsTable = {
+      columns: ["IID", "Fecha de\nmuestreo"],
+      rows: [["s1", "a"]] satisfies Cell[][],
+    };
+    const columns = individualsTableColumns(readOf(table, "."));
+    expect(columns.map((c) => c.label)).toEqual(["IID", "Fecha de\\nmuestreo"]);
+    expect(columns.map((c) => c.csvLabel ?? c.label)).toEqual([
+      "IID",
+      "Fecha de\nmuestreo",
     ]);
   });
 

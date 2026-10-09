@@ -58,6 +58,10 @@ export interface SortableColumn<Id extends string> {
   readonly id: Id;
   /** The words of its header. */
   readonly label: string;
+  /** The header of its column in the CSV of the table's download, when
+      it is not `label`: the name as the user's file holds it, where
+      `label` shows a control character escaped. */
+  readonly csvLabel?: string;
   /** Whether its cell is the header of each row; one column has it. */
   readonly isRowHeader?: boolean;
   /** Whether it holds numbers, aligned on their end with digits of one
@@ -157,7 +161,7 @@ export function SortableTable<Id extends string>(
           items={[
             tableItem(
               props.download.fileName,
-              props.columns.map((column) => column.label),
+              props.columns.map((column) => column.csvLabel ?? column.label),
               props.rows,
             ),
           ]}

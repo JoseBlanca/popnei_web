@@ -63,7 +63,8 @@ function columnId(index: number): TableColumnId {
 
 /** The columns of the table of `read`, in the order of the file: the
     first the header of each row; a column whose every value is a number,
-    with one at least, aligned as numbers. */
+    with one at least, aligned as numbers; each labelled with its name
+    escaped, and headed in the CSV with its name as the file holds it. */
 export function individualsTableColumns(
   read: TableRead,
 ): readonly SortableColumn<TableColumnId>[] {
@@ -73,6 +74,9 @@ export function individualsTableColumns(
     return {
       id: columnId(index),
       label,
+      // The CSV writes the name as the file holds it, as it writes the
+      // cells (docs/specs/widgets/downloads.md, "A table").
+      csvLabel: name,
       isRowHeader: index === 0,
       isNumeric: index > 0 && isNumbers(rows, index),
       minWidth: minWidthOf(label),

@@ -268,6 +268,33 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
     expect(announcer.getState()).toBe("Saving panel_pops.table.csv.");
   });
 
+  test("a sortable table's CSV heads a column given the label of its file with that label, not the words of its header", async () => {
+    draw(
+      createElement(SortableTable<Id>, {
+        label: "The individuals",
+        columns: [
+          SORTABLE_COLUMNS[0] ?? { id: "name", label: "", minWidth: 80 },
+          {
+            id: "missing",
+            label: "Missing\\nrate",
+            csvLabel: "Missing\nrate",
+            isNumeric: true,
+            minWidth: 80,
+          },
+        ],
+        rows: SORTED_ROWS,
+        sort: null,
+        onSortChange: () => undefined,
+        download: { what: "the table", fileName: "x.table.csv", waiting: null },
+      }),
+    );
+    await choose("the table", "Table as CSV");
+    expect(savedText().text.split("\n").slice(0, 2)).toEqual([
+      'Individual,"Missing',
+      'rate"',
+    ]);
+  });
+
   test("a sortable table of more rows than its frame shows saves every row", async () => {
     // A guard against a CSV of the first rows alone, a slice. It cannot
     // prove every row in jsdom, where React Aria's Virtualizer draws every

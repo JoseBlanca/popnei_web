@@ -91,7 +91,10 @@ a file of them then would hold counts of part of the variants with
 nothing to mark them. The CSV:
 
 - **Every row**, in the order shown, sorted as the user sorted it, and
-  every column in its order, the header the labels of the columns.
+  every column in its order, the header the labels of the columns; for
+  a table of the user's file, the names of its columns as the file holds
+  them, which the screen shows with a control character escaped, as it
+  shows the cells (`csvLabel` of a column of `SortableTable`).
 - **The values as stored**, which the table is given beside the texts it
   shows: each cell a `CellValue`, a string, a number or `null`. A
   number is written as `String` writes it, in full, with the point and
