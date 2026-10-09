@@ -1,5 +1,12 @@
 # The entry of the population genetics page
 
+Revised on 9 October 2026 for `docs/designs/input-page.md`, approved by
+the owner that day, with no code yet: the refusal of the individuals
+file is recorded with its format; every page loads an individuals file
+with options of a CSV; and the entry of `popgen2.html` chooses the
+column of the populations of each file read and says the read in the
+status region (below, "The column of the populations on popgen2.html").
+
 25 September 2026, approved by the owner on 25 September 2026, and revised
 on 26 September 2026 with the owner's decisions at stop 9.6 of
 `docs/plans/walking-skeleton.md`, on the points of the review of its
@@ -425,8 +432,8 @@ it").
 | `failed`, with `popnei`: popnei refused the file | `variantsRead(fileId, { kind: "failed", error: { kind: "popnei", message } })` |
 | `failed`, any other kind: the browser could not read the file, `reopenFailed`; the calculation worker crashed, could not start, is of another version, or a message was a defect | `variantsRead(fileId, { kind: "failed", error: { kind: "worker", error } })`, the error as the client gives it, whose words `projectNeeds` gives by its kind |
 | `read`: the individuals file read, its table, the types of its columns, and the options of the CSV it used, set or found | `individualsRead(fileId, csv, { kind: "read", table, columns, found })` |
-| `refused`: the reader refused the file, with the way it is wrong | `individualsRead(fileId, csv, { kind: "failed", error })` |
-| `failed`: the light worker failed | `individualsRead(fileId, csv, { kind: "failed", error: { kind: "worker", error } })` |
+| `refused`: the reader refused the file, with the way it is wrong and, from 9 October 2026, the format it found | `individualsRead(fileId, csv, { kind: "failed", error, format })` |
+| `failed`: the light worker failed | `individualsRead(fileId, csv, { kind: "failed", error: { kind: "worker", error }, format: null })` |
 | `cancelled`, of either | nothing |
 
 The error the client gives is a `RunError` of
@@ -438,6 +445,62 @@ because its worker failed, and change nothing otherwise
 (`docs/specs/core/project.md`, "The records"). So an answer that crosses
 a cancel, one the worker had sent before the cancel reached it, changes
 nothing either.
+
+### The column of the populations on popgen2.html
+
+From 9 October 2026 (`docs/designs/input-page.md`, "The column chosen
+when a file is opened"). The entry of `popgen2.html` watches the store
+for a read of the individuals file newly recorded: the present
+project's `individuals.read` of kind `read` or `failed`, where the
+present project before the change had, for the same load id and the
+same options of the CSV, a read `pending`. An undo, a redo or an opening
+of a variants file does not make one, since none turns a pending read
+into a read; so the entry acts once on each read, as it is recorded, and
+never at another change of the project.
+
+At a read of kind `read`, when the grouping names no column of its table,
+no column or one of a name the table does not have, it sends
+`dispatch` the command `setGrouping(p, { kind: "populations", column })`
+with the column `defaultPopulationsColumn(read)` of core gives, described
+"the column of the populations was chosen", and sends nothing when that
+is `null`. It is a step of the history, as every command of the
+individuals file is on that page. Then, the column chosen or not, it
+says the read in the status region, "panel_pops.csv read: 200 rows, the
+populations from popcat." or "…, no column chosen for the populations.",
+followed by the warning the box then shows, if any, of no individual in
+the file, of too many values or of no column qualified
+(`docs/specs/steps/popgen2-input.md`, "Its words"). At a read of kind
+`failed`, it says the words of the box, `individualsBoxNeeds`.
+
+It runs in the subscription of the entry, after the listeners of the
+change have run, `queueMicrotask`, as the start of the one pass does
+(`src/ui/popgen2.tsx`, `startByThemselves`), so that its command is not
+sent in the middle of telling the listeners of the record. The record of
+the read itself does not choose the column: it writes the table into
+the projects of the history that hold the file (`recordShared` of
+`src/core/store.ts`), and is shared with `popgen.html`, whose user
+chooses every column.
+
+In a module of its own, `src/ui/populationColumn.ts`, made by the entry
+of `popgen2.html` alone:
+
+```ts
+/** Watches `store` for reads of the individuals file newly recorded,
+    sends the column of the populations the page chooses, and says each
+    read with `announce`. Gives the function that stops it. */
+export function choosePopulationColumns(deps: {
+  store: Pick<Store<JobResult, Blob>, "getState" | "subscribe" | "dispatch">;
+  announce: (words: string) => void;
+}): () => void;
+```
+
+Verified with Vitest, with a store made by `createPopgen2Store` and a
+fake worker: a read of `panel_pops.csv` recorded sends one command, and
+the grouping is `popcat`; "None" chosen after it, nothing is sent; the
+separator changed and the read recorded again, `popcat` is chosen again,
+as the design says; a second file with a column `popcat` sends nothing;
+a table of numbers alone sends nothing and says the read with no column;
+an undo and a redo send nothing; the words said, in each case.
 
 ### The outcome of a calculation
 

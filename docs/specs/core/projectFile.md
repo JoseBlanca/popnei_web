@@ -1,5 +1,14 @@
 # The project file
 
+Revised on 9 October 2026 for `docs/designs/input-page.md`, approved by
+the owner that day, with nothing to change in the format: the cells of a
+CSV read by table_io may be numbers and booleans, which `Cell` already
+allows and the file already writes for an xlsx; the source of an xlsx
+loaded since then has options of a CSV, which the validation accepts,
+while one saved before, with `null`, still opens; a failed read, which
+now carries the format of its file, is never written, as before, but
+as `notGiven`. `FORMAT_VERSION` stays 1.
+
 Written on 25 September 2026, and approved by the owner the same day;
 its example revised the same day for the line of a character not
 decoded that the read of the metadata file gained
