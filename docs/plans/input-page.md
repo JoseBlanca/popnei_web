@@ -378,7 +378,7 @@ Deliverables:
 
 Tasks:
 
-- [ ] 1.1 table_io installed from its release's URL with `npm install
+- [x] 1.1 table_io installed from its release's URL with `npm install
   <URL>`, beside xlsx_rs; the types: `IndividualsFileError` and the
   comment of `Cell` in `src/worker/protocol.ts`, the failed read with its
   format in `src/worker/messages.ts`, `refused` with its format in
@@ -392,21 +392,21 @@ Tasks:
   its way would offer the options of a CSV beside an xlsx, or none
   beside a CSV, with nothing to show it; so this is a commit of its own,
   guarded by deliverables 2 and 3.
-- [ ] 1.2 The reader: `readOfTable` and `readIndividualsFile` in
+- [x] 1.2 The reader: `readOfTable` and `readIndividualsFile` in
   `src/worker/individualsFile.ts`, `MAX_SHEET_CELLS` moved there, the
   loading of the package in `src/worker/filesRunner.ts`, and the lint's
   two rules in `eslint.config.js` (the reader spec, "The read by
   table_io", "The refusals and their words", "The TypeScript interface",
   "Loading the files wasm on first need"). Deliverables 1 and 4. Stands
   on 1.1.
-- [ ] 1.3 Core: `cellShown`, the names of the populations by it, the
+- [x] 1.3 Core: `cellShown`, the names of the populations by it, the
   words by the format and of the new kinds, the validation of a source
   of an xlsx with options (`project.md`, "The populations", "What an
   analysis needs of every project", "The validation", and the paragraph
   of `cellShown` in "The counts per population on popgen2.html";
   `projectFile.md`, its opening of 9 October 2026). Deliverable 3. May
   run beside 1.2; stands on 1.1.
-- [ ] 1.4 The old step: every file loaded with `AUTO_CSV`
+- [x] 1.4 The old step: every file loaded with `AUTO_CSV`
   (`src/ui/steps/individuals/commands.ts`), the options shown by `found`
   or by the format of a failed read and the line of the first sheet for
   an xlsx (`IndividualsStep.tsx`), the words (`words.ts`); the literals
@@ -414,7 +414,7 @@ Tasks:
   deliverable 6 (`steps/individuals.md`, its opening of 9 October 2026;
   the reader spec, "What a user sees change from the reader of
   TypeScript"). Deliverables 5 and 6. Stands on 1.2 and 1.3.
-- [ ] 1.5 xlsx_rs removed and the reader of TypeScript deleted, with the
+- [x] 1.5 xlsx_rs removed and the reader of TypeScript deleted, with the
   parts of `individualsFile.test.ts` that tested the decoding.
   Deliverable 7. The Vitest count falls by the tests of the files
   removed alone, which the commit message counts.
@@ -493,14 +493,14 @@ Deliverables:
 
 Tasks:
 
-- [ ] 2.1 The bullet of the restart in `client.md`'s "How it is
+- [x] 2.1 The bullet of the restart in `client.md`'s "How it is
   verified", from its section "The light worker started again after a
   large read", then the restart in `src/worker/client.ts` with
   `READ_RESTART_BYTES` at 2,000,000 (`client.md`, that section and the
   interface). Deliverable 1. May run beside work packages 3 and 4.
-- [ ] 2.2 The measurement and its run, alone on the machine.
+- [x] 2.2 The measurement and its run, alone on the machine.
   Deliverables 2 and 3. Stands on 2.1.
-- [ ] 2.3 The value set as deliverable 3 decides: `client.md` and the
+- [x] 2.3 The value set as deliverable 3 decides: `client.md` and the
   reader spec first, then the constant, or the restart dropped, with the
   tests of deliverable 1 changed to it. Skipped when the value stays
   2,000,000.
@@ -558,9 +558,9 @@ Deliverables:
 
 Tasks:
 
-- [ ] 3.1 `keepHidden` of `Tabs.tsx` (the screen spec, "Both tabs kept
+- [x] 3.1 `keepHidden` of `Tabs.tsx` (the screen spec, "Both tabs kept
   drawn"). Deliverable 1.
-- [ ] 3.2 The page: `src/ui/variants/VariantsPage.tsx` with the two
+- [x] 3.2 The page: `src/ui/variants/VariantsPage.tsx` with the two
   boxes, the zone of `OpenVariants.tsx` inside the box of the variants
   file and outside the boundary of errors made for each load, the box of
   the individuals file with its words of no file, the tabs, and the
@@ -568,7 +568,7 @@ Tasks:
   (the screen spec, "The order of the page", "The box of the variants
   file", "The tab Variants file", "Both tabs kept drawn",
   "Accessibility", the order of the Tab key). Deliverables 2, 3 and 5.
-- [ ] 3.3 The screenshots. Deliverable 4.
+- [x] 3.3 The screenshots. Deliverable 4.
 
 What could go wrong: a plot whose box has no size while its tab is
 hidden. `createPlot2d` keeps its last drawing then and draws again when
@@ -607,12 +607,12 @@ Deliverables:
 
 Tasks:
 
-- [ ] 4.1 `MAX_LISTED_POPULATIONS`, `defaultPopulationsColumn` and
+- [x] 4.1 `MAX_LISTED_POPULATIONS`, `defaultPopulationsColumn` and
   `individualsBoxNeeds` in `src/core/populations.ts` (`project.md`, "The
   counts per population on popgen2.html", the bullets "The column chosen
   by the page" and "The words of the box"). Deliverable 1. The answer to
   question 1 changes this task alone.
-- [ ] 4.2 `populationCounts` (the same section, the bullet "The counts"
+- [x] 4.2 `populationCounts` (the same section, the bullet "The counts"
   and "The rules of the counts against what a reader would expect").
   Deliverables 2 and 3. A memo that gives back the last counts for a
   list of other individuals would show the counts of other thresholds,
@@ -650,7 +650,7 @@ Deliverables:
 
 Tasks:
 
-- [ ] 5.1 The correction of question 3, before any code: in `entry.md`,
+- [x] 5.1 The correction of question 3, before any code: in `entry.md`,
   "The column of the populations on popgen2.html" and its "Verified with
   Vitest"; in the screen spec, the paragraph of the list "Column of the
   populations" and the bullet of "None" in "How it is checked"; and the
@@ -667,9 +667,9 @@ Tasks:
   files. The session reads the correction against the rest of the two
   specs before 5.2. If the owner keeps the specs as they are, this task
   changes nothing.
-- [ ] 5.2 The words (the screen spec, "What it shows", "Its words", "The
+- [x] 5.2 The words (the screen spec, "What it shows", "Its words", "The
   states"). Deliverable 1. May run beside 5.1.
-- [ ] 5.3 `src/ui/populationColumn.ts`, and the entry of `popgen2.html`,
+- [x] 5.3 `src/ui/populationColumn.ts`, and the entry of `popgen2.html`,
   `src/ui/popgen2.tsx`, which makes it with the store gated as the
   screens' is and stops it with the page (`entry.md`, "The column of the
   populations on popgen2.html"). Deliverable 2. Stands on 5.1 and 5.2.
@@ -740,13 +740,13 @@ Deliverables:
 
 Tasks:
 
-- [ ] 6.1 The box of the individuals file: its zone, a `FileZone` as the
+- [x] 6.1 The box of the individuals file: its zone, a `FileZone` as the
   variants file's, outside the boundary of errors made for each load;
   Remove; the list; the counts with `Table.tsx`; the lines and
   warnings with `Warning.tsx`; the counts that wait (the screen spec,
   "The box of the individuals file", "What it sends and reads",
   "Accessibility"). Deliverables 1, part of 2, and 3.
-- [ ] 6.2 The tab "Individuals file": how it was read, with the selects
+- [x] 6.2 The tab "Individuals file": how it was read, with the selects
   of the old step, the line of UTF-16 and the warning of a character not
   decoded; the format remembered for each load id while a read again is
   pending; the individuals not in the file with Copy; the table with
@@ -754,7 +754,7 @@ Tasks:
   put back when it is shown (the screen spec, "The tab Individuals
   file", "Both tabs kept drawn"). The rest of deliverable 2. Stands on
   6.1, since both are in the page and share its flows.
-- [ ] 6.3 The measurement of the sort, the screenshots and the size of
+- [x] 6.3 The measurement of the sort, the screenshots and the size of
   the first load. Deliverables 4, 5 and 6.
 
 What could go wrong: the table under a hidden tab. A box hidden with
@@ -767,13 +767,13 @@ turn back, in both engines.
 
 ## Work package 7: the end
 
-- [ ] 7.1 The session's own look: it reads every screenshot of work
+- [x] 7.1 The session's own look: it reads every screenshot of work
   packages 3 and 6 with `Read`, state by state, in both themes and both
   widths, and the old page's screens of the individuals, and checks
   that each state of the screen spec's table "The states" is there and
   readable; what it finds is a fix sent to a subagent, test first,
   before 7.2.
-- [ ] 7.2 The checks of the `coding` skill on the last commit, and the
+- [x] 7.2 The checks of the `coding` skill on the last commit, and the
   browser check of the whole suite in Chromium and WebKit, in chunks of
   spec files that each end within a foreground command: the old page's
   flows of the individuals, in two or three chunks; its flows of the
@@ -781,13 +781,13 @@ turn back, in both engines.
   and the rest; split again if a chunk passes 9 minutes. The counts of
   each chunk, and of the screens run, recorded below; a flaky test is
   run again three times and named.
-- [ ] 7.3 The documents: `docs/architecture.md`,
+- [x] 7.3 The documents: `docs/architecture.md`,
   `docs/functionality.md` and `docs/technology.md` checked against what
   was built, the numbers of size and of memory of work packages 1, 2, 3
   and 6 put where those documents give an estimate; each spec of this
   plan says it is built on the branch `individuals-file`, with what a
   round changed; "What was done" complete.
-- [ ] 7.4 The instructions of the project, by the session itself and not
+- [x] 7.4 The instructions of the project, by the session itself and not
   by a subagent, since they are what every later session reads: every
   place that names xlsx_rs as the reader of today says table_io, in
   `CLAUDE.md` ("popnei in the application", its sentence "The same holds
@@ -797,7 +797,7 @@ turn back, in both engines.
   sentence that records the history of 28 September 2026 stays as
   history. The report says that the session made this change and lists
   the files.
-- [ ] 7.5 The report to the owner, as the `building` skill says, with the
+- [x] 7.5 The report to the owner, as the `building` skill says, with the
   stops met first, if any; the answers to the three questions and what
   the plan followed where they were not given; the measurement of work
   package 2 and the value it set; the sizes; what the review found and
@@ -1006,3 +1006,35 @@ Left to work package 7: a header partly out of view wraps and makes the
 row of headers taller when the wide table scrolls sideways. Vitest
 4,619 (one timeout under a load of 22, which passes alone); 428 flows
 in Chromium and WebKit; screens 224.
+
+### Work package 7, 9 October 2026
+
+7.1, the session's own look: every state of the box and the tab, in
+both themes and both widths (counts, unclassified, no name matching, 21
+values, "None", refused, waiting, the tab with a CSV, an xlsx and 10,000
+rows, no file); one flaw, a header of three words that wrapped in its
+column of the wide table and made the row of headers taller when it
+scrolled into view, fixed test first in 9e570c5 (each column of the
+individuals' table as wide as its header on one line; the old page's
+tables unchanged), seen fixed in Chromium and WebKit at 1280 and 320 px.
+
+7.2, the checks on 0f3f4d1: typecheck, lint and format clean; Vitest
+4,620; the whole browser suite in six chunks, 715 in Chromium and 715 in
+WebKit, all passed after one fix: the flow "TH round 1 at 320 px" of the
+old page failed three times of three in Chromium, measuring the plots
+against the window while the browser scrolled to keep the typed box in
+view; it measures in the page now (97e420b), three passes in each
+engine. Screens 266: 224 of `popgen2.html`, 42 of the old step.
+
+7.3, the documents (0f3f4d1): `architecture.md` (the light worker, the
+files of section 9, the costs of section 11), `technology.md` (the first
+load of `popgen2.html` 278.6 KB with its two additions, the lazy load
+left to the owner, table_io's release), `functionality.md`, the design's
+notes as built, the ten specs built on this branch, `pca.md`'s open point
+of the decimal mark in the colours of a column, `site.yml`'s comment.
+
+7.4, by the session (e914216): `CLAUDE.md`, the `coding` skill
+(`SKILL.md`, `worker.md`, `testing.md`, `configs.md`), the `code-review`
+skill's `categories.md` and an example of `writing-plans` name table_io
+as the reader of every individuals file; the history of 28 September
+2026 stays.
