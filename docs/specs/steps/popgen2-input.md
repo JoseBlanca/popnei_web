@@ -129,7 +129,12 @@ boundary of errors that is made anew for each file (the `ErrorBoundary`
 keyed by the load id in `VariantsPage.tsx`): a zone inside it would be
 drawn anew at each opening, and the button the user pressed, which then
 holds the focus, would be replaced by another, leaving the focus on
-nothing.
+nothing. The zone of the variants file has a boundary of its own, whose
+heading is "Opening a variants file", made anew at each turn of the
+tabs: a throw in the zone takes away the one way to open a file, and a
+turn of the tab gives it back without a reload, as a turn of the step
+does on `popgen.html`. The focus is then on the tab, so no button that
+holds it is replaced.
 
 ### The box of the individuals file
 

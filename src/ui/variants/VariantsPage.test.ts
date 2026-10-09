@@ -330,6 +330,15 @@ describe("IN3 the page in two boxes and two tabs", () => {
   });
 });
 
+/** The tab whose label is `label`. */
+function tabOf(label: string): HTMLElement {
+  const found = [
+    ...container.querySelectorAll<HTMLElement>('[role="tab"]'),
+  ].find((tab) => tab.textContent === label);
+  if (found === undefined) throw new Error(`no tab ${label}`);
+  return found;
+}
+
 /** Draws the page with a throw in the zone that opens a variants file,
     which the boundary of the zone catches. */
 async function drawWithZoneThrowing(
@@ -355,5 +364,32 @@ describe("IN3 the boundary of the zone that opens a variants file", () => {
       "H3 Opening a variants file",
       "H2 Individuals file",
     ]);
+  });
+
+  test("after a throw in the zone, a turn of the tab draws the zone again, and a file can be opened from it", async () => {
+    const store = await drawWithZoneThrowing("c".repeat(32));
+    await act(async () => {
+      tabOf("Individuals file").click();
+      await Promise.resolve();
+    });
+    expect(tabOf("Individuals file").getAttribute("aria-selected")).toBe(
+      "true",
+    );
+    const button = buttonOf("Open variants file…");
+    expect(button).not.toBeNull();
+    expect(region("Variants file")?.contains(button)).toBe(true);
+
+    const input =
+      region("Variants file")?.querySelector<HTMLInputElement>(
+        'input[type="file"]',
+      );
+    if (input === null || input === undefined) throw new Error("no input");
+    const picked = new File(["##fileformat=VCFv4.2\n"], "panel.vcf");
+    Object.defineProperty(input, "files", { value: [picked] });
+    await act(async () => {
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(store.getState().project.variants?.name).toBe("panel.vcf");
   });
 });

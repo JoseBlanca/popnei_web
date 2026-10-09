@@ -14,7 +14,9 @@
  * a variants file, moved there from the end of the page. The zone is
  * outside that boundary: inside it, it would be drawn anew at each
  * opening, and the button the user pressed, which holds the focus, would
- * be replaced, leaving the focus on nothing. The tab "Variants file" holds
+ * be replaced, leaving the focus on nothing. It has a boundary of its
+ * own, made again at each turn of the tabs, so that a throw in it leaves
+ * the page a way to open a file without a reload. The tab "Variants file" holds
  * the statistics of the file open (docs/plans/file-stats.md), and the
  * status region says what changes away from the focus, whichever tab is
  * shown. The page holds the words of the last file not opened, which the
@@ -115,7 +117,13 @@ export function VariantsPage({
                 refusal={refusal}
               />
             </ErrorBoundary>
-            <ErrorBoundary heading={OPENING_ZONE_NAME} level={3}>
+            {/* Its own boundary, made again at each turn of the tabs:
+                after a throw the zone is gone, and with it the one way to
+                open a file, so a turn of the tab draws it again, as a
+                turn of the step draws the step on popgen.html. Not keyed
+                by the load, which would replace the button at each
+                opening. */}
+            <ErrorBoundary key={tab} heading={OPENING_ZONE_NAME} level={3}>
               <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
             </ErrorBoundary>
           </section>
