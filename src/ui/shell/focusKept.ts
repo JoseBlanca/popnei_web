@@ -24,10 +24,31 @@ export function keepingFocus(change: () => void): void {
   change();
   if (before === null || before === document.body) return;
   queueMicrotask(() => {
-    if (before.isConnected) return;
-    const now = document.activeElement;
-    if (now !== null && now !== document.body && now.isConnected) return;
-    const heading = document.querySelector("main h1");
-    if (heading instanceof HTMLElement) heading.focus();
+    toHeadingIfLost(before);
   });
+}
+
+/**
+ * Called as `leaving` is about to leave the page, as React lets go of
+ * its element: when it has the focus, gives the focus to the `<h1>` of
+ * the page once it has left, in a microtask, unless something took the
+ * focus meanwhile. So a button that a command removes, whatever sent the
+ * command, does not leave the focus on nothing; the button that a press
+ * of its own hands the focus to keeps it.
+ */
+export function headingAfter(leaving: Element): void {
+  if (leaving.ownerDocument.activeElement !== leaving) return;
+  queueMicrotask(() => {
+    toHeadingIfLost(leaving);
+  });
+}
+
+/** Gives the focus to the `<h1>` of the page when `before`, which had
+    it, has left the page and nothing has the focus now. */
+function toHeadingIfLost(before: Element): void {
+  if (before.isConnected) return;
+  const now = document.activeElement;
+  if (now !== null && now !== document.body && now.isConnected) return;
+  const heading = document.querySelector("main h1");
+  if (heading instanceof HTMLElement) heading.focus();
 }

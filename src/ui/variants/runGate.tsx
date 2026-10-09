@@ -39,3 +39,16 @@ export function usePendingChange(): string | null {
     gate === null ? null : gate.pending(),
   );
 }
+
+/** Nothing to end, on a page with no gate. */
+function endNothing(): void {
+  // popgen.html holds no run of the keys.
+}
+
+/** Ends every run of the keys waiting, each made a change, as Undo does
+    before it reads what it takes back; nothing on a page with no gate,
+    popgen.html. */
+export function useEndRuns(): () => void {
+  const gate = useContext(RunGateContext);
+  return gate?.endAll ?? endNothing;
+}
