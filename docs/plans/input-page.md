@@ -974,3 +974,35 @@ first reader understood the eight messages; left for the owner's try:
 the individuals with an empty cell are named nowhere, and the line of
 the individuals not in the variants file does not say whether they
 matter.
+
+### Work package 6, 9 October 2026
+
+2752df4 (the box and the tab), 0552f2f (320 px), a9d2ddf (the flows,
+the screens, the measurements). The item left from package 5: a flow
+that fails when `popgen2.tsx` passes the store without its gate (seen
+failing, counts at 0.031 for 0.03). IN6 D3: the counts add up to 116,
+the individuals the download says it kept. Seen by the session: the box
+with the unclassified (light), the tab with the options and the missing
+names (dark), the counts at 320 px (light), the 10,000 rows sorted
+(WebKit).
+
+Review, eleven categories, three reviewers. Taken, in 7ee9835..2b355b1:
+the sort of 10,000 rows × 20 columns froze the page with nothing on
+screen, 675 ms in Chromium and 430 ms in WebKit on the Apple M5 Pro,
+2,739 ms with the processor slowed 4 times; the body of the table is no
+longer rebuilt at each sort above 8 columns, the sort is a transition
+and "Sorting…" shows with `aria-busy`: the first frame in 11 and 6 ms,
+the rows in 311 and 382 ms, 1,294 ms slowed; a crash of the tab emptied
+the whole page, now its own boundary, "How the individuals file was
+read and what it holds"; the table showed a file's control characters
+raw where the list escapes them; six behaviours and a drop and a paste
+on the box with no test; the Copy flow that accepted a failure; a
+held read with axe; a branch no state reaches; a stale comment of
+`vite.config.ts`. Not taken, for the owner: loading the box's lines and
+the tab only at the first individuals file, which would take 34.8 KB
+gzipped out of the first load of `popgen2.html` (278.6 KB now, from
+237.3 before this package; React Aria's table and list 68% of it).
+Left to work package 7: a header partly out of view wraps and makes the
+row of headers taller when the wide table scrolls sideways. Vitest
+4,619 (one timeout under a load of 22, which passes alone); 428 flows
+in Chromium and WebKit; screens 224.
