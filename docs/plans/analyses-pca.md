@@ -1124,3 +1124,48 @@ of `e2e/screens.spec.ts` that show a file being read hold the page's
 clock still and move it on by one second after the pick, as the shot of
 the thresholds' focus already did, so they still show "1 second so
 far." (10 of 10 in the screens run, read by the subagent).
+
+### Work package 3, 9 October 2026
+
+Commits 1c5025a (the store spec, for the owner's answer 2), 2b16844
+(`stopLeftBehind`), 79dc4b1 (`applyAfresh` in the store and the gate)
+and b53e477 (the individuals file's changes through `applyAfresh`).
+Checks at b53e477: Vitest 4,802 tests in 141 files; `AP3 D1` 15, `AP3
+D2` 3, `AP3 D3` 23 tests; the flows of `popgen2.html` 280 in Chromium
+and WebKit, untouched. The store tests build the store with
+`createPopgen2Store`'s configuration, since core's tests may not import
+`src/ui`.
+
+The review, `spec`, `tests`, `stale`, `errors`, `api` and
+`architecture` (the last found nothing). Ten findings held. The one a
+user would meet: the column the page picks when the read of the
+individuals file lands went through the gated `applyAfresh`, so it
+committed a threshold the user was still typing ("0." on the way to
+"0.05" became 0), ended a run of the arrow keys, and dropped every step
+the user had made during the read, which for a large xlsx lasts
+seconds. The session decided that the page's own pick is no change of
+the user's: it is recorded as the read is, into every project of the
+history that holds that load (`populationColumnChosen`, commit
+6f1f453), with no step, no gate and nothing added to `history.ts`; the
+opening, the removal and the reader's options stay `applyAfresh`, no
+step, as the owner decided. The others: a Run waiting for the one pass,
+and a PCA left behind by an Undo or a Redo, whose stopping no test
+guarded; `historyMoves` counted before the keys were made; `applyAfresh`
+on the `Store` both pages share though it threw on the old page's
+(now a `Popgen2Store`); stale lines of five specs and of
+`docs/architecture.md`; and a test of `StatsSection` that measured
+wall-clock time and failed once under load (now it checks an order).
+Commits 6f1f453 to 8251d2b. Checks after them: Vitest 4,837 tests in
+142 files; `AP3` 51 tests; the flows of `popgen2.html` in Chromium and
+WebKit 306, with two failures of one flow, `FS2` of
+`e2e/fileStats.spec.ts`, whose filter of addresses matches "d3" inside
+a content hash of the build; it goes to the fixes of task 5.4.
+
+A question for the owner, found by the review and asked on 9 October
+2026: the owner's answer 2 locks the population column while a PCA
+runs, on the reason that the PCA depends on it; on `popgen2.html` the
+PCA's key holds neither the individuals file nor its column, which only
+colour its points, and the box of the individuals file stays open
+beside it. The session recommended locking only what the PCA reads (the
+thresholds, the FILTER box and the PCA's own options); meanwhile the
+plan follows that recommendation, in work package 6.
