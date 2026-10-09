@@ -268,8 +268,9 @@ With Vitest, in node, at `tableCsv`, `binsCsv`, `downloadName` and
 - `individualsStem("panel_pops.csv")` is `panel_pops`, and
   `individualsStem(".csv")` is `individuals`.
 
-With Vitest and React Testing Library, the widgets in a page simulated
-in node: a `SortableTable` of three rows sorted descending by a number
+With Vitest, the widgets drawn by React in a page that jsdom simulates
+in node, with `createRoot` and `act` and no testing library, as
+`.claude/skills/coding/testing.md` and the tests of the tabs do: a `SortableTable` of three rows sorted descending by a number
 column, "Table as CSV" chosen: the text handed to `downloadText` has
 the rows in that order and the values, not the texts; a table given a
 download and a row with no `values`: a defect; a `DownloadMenu` with a
