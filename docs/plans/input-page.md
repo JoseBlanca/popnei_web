@@ -913,3 +913,64 @@ old page's card that jumps at the first read, and its options hidden
 after a crash, the old page being deprecated. Left to work package 7:
 the stale mentions of xlsx_rs in the documents and the skills, listed
 by the review.
+
+### Work packages 2, 4 and 5, 9 October 2026
+
+**2, the light worker started again, and table_io's memory.** 4a3965e
+and 998b233 (the review of package 1: a two-valued column of decimals
+written with the read's mark; three mutations caught), 23d55af (2.1, the
+restart after a read above a size, client.md first), d48ac90 and f3dedd5
+(2.2, the measurement `IN2 D2`), 82eb3fe (2.3). Measured on the Apple M5
+Pro, 64 GB, load 8 to 17, the median of 3 reads, held 3 s after the read
+above what the engine held before, and what ending the worker gives
+back:
+
+| CSV | Chromium 153, held / given back | WebKit 26.6, held / given back |
+|---|---|---|
+| 1 MB, zeros | 123.7 / 47.0 MB | 285.1 / 32.4 MB |
+| 1 MB, empty cells | 174.7 / 76.0 MB | 405.7 / 51.9 MB |
+| 5 MB, zeros | 305.3 / 77.8 MB | 753.3 / 517.5 MB |
+| 5 MB, empty cells | 495.0 / 212.5 MB | 1,558.5 / 916.9 MB |
+| 20 MB, zeros | 802.7 / 391.2 MB | 3,144.4 / 1,473.8 MB |
+| 20 MB, empty cells | 1,364.5 / 816.6 MB | 4,615.3 / 3,326.7 MB |
+
+Every file was read; the 20 MB file with empty cells in 6.6 s in
+Chromium and 13.1 s in WebKit. By the rule written before, 50 MB given
+back at 1 MB, the value is 0: the light worker is ended after every read
+of a file that is not empty (82eb3fe), at a cost of 0 to 110 ms a read.
+Four flows that counted the downloads of a kept worker now check the
+new worker of each read, and an empty file, the one read that keeps its
+worker, carries the test of the retry. Found then: WebKit fetches
+table_io's wasm again at every read, 330 KB gzipped, against the
+headers GitHub Pages sends, where Chromium takes it from its cache;
+written in the specs, `technology.md` and `architecture.md`. Not acted
+on: what the page itself holds after a 20 MB file, about 550 MB in
+Chromium and 1.3 GB in WebKit with the worker ended; for the owner's
+report. Vitest 4,583; 704 flows in Chromium and WebKit that read an
+individuals file.
+
+**4, the counts and the column.** 1bfaa10 (4.1, the column chosen, the
+words of the box, the columns offered, a boolean one not), 8f32790
+(4.2, the counts and their memo). The review (spec, tests, stale,
+errors, api): the counts equal those of `individualsKept` in 48 states
+of the thresholds on two tables. Taken, in package 5's first commits: a
+column of TRUE and FALSE kept the grouping of a file before while the
+list showed "None" (c012597, a column groups only when offered); the
+memo's checks of the table and the decimal mark tested (d264b9d); the
+counts checked at a missing rate of 0.03, where 0.1 removes none
+(5c024b6, 4993a07).
+
+**5, the words and the column chosen by the entry.** e0e6858 (a sheet
+too large worded for the individuals file), 9542fe2 (5.1, a "None" the
+user chose stays), 20f3dc5 (5.2, the words), 59dbd9f (5.3, the entry's
+choice through the gate). The review (spec, tests, stale, errors, api,
+architecture): no fault; six guards of the entry's choice and three
+cases' words untested, now tested (154f187, 936a126). A first reader on
+the words, as a population geneticist; taken (a74d27e): the names of the
+unclassified belong to their cause and point to the tab's full list,
+the direction of "in A but not in B", the limit of 20 said, "after the
+filters of individuals", "in the tab", "the reader of tables". A second
+first reader understood the eight messages; left for the owner's try:
+the individuals with an empty cell are named nowhere, and the line of
+the individuals not in the variants file does not say whether they
+matter.
