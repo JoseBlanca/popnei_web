@@ -328,8 +328,11 @@ while its box has no size. So the tab "Individuals file" notes how far
 its table was scrolled as the user leaves it, and scrolls it back there
 when it is shown again, after the table has measured its box and drawn
 its rows. A turn to
-the other tab and back finds the plots, a number half typed in the box
-of a threshold, the sort of the table and its place as they were. A plot
+the other tab and back finds the plots, the thresholds, the sort of the
+table and its place as they were. A number typed in the box of a
+threshold and not yet applied by Enter is applied as the focus leaves
+the box for the tab, as a click anywhere else on the page applies it, so
+the turn back finds it applied, with its line moved to it. A plot
 whose tab is hidden keeps its last drawing and draws again at the size of
 its box when shown (`createPlot2d` of `src/charts/plot2d.ts`). The
 widget of tabs gains a prop for it, `keepHidden`, which the old page's
