@@ -1211,3 +1211,47 @@ is checked in jsdom until then.
 For the owner when they try the page: at 1280 px the buttons sit at the
 right edge of the page's column of 48 rem, not at the window's corner,
 with some 528 px of window to their right.
+
+### Work package 5, task 5.4, 9 October 2026
+
+Commit 9ba7978: the six histograms, the table of the Individuals tab
+and the counts per population carry their menus, with the file names of
+the screen spec; a histogram's menu and the counts' wait for the end of
+the one pass. Checks: `AP5 D4` 12 flows; the flows of `popgen2.html`
+308; the table of `individuals_10000.xlsx` sorted by Edad saved and read
+back, 10,001 lines in the order sorted; Vitest 4,837; the first load
+293.12 KB gzipped (+0.55 KB).
+
+The review, `spec`, `tests`, `stale`, `ux`, `accessibility`, `browser`
+and `react`, with the widgets of tasks 5.1 to 5.3 seen on the page
+(`stale`, `browser` and `react` found nothing to fix; the browser
+reviewer saved and read back a file of each kind in Chromium and WebKit,
+the PNG twice the plot's size and opaque, the table of 10,000 rows in
+98 ms and 126 ms, and measured the layout at 15 widths). Fifteen
+findings held and were fixed in commits e65cb0f to d013b12: the numbers
+of a histogram's CSV, the wait of the counts' menu, the line of the
+threshold in the SVG and the table's values, untested; the header of
+the table written escaped (now the names as the file holds them); a
+waiting menu's reason closed by a scroll, and given on no tap and no
+click (now the tooltip of the greyed tabs, held); the words "Download
+once … is read to the end" after a Stop, which will not happen by
+itself (now they say to start the reading again); a refused PNG that
+moved the neighbour's box 46 px (now drawn over the plot's corner,
+marked as a refusal); the counts' menu at the left of its table; two
+names a screen reader says; the menus on a line of their own in every
+row, the session's choice; and, older than this task, the plots that
+kept the height of a wider window when it narrowed (`min-block-size:
+0`, both pages). The gap of 56 px under the headings of the Variants
+tab is the room kept for the line of the pass and of a Stop, kept.
+Checks after them: `AP5` 51 tests; Vitest 4,851; in Chromium and WebKit
+`popgen2Downloads.spec.ts` with `--repeat-each=2` 36, the other flows of
+`popgen2.html` 310, the old page's flows of its histograms and tables
+218; the screenshots read by the session. The first load 293.41 KB
+gzipped.
+
+For the owner when they try the page: a refused PNG's words cover the
+plot's top-right corner, the threshold's handle with it, until the next
+choice of the menu; a PNG is refused only for a plot too large for the
+browser. Not seen: whether Safari, as opposed to Playwright's WebKit,
+accepts the save of a PNG that starts after the fonts and the image are
+ready.
