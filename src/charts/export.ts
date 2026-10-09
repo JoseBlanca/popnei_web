@@ -23,9 +23,10 @@ export interface ExportSize {
 /**
  * Why a PNG was refused: `tooLarge`, a side of the canvas above
  * MAX_CANVAS_SIDE pixels at that scale, found before anything is drawn;
- * `notMade`, the browser gave no canvas or made no PNG. The screen tells
- * the two apart by `kind`: it asks for a scale of 3, and for 2 after a
- * `tooLarge`.
+ * `notMade`, the browser gave no canvas or made no PNG. The screen asks
+ * for a scale of 2 alone, and tells the two apart by `kind` in the words
+ * it says under the menu "Download…" (docs/specs/widgets/downloads.md,
+ * "The menu").
  */
 export type PngErrorKind = "tooLarge" | "notMade";
 
