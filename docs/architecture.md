@@ -1858,8 +1858,9 @@ without a file. That page counts the individuals of each population in
 core, from the project and the individuals kept, and calls no
 `individualsNeeds`, which `popgen.html` keeps with its rule. The page
 shows the two files in a box each and in two tabs, "Variants file" and
-"Individuals file", of which only the tab shown is drawn (section 7, "a
-tab that is open").
+"Individuals file", both kept drawn and the one not chosen hidden, so
+that a turn to the other tab loses nothing (section 7, "a tab that is
+open").
 
 ### Who asks for a read
 

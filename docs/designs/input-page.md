@@ -136,15 +136,15 @@ Three things make this more than a new screen over that code:
    (`individualsNeeds`). The owner decided on 9 October 2026 that on this
    page such an individual is unclassified instead, so the rule changes
    for one page and not for the other.
-2. **Two tabs, and only one is drawn.** The tab "Variants file" holds six
-   plots, each with a threshold the user drags. The widget of tabs of the
-   application draws only the tab shown, so the plots are destroyed when
-   the user turns to the other tab and drawn again when they come back.
-   Kept drawn and hidden instead, they would be drawn at a width of 0,
-   since a plot measures its box when it is drawn and the box of a hidden
-   tab has no width.
+2. **Two tabs, and what the hidden one keeps.** The tab "Variants file"
+   holds six plots, each with a threshold the user drags, and the tab
+   "Individuals file" a table the user sorts and scrolls. The widget of
+   tabs of the application draws only the tab shown, so as it stands a
+   turn to the other tab would destroy the plots, the sort and the place
+   in the table, and the status region would then say at once
+   everything the plots had done while they were away.
 3. **Counts that follow the filters.** A count after the filters must
-   change with a threshold of the individuals at once, and never be the
+   change with each change of a threshold of the individuals, and never be the
    count of other thresholds than those shown.
 
 ## The page
@@ -169,12 +169,17 @@ and what follows it.
   individuals of panel.nei are unclassified, and every analysis can be
   done with them.";
 - while the file is read: its name and "Reading panel_pops.csv.";
-- a file refused, or a reading that failed: its name and the words of
-  the old page for that refusal (`individualsStepNeeds` of
-  `src/core/project.ts`), "panel_pops.csv could not be read: line 7 has 3
-  cells where the header has 4. Choose another separator, or load a
-  corrected file."; the separator is chosen under the tab "Individuals
-  file", which the words then name;
+- a file refused, or a reading that failed: its name and words of its
+  own for this page, made from those of the old page
+  (`individualsStepNeeds` of `src/core/project.ts`) as the box of the
+  variants file has its own (`variantsOpenNeeds`): "panel_pops.csv could
+  not be read: line 7 has 3 cells where the header has 4. Choose another
+  separator under the tab Individuals file, or open a corrected file."
+  The words of the old page do not do as they are: after a reader that
+  could not start they say to save the project and reload the page,
+  which this page cannot do, and a variants file given in the place of
+  the individuals file is sent to "the Variants step", which this page
+  does not have;
 - a file read: its name, the list "Column of the populations", and the
   counts.
 
@@ -248,18 +253,25 @@ away from what the user was looking at, a threshold half set, would lose
 them. The box of the individuals file already shows what an opening
 gives.
 
-The tab holds no state of its own that a turn to the other tab could
-lose: the thresholds and the FILTER box are filters of the project, the
-plots come from the results in the store, and the text after a download
-from the store's write (`docs/designs/stats-filters.md`). What is lost
-is a number typed in the box of a threshold and not yet committed; the
-spec checks that the box commits it when the focus leaves it for a tab,
-as it does for the Tab key. While a file is written, the dialog of the
-download covers the page and no tab can be chosen. The words the status
-region says of the plots as they fill in are said only while their tab
-is shown, as they are said only while their section is drawn today
-(`src/ui/variants/announceChanges.ts`); the box's count of the variants
-is said whatever the tab.
+Both tabs stay drawn while the other is shown; the hidden one is taken
+out of view, out of the reach of the Tab key and out of what a screen
+reader reads (React Aria's `shouldForceMount`, which marks the hidden
+tab inert, and a rule of CSS that hides it), as "What a hidden tab
+keeps", below, argues. So a turn to the other tab and back finds
+everything as it was: the plots, a number half typed in the box of a
+threshold, the sort and the place of the table. A plot whose tab is
+hidden keeps its last drawing, and draws again at the size of its box
+when the tab is shown, since every plot watches the size of its box
+(`src/charts/plot2d.ts`, the ResizeObserver of `createPlot2d`, "An
+element of no size, a tab that is hidden, keeps its last drawing"). The
+line of each threshold is laid over its plot from the frame the plot
+gives after each drawing, so it follows. While a file is written, the
+dialog of the download covers the page and no tab can be chosen. The
+status region goes on saying what the plots do while their tab is
+hidden, as it does today while they are out of view down the page; the
+spec decides whether the sentence of no variant kept, which speaks of
+the place of the download button (`noVariantAnnouncement` of
+`src/ui/variants/downloadState.ts`), names the tab when it is hidden.
 
 ### The tab "Individuals file"
 
@@ -327,8 +339,13 @@ remembers no tab across a reload.
 
 The counts are made in core, by one function of plain arithmetic on the
 project and the individuals kept, beside the functions of the
-populations in `src/core/populations.ts`. It gives, for the individuals
-of the variants file:
+populations in `src/core/populations.ts`. It gives the same object again
+for the same table, column, read of the variants file and individuals
+kept, as the other functions of the populations do, since a screen that
+reads the store is drawn again whenever what it reads is a new object,
+and the store changes many times a second while the one pass reports
+its progress (`src/ui/store.tsx`). It gives, for the individuals of the
+variants file:
 
 - each population of the column chosen, with its individuals that are in
   both files, and of those, the individuals kept, or none known yet;
@@ -361,18 +378,27 @@ variants file again. They can, and the code already does what it needs:
   the thresholds to those numbers (`individualsKept` of
   `src/core/individualsKept.ts`). It works them out again at every
   change of the project, with no request to a worker.
-- So when a threshold of the individuals moves, the individuals kept,
-  and the counts after the filters made from them, change in the same
-  drawing of the page. No filter of the variants removes an individual,
-  so a threshold of the variants changes neither count.
+- So when a threshold of the individuals changes the project, the
+  individuals kept, and the counts after the filters made from them,
+  change in the same drawing of the page. A threshold changes the
+  project when the line is let go, when a number typed is committed, or
+  a second after the last press of an arrow key
+  (`src/ui/variants/StatsHistogram.tsx`), so the counts follow those and
+  not the line while it is dragged. No filter of the variants removes an
+  individual, so a threshold of the variants changes neither count.
 
-What the counts after the filters cannot do is come before the end of the
-one pass: until then the store does not know the individuals kept, and
-after a Stop it does not either, since the numbers of a pass stopped are
-not kept as a result. So the column "After the filters" shows "…" while
-the pass runs, with the words "known once panel.nei is read to the end"
-beside its header, and "not known: the reading was stopped" after a Stop,
-until Start again ends a pass. The download of the filtered variants
+With no threshold of the individuals on, as the page starts, the
+filters keep every individual, which the store knows with no pass
+(`individualsKept` gives the list as known, removing nobody), and the
+column "After the filters" equals the one before them from the moment
+both files are read. With a threshold on, the column cannot come before
+the end of the one pass: until then the store does not know the
+individuals kept, and after a Stop it does not either, since the
+numbers of a pass stopped are not kept as a result. So, with a
+threshold on, the column shows "…" while the pass runs, with the words
+"known once panel.nei is read to the end" beside its header, and "not
+known: the reading was stopped" after a Stop, until Start again ends a
+pass. The download of the filtered variants
 waits for the same end, so the two never disagree. The counts before the
 filters need no pass: the individuals of the variants file are known as
 soon as it is opened.
@@ -407,6 +433,30 @@ chosen, so when `popgen2.html` gains a project file it will be saved
 there, as `docs/functionality.md` section 9 already says. Nothing in this
 piece changes what a project file holds.
 
+### How an opening of the individuals file reaches the store
+
+The store of the page has two ways to change the project. The opening
+of the variants file goes through `open`, which starts a new history,
+stops every calculation and forgets the text after a download
+(`src/core/store.ts`); it is right for a new variants file, whose pass
+has to start again anyway. Used for an individuals file it would stop
+the one pass of a variants file half read, and the page starts that
+pass only once for each key (`src/ui/autoRuns.ts`), so the user would
+have to press Start again and wait for the whole file a second time.
+
+So the individuals file goes through the other way, a command,
+`dispatch` of the store, as on the old page
+(`src/ui/steps/individuals/commands.ts`): its opening, its removal, the
+options of a CSV and the column of the populations are each a step of
+the history. None of them changes the key of the one pass, so none
+stops it, and none changes the key of the download, so the text after a
+download stays. What it costs: the history, which the page keeps ready
+for an Undo it does not show (the owner hid Undo and Redo on 8 October
+2026), holds these steps beside those of the filters, where the opening
+of a variants file is no step. When Undo comes back, whether an Undo
+takes back the opening of an individuals file is decided then; nothing
+of this piece prevents either answer.
+
 ## The options
 
 Three choices are argued; the rest of the page follows from the owner's
@@ -416,7 +466,8 @@ decisions.
 
 - **(a) From the project and the individuals kept, in core, on the
   page: taken.** No reading of the variants file and no request to a
-  worker; the counts change in the same drawing as the thresholds. What
+  worker; the counts change with each change of the project, in the
+  drawing that shows it. What
   it costs: a walk over the individuals of the variants file at each
   change of the project that touches them, a few thousand names, well
   under a millisecond by the size of the work, not measured; the
@@ -432,22 +483,31 @@ bound of 20 MB on the file makes unlikely.
 
 ### What a hidden tab keeps
 
-- **(a) The hidden tab is not drawn: taken.** The widget does this
-  today, and everything that matters in the tab "Variants file" lives in
-  the project and the store (above). What it costs: the six plots are
-  drawn again at each return to that tab, a drawing of up to 40 bars
-  each from numbers already in the store, and a number typed and not
-  committed in a threshold's box is lost if the box does not commit it as
-  the focus leaves.
-- **(b) The hidden tab drawn and hidden**, React Aria's
-  `shouldForceMount`. Its plots would be drawn at a width of 0 while
-  hidden, since a plot of `src/charts` measures its box when it is drawn
-  and the box of a hidden tab has none, and they do not draw again when
-  the box grows. It would need every plot to watch the size of its box,
-  a change of `src/charts`, for nothing the user needs.
+- **(a) The hidden tab is not drawn**, the widget as it is. Nothing to
+  build. What it costs: the sort of the table and where it was scrolled
+  are lost at each turn away from the tab "Individuals file"; the six
+  plots are drawn again at each return to the tab "Variants file", from
+  numbers already in the store; and the status region says at once, on
+  that return, everything the plots did while away
+  (`src/ui/variants/announceChanges.ts`, `onShown`), a burst of
+  sentences the user did not ask for.
+- **(b) Both tabs drawn, the hidden one out of view: taken.** React
+  Aria's `TabPanel` takes `shouldForceMount`, and marks the hidden tab
+  inert, out of the Tab key and the screen reader; a rule of CSS hides
+  it. The plots keep their last drawing while their box has no size and
+  draw again when it has one, which `createPlot2d` already does for every
+  plot of `src/charts`, so no plot changes. What it costs: the hidden tab
+  stays in the memory of the page, six plots of at most 40 bars each and
+  a table that draws only its rows in view, well under a MB by their
+  size, not measured; the widget of tabs gains the option, which its
+  other use, the plot and the table of the bins on the old page, does
+  not take; and a plot of a tab hidden when its file is opened is first
+  drawn when the tab is shown.
 
-(b) would win if a tab held something costly to make again, a 3D plot
-of the PCA of many individuals, which is not in this piece.
+(b) is taken because it keeps what the user did on each tab, and costs
+a line of the widget. (a) would win if a hidden tab held something
+costly in memory, a 3D plot of the PCA of many individuals, which is not
+in this piece.
 
 ### The reader of the individuals file
 
@@ -469,8 +529,10 @@ The six of the designing skill (`.claude/skills/designing/SKILL.md`):
    are in `src/core`, the boxes and the tabs in `src/ui`.
 3. **The project is one plain value**, changed by commands. Kept: the
    opening, the removal, the options of a CSV and the column are the
-   commands of core that exist; the tab shown is state of the screen,
-   which section 7 allows, "a tab that is open".
+   commands of core that exist, `loadIndividuals`, `removeIndividuals`,
+   `setCsvOptions` and `setGrouping`, sent as "How an opening of the
+   individuals file reaches the store" says; the tab shown is state of
+   the screen, which section 7 allows, "a tab that is open".
 4. **`src/core` has no DOM and no React.** Kept.
 5. **Two workers, one request at a time in each.** Kept: the light
    worker reads the individuals file as it does on the old page.
@@ -495,22 +557,28 @@ open question 4 when they come to this page.
   in the file, named in the order of the variants file; a column with 3
   empty cells gives 3 with an empty cell; a file of other names gives the
   warning. The counts after the filters are checked against
-  `individualsKept` for the same thresholds, and are "not known" before
-  the end of the pass and after a Stop. A threshold of the individuals
+  `individualsKept` for the same thresholds, equal to those before the
+  filters with no threshold on, and, with a threshold on, "not known"
+  before the end of the pass and after a Stop. The same inputs give the
+  same object, and a progress of the pass draws no box again. A threshold of the individuals
   moved changes them with no request sent to a worker, which the fake
   worker counts.
 - **The page**, in Playwright, in Chromium and WebKit, the two engines
   that start on the owner's Mac: the two files opened in either order;
   the tabs by keyboard alone, the arrow keys, Home and End; a threshold
   moved under the tab "Variants file", the other tab shown and the first
-  shown again, the threshold and the plots as they were; the table of
+  shown again, the threshold, its line over the plot and the plots as
+  they were; a table sorted and scrolled, the other tab shown and back,
+  the same; an individuals file opened while the one pass runs, which
+  does not stop it; the table of
   `individuals_10000.xlsx`, 10,000 rows, sorted, with the page answering
   a key within a tenth of a second; the page at 320 px with no sideways
   scroll; and axe, the checker of accessibility the tests run, with no
   finding. The screen is then looked at in a browser, as `CLAUDE.md`
   asks.
-- **What would send the design back**: a plot that comes back from the
-  other tab drawn wrong or at the wrong width; a count after the filters
+- **What would send the design back**: a plot, or the line of its
+  threshold, that comes back from the other tab drawn wrong or at the
+  wrong width; a count after the filters
   that differs from what the download writes, "Individuals removed: 84
   by the missing rate", for the same thresholds; or a table of a real
   individuals file that freezes the page when its tab is shown.
@@ -528,16 +596,21 @@ choosing it without breaking those files.
 ## The costs of the web
 
 - **Memory of the tab.** The table is in the project, as on the old
-  page, bounded by the reader's 20 MB on the file
-  (`MAX_INDIVIDUALS_FILE_BYTES` of `src/worker/individualsFile.ts`); a
-  table of 5,000 rows and 20 columns is a few MB. The counts keep one
+  page. The reader refuses a file above 20 MB
+  (`MAX_INDIVIDUALS_FILE_BYTES` of `src/worker/individualsFile.ts`), but
+  that bounds the file and not the table: a CSV of 20 MB of short cells
+  makes millions of cells, each a value of JavaScript, in the light
+  worker, in the message to the page and in the project, which may take
+  several times the size of the file. Not measured; the plan of the
+  piece measures the memory of the page with such a file. A common
+  file, 5,000 rows of 20 columns, is a hundred thousand cells. The counts keep one
   list of names per population, which the store keeps once for each
   table and column. Nothing grows with the variants.
 - **The page frozen.** The table draws only the rows in view, measured
   at 10,000 rows (above). The counts walk the individuals once per
-  change, in core on the page, not measured, a few thousand names. The
-  plots drawn again at each return to their tab draw from numbers in the
-  store, as a change of a threshold already does.
+  change, in core on the page, not measured, a few thousand names. A
+  plot draws again when its tab is shown, from numbers in the store, as
+  a change of a threshold already does.
 - **Download size.** No new dependency with the reader as it is. The
   page's first script grows by the code of React Aria's table, its tabs
   and its list, which `popgen2.html` does not use yet; React Aria's table
@@ -588,10 +661,18 @@ revised when the old page goes.
   none. The user who opens a file sees counts at once, and the list
   shows which column was taken. What it costs: a column chosen by a name
   can be the wrong one, a "population_size" of numbers, which the counts
-  then show at once as hundreds of populations of one; and core chooses
-  it when it records the read, the page's own choice, which the old page
-  avoided so that every choice was the user's
-  (`docs/specs/steps/individuals.md`, "The populations").
+  then show at once as hundreds of populations of one; and the choice is
+  the page's own, which the old page avoided so that every choice was
+  the user's (`docs/specs/steps/individuals.md`, "The populations"). It
+  cannot be made by core when it records the read: the store copies a
+  read into every project of the history that holds the file and
+  nothing else of the record (`recordShared` of `src/core/store.ts`), so
+  a column set there would be in some of those projects and not in
+  others, and that record is shared with `popgen.html`. So the entry of
+  the page sends it, once the read of a new load is recorded and no
+  column of that file is chosen, as one command, `setGrouping`, as the
+  entry already starts the one pass by itself; one step more in the
+  history, and code in the entry and not in core.
 - **(b) None until the user chooses.** Every individual is unclassified
   until then, and the box says so. One more action for every user, and a
   user who misses the list sees everyone unclassified.
