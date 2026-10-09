@@ -5,9 +5,10 @@
  * the stepper, the saving and the shell. It makes the store of the page,
  * wrapped for the screens by the gate of the thresholds' runs, and the
  * worker client, the announcer of the status region, the reads
- * the project waits for and the analyses that start by themselves, and
- * draws the error bar and the page in two roots, all in one run of this
- * code.
+ * the project waits for, the analyses that start by themselves and the
+ * column of the populations chosen at each read of the individuals file,
+ * and draws the error bar and the page in two roots, all in one run of
+ * this code.
  */
 import "./tokens.css";
 import "./base.css";
@@ -26,6 +27,7 @@ import {
 } from "./pageStart.tsx";
 import type { DrawBar } from "./pageStart.tsx";
 import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "./popgen2Store.ts";
+import { choosePopulationColumns } from "./populationColumn.ts";
 import { startAnalysis } from "./runs.ts";
 import { AnnouncerProvider } from "./shell/announcer.tsx";
 import { createAnnouncer } from "./shell/status.ts";
@@ -38,8 +40,8 @@ import { reportDefects } from "./variants/workerDefects.ts";
 
 /** The opening after the guard, the listeners and the bar: the store and
     the worker client, the bar with the store and no saving, the
-    announcer, the reads, the analyses that start by themselves, and the
-    page. */
+    announcer, the reads, the analyses that start by themselves, the
+    column of the populations, and the page. */
 function startApplication(defects: Defects, drawBar: DrawBar): void {
   const { store, client, files } = connectStore((senders) =>
     createPopgen2Store({ ...senders, appVersion: APP_VERSION }),
@@ -57,10 +59,20 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
   // The screens' commands pass the gate of the thresholds, which makes a
   // run of the keys waiting a change before any other.
   const gate = createRunGate();
+  const gated = gatedStore(store, gate);
+  // The column of the populations at each read of the individuals file,
+  // sent through the gate as the screens' commands are. It watches as
+  // long as the page lives, as the reads and the runs do.
+  choosePopulationColumns({
+    store: gated,
+    announce: (words) => {
+      announcer.announce(words);
+    },
+  });
 
   renderApplication(
     defects,
-    <StoreProvider value={gatedStore(store, gate)}>
+    <StoreProvider value={gated}>
       <RunGateProvider value={gate}>
         <AnnouncerProvider value={announcer}>
           <FilesProvider value={files}>
