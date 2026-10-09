@@ -20,18 +20,13 @@ import type { StepCommand } from "../variants/commands.ts";
 import type { CsvOption, PopulationItemId } from "./words.ts";
 import { AUTO_CSV, columnOfItem } from "./words.ts";
 
-/** A file picked or dropped, a new load: a CSV or a TSV read with every
-    option found by the reader, or, when `xlsx`, an xlsx, which has no
-    options of a CSV. */
-export function pickCommand(
-  fileId: string,
-  name: string,
-  xlsx: boolean,
-): StepCommand {
+/** A file picked or dropped, a new load read with every option of a CSV
+    found by the reader, an xlsx too, since the reader finds the format
+    from the bytes and not from the name. */
+export function pickCommand(fileId: string, name: string): StepCommand {
   return {
     description: "a new metadata file was loaded",
-    command: (p) =>
-      loadIndividuals(p, { fileId, name, csv: xlsx ? null : AUTO_CSV }),
+    command: (p) => loadIndividuals(p, { fileId, name, csv: AUTO_CSV }),
   };
 }
 

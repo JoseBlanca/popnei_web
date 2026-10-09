@@ -1,6 +1,8 @@
 /**
  * The metadata file read from an xlsx, on the built site, through the
- * package of the release of xlsx_rs that package.json names
+ * package of the release of table_io that package.json names, which reads
+ * a CSV as well; and the loading of that package on the first read of any
+ * file
  * (docs/specs/worker/individuals.md, "How it is verified", "With
  * Playwright, from stage 4"; docs/specs/steps/individuals.md, "The file"
  * and "How the file was read"; the refusals of "Its words"). The xlsx
@@ -24,15 +26,15 @@ import { expect, test } from "./axe.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
-/** The two files of the package of xlsx_rs in the built site: its
+/** The two files of the package of table_io in the built site: its
     JavaScript, a file of its own, and its wasm. */
-const XLSX_JS = /\/xlsx_rs-[^/]*\.js$/;
-const XLSX_WASM = /\/xlsx_rs_bg-[^/]*\.wasm$/;
+const XLSX_JS = /\/table_io-[^/]*\.js$/;
+const XLSX_WASM = /\/table_io_bg-[^/]*\.wasm$/;
 
-/** What the step says when the reader of xlsx files was not downloaded,
+/** What the step says when the reader of tables was not downloaded,
     with no end of its own (docs/specs/core/project.md). */
 function notLoadedText(name: string): string {
-  return `${name} could not be read: the part of the application that reads Excel files could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again.`;
+  return `${name} could not be read: the part of the application that reads tables could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again.`;
 }
 
 async function expectNoViolations(
@@ -79,19 +81,31 @@ async function pick(
 }
 
 /** The requests of the page and its workers for the two files of the
-    package of xlsx_rs, as they are made. */
+    package of table_io, as they are made, and the types of the answers
+    of its wasm. */
 function xlsxRequests(page: Page): {
   readonly js: () => number;
   readonly wasm: () => number;
+  readonly wasmTypes: () => readonly string[];
 } {
   const seen: Request[] = [];
+  const wasmTypes: string[] = [];
   page.on("request", (request) => {
     seen.push(request);
+  });
+  page.on("response", (response) => {
+    if (XLSX_WASM.test(new URL(response.url()).pathname)) {
+      wasmTypes.push(response.headers()["content-type"] ?? "");
+    }
   });
   const count = (pattern: RegExp) => (): number =>
     seen.filter((request) => pattern.test(new URL(request.url()).pathname))
       .length;
-  return { js: count(XLSX_JS), wasm: count(XLSX_WASM) };
+  return {
+    js: count(XLSX_JS),
+    wasm: count(XLSX_WASM),
+    wasmTypes: () => wasmTypes,
+  };
 }
 
 /** The table of the columns of excel_en.xlsx, as the step shows it: the
@@ -125,7 +139,7 @@ async function expectExcelEn(page: Page, name: string): Promise<void> {
   ).toBeVisible();
 }
 
-test("IP9 D2 excel_en.xlsx is read from its first sheet, with no options of a CSV, and the reader of xlsx files is downloaded once, on the first xlsx", async ({
+test("IP9 D2 excel_en.xlsx is read from its first sheet, with no options of a CSV, and the reader of tables is downloaded once, on the first file", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -155,21 +169,29 @@ test("IP9 D2 excel_en.xlsx is read from its first sheet, with no options of a CS
   expect(requests.wasm()).toBe(1);
 });
 
-test("IP9 D2 a CSV read downloads nothing of the reader of xlsx files, and the card has no line of a sheet", async ({
+test("IN1 D4 a CSV read downloads the reader of tables at its first read, its JavaScript and its wasm once, the wasm as application/wasm, and a second file nothing more; the card has no line of a sheet", async ({
   page,
 }) => {
   const requests = xlsxRequests(page);
   await openIndividuals(page);
+  expect(requests.js()).toBe(0);
+  expect(requests.wasm()).toBe(0);
   await pick(page, "panel_pops.csv");
   await expect(zone(page).getByText("200 rows, 2 columns")).toBeVisible();
   await expect(zone(page).getByText(/^Read from the first sheet/)).toHaveCount(
     0,
   );
-  expect(requests.js()).toBe(0);
-  expect(requests.wasm()).toBe(0);
+  expect(requests.js()).toBe(1);
+  expect(requests.wasm()).toBe(1);
+  expect(requests.wasmTypes()).toEqual(["application/wasm"]);
+
+  await pick(page, "panel_meta.csv");
+  await expect(zone(page).getByText("200 rows, 3 columns")).toBeVisible();
+  expect(requests.js()).toBe(1);
+  expect(requests.wasm()).toBe(1);
 });
 
-test("IP9 D2 the wasm of the reader answered with an error: the words of a reader not downloaded, and the file loaded again is read", async ({
+test("IN1 D4 the wasm of the reader answered with an error: the words of a reader not downloaded for a CSV, and the file loaded again is read", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -178,22 +200,22 @@ test("IP9 D2 the wasm of the reader answered with an error: the words of a reade
     route.fulfill({ status: 404, body: "Not Found" }),
   );
   await openIndividuals(page);
-  await pick(page, "excel_en.xlsx");
+  await pick(page, "panel_pops.csv");
 
   await expect(
-    zone(page).getByText(notLoadedText("excel_en.xlsx"), { exact: true }),
+    zone(page).getByText(notLoadedText("panel_pops.csv"), { exact: true }),
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
   // The light worker goes on: the route removed, the file loaded again
   // is read, the wasm asked for again.
   await page.unroute(XLSX_WASM);
-  await pick(page, { name: "again.xlsx", fixture: "excel_en.xlsx" });
-  await expectExcelEn(page, "again.xlsx");
+  await pick(page, "panel_pops.csv");
+  await expect(zone(page).getByText("200 rows, 2 columns")).toBeVisible();
   expect(requests.wasm()).toBe(2);
 });
 
-test("IP9 D2 the JavaScript of the reader answered with an error: the words of a reader not downloaded, and the file loaded again is read, at another address where the engine keeps the failure", async ({
+test("IN1 D4 the JavaScript of the reader answered with an error: the words of a reader not downloaded for a CSV, and a file loaded again is read, at another address where the engine keeps the failure", async ({
   page,
 }) => {
   const requests = xlsxRequests(page);
@@ -201,9 +223,9 @@ test("IP9 D2 the JavaScript of the reader answered with an error: the words of a
     route.fulfill({ status: 404, body: "Not Found" }),
   );
   await openIndividuals(page);
-  await pick(page, "excel_en.xlsx");
+  await pick(page, "panel_pops.csv");
   await expect(
-    zone(page).getByText(notLoadedText("excel_en.xlsx"), { exact: true }),
+    zone(page).getByText(notLoadedText("panel_pops.csv"), { exact: true }),
   ).toBeVisible();
   expect(requests.wasm()).toBe(0);
 
@@ -275,8 +297,9 @@ test("IP9 D2 encrypted.xlsx is refused with its words", async ({
     reader of xlsx files and the screen, with the file that brings it
     and its words (docs/specs/steps/individuals.md, "Its words"). The
     xlsx files are those of the tests of xlsx_rs, tests/data/ at
-    4a29ee7. `encrypted` is the test above, and `xlsxReaderNotLoaded`
-    the two of the reader that answered with an error. `sheetTooLarge`
+    4a29ee7. `encrypted` is the test above, and `readerNotLoaded`
+    the two of the reader that answered with an error. A CSV named
+    .xlsx, refused as notXlsx until 9 October 2026, is now read. `sheetTooLarge`
     needs a sheet of more than 2,000,000 cells, which no file of the
     tests of xlsx_rs has, so its words are checked in node only
     (src/core/project.test.ts). */
@@ -288,20 +311,12 @@ const REFUSALS: readonly {
   readonly words: string;
 }[] = [
   {
-    kind: "notXlsx",
-    what: "a CSV named pops.xlsx",
-    name: "pops.xlsx",
-    bytes: () => readFile(join(FIXTURES, "panel_pops.csv")),
-    words:
-      "it is not an Excel workbook, although its name ends in .xlsx; if it is a CSV or a TSV, give it a name that ends in .csv",
-  },
-  {
     kind: "oldExcel",
     what: "excel97.xls, of Excel 97–2003, named pops.xlsx",
     name: "pops.xlsx",
     bytes: () => readFile(join(FIXTURES, "excel97.xls")),
     words:
-      "it is a workbook of Excel 97–2003, although its name ends in .xlsx; in Excel, save it as Excel Workbook (.xlsx)",
+      "it is a workbook of Excel 97–2003; in Excel, save it as Excel Workbook (.xlsx)",
   },
   {
     kind: "emptySheet",

@@ -236,9 +236,10 @@ test("WS8 D2 a panel drawn locked that becomes ready gives the focus to its head
   page,
 }) => {
   // popnei's wasm held back, so that panel.nei stays being read while the
-  // Analyses step is on the screen; the metadata file needs none.
+  // Analyses step is on the screen; the metadata file needs table_io's
+  // alone, which goes on.
   const held: Route[] = [];
-  await page.route("**/*.wasm", (route) => {
+  await page.route("**/popnei_bg-*.wasm", (route) => {
     held.push(route);
   });
   await page.goto("popgen.html#individuals");

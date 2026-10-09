@@ -134,7 +134,7 @@ async function withoutTwelve(): Promise<string> {
 const MISSING_REASON =
   "12 individuals of panel.nei are not in pops.csv: s031, s044 and 10 more. Add them to pops.csv and load it again.";
 
-test("WS8 D1 panel_pops.csv is read with the three options found, its columns and their types are shown, and the light worker fetches no wasm", async ({
+test("WS8 D1 panel_pops.csv is read with the three options found, its columns and their types are shown, and the light worker fetches table_io's wasm and not popnei's", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -208,7 +208,8 @@ test("WS8 D1 panel_pops.csv is read with the three options found, its columns an
   await expectNoViolations(makeAxeBuilder);
 
   // What each worker fetched, from its own list of resources: the
-  // calculation worker fetched popnei's wasm, and the light worker none.
+  // calculation worker fetched popnei's wasm, and the light worker
+  // table_io's alone, which reads a CSV since 9 October 2026.
   const light = workers.find((w) => w.url().includes("filesRunner"));
   const calculation = workers.find((w) => w.url().includes("runnerWorker"));
   if (light === undefined || calculation === undefined) {
@@ -222,8 +223,10 @@ test("WS8 D1 panel_pops.csv is read with the three options found, its columns an
     (await fetchedBy(calculation)).some((name) => name.endsWith(".wasm")),
   ).toBe(true);
   expect(
-    (await fetchedBy(light)).filter((name) => name.endsWith(".wasm")),
-  ).toEqual([]);
+    (await fetchedBy(light))
+      .filter((name) => name.endsWith(".wasm"))
+      .map((name) => /table_io_bg-[^/]*\.wasm$/.test(name)),
+  ).toEqual([true]);
 });
 
 test("WS8 D1 the column popcat chosen lists the populations p0, p2 and p1 with their individuals, read in words and copied as shown", async ({
@@ -450,7 +453,7 @@ test("WS8 D1 Remove takes the step back to no file, with the focus on the file b
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("WS8 D1 a file being read shows its name, the options of the reader, and no columns", async ({
+test("WS8 D1 a file being read shows its name, no columns, and no options of the reader until the reader has found it a text file", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -460,9 +463,9 @@ test("WS8 D1 a file being read shows its name, the options of the reader, and no
   await pick(page, "panel_pops.csv");
 
   await expect(zone(page).getByText("Reading panel_pops.csv.")).toBeVisible();
-  await expect(select(page, "Encoding")).toHaveText("Detected");
-  await expect(select(page, "Separator")).toHaveText("Detected");
-  await expect(select(page, "Decimal mark")).toHaveText("Detected");
+  // The format is found from the bytes since 9 October 2026, so the
+  // options of a CSV wait for the read.
+  await expect(select(page, "Encoding")).toHaveCount(0);
   await expect(page.getByRole("table")).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 });
@@ -546,7 +549,7 @@ test("WS8 D1 the types of the columns, the warning of a few whole numbers, and a
     "i1 · i2 · i3",
     "España · Italia · Perú",
     "sí · no",
-    "1,75 · 1,62 · 1,80",
+    "1,75 · 1,62 · 1,8",
     "1 · 2 · 3",
   ]);
   await expectNoViolations(makeAxeBuilder);

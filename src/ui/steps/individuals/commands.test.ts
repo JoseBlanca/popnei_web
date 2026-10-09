@@ -46,7 +46,7 @@ const FILE_ID = "a".repeat(32);
 describe("the commands of the Individuals step", () => {
   test("a pick loads the file pending, with every option found by the reader", () => {
     const store = realStore();
-    apply(store, pickCommand(FILE_ID, "pops.csv", false));
+    apply(store, pickCommand(FILE_ID, "pops.csv"));
     expect(store.getState().undo).toBe("a new metadata file was loaded");
     expect(store.getState().project.individuals).toEqual({
       fileId: FILE_ID,
@@ -57,14 +57,14 @@ describe("the commands of the Individuals step", () => {
     });
   });
 
-  test("IP9 an xlsx picked is a new load with no options of a CSV", () => {
+  test("IN1 D5 an xlsx picked is a new load with the options of a CSV all auto, since the reader finds the format from the bytes", () => {
     const store = realStore();
-    apply(store, pickCommand(FILE_ID, "pops.xlsx", true));
+    apply(store, pickCommand(FILE_ID, "pops.xlsx"));
     expect(store.getState().undo).toBe("a new metadata file was loaded");
     expect(store.getState().project.individuals).toEqual({
       fileId: FILE_ID,
       name: "pops.xlsx",
-      csv: null,
+      csv: { encoding: "auto", separator: "auto", decimal: "auto" },
       typesSet: [],
       read: { kind: "pending" },
     });
@@ -72,7 +72,7 @@ describe("the commands of the Individuals step", () => {
 
   test("an option chosen sets it, keeps the other two, and names the file", () => {
     const store = realStore();
-    apply(store, pickCommand(FILE_ID, "pops.csv", false));
+    apply(store, pickCommand(FILE_ID, "pops.csv"));
     apply(
       store,
       csvOptionCommand("separator", "pops.csv", {
@@ -105,7 +105,7 @@ describe("the commands of the Individuals step", () => {
 
   test("a column chosen sets the grouping, and Remove takes the file away and keeps it", () => {
     const store = realStore();
-    apply(store, pickCommand(FILE_ID, "pops.csv", false));
+    apply(store, pickCommand(FILE_ID, "pops.csv"));
     apply(store, groupingCommand("popcat"));
     expect(store.getState().undo).toBe("the column of the populations changed");
     expect(store.getState().project.grouping).toEqual({
@@ -125,7 +125,7 @@ describe("the commands of the Individuals step", () => {
 
   test("IP5 D2 All individuals in one population chosen puts every individual in one population, one step of undo", () => {
     const store = realStore();
-    apply(store, pickCommand(FILE_ID, "pops.csv", false));
+    apply(store, pickCommand(FILE_ID, "pops.csv"));
     apply(store, groupingCommand("popcat"));
     apply(store, populationItemCommand("one"));
     expect(store.getState().undo).toBe(
@@ -146,7 +146,7 @@ describe("the commands of the Individuals step", () => {
       "the column of the populations changed",
     );
     const store = realStore();
-    apply(store, pickCommand(FILE_ID, "pops.csv", false));
+    apply(store, pickCommand(FILE_ID, "pops.csv"));
     apply(store, populationItemCommand("column:one"));
     expect(store.getState().project.grouping).toEqual({
       kind: "populations",
@@ -203,7 +203,7 @@ function typeOf(store: Store<JobResult>, column: string): unknown {
 describe("IP5 D2 the commands of the types of the columns", () => {
   test("a type chosen sets it, one step of undo with no notice, and an undo is said with its description", () => {
     const store = realStore();
-    apply(store, pickCommand(FILE_ID, "pops.csv", false));
+    apply(store, pickCommand(FILE_ID, "pops.csv"));
     readPops(store, ["IID", "status", "score"]);
     apply(store, typeCommand("score", { kind: "categorical" }));
     expect(store.getState().undo).toBe("the type of score changed");
@@ -227,7 +227,7 @@ describe("IP5 D2 the commands of the types of the columns", () => {
 
   test("the value coded 1 chosen sets the binary type with the other value coded 0, one step of undo with no notice", () => {
     const store = realStore();
-    apply(store, pickCommand(FILE_ID, "pops.csv", false));
+    apply(store, pickCommand(FILE_ID, "pops.csv"));
     readPops(store, ["IID", "status", "score"]);
     apply(store, codingCommand("status", "no", "yes"));
     expect(store.getState().undo).toBe("the value coded 1 in status changed");
@@ -247,7 +247,7 @@ describe("IP5 D2 the commands of the types of the columns", () => {
 
   test("the types forgotten drop those not applied and keep the others, one step of undo with no notice", () => {
     const store = realStore();
-    apply(store, pickCommand(FILE_ID, "pops.csv", false));
+    apply(store, pickCommand(FILE_ID, "pops.csv"));
     readPops(store, ["IID", "status", "score"]);
     apply(store, typeCommand("score", { kind: "categorical" }));
     apply(store, codingCommand("status", "no", "yes"));

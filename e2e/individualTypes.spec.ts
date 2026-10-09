@@ -236,7 +236,7 @@ const TYPES_ROWS: readonly ColumnRow[] = [
     values: "yes · no",
   },
   { name: "score", type: "continuous", values: "1 · 2 · 3" },
-  { name: "height", type: "continuous", values: "1.75 · 1.62 · 1.80" },
+  { name: "height", type: "continuous", values: "1.75 · 1.62 · 1.8" },
   { name: "region", type: "categorical", values: "north · south · east" },
 ];
 

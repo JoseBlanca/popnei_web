@@ -35,6 +35,7 @@ import type {
   CsvFound,
   CsvOptions,
   IndividualsTable,
+  TableFormat,
 } from "../../../worker/protocol.ts";
 import { columnWarningText } from "../../../worker/individuals/columnTypes.ts";
 import { classOf } from "../../classOf.ts";
@@ -164,7 +165,7 @@ export function IndividualsStep(): React.JSX.Element {
     }
     setMessage(null);
     const fileId = files.addFile(file);
-    send(pickCommand(fileId, file.name, kind === "xlsx"));
+    send(pickCommand(fileId, file.name));
   };
 
   const remove = (): void => {
@@ -174,9 +175,36 @@ export function IndividualsStep(): React.JSX.Element {
   };
 
   const read = individuals?.read ?? null;
-  // The options of the reader, `null` with no file or with an xlsx.
+  // The options of the reader, `null` with no file or with an xlsx of a
+  // project saved before 9 October 2026.
   const csv = individuals?.csv ?? null;
   const found = read?.kind === "read" ? read.found : null;
+
+  // The format the reader found of the load, which decides whether the
+  // options of a CSV are offered: by the found of a read, a text file with
+  // one and an xlsx without, or by the format of a refusal. While a read
+  // of other options is under way, the format the last read found, kept
+  // for its load as the line of UTF-16 is below, so that the options the
+  // user is changing stay; before the first read of a load, none.
+  const [formatLoad, setFormatLoad] = useState<{
+    readonly fileId: string;
+    readonly format: TableFormat | null;
+  } | null>(null);
+  const known = knownFormat(read);
+  const loadId = individuals?.fileId ?? null;
+  if (
+    known !== undefined &&
+    loadId !== null &&
+    (formatLoad?.fileId !== loadId || formatLoad.format !== known)
+  ) {
+    setFormatLoad({ fileId: loadId, format: known });
+  }
+  const format =
+    known !== undefined
+      ? known
+      : formatLoad !== null && formatLoad.fileId === loadId
+        ? formatLoad.format
+        : null;
 
   // The load whose file starts with the mark of UTF-16, as a read of it
   // found. The mark does not change with the options, so the line that
@@ -239,7 +267,7 @@ export function IndividualsStep(): React.JSX.Element {
 
         {/* A file notGiven is loaded again rather than read with other
             options, so it has none. */}
-        {individuals !== null && csv !== null && read?.kind !== "notGiven" && (
+        {individuals !== null && csv !== null && format === "text" && (
           <section
             aria-labelledby={optionsHeading}
             className={classOf(styles, "section")}
@@ -280,6 +308,28 @@ export function IndividualsStep(): React.JSX.Element {
   );
 }
 
+/** The format the reader found of the read `read`: "text" for a read
+    with a found, "xlsx" for one without, the format of a refusal, `null`
+    for a refusal before the reader read the bytes and for a file not
+    given; `undefined` while it is being read, which tells nothing. */
+function knownFormat(
+  read: IndividualsSource["read"] | null,
+): TableFormat | null | undefined {
+  if (read === null) {
+    return undefined;
+  }
+  switch (read.kind) {
+    case "pending":
+      return undefined;
+    case "read":
+      return read.found === null ? "xlsx" : "text";
+    case "failed":
+      return read.format;
+    case "notGiven":
+      return null;
+  }
+}
+
 /** What the card of a loaded file is drawn with. */
 interface FileCardProps {
   /** The metadata file of the project. */
@@ -302,7 +352,7 @@ function FileCard({ individuals, reason }: FileCardProps): React.JSX.Element {
       {read.kind === "read" ? (
         <>
           <p className={classOf(styles, "muted")}>{sizeText(read.table)}</p>
-          {individuals.csv === null && (
+          {read.found === null && (
             <p className={classOf(styles, "line")}>
               {firstSheetText(individuals.name)}
             </p>
