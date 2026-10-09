@@ -624,7 +624,10 @@ owner hid Undo and Redo on 8 October 2026), holds these steps beside
 those of the filters, where the opening of a variants file is no step.
 When Undo comes back, whether an Undo takes back the opening of an
 individuals file is decided then; nothing of this piece prevents either
-answer.
+answer. Decided on 9 October 2026 (`docs/designs/analyses-pca.md`, "Undo
+and Redo"): it does not. These changes of the individuals file, but for
+the column the user chooses, go through `applyAfresh` of the store, a
+command after which the history starts afresh, and are no steps.
 
 ## The options
 

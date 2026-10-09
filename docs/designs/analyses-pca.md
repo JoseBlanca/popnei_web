@@ -687,7 +687,11 @@ is shown. What it costs: a PCA of minutes, stopped by a threshold
 moved by mistake, is run again after the Undo. Keeping it for an Undo
 would win if the tab said, under its options, that a PCA of the
 earlier filters runs on, with its Stop; that is a screen to add, not
-a change of the store.
+a change of the store. The same holds for a key pressed by habit: Ctrl+Z
+while a PCA runs undoes the last step, and if that step changed what
+the PCA reads, the PCA is stopped, and a Redo gives the filters back
+but not the calculation; on the page before this piece Ctrl+Z did
+nothing.
 
 ## Undo and Redo
 
@@ -742,17 +746,32 @@ user would have to start again and wait for. So the store gains a
 third way to change the project, `applyAfresh`: the command changes the
 project as `apply` does, stopping and removing what a command would,
 and the history then starts afresh at the new project, with nothing to
-undo or redo. The five changes of the individuals file go through it.
+undo or redo. It counts as a move of the history, as an opening does
+(`historyMoves` of the store), so that a screen holding text of its own
+starts again at the project. On this page it passes through the gate of
+the screens, as `open` does: a run of the arrow keys waiting on a
+threshold is made a change first, and the fresh start then takes it
+with the other steps. The five changes of the individuals file go
+through it.
 Two of them are choices of the session, listed at the end: the removal
 of the file and a change of an option of its reader are no steps either,
 since each is part of reading a file, and the user puts either back by
-opening the file again or choosing the option again. What it costs: a
-change made while the individuals file is read, a threshold moved in
-the second the read takes, leaves the history with the column the page
-then chooses, and its own step is lost.
+opening the file again or choosing the option again. What it costs:
+every step before the change is gone, the thresholds and the options of
+the PCA set before the individuals file was opened among them, as an
+opening of the variants file already drops them since 8 October 2026;
+and a change made while the individuals file is read, a threshold moved
+in the second the read takes, is lost with them when the page chooses
+the column at the end of the read.
 
 Not taken: the individuals file's changes kept as steps, which would
-let Undo take back an opening, against the owner's rule; and `open`
+let Undo take back an opening, against the owner's rule; the change
+written into every project of the history, as the store already writes
+the read of a file there (`recordShared` of `src/core/store.ts`), which
+would keep the steps before it, but leaves steps of the column that
+take back nothing once every project holds the column of the new file,
+an Undo the user presses for no change, and gives the two files two
+rules where the owner tried one; and `open`
 with a setting that stops nothing, which would mix two meanings in one
 command of the store, an opening of the variants file that must stop
 the pass and one of the individuals file that must not.
@@ -843,18 +862,27 @@ to Undo; without it the focus would be on nothing, and the next Tab
 would start again from the top of the page in some browsers and from
 the end in others. When a button with the focus goes for another reason,
 an opening of a file by a drop, the focus goes to the heading
-"Popnei" (`src/ui/shell/focusKept.ts`). Both are the old page's rules;
-this page reaches the second more often, since the old page disables
-its buttons and this one removes them.
+"Popnei". This second rule is new: on the old page the buttons are only
+disabled, and the focus goes to the heading only after their own press
+(`keepingFocus` of `src/ui/shell/focusKept.ts`, around the press). Here
+a button with the focus can go for many reasons: a user tabs to Redo,
+then clicks the FILTER box, which in Safari does not take the focus,
+and the command hides Redo. So the part that draws the buttons moves
+the focus to the heading whenever a button it removes had the focus,
+whatever removed it.
 
 ### What changes in the code
 
 - `UndoRedoButtons` draws a button only while it has a step, by a
   setting this page gives, and the old page draws them as it does; its
   keys are caught by the same part while it is drawn, which on this page
-  is always.
+  is always; and it gives the heading the focus when a button it removes
+  had it.
 - The store's `applyAfresh`, beside `apply` and `open`, in
-  `src/core/store.ts`, with its spec.
+  `src/core/store.ts`, with its spec, and in the gate of the screens,
+  `gatedStore` of `src/ui/variants/thresholdRun.ts`, which builds its
+  store from the store's methods one by one and would pass a new one
+  through ungated.
 - The commands of the individuals file, of its box and its tab, and the
   column the page chooses (`src/ui/populationColumn.ts`), sent through
   `applyAfresh`.
