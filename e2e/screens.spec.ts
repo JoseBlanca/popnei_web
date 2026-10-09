@@ -4510,6 +4510,30 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-tabs-open${at}-${theme}`);
       });
 
+      test("the PCA tab shown, then greyed while another variants file opens", async ({
+        page,
+      }) => {
+        // The opening of panel.vcf.gz kept from the calculation worker,
+        // so that it stays being opened; served from a page opened again.
+        await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
+          const response = await route.fetch();
+          const script = await response.text();
+          const front = `self.addEventListener("message", (event) => { if (event.data !== null && typeof event.data === "object" && event.data.kind === "open" && event.data.file.name === "panel.vcf.gz") { event.stopImmediatePropagation(); } });\n`;
+          await route.fulfill({ response, body: front + script });
+        });
+        await page.goto("popgen2.html");
+        await pickOnNewPage(page, "panel.nei");
+        const row = page.getByRole("tablist", { name: "Files and analyses" });
+        const pca = row.getByRole("tab", { name: "PCA", exact: true });
+        await expect(pca).not.toHaveAttribute("aria-disabled");
+        await pca.click();
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(pca).toHaveAttribute("aria-disabled", "true");
+        await expect(pca).toHaveAttribute("aria-selected", "true");
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-tabs-greyed-shown${at}-${theme}`);
+      });
+
       test("the Populations tab shown, not built yet", async ({ page }) => {
         await pickOnNewPage(page, "panel.nei");
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
@@ -4517,7 +4541,11 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("tablist", { name: "Files and analyses" })
           .getByRole("tab", { name: "Populations", exact: true })
           .click();
-        await expect(page.getByText(/^Not built yet: /u)).toBeVisible();
+        // The panel shown: the line of Distances, greyed, is drawn hidden
+        // under its reason.
+        await expect(
+          page.getByRole("tabpanel").getByText(/^Not built yet: /u),
+        ).toBeVisible();
         await save(page, `popgen2-tabs-not-built${at}-${theme}`);
       });
 
