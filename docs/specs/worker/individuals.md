@@ -571,9 +571,48 @@ MB of short cells, and 335.8 MB for 100 columns of `0`; a common file,
 5,000 rows of 20 columns, is a hundred thousand cells, a few MB. The
 memory of a wasm grows and never shrinks, so the light worker keeps what
 its largest read took until it is ended; the client ends it after a read
-of a file above `READ_RESTART_BYTES` (`docs/specs/worker/client.md`).
-What a browser's worker gives for a file of 20 MB is measured by hand in
-the plan, in Chromium and WebKit, and sets that number.
+of a file above `READ_RESTART_BYTES` (`docs/specs/worker/client.md`),
+2,000,000 bytes. The plan's rule, applied to the measurement below,
+gives 0, the worker ended after every read of a file that is not empty,
+since the file of 1 MB of empty cells already gives back 50 MB or more
+in both engines; 0 is not set yet, because four flows of the reader
+expect a second read to download nothing and the light worker to be
+there after a read, which a restart after every read breaks (the plan,
+work package 2).
+
+What was measured on 9 October 2026, by `IN2 D2` of `e2e/measure.spec.ts`
+(the plan of the input page, work package 2), on the owner's Mac, an
+Apple M5 Pro of 64 GB, macOS 27.0.1, with Chromium 153 and WebKit 26.6
+under Playwright 1.63.0, from the built site with `READ_RESTART_BYTES`
+set to 25,000,000, the worker kept, and to 0, the worker ended, and the
+machine at a load of 8 to 17 from other work. The CSVs had a header of
+100 names over rows of a name and 99 cells, `0` or empty, the shapes of
+table_io's report; each was read three times on the old page, each time
+on a new page, and the numbers are the medians. Every file was read, the
+20 MB ones too. "Kept" is what the engine's processes held 3 s after the
+read with the worker kept, above what they held before it; "gives back"
+is that less the same with the worker ended.
+
+| file | engine | pick to table | kept | gives back |
+|---|---|---|---|---|
+| 1 MB, `0` | Chromium | 227 ms | 123.7 MB | 47.0 MB |
+| 1 MB, empty | Chromium | 345 ms | 174.7 MB | 76.0 MB |
+| 5 MB, `0` | Chromium | 833 ms | 305.3 MB | 77.8 MB |
+| 5 MB, empty | Chromium | 1,470 ms | 495.0 MB | 212.5 MB |
+| 20 MB, `0` | Chromium | 3,428 ms | 802.7 MB | 391.2 MB |
+| 20 MB, empty | Chromium | 6,635 ms | 1,364.5 MB | 816.6 MB |
+| 1 MB, `0` | WebKit | 380 ms | 285.1 MB | 32.4 MB |
+| 1 MB, empty | WebKit | 570 ms | 405.7 MB | 51.9 MB |
+| 5 MB, `0` | WebKit | 1,637 ms | 753.3 MB | 517.5 MB |
+| 5 MB, empty | WebKit | 2,761 ms | 1,558.5 MB | 916.9 MB |
+| 20 MB, `0` | WebKit | 9,968 ms | 3,144.4 MB | 1,473.8 MB |
+| 20 MB, empty | WebKit | 13,107 ms | 4,615.3 MB | 3,326.7 MB |
+
+The time from the pick to the table of `individuals_10000.xlsx`, the
+median of five reads after a first one, was 235 ms in Chromium and 257
+ms in WebKit with the worker kept, and 344 ms and 272 ms with it ended
+after every read; that of `panel_pops.csv`, 29 ms and 15 ms kept, 30 ms
+and 31 ms ended.
 
 ## How it is verified
 
