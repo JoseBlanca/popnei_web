@@ -61,11 +61,15 @@ The old page gets none of this: it is to be retired.
 - A change of a filter that changes what the PCA reads takes its result
   off the screen, and stops it if it runs. The result stays in the
   cache, so the filters set back as they were bring it back with no
-  calculation. Whether `popgen2.html` gets its Undo back is left open.
+  calculation (the cache: the store's memory of results, each under a
+key made from everything it was calculated from). Whether `popgen2.html`
+gets its Undo back is left open.
 - Every table and every plot of the page has a button "Download…" that
   offers its rows as CSV, and, for a plot, its image as SVG or PNG and
   its data as CSV. The table and the plot components carry it, so a new
-  table or plot has it with no work of its screen. The CSV of the PCA's
+  table or plot has it with no work of its screen. A histogram's waits
+  for the end of the one pass, so that no file of part of the variants
+  leaves the page. The CSV of the PCA's
   plot is the one vavilov-explorer imports: the names and PC1 to PC10.
 - An individual the individuals file does not classify is drawn in the
   PCA all the same, as "Unclassified", and the PCA never waits for the
@@ -606,7 +610,8 @@ such fix, Lingoes' correction, and none other: its declarations
 (`node_modules/popnei/dist/pcoa.d.ts`) give `doPcoaFromVariants` with
 the option `correctByLingoes`, `correctDistsByLingoes` for a
 `Distances`, and `doPcoa`, which refuses distances that are not
-Euclidean; no Cailliez correction, and no other distance between
+Euclidean; no Cailliez correction, the other common one, which adds a constant to
+the distances rather than to their squares, and no other distance between
 individuals than Kosman's (`calcPairwiseKosmanDists`). So nothing is
 asked of popnei, and the PCoA is that of the old page.
 
@@ -1004,8 +1009,11 @@ The owner's answer 3 counts on Undo to bring a removed result back.
 `popgen2.html` has none: the owner hid its row and its keys on 8
 October 2026 (`docs/plans/filters.md`). The store still keeps the
 history, and the row is ready to draw again. The session has asked the
-owner; until the answer, the removal is built as above, which works
-either way.
+owner; until the answer, the removal is built as above: a change stops
+the PCA it leaves behind and removes its result. If Undo comes back,
+an Undo of that change gives the filters and the result back from the
+cache; only a PCA that was running is lost, unless (a) below also keeps
+it running.
 
 - **(a) Undo and Redo back on the page with this piece.** The row of
   the two buttons, and their keys, Ctrl+Z, Ctrl+Y and Cmd+Shift+Z,
@@ -1016,7 +1024,9 @@ either way.
   than stopped at once, which brings back the notice or something in
   its place to say that it runs. What it costs: the row the owner hid;
   the keys taken from the browser's own; and, if a run is kept for an
-  Undo, the setting of answer 3 changes.
+  Undo, the store's setting of answer 3 no longer stops at once a
+  calculation left behind, and the PCA tab has to say that a PCA of the
+  earlier filters runs on, out of sight of its plot.
 - **(b) No Undo.** The filters set back by hand as they were give the
   key back, and the cache gives the result back with no calculation; a
   PCA stopped by the change is run again. What it costs: the user has
