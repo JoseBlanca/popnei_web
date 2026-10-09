@@ -8,7 +8,9 @@
  * `variantsSummary`, as the statistics of each individual, so that the
  * individuals kept are worked out from that pass finished; and the
  * writing of the filtered variants, as a VCF or a `.nei` file
- * (docs/specs/analyses/writeVariants.md, "On popgen2.html").
+ * (docs/specs/analyses/writeVariants.md, "On popgen2.html"); and the
+ * setting `stopLeftBehind`, under which a change makes no notice and
+ * stops what it leaves behind.
  * Apart from the entry, so that a test in node makes the store with what
  * the page gives it.
  */
@@ -78,6 +80,11 @@ export function createPopgen2Store(
     // The page has no steps, so the words of no individual kept send the
     // user to none (docs/specs/steps/popgen2-download.md, "Its words").
     keptNoneStep: null,
+    // The page draws no notice, so a calculation a change leaves behind
+    // is stopped at once rather than run on out of sight
+    // (docs/specs/core/store.md, "On popgen2.html: no notice, and a
+    // history of the filters").
+    stopLeftBehind: true,
   });
 }
 

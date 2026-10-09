@@ -21,6 +21,7 @@ import {
   turnOffVariantFilter,
   setCsvOptions,
   setGrouping,
+  setAnalysisOptions,
   setIndividualFilter,
   setThreshold,
   setVariantFilter,
@@ -36,7 +37,16 @@ import type {
   VariantSource,
 } from "./project.ts";
 import { individualsKept, keptNoneReason } from "./individualsKept.ts";
-import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "./apps.ts";
+import {
+  POPGEN2_ANALYSES,
+  POPGEN_ANALYSES,
+  countsOf,
+  individualStatsOf,
+  popgen2FirstProject,
+  writeCountsOf,
+} from "./apps.ts";
+import { pcaOnPopgen2 } from "./analyses/pca.ts";
+import { variantsSummary } from "./analyses/variantsSummary.ts";
 import { createStore } from "./store.ts";
 import type {
   AnalysisDef,
@@ -62,6 +72,7 @@ import {
   noPopDiversity,
   sampleProject,
   statsResult,
+  summaryResult,
   writeTestCountsOf,
   writtenFile,
 } from "./testSupport.ts";
@@ -85,6 +96,7 @@ import type {
   Outcome,
   Progress,
   PassStats,
+  PcaResult,
   Run,
   RunError,
   VariantFilterKind,
@@ -8175,5 +8187,326 @@ describe("SF5 D4 the properties of the failures and of the results so far kept a
       }),
     );
     expect(shown).toBeGreaterThan(50);
+  });
+});
+
+/** A request or a write the fake sends of `popgen2Store` were given,
+    which the test ends by hand. */
+interface Popgen2Sent {
+  readonly id: number;
+  readonly key: string;
+  /** The analysis of the request, or "write". */
+  readonly what: string;
+  /** How many times its `cancel()` was called. */
+  readonly cancels: () => number;
+}
+
+/** The load of panel.nei on popgen2.html, and its read, two individuals. */
+const POPGEN2_LOAD = {
+  fileId: VARIANTS_ID,
+  name: "panel.nei",
+  size: 261_490,
+  format: "nei",
+  readOptions: null,
+} as const;
+
+/** The individuals of panel.nei in these tests, those `summaryResult`
+    gives the statistics of by default. */
+const POPGEN2_INDIVIDUALS = ["s000", "s001"];
+
+/** The missing data threshold of the variants, which the PCA of
+    popgen2.html follows by default, so that moving it changes its key. */
+const MISSING_THRESHOLD = { of: "variants", kind: "missing_data" } as const;
+
+/** The options of the PCA of popgen2.html in these tests: its defaults,
+    with the distance of its LD pruning typed, so that it can run. */
+const PCA2_OPTIONS = {
+  ...pcaOnPopgen2.defaults,
+  ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
+};
+
+/** A result of the PCA of the two individuals. */
+function popgen2PcaResult(): PcaResult {
+  const pass: PassStats = { numVars: 1200, filtering: {} };
+  return {
+    analysis: "pca",
+    method: "pca",
+    individuals: POPGEN2_INDIVIDUALS,
+    numComps: 1,
+    numCompsFound: 1,
+    projections: Float64Array.from([1, -1]),
+    explainedVariancePercent: Float64Array.from([100]),
+    numVarsUsed: 1200,
+    lingoesConstant: null,
+    negativeEigenvaluesPercent: null,
+    passStats: pass,
+  };
+}
+
+/**
+ * The store of popgen2.html as `createPopgen2Store` of
+ * src/ui/popgen2Store.ts makes it, which core's tests do not import: its
+ * first project, its analyses, the one pass as the statistics, its write
+ * and no counts; with the setting `stopLeftBehind` as given, and fake
+ * sends that record each request and its `cancel()` and never end one.
+ * popnei is ready and panel.nei opened and read.
+ */
+function popgen2Store(stopLeftBehind: boolean): {
+  readonly store: Store<JobResult, string>;
+  readonly sent: Popgen2Sent[];
+  /** Ends the request `request` done with `result`. */
+  readonly end: (request: Popgen2Sent | undefined, result: JobResult) => void;
+} {
+  const sent: Popgen2Sent[] = [];
+  const record = (key: string, what: string): Popgen2Sent => {
+    let cancels = 0;
+    const one: Popgen2Sent = {
+      id: sent.length + 1,
+      key,
+      what,
+      cancels: () => cancels,
+    };
+    sent.push(one);
+    handles.set(one.id, () => {
+      cancels += 1;
+    });
+    return one;
+  };
+  const handles = new Map<number, () => void>();
+  const never = <T>(): Promise<Outcome<T>> => new Promise(() => undefined);
+  const store = createStore<Job, JobResult, string>({
+    first: popgen2FirstProject(),
+    analyses: POPGEN2_ANALYSES,
+    send: (key, job): Run<JobResult> => {
+      const one = record(key, job.analysis);
+      return {
+        id: one.id,
+        outcome: never(),
+        cancel: () => handles.get(one.id)?.(),
+      };
+    },
+    countsOf,
+    counts: null,
+    statistics: {
+      analysis: variantsSummary.id,
+      of: (r) => {
+        if (r.analysis !== "variantsSummary") {
+          throw new Error("not a summary");
+        }
+        const { individuals, missingGtRate, obsHetRate } = r.perIndividual;
+        return { individuals, missingGtRate, obsHetRate };
+      },
+    },
+    write: {
+      send: (key): Run<Written<string>> => {
+        const one = record(key, "write");
+        return {
+          id: one.id,
+          outcome: never(),
+          cancel: () => handles.get(one.id)?.(),
+        };
+      },
+      countsOf: writeCountsOf,
+    },
+    appVersion: "0.1.0",
+    cacheMaxBytes: 1_000_000_000,
+    maxUndoSteps: 100,
+    keptNoneStep: null,
+    ...(stopLeftBehind ? { stopLeftBehind: true } : {}),
+  });
+  store.popneiReady("0.2.2");
+  store.open((p) =>
+    setAnalysisOptions(
+      loadVariants(p, POPGEN2_LOAD),
+      pcaOnPopgen2,
+      PCA2_OPTIONS,
+    ),
+  );
+  store.variantsRead(VARIANTS_ID, {
+    kind: "read",
+    individuals: POPGEN2_INDIVIDUALS,
+    ploidy: 2,
+    numVars: null,
+    keepsPassed: false,
+  });
+  const end = (request: Popgen2Sent | undefined, result: JobResult): void => {
+    if (request === undefined) {
+      throw new Error("no such request");
+    }
+    store.runEnded(request.id, { kind: "done", key: request.key, result });
+  };
+  return { store, sent, end };
+}
+
+/** The state of the PCA in `state`. */
+function pcaOf(state: AppState<JobResult, string>): AnalysisStatus<JobResult> {
+  const view = state.analyses.find((one) => one.id === "pca");
+  if (view === undefined) {
+    throw new Error("no PCA");
+  }
+  return view.status;
+}
+
+/** The one pass of `popgen2Store` run and ended, so that the PCA can
+    run. */
+function passDone(made: ReturnType<typeof popgen2Store>): void {
+  made.store.startRun("variantsSummary");
+  made.end(made.sent[0], summaryResult(["1"], [1200]));
+}
+
+/** Moves the missing data threshold of the variants to `value`. */
+function moveMissing(store: Store<JobResult, string>, value: number): void {
+  store.apply("the filter of the variants by missing data changed", (p) =>
+    setThreshold(p, MISSING_THRESHOLD, value),
+  );
+}
+
+describe("AP3 D1 stopLeftBehind on the store of popgen2.html", () => {
+  test("a PCA done, the threshold moved: no notice, the PCA ready under the new key; undo: done with the same result, nothing sent", () => {
+    const made = popgen2Store(true);
+    passDone(made);
+    made.store.startRun("pca");
+    const result = popgen2PcaResult();
+    made.end(made.sent[1], result);
+    const done = pcaOf(made.store.getState());
+    expect(done.kind).toBe("done");
+    moveMissing(made.store, 0.2);
+    const after = made.store.getState();
+    expect(after.notice).toBeNull();
+    const ready = pcaOf(after);
+    expect(ready.kind).toBe("ready");
+    expect(
+      ready.kind === "ready" && done.kind === "done" && ready.key,
+    ).not.toBe(done.kind === "done" && done.key);
+    made.store.undo();
+    const back = pcaOf(made.store.getState());
+    expect(back.kind === "done" ? back.result : null).toBe(result);
+    expect(made.store.getState().notice).toBeNull();
+    expect(made.sent).toHaveLength(2);
+  });
+
+  test("a PCA in flight, the threshold moved: its cancel() called once at once, the PCA ready with nothing stopped; undo: ready, not running, nothing sent", () => {
+    const made = popgen2Store(true);
+    passDone(made);
+    made.store.startRun("pca");
+    expect(pcaOf(made.store.getState()).kind).toBe("running");
+    moveMissing(made.store, 0.2);
+    expect(made.sent[1]?.cancels()).toBe(1);
+    const after = made.store.getState();
+    expect(after.notice).toBeNull();
+    const ready = pcaOf(after);
+    expect(ready.kind === "ready" ? ready.stopped : "not ready").toBeNull();
+    made.store.undo();
+    const back = made.store.getState();
+    expect(pcaOf(back).kind).toBe("ready");
+    expect(back.notice).toBeNull();
+    expect(made.sent).toHaveLength(2);
+    expect(made.sent[1]?.cancels()).toBe(1);
+  });
+
+  test("a PCA in flight, the threshold moved, its cancel() called, its result given after: still ready under the new key; undo: done, from the cache", () => {
+    const made = popgen2Store(true);
+    passDone(made);
+    made.store.startRun("pca");
+    moveMissing(made.store, 0.2);
+    expect(made.sent[1]?.cancels()).toBe(1);
+    const result = popgen2PcaResult();
+    made.end(made.sent[1], result);
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+    made.store.undo();
+    const back = pcaOf(made.store.getState());
+    expect(back.kind === "done" ? back.result : null).toBe(result);
+    expect(made.sent).toHaveLength(2);
+  });
+
+  test("a PCA in flight, the colour of the points changed, which its key does not hold: no cancel(), still running", () => {
+    const made = popgen2Store(true);
+    passDone(made);
+    made.store.startRun("pca");
+    made.store.apply("the colour of the points changed", (p) =>
+      setAnalysisOptions(p, pcaOnPopgen2, { ...PCA2_OPTIONS, colourBy: "pop" }),
+    );
+    expect(made.sent[1]?.cancels()).toBe(0);
+    expect(pcaOf(made.store.getState()).kind).toBe("running");
+    expect(made.store.getState().notice).toBeNull();
+  });
+
+  test("a Run of the PCA that waits for the one pass, the threshold moved: the wait ended, the PCA ready, the one pass still in flight and not cancelled", () => {
+    const made = popgen2Store(true);
+    // A filter of individuals, so that the PCA needs the statistics.
+    made.store.apply("the filter of individuals changed", (p) =>
+      setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.5),
+    );
+    made.store.startRun("variantsSummary");
+    made.store.startRun("pca");
+    const waiting = pcaOf(made.store.getState());
+    expect(waiting.kind === "running" && waiting.waitsForStatistics).toBe(true);
+    moveMissing(made.store, 0.2);
+    const after = made.store.getState();
+    expect(pcaOf(after).kind).toBe("ready");
+    expect(after.notice).toBeNull();
+    expect(made.sent).toHaveLength(1);
+    expect(made.sent[0]?.cancels()).toBe(0);
+    expect(after.runs.map((run) => run.analysis)).toEqual(["variantsSummary"]);
+    // The one pass ends: nothing is sent for the wait it ended.
+    made.end(made.sent[0], summaryResult(["1"], [1200]));
+    expect(made.sent).toHaveLength(1);
+  });
+
+  test("a write in flight, the threshold moved: its cancel() called, the write ready under the new key, no notice", () => {
+    const made = popgen2Store(true);
+    passDone(made);
+    made.store.startWrite("vcf");
+    expect(made.store.getState().write?.kind).toBe("running");
+    moveMissing(made.store, 0.2);
+    expect(made.sent[1]?.what).toBe("write");
+    expect(made.sent[1]?.cancels()).toBe(1);
+    expect(made.store.getState().write?.kind).toBe("ready");
+    expect(made.store.getState().notice).toBeNull();
+  });
+
+  test("the one pass in flight, every threshold and undo: never cancelled", () => {
+    const made = popgen2Store(true);
+    made.store.startRun("variantsSummary");
+    moveMissing(made.store, 0.2);
+    made.store.apply("the MAF filter changed", (p) =>
+      setThreshold(p, { of: "variants", kind: "maf" }, 0.9),
+    );
+    made.store.apply("the filter of individuals changed", (p) =>
+      setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.5),
+    );
+    made.store.undo();
+    made.store.undo();
+    made.store.redo();
+    expect(made.sent[0]?.cancels()).toBe(0);
+    const summary = made.store
+      .getState()
+      .analyses.find((view) => view.id === "variantsSummary");
+    expect(summary?.status.kind).toBe("running");
+  });
+
+  test("without the setting, the old rule: a PCA done, the threshold moved: removed, in a notice", () => {
+    const made = popgen2Store(false);
+    passDone(made);
+    made.store.startRun("pca");
+    made.end(made.sent[1], popgen2PcaResult());
+    moveMissing(made.store, 0.2);
+    const after = made.store.getState();
+    expect(after.notice?.removed).toEqual(["pca"]);
+    expect(pcaOf(after).kind).toBe("removed");
+  });
+
+  test("without the setting, a PCA in flight, the threshold moved: not cancelled, left behind in the notice; the colour changed: still running", () => {
+    const made = popgen2Store(false);
+    passDone(made);
+    made.store.startRun("pca");
+    made.store.apply("the colour of the points changed", (p) =>
+      setAnalysisOptions(p, pcaOnPopgen2, { ...PCA2_OPTIONS, colourBy: "pop" }),
+    );
+    expect(pcaOf(made.store.getState()).kind).toBe("running");
+    expect(made.store.getState().notice).toBeNull();
+    moveMissing(made.store, 0.2);
+    expect(made.sent[1]?.cancels()).toBe(0);
+    expect(made.store.getState().notice?.leftBehind).toEqual(["pca"]);
   });
 });

@@ -2,8 +2,10 @@ import { describe, expect, test } from "vitest";
 
 import { firstProject, popgen2FirstProject } from "../core/apps.ts";
 import { keyFromWire, writeKeyOf, createKeyMemo } from "../core/keys.ts";
+import { pcaOnPopgen2 } from "../core/analyses/pca.ts";
 import {
   loadVariants,
+  setAnalysisOptions,
   setThreshold,
   turnOffVariantFilter,
 } from "../core/project.ts";
@@ -556,5 +558,62 @@ describe("DL4 D3 the store of popgen2.html writes, and works out the individuals
     ).toThrow(
       /^popnei_web defect: the statistics of each individual were asked of a result of filterCounts/,
     );
+  });
+});
+
+describe("AP3 D1 the store of popgen2.html stops what a change leaves behind", () => {
+  test("a PCA in flight, a threshold moved: its cancel() called at once, and no notice", () => {
+    let cancels = 0;
+    const jobs: Job[] = [];
+    const keys: string[] = [];
+    const store = createPopgen2Store({
+      send: (key, job): Run<JobResult> => {
+        jobs.push(job);
+        keys.push(key);
+        return {
+          id: jobs.length,
+          outcome: new Promise<Outcome<JobResult>>(() => undefined),
+          cancel: () => {
+            if (job.analysis === "pca") cancels += 1;
+          },
+        };
+      },
+      sendWrite: () => {
+        throw new Error("popnei_web defect: no write is sent here");
+      },
+      appVersion: "0.1.0",
+    });
+    store.popneiReady("0.2.2");
+    const load = vcfLoad("a".repeat(32), "a.vcf.gz");
+    openVariantsFile(store, load);
+    store.apply("the distance of the LD pruning changed", (p) =>
+      setAnalysisOptions(p, pcaOnPopgen2, {
+        ...pcaOnPopgen2.defaults,
+        ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
+      }),
+    );
+    store.variantsRead(load.fileId, {
+      kind: "read",
+      individuals: ["s000", "s001"],
+      ploidy: 2,
+      numVars: null,
+      keepsPassed: true,
+    });
+    const pass = store.startRun("variantsSummary")?.[0];
+    if (pass === undefined) throw new Error("the pass was not sent");
+    store.runEnded(pass.id, {
+      kind: "done",
+      key: keys[0] ?? "",
+      result: summaryResult(["1"], [1200]),
+    });
+    store.startRun("pca");
+    expect(jobs.map((job) => job.analysis)).toEqual(["variantsSummary", "pca"]);
+
+    store.apply("the filter of the variants by missing data changed", (p) =>
+      setThreshold(p, { of: "variants", kind: "missing_data" }, 0.2),
+    );
+
+    expect(cancels).toBe(1);
+    expect(store.getState().notice).toBeNull();
   });
 });

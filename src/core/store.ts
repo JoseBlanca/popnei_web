@@ -456,6 +456,13 @@ export interface StoreConfig<J, R, F = never> {
       end "Loosen them." (docs/specs/steps/popgen2-download.md, "Its
       words"). */
   readonly keptNoneStep?: string | null;
+  /** Whether a change makes no notice and stops at once every
+      calculation, every Run waiting for the statistics and every write
+      whose key it leaves behind (docs/specs/core/store.md, "On
+      popgen2.html: no notice, and a history of the filters"): true on
+      popgen2.html, which draws no notice; false when absent. The one
+      pass of that page reads no filter, so no change stops it. */
+  readonly stopLeftBehind?: boolean;
 }
 
 /** What the store takes from the pass of a result. */
@@ -706,6 +713,7 @@ export function createStore<J, R, F = never>(
     ids.add(def.id);
   }
   const statistics = config.statistics;
+  const stopLeftBehind = config.stopLeftBehind === true;
   /** The step the words of no individual kept send the user to. */
   const keptNoneStep =
     config.keptNoneStep === undefined
@@ -1632,7 +1640,9 @@ export function createStore<J, R, F = never>(
    * the new project still does not give; and makes the notice of this
    * change, `cause`, with the analyses that were done and are not, the
    * calculations it leaves behind and those it stopped at once, and the
-   * file written it forgot; none when it has none of these.
+   * file written it forgot; none when it has none of these. Under
+   * `stopLeftBehind` it makes no notice and stops at once what it leaves
+   * behind.
    */
   const changedByUser = (
     next: History,
@@ -1695,6 +1705,16 @@ export function createStore<J, R, F = never>(
       .map((def) => def.id);
     const runs = leftBehindNow(keys);
     const waitIds = waitsBehindNow(keys);
+    if (stopLeftBehind) {
+      // No notice to undo from, so nothing left behind may go on out of
+      // sight; an undo that gives a key back finds its result in the
+      // cache, or the user runs it again.
+      stopAll(runs);
+      endWaits(waitIds);
+      notice = null;
+      changed();
+      return;
+    }
     notice =
       removed.length === 0 &&
       runs.size === 0 &&
