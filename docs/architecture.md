@@ -971,10 +971,13 @@ that keep the same individuals share their results, at the cost of a key
 made from a result in the cache rather than from the project alone.
 
 **No notice on `popgen2.html`, and no Undo of an opening.** The one
-calculation of that page, the one pass, reads no filter, so a change of
-a threshold or of the FILTER box removes and stops nothing, and gives
-no notice, as on the old page; the owner decided on 8 October 2026 that
-none is needed. Opening a file there, the first or another, is the
+calculation of that page until 9 October 2026, the one pass, reads no
+filter, so a change of a threshold or of the FILTER box removed and
+stopped nothing, and gave no notice; the owner decided on 8 October
+2026 that none is needed. From 9 October 2026 the PCA reads the filters
+there, and a setting of the store keeps the page without notice: a
+change makes none, and stops at once every calculation it leaves behind
+(below, "What was revised on 9 October 2026"). Opening a file there, the first or another, is the
 store's `open`, which starts a new history with nothing to undo, stops
 the pass of the file before and gives no notice; the filters are kept
 as the user left them. So the page's Undo and Redo, when the page
@@ -1025,7 +1028,7 @@ What was revised on 9 October 2026, from
 comes to `popgen2.html`, the first calculation of that page that reads
 the filters, so a change of a filter can now remove a result or leave a
 calculation behind. The paragraph "No notice on `popgen2.html`" holds
-by a setting of the store on that page, under which a change makes no
+still, by a setting of the store on that page, under which a change makes no
 notice and stops at once every calculation it leaves behind, since the
 page draws no notice and has no Undo to come back to it; a result
 removed stays in the cache under its key, and the filters set back as
@@ -2601,8 +2604,9 @@ Every table and every plot of that page offers its data as CSV, and a
 plot its image as SVG or PNG, from a button "Download…" that the
 components of the tables, `SortableTable` and `Table` of
 `src/ui/widgets/`, and the React wrappers of the plots carry, so that no
-screen writes a download of its own; the histogram of `src/charts` takes
-its threshold to draw it into the exported image.
+screen writes a download of its own; the plots of `src/charts` do not
+change, and `usePlot` gives the wrappers the handle of their plot. The
+menu of a plot drawn from the one pass waits for its end.
 
 ## 8. The project file, the report and the script
 

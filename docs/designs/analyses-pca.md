@@ -680,13 +680,34 @@ already carries, so that the five buttons of a tab are not five
 "Download". The keyboard reaches it with the Tab key; Enter, Space or
 the arrow down opens the menu, the arrows move in it, Enter chooses,
 Escape closes it and gives the focus back to the button. A choice
-starts the download at once, with no dialog, and the status region says
-"panel.missing_rate_variants.csv downloaded." One button and a menu, and
-not three buttons, so that a plot of a phone's width keeps its room.
+hands the file to the browser at once, and the status region says
+"Saving panel.missing_rate_variants.csv." The page cannot know that the
+file was saved: a Firefox or a Safari set to ask where to save opens its
+own dialog, which the user may cancel. One button and a menu, and not
+three buttons, so that a plot of a phone's width keeps its room. A PNG
+the browser refuses, too large for its canvas or not made, is said in
+words under the button, "The image of this plot is too large for a PNG
+in this browser; download it as SVG.", from the error the export gives
+(`PngError` of `src/charts/export.ts`).
 
-The file is named from the variants file and what is downloaded,
-`panel.pca.csv`, `panel.pca.svg`, `panel.individuals.csv`, with no
-date, as the old page named its files.
+The file is named from the file its data come from and what is
+downloaded, with no date, as the old page named its files: from the
+variants file, `panel.missing_rate_variants.csv`; for the PCA by its
+method, `panel.pca.coordinates.csv` for the plot's CSV, the one
+vavilov-explorer imports, and `panel.pca.table.csv` for the table's,
+`panel.pcoa.…` for a PCoA, so that the two never share a name and the
+browser never renames one "(1)"; and for the table of the individuals
+file, which is shown with no variants file open, from the individuals
+file, `panel_pops.table.csv`.
+
+**A plot drawn from part of the file.** The histograms of the Variants
+tab are drawn from the one pass while it runs, and after a Stop from
+what it had read (`src/ui/variants/statsPlots.ts`); only their
+description says so. Their menu waits for the end of the one pass, the
+rule the download of the filtered variants has (`downloadPlace` of
+`src/ui/variants/downloadState.ts`), with the reason as the button's
+tooltip and description, "Download once panel.nei is read to the end.",
+so that no file of part of the variants leaves the page unmarked.
 
 ### The CSV of a table
 
@@ -716,14 +737,16 @@ texts only today (`cells: readonly string[]`), and gains the values.
 ### What a plot offers
 
 - **Its image**, by the export the plots already have
-  (`src/charts/export.ts`, the handle's `exportSvg` and `exportPng` of
-  `plot2d.ts` and `pca3d.ts`): the plot as drawn, in the colours of the
+  (the handle's `toSVG` and `toPNG` of `src/charts/types.ts`, made by
+  `src/charts/export.ts`): the plot as drawn, in the colours of the
   light theme, with its legend and with no mark of the point under the
-  mouse; the 3D view as it is turned. The line of a threshold, today a
-  control of the screen laid over the histogram, is not in the export;
-  the plot is given the threshold to draw it into the image, since an
-  image of a filter with no line would mislead.
-- **Its data**, as CSV, by the rules of a table: for a histogram, a row
+  mouse; the 3D view as it is turned. The histogram draws its
+  threshold's line itself (`drawHistogram` of `src/charts/histogram.ts`),
+  under the control the user drags, and the export keeps it, since it
+  takes out only the overlays and the mark of the point under the
+  mouse.
+- **Its data**, as CSV, by the rules of a table, but for the names of
+  the PCA's coordinates, below: for a histogram, a row
   per bin as the plot draws it, its left edge, its right edge and its
   count, the bins the plot adds up from popnei's fine bins; for the
   histograms of the individuals, the bins core makes, and the
@@ -732,7 +755,14 @@ texts only today (`cells: readonly string[]`), and gains the values.
   coordinates of case 3: the first column the names of the individuals,
   headed `individual`, and one column for each component, PC1 to PC10,
   every component kept and not only those drawn, so that
-  vavilov-explorer imports it (`docs/use-cases.md`, case 3). The
+  vavilov-explorer imports it (`docs/use-cases.md`, case 3). Its names
+  are written as the variants file writes them, quoted by RFC 4180 when
+  they need it and with no quote, ', before a leading "=", "+", "-" or
+  "@": vavilov-explorer has to find them again in the variants file
+  and in the populations it sends back, and "'+A12" would not match
+  "+A12". A spreadsheet that opens it may read such a name as a formula,
+  which the user of these files, who opens them in vavilov-explorer, is
+  told in the help. The
   population is not among them: vavilov-explorer would read it as a
   component, and it is in the individuals file and in the CSV of the
   PCA's table, which has it.
@@ -740,8 +770,8 @@ texts only today (`cells: readonly string[]`), and gains the values.
 A plot component makes its CSV from the data it is given, unless its
 screen gives it a fuller table, as the PCA's does with the ten
 components where the plot draws two or three. The plots of `src/charts`
-do not change but for the threshold drawn into the image: the menu and
-the CSV are in their React wrappers of `src/ui`.
+do not change: the menu and the CSV are in their React wrappers of
+`src/ui`.
 
 ### Which components and which screens
 
@@ -794,8 +824,16 @@ of `popgen2.html` that makes no notice and stops a calculation left
 behind (answer 3); the components of the tables, which take the stored
 value of each cell beside its text, and the React wrappers of the plots,
 which take the name of what they download and, for the PCA, the fuller
-table of its CSV (answer 4); and the histogram of `src/charts`, which
-takes the threshold to draw into its exported image.
+table of its CSV (answer 4); `usePlot` of `src/ui/widgets/usePlot.ts`,
+which gives back the plot's handle beside its element, so that a
+wrapper's menu can export it, a change shared with the heatmap and the
+line plot of the old page; for the PCA on this page a second
+definition, since its defaults differ, the LD pruning on, and
+`pcaFilters`, which the key, the job, the warnings, the script and the
+words of the refusals call, given the page's rule of the stricter of
+each pair; and the words of the LD field, which say "turn the LD pruning
+off" where the old page says "set it back to as in the Variants
+step".
 
 ## How it is tested, and what would prove it wrong
 
@@ -917,8 +955,10 @@ hidden, the 3D view with them; the labels wrapping at the width of a
 phone; Run disabled until the one pass ends; the unclassified as one
 group in the PCA; the PCA's own value kept when the Variants tab goes
 below it; one button "Download…" with a menu; the CSV of the stored
-values with the point as the decimal mark; the threshold's line drawn
-into the image of a histogram; and the words of the reasons.
+values with the point as the decimal mark; the names of the PCA's
+coordinates written with no quote before a leading "=", "+", "-" or "@";
+the menus of the histograms waiting for the end of the one pass; the
+names of the files; and the words of the reasons.
 
 ## What the owner decided
 
