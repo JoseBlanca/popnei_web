@@ -1,6 +1,8 @@
 /**
  * The body of popgen2.html (docs/specs/steps/popgen2-input.md, "The order
- * of the page"): the page's one heading, "Popnei"; under it the two boxes
+ * of the page"): the page's one heading, "Popnei", with Undo and Redo at
+ * the right end of its line (docs/specs/steps/popgen2-pca.md, "Undo and
+ * Redo"); under it the two boxes
  * of the files, side by side from 720 pixels and one above the other
  * below, the variants file's first; and under them the row of five tabs,
  * "Variants", "Individuals", "PCA", "Populations" and "Distances"
@@ -33,6 +35,7 @@ import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { StatusRegion } from "../shell/StatusRegion.tsx";
+import { UndoRedoButtons } from "../shell/UndoRedoButtons.tsx";
 import { useAppState } from "../store.tsx";
 import { ANALYSES_TABS_LABEL } from "./analysisTabsWords.ts";
 import { IndividualsBox } from "./IndividualsBox.tsx";
@@ -71,20 +74,21 @@ export function VariantsPage({
   return (
     <>
       <main className={classOf(styles, "page")}>
-        {/* It takes the focus after Close of the error bar, and is not in
-            the order of the Tab key. */}
-        <h1 tabIndex={-1} className={classOf(styles, "title")}>
-          Popnei
-        </h1>
-        {/* The row of Undo and Redo, the shell's UndoRedoButtons, which
-            stood here with their keys, Ctrl+Z, Ctrl+Y and Cmd+Shift+Z, is
-            hidden by the owner's decision of 8 October 2026, until a later
-            feature needs it (docs/specs/steps/popgen2-filters.md, "Undo,
-            Redo and their keys"). Kept ready to draw it again in a
-            <div> of its own: the store's history, the thresholds and
-            the FILTER box as commands with their descriptions, a run of
-            the keys made a change before any other command (runGate.tsx,
-            thresholdRun.ts), and the words of an undo (undoRedo.ts). */}
+        {/* The line of the heading, with Undo and Redo at its right end,
+            each drawn only while it has a step, in places that stay, so
+            that the line keeps its height and the page under it does not
+            move when Undo comes (docs/specs/steps/popgen2-pca.md, "Undo
+            and Redo"). Their keys are caught on the whole page from its
+            opening. */}
+        <div className={classOf(styles, "headingLine")}>
+          {/* It takes the focus after Close of the error bar, and when a
+              button of Undo or Redo with the focus goes, and is not in
+              the order of the Tab key. */}
+          <h1 tabIndex={-1} className={classOf(styles, "title")}>
+            Popnei
+          </h1>
+          <UndoRedoButtons onlyWithStep />
+        </div>
         <div className={classOf(styles, "boxes")}>
           <section
             aria-labelledby={variantsHeadingId}

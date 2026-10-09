@@ -4442,6 +4442,9 @@ function downloadButton(page: Page): Locator {
   });
 }
 
+/** The words of the FILTER box of popgen2.html. */
+const FILTER_LABEL = "Leave out the variants that failed their FILTER";
+
 /** The sentence of no variant of panel.vcf.gz on popgen2.html. */
 const PANEL_NO_VARIANT =
   "None of the 1,200 variants of panel.vcf.gz pass the filters, so there is nothing to download.";
@@ -5607,6 +5610,45 @@ for (const theme of ["light", "dark"] as const) {
           }),
         ).toBeVisible({ timeout: 20_000 });
         await save(page, `popgen2-threshold-grey${at}-${theme}`);
+      });
+
+      test("Undo alone at the right end of the line of the heading, after the FILTER box unticked", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 20_000,
+        });
+        await page.getByText(FILTER_LABEL, { exact: true }).click();
+        await expect(
+          page.getByRole("button", { name: "Undo", exact: true }),
+        ).toBeVisible();
+        await expect(
+          page.getByRole("button", { name: "Redo", exact: true }),
+        ).toHaveCount(0);
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-undo${at}-${theme}`);
+      });
+
+      test("Undo and Redo, after the FILTER box unticked, ticked and an Undo", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 20_000,
+        });
+        const label = page.getByText(FILTER_LABEL, { exact: true });
+        await label.click();
+        await label.click();
+        await page.getByRole("button", { name: "Undo", exact: true }).click();
+        await expect(
+          page.getByRole("checkbox", { name: FILTER_LABEL }),
+        ).not.toBeChecked();
+        await expect(
+          page.getByRole("button", { name: "Redo", exact: true }),
+        ).toBeVisible();
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-undo-redo${at}-${theme}`);
       });
 
       test("a VCF whose ploidy could not be read", async ({ page }) => {
