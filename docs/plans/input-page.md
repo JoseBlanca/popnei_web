@@ -860,3 +860,56 @@ documents to. On this Mac: typecheck and lint clean, Vitest 4,448. On
 GitHub, run 37905998519 of 864cab7: the checks, the flows in Chromium,
 Firefox and WebKit, three jobs each, all passed, and the site was
 published. It stands for the browser check of the starting commit.
+
+### Work packages 1 and 3, 9 October 2026
+
+Built side by side, each by its own subagent.
+
+**1, the switch to table_io**: f2130d9 (1.1, the failed read carries
+its format), 30a2499 (1.2, the reader and the loading of the package),
+1426d21 (1.3, core), b4efbf5 (1.4, the old step and its flows), 41abcf1
+(1.5, xlsx_rs and the reader of TypeScript removed). 40a5457, a commit
+of package 3, swept in the staged deletions of 1.5, so it alone fails
+the typecheck; 41abcf1 completes it; the branch is local and was not
+rewritten. Vitest 4,454; flows in Chromium and WebKit: the old page's
+individuals and xlsx 130, its analyses 392, the statistics and the write
+204; the old step's screens 42. table_io's wasm 651,680 bytes, 330,425
+gzipped, and its JavaScript 3,196 gzipped, loaded at the first read of
+an individuals file, a CSV included. Departures: a value of a column
+keeps its cell's number for the types (a CSV of 1,5 1,7 1,9 read with
+the comma had come out categorical); deliverables 5 and 6, the old
+page's changes checked by flows and screens, dropped by the owner's
+answer 4; the old step shows the options of a CSV once the reader found
+the format.
+
+**3, the page in two boxes and two tabs**: d74e8d7 (`Tabs` keeps the
+hidden panel drawn and inert), beab4a2 (the page), 24ed7aa (the flows),
+da96c72 (two flows follow the opening into the box), 4e9c6d2 (the
+screens). Seen by the session: the tabs (light), no file at 320 px
+(dark). The first load of `popgen2.html` 215.39 to 231.34 KB gzipped,
++15.95 KB, of which about 86% is React Aria's machinery of lists and
+selection, which the column list and the table of package 6 need too;
+no lighter way within the rules.
+
+**Review of 3** (spec, tests, stale, errors, api, architecture, react,
+accessibility, ux, browser, bundle): no fault with the tabs. Taken: a
+number typed with no Enter is applied as the focus goes to a tab, as a
+click anywhere applies it, now said by the spec, the design and this
+plan (44fb9d1, b0b0d32; the session's decision); the header of the flow
+file (9161987); the heading of a crash of the opening zone, "Opening a
+variants file", in place of a second "Variants file" (08ee594); the zone
+drawn again at a turn of the tabs after it threw (40a5457). Not taken:
+the empty room of the bar of the pass under "Ploidy", older than this
+plan; the boxes without the grey of the old box, which both share. The
+unselected tab's label: 6.66:1 light, 7.67:1 dark, enough.
+
+**Review of 1** (spec, tests, stale, errors, api, architecture, browser,
+bundle, react, accessibility, ux): no fault in the browsers (the wasm's
+features within the floor, its retry, no other origin, served as
+`application/wasm`). Taken, with task 2.1: a two-valued column of
+decimals read with the comma written "2.5" in its coding and "2,5" in
+the table; three mutations of the reader no test caught. Not taken: the
+old page's card that jumps at the first read, and its options hidden
+after a crash, the old page being deprecated. Left to work package 7:
+the stale mentions of xlsx_rs in the documents and the skills, listed
+by the review.
