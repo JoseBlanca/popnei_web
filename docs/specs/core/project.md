@@ -1143,8 +1143,10 @@ never find one of the other not yet made (above, "The populations").
   that could not be read, in the words of `individualsStepNeeds` but for
   their ends, which are this page's: "panel_pops.csv could not be read: "
   and the words of the reader's spec after the colon, then
-  "Choose another separator in the tab Individuals file, or open a
-  corrected file." for `raggedRow` and `unclosedQuote`; for
+  "Choose another separator in the Individuals tab, or open a corrected
+  file." for `raggedRow` and `unclosedQuote` (the tab "Individuals
+  file" until 9 October 2026, when the row of five tabs of
+  `docs/specs/steps/popgen2-pca.md` renamed it "Individuals"); for
   `variantsFile`, "it is a variants file; open it with Open variants
   file in the box Variants file." in place of the reader's words; for
   `tooLarge`, "it is 312.4 MB, more than the 20 MB an individuals file
