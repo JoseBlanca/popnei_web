@@ -24,6 +24,7 @@ import {
   manyMissingNote,
   pca,
   pcaColours,
+  pcaCoordinatesCsv,
   pcaCsv,
   pcaOptions,
   pcaDescription,
@@ -1012,5 +1013,188 @@ describe("IP8 D3 manyMissingNote", () => {
     expect(manyMissingNote(result(five), s, p)).toBe(
       "a, b and 2 more lack more than 20% of their genotypes over the variants of panel.nei. The PCA gives a missing genotype the mean of its variant, which draws an individual toward the centre of the plot about as much as it lacks. The PCoA of the Kosman distances compares each pair over the variants both have called, and does not.",
     );
+  });
+});
+
+describe("AP2 D2 pcaColours and pcaCoordinatesCsv on popgen2.html", () => {
+  /** panel_pops.csv as the reader reads it. */
+  function panelPops(): IndividualsTable {
+    const [header = "", ...lines] = readFileSync(
+      new URL("../../../e2e/fixtures/panel_pops.csv", import.meta.url),
+      "utf8",
+    )
+      .trim()
+      .split("\n");
+    return {
+      columns: header.split(","),
+      rows: lines.map((line) => line.split(",")),
+    };
+  }
+
+  const r = flowResult();
+
+  /** panel.nei with `table` as panel_pops.csv, the populations of
+      `column`, and the LD pruning of the PCA within 50,000. */
+  function withPops(
+    table: IndividualsTable,
+    column: string | null = "popcat",
+  ): Project {
+    return project({
+      individuals: r.individuals,
+      meta: {
+        name: "panel_pops.csv",
+        table,
+        types: [{ kind: "categorical" }],
+      },
+      grouping: { kind: "populations", column },
+      options: { ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50000 } },
+    });
+  }
+
+  /** Every individual of the result unclassified, with no note. */
+  function expectAllUnclassified(c: PcaColours): void {
+    const groups = groupsOf(c);
+    expect(groups.names).toEqual([]);
+    expect(groups.numNone).toBe(200);
+    expect(groups.noneName).toBe("Unclassified");
+    expect(groups.note).toBeNull();
+    expect(groups.group.every((g) => g === NO_COLOUR_GROUP)).toBe(true);
+  }
+
+  test("no individuals file: one group Unclassified of 200 and no note", () => {
+    const p = project({ individuals: r.individuals, meta: null });
+    expectAllUnclassified(pcaColours(r, p, "popgen2"));
+  });
+
+  test("the individuals file pending, or refused, or no column chosen: the same", () => {
+    const read = withPops(panelPops());
+    const file = read.individuals;
+    if (file === null) {
+      throw new Error("the project of the test has an individuals file");
+    }
+    const pending = deepFreeze<Project>({
+      ...read,
+      individuals: { ...file, read: { kind: "pending" } },
+    });
+    expectAllUnclassified(pcaColours(r, pending, "popgen2"));
+    const refused = deepFreeze<Project>({
+      ...read,
+      individuals: {
+        ...file,
+        read: { kind: "failed", error: { kind: "empty" }, format: "text" },
+      },
+    });
+    expectAllUnclassified(pcaColours(r, refused, "popgen2"));
+    expectAllUnclassified(
+      pcaColours(r, withPops(panelPops(), null), "popgen2"),
+    );
+  });
+
+  test("popcat: p0 48, p2 84, p1 68, none unclassified", () => {
+    const c = groupsOf(pcaColours(r, withPops(panelPops()), "popgen2"));
+    expect(c.names).toEqual(["p0", "p2", "p1"]);
+    expect(c.counts).toEqual([48, 84, 68]);
+    expect(c.numNone).toBe(0);
+    expect(c.noneName).toBe("Unclassified");
+    expect(c.note).toBeNull();
+  });
+
+  test("four rows removed and three cells emptied: 7 unclassified, with no note", () => {
+    const table = panelPops();
+    // The last seven rows, s193 to s199, are of p2: s196 to s199 removed,
+    // and the cells of s193 to s195 emptied.
+    const rows = table.rows
+      .slice(0, -4)
+      .map((row, i): Cell[] => (i >= 193 ? [row[0] ?? null, null] : [...row]));
+    const c = groupsOf(pcaColours(r, withPops({ ...table, rows }), "popgen2"));
+    expect(c.names).toEqual(["p0", "p2", "p1"]);
+    expect(c.counts).toEqual([48, 77, 68]);
+    expect(c.numNone).toBe(7);
+    expect(c.noneName).toBe("Unclassified");
+    expect(c.note).toBeNull();
+  });
+
+  test("the old page keeps No population and its note, and the two pages asked in turn each get their own colours", () => {
+    const p = withPops(panelPops(), null);
+    const old = groupsOf(pcaColours(r, p, "popgen"));
+    expect(old.names).toEqual(["All individuals"]);
+    expect(old.noneName).toBe("No population");
+    expect(old.note).not.toBeNull();
+    const now = pcaColours(r, p, "popgen2");
+    expectAllUnclassified(now);
+    expect(pcaColours(r, p, "popgen")).toBe(old);
+    expect(pcaColours(r, p, "popgen2")).toBe(now);
+  });
+
+  test("a colouring by a column keeps No value, and its notes name the box Individuals file", () => {
+    const byColumn = (meta: Project): PcaColours =>
+      pcaColours(
+        r,
+        deepFreeze<Project>({
+          ...meta,
+          analyses: [
+            {
+              analysis: "pca",
+              options: optionsJson({
+                ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50000 },
+                colourBy: "height",
+              }),
+            },
+          ],
+        }),
+        "popgen2",
+      );
+    const none = byColumn(project({ individuals: r.individuals, meta: null }));
+    expect(none.note).toBe(
+      "No individuals file is open in the box Individuals file, so the points cannot be coloured by height.",
+    );
+    expectAllUnclassified({ ...none, note: null });
+    const missing = byColumn(withPops(panelPops()));
+    expect(missing.note).toBe(
+      "panel_pops.csv has no column height, by which the points were coloured, so they are coloured by the column of the populations chosen in the box Individuals file.",
+    );
+    const popcat = pcaColours(
+      r,
+      deepFreeze<Project>({
+        ...withPops(panelPops()),
+        analyses: [
+          {
+            analysis: "pca",
+            options: optionsJson({
+              ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50000 },
+              colourBy: "popcat",
+            }),
+          },
+        ],
+      }),
+      "popgen2",
+    );
+    expect(groupsOf(popcat).noneName).toBe("No value");
+  });
+
+  test("pcaCoordinatesCsv of the flow: the header of the ten components and the row of s000", () => {
+    const lines = pcaCoordinatesCsv(r).split("\n");
+    expect(lines[0]).toBe(
+      "individual,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10",
+    );
+    expect(
+      lines[1]?.startsWith(
+        "s000,-0.7138853335304419,7.676473141448964,-4.384383801903496,",
+      ),
+    ).toBe(true);
+    expect(lines).toHaveLength(202);
+    expect(lines.at(-1)).toBe("");
+  });
+
+  test("pcaCoordinatesCsv writes each name as the variants file does, with no ' before it", () => {
+    const named = result(["+A12", "a,b", "=x", 'say "hi"'], 2);
+    const rows = pcaCoordinatesCsv(named).split("\n");
+    expect(rows[0]).toBe("individual,PC1,PC2");
+    expect(rows.slice(1, 5).map((row) => row.split(",0,")[0])).toEqual([
+      "+A12",
+      '"a,b"',
+      "=x",
+      '"say ""hi"""',
+    ]);
   });
 });

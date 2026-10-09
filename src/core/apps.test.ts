@@ -11,8 +11,9 @@ import {
   writeCountsOf,
 } from "./apps.ts";
 import { ldDecay } from "./analyses/ldDecay.ts";
-import { pca } from "./analyses/pca.ts";
+import { pca, pcaOnPopgen2 } from "./analyses/pca.ts";
 import { popDists } from "./analyses/popDists.ts";
+import { variantsSummary } from "./analyses/variantsSummary.ts";
 import { resultBytes } from "./cache.ts";
 import { keyFromWire } from "./keys.ts";
 import { emptyProject } from "./project.ts";
@@ -479,13 +480,25 @@ describe("IP2 D3 the histograms of the variants after an undo to a load whose st
   });
 });
 
+describe("AP2 D2 the PCA of popgen2.html in apps.ts", () => {
+  test("POPGEN2_ANALYSES lists pcaOnPopgen2 after variantsSummary, and POPGEN_ANALYSES keeps the PCA of the old page", () => {
+    expect(POPGEN2_ANALYSES).toEqual([variantsSummary, pcaOnPopgen2]);
+    expect(POPGEN2_ANALYSES[1]).toBe(pcaOnPopgen2);
+    expect(POPGEN_ANALYSES).toContain(pca);
+    expect(POPGEN_ANALYSES).not.toContain(pcaOnPopgen2);
+  });
+});
+
 describe("open-variants 1 the summary of the variants file in apps.ts", () => {
   /** The summary of panel.nei, its chromosomes as popnei gave them on 5
       October 2026. */
   const PANEL_SUMMARY: VariantsSummaryResult = summaryResult(["1"], [1200]);
 
-  test("the new page has the summary alone, whose one pass gives the statistics too, and the analyses of the old page do not hold the summary", () => {
-    expect(POPGEN2_ANALYSES.map((def) => def.id)).toEqual(["variantsSummary"]);
+  test("the new page has the summary, whose one pass gives the statistics too, and the PCA, and the analyses of the old page do not hold the summary", () => {
+    expect(POPGEN2_ANALYSES.map((def) => def.id)).toEqual([
+      "variantsSummary",
+      "pca",
+    ]);
     expect(POPGEN_ANALYSES.map((def) => def.id)).not.toContain(
       "variantsSummary",
     );
@@ -538,6 +551,7 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
     const state = store.getState();
     expect(state.analyses.map((view) => [view.id, view.status.kind])).toEqual([
       ["variantsSummary", "done"],
+      ["pca", "locked"],
     ]);
     const read = state.project.variants?.read;
     expect(read?.kind === "read" ? read.numVars : null).toBe(1200);

@@ -566,6 +566,173 @@ describe("AP2 D2 the key of the PCA on popgen2.html", () => {
   });
 });
 
+describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
+  /** The PCA's LD pruning on at r² 0.1 within 50,000, as the flows of
+      popgen2.html set it. */
+  const LD_50000: Partial<PcaOptions> = {
+    ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
+  };
+  const PRUNING_DISTANCE_2 =
+    "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off.";
+
+  test("an individuals file pending, refused, or lacking individuals of the variants file: no reason", () => {
+    expect(
+      pcaOnPopgen2.needs(
+        project({ individualsFile: "pending", options: LD_50000 }),
+      ),
+    ).toBeNull();
+    const refused = deepFreeze<Project>({
+      ...project({ options: LD_50000 }),
+      individuals: {
+        fileId: INDIVIDUALS_ID,
+        name: "pops.csv",
+        csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+        typesSet: [],
+        read: { kind: "failed", error: { kind: "empty" }, format: "text" },
+      },
+    });
+    expect(individualsNeeds(refused)).not.toBeNull();
+    expect(pcaOnPopgen2.needs(refused)).toBeNull();
+    expect(
+      pcaOnPopgen2.needs(
+        project({
+          individualsFile: tableOf(individualsOf(200).slice(12)),
+          options: LD_50000,
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  test("PCA2_DEFAULTS, with no distance: the words of popgen2.html, by the method; 50000 typed: none", () => {
+    expect(pcaOnPopgen2.needs(project())).toBe(PRUNING_DISTANCE_2);
+    expect(pruningDistanceReason(project(), "popgen2")).toBe(
+      PRUNING_DISTANCE_2,
+    );
+    const pcoa = project({
+      options: {
+        method: "pcoa",
+        ld: { follow: false, maxAllowedR2: 0.1, maxDist: null },
+      },
+    });
+    expect(pcaOnPopgen2.needs(pcoa)).toBe(
+      "The LD pruning of the PCoA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off.",
+    );
+    expect(pcaOnPopgen2.needs(project({ options: LD_50000 }))).toBeNull();
+    expect(pruningDistanceReason(project(), "popgen")).toBeNull();
+  });
+
+  test("9,382 individuals: the limit, with or without an individuals file", () => {
+    const many = individualsOf(9382);
+    expect(
+      pcaOnPopgen2.needs(
+        project({ individuals: many, individualsFile: "none" }),
+      ),
+    ).toBe(limitWords("9,382"));
+    expect(
+      pcaOnPopgen2.needs(
+        project({ individuals: many, individualsFile: "pending" }),
+      ),
+    ).toBe(limitWords("9,382"));
+    expect(
+      pcaOnPopgen2.needs(
+        project({ individuals: individualsOf(9381), options: LD_50000 }),
+      ),
+    ).toBeNull();
+  });
+
+  test("the PCoA of 9,382 individuals kept: the limit with the filters of individuals in the Variants tab", () => {
+    const many = individualsOf(9382);
+    const p = project({
+      individuals: many,
+      individualsFile: "none",
+      options: { method: "pcoa", ...LD_50000 },
+    });
+    expect(pcaOnPopgen2.keptNeeds?.(p, keptOf(p, null))).toBe(
+      "panel.nei has 9,382 individuals, and the principal coordinates of more than 9,381 need more memory than a browser tab can hold. Keep at most 9,381 with the filters of individuals in the Variants tab, or calculate them with popnei in Python, outside the browser.",
+    );
+  });
+
+  test("the warnings with the words of popgen2.html: no LD pruning, and few variants", () => {
+    expect(
+      pcaOnPopgen2.warnings(
+        result({ numVarsUsed: 1200 }),
+        project({
+          options: { ld: { follow: true, maxAllowedR2: 0.1, maxDist: null } },
+        }),
+      ),
+    ).toEqual([
+      {
+        code: "pruningOff",
+        text: "No LD pruning was applied for the PCA, so a region of the genome counts once for each of its variants, and a region of many variants in linkage disequilibrium, such as an inversion, can make a component of its own that separates the individuals by that region rather than by their ancestry. Turn on the LD pruning of the PCA in its options above, unless such regions are what you are looking for.",
+      },
+    ]);
+    expect(
+      pcaOnPopgen2.warnings(
+        result({ numVarsUsed: 150 }),
+        project({ options: LD_50000 }),
+      ),
+    ).toEqual([
+      {
+        code: "fewVariants",
+        text: "The PCA used 150 variants that vary among its 200 individuals, fewer variants than individuals, so each component rests on few variants and can show chance differences as structure. If the dataset has more, loosen the filters of the PCA in its options above, or the thresholds of the Variants tab.",
+      },
+    ]);
+  });
+
+  test("the refusals with the words of popgen2.html: no variant left, and the LD pruning over a file not sorted", () => {
+    const p = project({ options: LD_50000 });
+    expect(
+      refusalText("there are no variants to do a PCA with", p, "popgen2"),
+    ).toBe(
+      "No variant of panel.nei is left after the filters of the PCA, so there is no variant to do the PCA with. Loosen the filters of the PCA in its options above, or the thresholds of the Variants tab.",
+    );
+    expect(
+      refusalText(
+        "there are no variants to do a PCA with",
+        project({ variantsName: "empty.vcf", numVars: 0, options: LD_50000 }),
+        "popgen2",
+      ),
+    ).toBe(
+      "empty.vcf has no variants, so there is no variant to do the PCA with. Open another variants file in the box Variants file.",
+    );
+    expect(
+      refusalText(
+        LD_NOT_SORTED,
+        project({
+          variantsName: "panel.vcf.gz",
+          readOptions: { ploidy: 2, onlyPassed: false },
+          options: LD_50000,
+        }),
+        "popgen2",
+      ),
+    ).toBe(
+      "The LD pruning of the PCA needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and load it again, or turn the LD pruning of the PCA off.",
+    );
+    expect(
+      refusalText(
+        "no variant has more than one dosage among its called genotypes, so none of them varies and there is nothing to do a PCA with",
+        p,
+        "popgen2",
+      ),
+    ).toBe(
+      "No variant left after the filters varies among the individuals kept, so there is nothing to do the PCA with. This happens with one individual, or a few of one line; keep more individuals with the thresholds of the individuals in the Variants tab.",
+    );
+    expect(refusalText("out of memory.", p, "popgen2")).toBe(
+      "popnei could not calculate the principal components: out of memory. Change the settings, or open the variants file again in the box Variants file, to run it again.",
+    );
+  });
+
+  test("the words of a calculation that stopped with no answer, on popgen2.html", () => {
+    const p = project({ options: LD_50000 });
+    expect(crashText(p, 200, "popgen2")).toBe(
+      "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the box Variants file.",
+    );
+    expect(crashText(p, 4000, "popgen2")).toBe(
+      "The calculation stopped unexpectedly, perhaps because the principal components of 4,000 individuals, which need about 0.8 GB, did not fit in the memory of this tab; a phone or a tablet gives a tab far less than a computer. Keep fewer individuals with the thresholds of the individuals in the Variants tab, close other tabs and run it again, or calculate them with popnei in Python, outside the browser.",
+    );
+  });
+});
+
 /** A client that records the jobs of the PCA it is given, with the
     individuals kept `individuals`. */
 function recordingClient(individuals: readonly string[] | null): {

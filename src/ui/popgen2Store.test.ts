@@ -85,7 +85,10 @@ describe("the store of popgen2.html", () => {
       },
     ]);
     expect(store.getState().analyses.map((a) => [a.id, a.status.kind])).toEqual(
-      [["variantsSummary", "running"]],
+      [
+        ["variantsSummary", "running"],
+        ["pca", "locked"],
+      ],
     );
   });
 });
@@ -430,7 +433,10 @@ describe("DL4 D3 the store of popgen2.html writes, and works out the individuals
     });
     expect(
       store.getState().analyses.map((view) => [view.id, view.status.kind]),
-    ).toStrictEqual([["variantsSummary", "ready"]]);
+    ).toStrictEqual([
+      ["variantsSummary", "ready"],
+      ["pca", "locked"],
+    ]);
   });
 
   test("with a threshold of the individuals, the list needs the one pass while it runs with a result so far, and is known from its perIndividual once it is done", () => {

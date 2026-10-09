@@ -33,6 +33,7 @@ import {
   namesOf,
   populationsNeeds,
   populationsOf,
+  saying,
   shown,
   variantFilterNeeds,
 } from "../project.ts";
@@ -55,10 +56,12 @@ import { statisticsFailedWords } from "./individualChecks.ts";
 import type { Failure } from "./individualChecks.ts";
 import {
   CHANGE_SETTINGS,
+  EMPTY_SOURCE,
   STEP_LD_FILTER,
   csvField,
   defect,
   emptySourceText,
+  isVcfLineRefusal,
   ldOrderText,
   pythonOpenVariants,
   refusalWords,
@@ -506,11 +509,61 @@ const PCA_LD_FILTER: LdFilterWords = Object.freeze({
   turnOff: "set the LD filter of the PCA back to as in the Variants step",
 });
 
+/** The PCA's LD pruning on popgen2.html, in the words of a refusal; the
+    Variants tab has none. */
+const PCA2_LD_PRUNING: LdFilterWords = Object.freeze({
+  name: "The LD pruning of the PCA",
+  turnOff: "turn the LD pruning of the PCA off",
+});
+
+/** The places a sentence of the module names, by the page: the old page
+    names its Variants step and the filters of individuals there,
+    popgen2.html its Variants tab, the thresholds of the individuals there
+    and the box Variants file (docs/specs/steps/popgen2-pca.md, "Its
+    words"). */
+interface PlaceWords {
+  /** The filters of individuals, after "with". */
+  readonly individualFilters: string;
+  /** The filters of individuals in the words of the PCoA's limit, which
+      the lock of Run gives (docs/specs/steps/popgen2-pca.md, "Run and
+      Stop"). */
+  readonly limitFilters: string;
+  /** The filters of the variants, after "with". */
+  readonly variantFilters: string;
+  /** Where the variants file is opened again, after "If it stops
+      again,": "load panel.nei again in the Variants step". */
+  readonly openAgain: (fileName: string) => string;
+  /** The end of the line of the LD pruning with no distance, after "or". */
+  readonly pruningOff: (name: string) => string;
+}
+
+/** The places of each page. */
+const PLACES: Readonly<Record<PcaPage, PlaceWords>> = Object.freeze({
+  popgen: Object.freeze({
+    individualFilters: "the filters of individuals in the Variants step",
+    limitFilters: "the filters of individuals in the Variants step",
+    variantFilters: "the filters of the Variants step",
+    openAgain: (fileName: string) =>
+      `load ${fileName} again in the Variants step`,
+    pruningOff: (name: string) =>
+      `set the LD pruning of the ${name} back to as in the Variants step`,
+  }),
+  popgen2: Object.freeze({
+    individualFilters: "the thresholds of the individuals in the Variants tab",
+    limitFilters: "the filters of individuals in the Variants tab",
+    variantFilters: "the filters of the Variants tab",
+    openAgain: (fileName: string) =>
+      `open ${fileName} again in the box Variants file`,
+    pruningOff: () => "turn the LD pruning off",
+  }),
+});
+
 /** The reason of the analysis's own LD pruning with no distance, named
     by the method `name`, "PCA" or "PCoA", as the choice "For the PCoA
-    alone" is (docs/specs/analyses/pca.md, "Why it cannot run"). */
-function pruningDistanceText(name: string): string {
-  return `The LD pruning of the ${name} needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or set the LD pruning of the ${name} back to as in the Variants step.`;
+    alone" is (docs/specs/analyses/pca.md, "Why it cannot run"), with the
+    way out of the page `page`. */
+function pruningDistanceText(name: string, page: PcaPage): string {
+  return `The LD pruning of the ${name} needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or ${PLACES[page].pruningOff(name)}.`;
 }
 
 /** The reason of the lock of the PCA's own LD filter, set with no
@@ -524,7 +577,7 @@ export function pruningDistanceReason(
 ): string | null {
   const o = pcaOptions(p, page);
   return !o.ld.follow && o.ld.maxDist === null
-    ? pruningDistanceText(methodName(o.method))
+    ? pruningDistanceText(methodName(o.method), page)
     : null;
 }
 
@@ -535,9 +588,11 @@ export function pruningDistanceReason(
  * follows it, `variantFilterNeeds`, first, as the store asks it of the
  * diversity; for the PCA of the genotypes, more individuals in the
  * variants file than popnei's limit, which counts those of the file
- * whatever the filters of individuals keep; the individuals file, which
- * colours the points; and the PCA's own LD filter with no distance. The
- * PCoA's limit is its `keptNeeds`, since it counts the individuals kept.
+ * whatever the filters of individuals keep; on the old page, the
+ * individuals file, which colours the points, and which on popgen2.html
+ * never locks the PCA, since the key holds nothing of it; and the PCA's
+ * own LD filter with no distance. The PCoA's limit is its `keptNeeds`,
+ * since it counts the individuals kept.
  */
 function needs(p: Project, page: PcaPage): string | null {
   const o = pcaOptions(p, page);
@@ -554,7 +609,8 @@ function needs(p: Project, page: PcaPage): string | null {
   ) {
     return pcaLimitText(p.variants.name, read.individuals.length);
   }
-  return individualsNeeds(p) ?? pruningDistanceReason(p, page);
+  const ofIndividuals = page === "popgen" ? individualsNeeds(p) : null;
+  return ofIndividuals ?? pruningDistanceReason(p, page);
 }
 
 /** The words of the PCA's limit on the individuals of the variants file
@@ -597,7 +653,7 @@ function keptNeeds(
     list === null
       ? `${has},`
       : `${has} and the filters of individuals keep ${grouped(numKept)} of them,`;
-  return `${start} and the principal coordinates of more than ${limit} need more memory than a browser tab can hold. Keep at most ${limit} with the filters of individuals in the Variants step, or calculate them with popnei in Python, outside the browser.`;
+  return `${start} and the principal coordinates of more than ${limit} need more memory than a browser tab can hold. Keep at most ${limit} with ${PLACES[page].limitFilters}, or calculate them with popnei in Python, outside the browser.`;
 }
 
 /** Builds the request, with the individuals the filters keep that the
@@ -648,8 +704,9 @@ function methodName(method: PcaMethod): "PCA" | "PCoA" {
  * in this order: no LD filter in the job, `pruningOff`; fewer variants
  * used than individuals, `fewVariants`; and, for the PCoA, distances
  * corrected by Lingoes' method, `lingoesCorrection` (docs/specs/analyses/
- * pca.md, "The warnings"). Throws a defect on a result of another
- * analysis.
+ * pca.md, "The warnings"), the first two in the words of the page `page`
+ * (docs/specs/steps/popgen2-pca.md, "Its words"). Throws a defect on a
+ * result of another analysis.
  */
 function warnings(
   result: JobResult,
@@ -661,9 +718,14 @@ function warnings(
   const found: Warning[] = [];
   const filters = pcaFilters(filtersApplied(p), pcaOptions(p, page), page);
   if (!filters.some((filter) => filter.kind === "ld")) {
+    const region =
+      "so a region of the genome counts once for each of its variants, and a region of many variants in linkage disequilibrium, such as an inversion, can make a component of its own that separates the individuals by that region rather than by their ancestry.";
     found.push({
       code: "pruningOff",
-      text: `No LD filter was applied, neither in the Variants step nor for the ${name}, so a region of the genome counts once for each of its variants, and a region of many variants in linkage disequilibrium, such as an inversion, can make a component of its own that separates the individuals by that region rather than by their ancestry. Set an LD filter for the ${name} in its options above, or for every analysis in the Variants step, unless such regions are what you are looking for.`,
+      text:
+        page === "popgen"
+          ? `No LD filter was applied, neither in the Variants step nor for the ${name}, ${region} Set an LD filter for the ${name} in its options above, or for every analysis in the Variants step, unless such regions are what you are looking for.`
+          : `No LD pruning was applied for the ${name}, ${region} Turn on the LD pruning of the ${name} in its options above, unless such regions are what you are looking for.`,
     });
   }
   const numUsed = r.method === "pca" ? r.numVarsUsed : r.passStats.numVars;
@@ -674,7 +736,7 @@ function warnings(
   if (numUsed < numIndividuals) {
     found.push({
       code: "fewVariants",
-      text: fewVariantsText(r.method, numUsed, numIndividuals),
+      text: fewVariantsText(r.method, numUsed, numIndividuals, page),
     });
   }
   if (r.lingoesConstant !== null && r.lingoesConstant > 0) {
@@ -684,11 +746,12 @@ function warnings(
 }
 
 /** The text of `fewVariants`, for `numUsed` variants and `numIndividuals`
-    individuals. */
+    individuals, on the page `page`. */
 function fewVariantsText(
   method: PcaMethod,
   numUsed: number,
   numIndividuals: number,
+  page: PcaPage,
 ): string {
   const name = methodName(method);
   const individuals = `${grouped(numIndividuals)} individuals`;
@@ -696,7 +759,7 @@ function fewVariantsText(
     method === "pca"
       ? `${counted(numUsed, "variant")} that ${numUsed === 1 ? "varies" : "vary"} among its ${individuals}`
       : `${counted(numUsed, "variant")} for its ${individuals}`;
-  return `The ${name} used ${used}, fewer variants than individuals, so each component rests on few variants and can show chance differences as structure. If the dataset has more, loosen the filters of the ${name} in its options above, or those of the Variants step that it follows.`;
+  return `The ${name} used ${used}, fewer variants than individuals, so each component rests on few variants and can show chance differences as structure. If the dataset has more, loosen the filters of the ${name} in its options above, or ${page === "popgen" ? "those of the Variants step that it follows" : "the thresholds of the Variants tab"}.`;
 }
 
 /**
@@ -945,22 +1008,30 @@ export function refusalText(
     throw defect("refusalText was given a project with no variants file.");
   }
   const o = pcaOptions(p, page);
+  const places = PLACES[page];
   const name = methodName(o.method);
   const fileName = escaped(variants.name);
   const nothingLeft = `there is no variant to do the ${name} with`;
-  const nothingKept = `No variant of ${fileName} is left after the filters of the ${name}, so ${nothingLeft}. Loosen the filters the ${name} has for itself in its options above, or those of the Variants step that it follows; the Count button of the Variants step shows how many each filter of the step keeps.`;
+  const nothingKept =
+    page === "popgen"
+      ? `No variant of ${fileName} is left after the filters of the ${name}, so ${nothingLeft}. Loosen the filters the ${name} has for itself in its options above, or those of the Variants step that it follows; the Count button of the Variants step shows how many each filter of the step keeps.`
+      : `No variant of ${fileName} is left after the filters of the ${name}, so ${nothingLeft}. Loosen the filters of the ${name} in its options above, or the thresholds of the Variants tab.`;
   if (message.startsWith(NO_VARIANTS)) {
     const counted0 =
       variants.read.kind === "read" && variants.read.numVars === 0;
-    return counted0 ? emptySourceText(p, nothingLeft) : nothingKept;
+    return counted0 ? emptyText(p, nothingLeft, page) : nothingKept;
   }
   if (message.startsWith(NO_VARIANCE)) {
-    return `No variant left after the filters varies among the individuals kept, so there is nothing to do the ${name} with. This happens with one individual, or a few of one line; keep more individuals with the filters of individuals in the Variants step.`;
+    return `No variant left after the filters varies among the individuals kept, so there is nothing to do the ${name} with. This happens with one individual, or a few of one line; keep more individuals with ${places.individualFilters}.`;
   }
   const order = ldOrderText(
     message,
     p,
-    o.ld.follow ? STEP_LD_FILTER : PCA_LD_FILTER,
+    page === "popgen2"
+      ? PCA2_LD_PRUNING
+      : o.ld.follow
+        ? STEP_LD_FILTER
+        : PCA_LD_FILTER,
   );
   if (order !== null) {
     return order;
@@ -972,34 +1043,91 @@ export function refusalText(
   const noDistance = NO_DISTANCE.exec(message);
   if (noDistance !== null) {
     const [, pairs = "", individual = "", inPairs = ""] = noDistance;
-    return noDistanceText(fileName, Number(pairs), individual, Number(inPairs));
+    return noDistanceText(
+      fileName,
+      Number(pairs),
+      individual,
+      Number(inPairs),
+      places,
+    );
   }
   if (message.startsWith(ONE_INDIVIDUAL)) {
-    return `The filters of individuals keep one individual of ${fileName}, and the PCoA needs two at least to place them. Keep more individuals with the filters of individuals in the Variants step.`;
+    return `The filters of individuals keep one individual of ${fileName}, and the PCoA needs two at least to place them. Keep more individuals with ${places.individualFilters}.`;
   }
   if (message.startsWith(ALL_DISTANCES_ZERO)) {
-    return "Every two of the individuals kept have the same alleles at every variant both have called, so their Kosman distances are all 0 and the PCoA has nothing to place. Keep more individuals, or more variants, with the filters of the Variants step.";
+    return `Every two of the individuals kept have the same alleles at every variant both have called, so their Kosman distances are all 0 and the PCoA has nothing to place. Keep more individuals, or more variants, with ${places.variantFilters}.`;
+  }
+  const ofFile = page === "popgen2" ? fileRefusalText(message, p) : null;
+  if (ofFile !== null) {
+    return ofFile;
   }
   return refusalWords(message, p, {
     calculate: "calculate the principal components",
     nothingLeft,
-    change: CHANGE_SETTINGS,
+    change:
+      page === "popgen"
+        ? CHANGE_SETTINGS
+        : "Change the settings, or open the variants file again in the box Variants file",
     again: "to run it again",
     emptyPass: () => nothingKept,
   });
 }
 
+/** The words of a variants file of no variant, with what that leaves,
+    `consequence`, on the page `page`: the old page's, which name its
+    Variants step; on popgen2.html, which reads every variant whatever its
+    FILTER column, "panel.nei has no variants, so …". */
+function emptyText(p: Project, consequence: string, page: PcaPage): string {
+  if (page === "popgen" || p.variants === null) {
+    return emptySourceText(p, consequence);
+  }
+  return `${escaped(p.variants.name)} has no variants, so ${consequence}. Open another variants file in the box Variants file.`;
+}
+
+/** popnei's refusal of a genotype of a ploidy other than that the
+    variants are read with: the line, the ploidy found and the one read,
+    as the box Variants file of popgen2.html reads it. */
+const OTHER_PLOIDY =
+  /^line (\d+) of the VCF, .*?its genotype is of the ploidy (\d+) and the variants are read with the ploidy (\d+)/su;
+
+/**
+ * The words of a refusal of the variants file itself on popgen2.html,
+ * which the one pass of the page would have met first, so that they name
+ * the box Variants file as its own words do: a file of no variant, a
+ * genotype of another ploidy, a line of the VCF popnei cannot read;
+ * `null` for another refusal. Throws a defect on a project with no
+ * variants file.
+ */
+function fileRefusalText(message: string, p: Project): string | null {
+  if (p.variants === null) {
+    throw defect("a refusal was given a project with no variants file.");
+  }
+  const fileName = escaped(p.variants.name);
+  if (message.startsWith(EMPTY_SOURCE)) {
+    return `${fileName} has no variants. Open another variants file in the box Variants file.`;
+  }
+  const ploidies = OTHER_PLOIDY.exec(message);
+  if (ploidies !== null) {
+    const [, line = "", found = "", read = ""] = ploidies;
+    return `Line ${line} of ${fileName} has a genotype of ploidy ${found} among genotypes of ploidy ${read}, and the application reads one ploidy per file. Remove those variants or individuals from the file and open it again.`;
+  }
+  if (isVcfLineRefusal(message)) {
+    return `popnei could not read ${fileName}${saying(message.replaceAll("`", ""))}. Correct the file, or fetch it again, and open it again in the box Variants file.`;
+  }
+  return null;
+}
+
 /** The words of the PCoA's pairs of individuals with no distance: `pairs`
     of them in the variants file `fileName`, `individual` in `inPairs` of
-    them. */
+    them, with the places of the page. */
 function noDistanceText(
   fileName: string,
   pairs: number,
   individual: string,
   inPairs: number,
+  places: PlaceWords,
 ): string {
-  const remedy =
-    "Remove the individuals with many missing genotypes with the filters of individuals in the Variants step, or use the PCA of the genotypes, which places every individual.";
+  const remedy = `Remove the individuals with many missing genotypes with ${places.individualFilters}, or use the PCA of the genotypes, which places every individual.`;
   const who = shown(individual);
   return pairs === 1
     ? `1 pair of individuals of ${fileName} has no variant called in both, so it has no Kosman distance and the PCoA cannot place it; ${who} is in it. ${remedy}`
@@ -1026,13 +1154,13 @@ export function crashText(
   }
   const bytes = BYTES_PER_CELL * numIndividuals * numIndividuals;
   if (bytes < PCA_MEMORY_WORDS_BYTES) {
-    return `The calculation stopped unexpectedly. Run it again. If it stops again, load ${escaped(p.variants.name)} again in the Variants step.`;
+    return `The calculation stopped unexpectedly. Run it again. If it stops again, ${PLACES[page].openAgain(escaped(p.variants.name))}.`;
   }
   const what =
     pcaOptions(p, page).method === "pca"
       ? "principal components"
       : "principal coordinates";
-  return `The calculation stopped unexpectedly, perhaps because the ${what} of ${counted(numIndividuals, "individual")}, which need about ${(bytes / 1e9).toFixed(1)} GB, did not fit in the memory of this tab; a phone or a tablet gives a tab far less than a computer. Keep fewer individuals with the filters of individuals in the Variants step, close other tabs and run it again, or calculate them with popnei in Python, outside the browser.`;
+  return `The calculation stopped unexpectedly, perhaps because the ${what} of ${counted(numIndividuals, "individual")}, which need about ${(bytes / 1e9).toFixed(1)} GB, did not fit in the memory of this tab; a phone or a tablet gives a tab far less than a computer. Keep fewer individuals with ${PLACES[page].individualFilters}, close other tabs and run it again, or calculate them with popnei in Python, outside the browser.`;
 }
 
 /**
@@ -1099,8 +1227,9 @@ export type PcaColours =
       readonly counts: readonly number[];
       /** The individuals of the result in no group. */
       readonly numNone: number;
-      /** The name of the individuals in no group. */
-      readonly noneName: "No population" | "No value";
+      /** The name of the individuals in no group: "Unclassified" for
+          those with no population on popgen2.html. */
+      readonly noneName: "No population" | "No value" | "Unclassified";
       /** Why the colours are not those the options ask, or `null`. */
       readonly note: string | null;
       /** When the colouring asked has more than MAX_COLOUR_GROUPS groups
@@ -1130,19 +1259,25 @@ type GroupsColours = Extract<PcaColours, { readonly kind: "groups" }>;
     project that is null: no individuals file, or no variants file. */
 const ABSENT = Object.freeze({});
 
-/** The colours `pcaColours` made, by the result, the individuals file, the
-    grouping, the variants file and the option, so that the same inputs
-    give the same object, which the highlight of the legend is kept with. */
-const COLOURS = new WeakMap<
-  PcaResult,
-  WeakMap<
-    IndividualsSource | typeof ABSENT,
+/** The colours `pcaColours` made, by the page, the result, the
+    individuals file, the grouping, the variants file and the option, so
+    that the same inputs give the same object, which the highlight of the
+    legend is kept with, and one page never gets the other's. */
+const COLOURS: Readonly<
+  Record<
+    PcaPage,
     WeakMap<
-      Grouping,
-      WeakMap<VariantSource | typeof ABSENT, Map<string | null, PcaColours>>
+      PcaResult,
+      WeakMap<
+        IndividualsSource | typeof ABSENT,
+        WeakMap<
+          Grouping,
+          WeakMap<VariantSource | typeof ABSENT, Map<string | null, PcaColours>>
+        >
+      >
     >
   >
->();
+> = Object.freeze({ popgen: new WeakMap(), popgen2: new WeakMap() });
 
 /** The value of `map` under `key`, made by `make` and kept the first time
     it is asked. */
@@ -1174,7 +1309,12 @@ function kept<K extends object, V>(
  * every group of the table, in the order of first appearance, so that a
  * population keeps its mark when the filters leave it no individual. The
  * same object for the same result, individuals file, grouping, variants
- * file and option.
+ * file and option. On popgen2.html, `page` "popgen2", the individuals with
+ * no population are one group, "Unclassified", with no note, since the
+ * box of the individuals file says why: with no individuals file, while it
+ * is read, after it was refused, with no column chosen, or with no
+ * population for the individual; and the notes of a column name the box
+ * Individuals file (docs/specs/analyses/pca.md, "On popgen2.html").
  */
 export function pcaColours(
   r: PcaResult,
@@ -1183,7 +1323,7 @@ export function pcaColours(
 ): PcaColours {
   const byColumn = kept(
     kept(
-      kept(COLOURS, r, () => new WeakMap()),
+      kept(COLOURS[page], r, () => new WeakMap()),
       p.individuals ?? ABSENT,
       () => new WeakMap(),
     ),
@@ -1200,40 +1340,52 @@ export function pcaColours(
   if (found !== undefined) {
     return found;
   }
-  const made = coloursOf(r, p, colourBy);
+  const made = coloursOf(r, p, colourBy, page);
   byOption.set(colourBy, made);
   return made;
 }
 
-/** The colours of `r` in `p` by the option `colourBy`, made anew. */
+/** The colours of `r` in `p` by the option `colourBy`, made anew, by
+    the rules of the page `page`. */
 function coloursOf(
   r: PcaResult,
   p: Project,
   colourBy: string | null,
+  page: PcaPage,
 ): PcaColours {
   if (colourBy === null) {
-    return byPopulations(r, p, null);
+    return byPopulations(r, p, null, page);
   }
   const individuals = p.individuals;
   if (individuals === null) {
     return byPopulations(
       r,
       p,
-      `No metadata file is loaded, so the points cannot be coloured by ${shown(colourBy)}.`,
+      page === "popgen"
+        ? `No metadata file is loaded, so the points cannot be coloured by ${shown(colourBy)}.`
+        : `No individuals file is open in the box Individuals file, so the points cannot be coloured by ${shown(colourBy)}.`,
+      page,
     );
   }
   const read = individuals.read;
   if (read.kind !== "read") {
-    // The PCA is locked while the file is read, refused or not given, so
-    // no result is drawn with it; the populations cannot be given either.
-    return byPopulations(r, p, null);
+    // The old page locks the PCA while the file is read, refused or not
+    // given, so no result is drawn with it there; popgen2.html draws a
+    // result meanwhile, every point unclassified, and the box of the file
+    // says why. The populations cannot be given either.
+    return byPopulations(r, p, null, page);
   }
   const index = read.table.columns.indexOf(colourBy);
   if (index === -1) {
+    const by =
+      page === "popgen"
+        ? "the populations"
+        : "the column of the populations chosen in the box Individuals file";
     return byPopulations(
       r,
       p,
-      `${escaped(individuals.name)} has no column ${shown(colourBy)}, by which the points were coloured, so they are coloured by the populations.`,
+      `${escaped(individuals.name)} has no column ${shown(colourBy)}, by which the points were coloured, so they are coloured by ${by}.`,
+      page,
     );
   }
   const cells = cellsOf(read.table, index);
@@ -1292,18 +1444,30 @@ function tooManyText(column: string, values: readonly string[]): string {
 const MEANWHILE =
   "Meanwhile the points are not coloured by population; another column can colour them.";
 
-/** The colours of `r` by the populations of `p`, with `before`, the note
-    of a column that cannot colour them, first in the note. */
+/**
+ * The colours of `r` by the populations of `p`, with `before`, the note of
+ * a column that cannot colour them, first in the note. On the old page,
+ * "All individuals" when the populations are one, and one group with the
+ * reason the populations cannot be given; on popgen2.html, every
+ * individual with no population in no group, "Unclassified", all of them
+ * when the populations are one or cannot be given, with no note of why.
+ */
 function byPopulations(
   r: PcaResult,
   p: Project,
   before: string | null,
+  page: PcaPage,
 ): PcaColours {
   const pops = populationsOf(p);
+  if (page === "popgen2" && (pops === "all" || pops === null)) {
+    return byGroups(r, "Population", [], "Unclassified", before, () => {
+      return undefined;
+    });
+  }
   if (pops === "all") {
     return oneGroup(r, "Population", "No population", before);
   }
-  const need = populationsNeeds(p);
+  const need = page === "popgen" ? populationsNeeds(p) : null;
   const note = joined(
     before,
     need === null ? null : `${need.reason} ${MEANWHILE}`,
@@ -1311,6 +1475,7 @@ function byPopulations(
   if (pops === null) {
     return oneGroup(r, "Population", "No population", note);
   }
+  const noneName = page === "popgen" ? "No population" : "Unclassified";
   const names = pops.map(([name]) => name);
   const groupOf = new Map<string, number>();
   for (const [i, [, individuals]] of pops.entries()) {
@@ -1323,7 +1488,7 @@ function byPopulations(
     return oneGroup(
       r,
       "Population",
-      "No population",
+      noneName,
       joined(before, column === null ? null : tooManyText(column, names)),
       (individual) => {
         const index = groupOf.get(individual);
@@ -1331,7 +1496,7 @@ function byPopulations(
       },
     );
   }
-  return byGroups(r, "Population", names, "No population", note, (individual) =>
+  return byGroups(r, "Population", names, noneName, note, (individual) =>
     groupOf.get(individual),
   );
 }
@@ -1616,6 +1781,42 @@ export function varianceCsv(r: PcaResult): string {
   return ["component,explained_variance_percent", ...lines]
     .map((line) => `${line}\n`)
     .join("");
+}
+
+/**
+ * The coordinates of the plot as the text of the CSV that
+ * vavilov-explorer, the owner's desktop application, imports
+ * (docs/use-cases.md, case 3; docs/specs/analyses/pca.md, "On
+ * popgen2.html"): the header `individual,PC1,…`, the components the
+ * result kept, at most PC10, and a row per individual in the order of the
+ * result, its projections as `String` writes them. Each name is written as
+ * the variants file writes it, quoted when it holds a comma, a quote or a
+ * new line, its quotes doubled, as RFC 4180 has it, and with no ' before
+ * a name that starts with "=", "+", "-" or "@", which `csvField` would
+ * put: vavilov-explorer finds the names again in the variants file, and
+ * "'+A12" would not match "+A12". No population, which vavilov-explorer
+ * would read as a component. Each line ends in a new line.
+ */
+export function pcaCoordinatesCsv(r: PcaResult): string {
+  const components = Array.from({ length: r.numComps }, (_, i) => pc(i + 1));
+  const lines = r.individuals.map((individual, i) =>
+    [
+      quotedName(individual),
+      ...Array.from(
+        r.projections.subarray(i * r.numComps, (i + 1) * r.numComps),
+        String,
+      ),
+    ].join(","),
+  );
+  return [["individual", ...components].join(","), ...lines]
+    .map((line) => `${line}\n`)
+    .join("");
+}
+
+/** A name in a cell of the CSV of the coordinates: as it is, or quoted,
+    its quotes doubled, when it holds a comma, a quote or a new line. */
+function quotedName(name: string): string {
+  return /[",\n\r]/u.test(name) ? `"${name.replaceAll('"', '""')}"` : name;
 }
 
 /** The minus sign the screen writes a negative number with. */
