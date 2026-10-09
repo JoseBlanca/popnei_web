@@ -993,6 +993,52 @@ describe("AP2 D1 run and script of pcaOnPopgen2, the filters narrowed", () => {
   });
 });
 
+describe("AP2 D1 the comment of the script of pcaOnPopgen2", () => {
+  /** The comment of the script of `p` on popgen2.html, in one line. */
+  const commentOf = (p: Project): string =>
+    pcaOnPopgen2
+      .script(p)
+      .split("\n")
+      .filter((line) => line.startsWith("# "))
+      .map((line) => line.slice(2))
+      .join(" ");
+
+  test("the missing data the stricter of the PCA's own and the Variants tab's, and the PCA's own LD pruning", () => {
+    expect(
+      commentOf(
+        project({
+          filters: [missing(0.03)],
+          options: {
+            missingData: { follow: false, maxAllowedMissingRate: 0.05 },
+            ...ownLd(50_000),
+          },
+        }),
+      ),
+    ).toBe(
+      "The principal components of the individuals, a PCA of the genotypes, over the filters of the Variants tab, with the missing data filter the stricter of the PCA's own and the Variants tab's, and the PCA's own LD pruning, on a Variants of its own",
+    );
+  });
+
+  test("the LD pruning alone, and the PCoA's missing data and MAF with no LD pruning", () => {
+    expect(commentOf(project({ options: ownLd(50_000) }))).toBe(
+      "The principal components of the individuals, a PCA of the genotypes, over the filters of the Variants tab, with the PCA's own LD pruning, on a Variants of its own",
+    );
+    expect(
+      commentOf(
+        project({
+          options: {
+            method: "pcoa",
+            missingData: { follow: false, maxAllowedMissingRate: 0.05 },
+            maf: { follow: false, maxAllowedMaf: 0.9 },
+          },
+        }),
+      ),
+    ).toBe(
+      "The principal components of the individuals, a PCoA of the Kosman distances, over the filters of the Variants tab, with the missing data and MAF filters the stricter of the PCoA's own and the Variants tab's, on a Variants of its own",
+    );
+  });
+});
+
 /** The words of the PCA's limit for panel.nei of `count` individuals. */
 function limitWords(count: string): string {
   return `panel.nei has ${count} individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser.`;

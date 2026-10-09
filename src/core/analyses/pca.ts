@@ -888,7 +888,9 @@ function script(p: Project, page: PcaPage): string {
           "print(pcoa.negative_eigenvalues_percent)",
         ];
   return [
-    ...commentLines(scriptComment(o)),
+    ...commentLines(
+      page === "popgen" ? scriptComment(o) : popgen2ScriptComment(o),
+    ),
     `pca_variants = ${open}`,
     ...filters.filter((filter) => filter.kind === "passed").map(filterLine),
     ...(p.individualFilters.length === 0
@@ -920,6 +922,32 @@ function scriptComment(o: PcaOptions): string {
         ? `, with the ${name}'s own ${last} filter in the place of the step's`
         : `, with the ${name}'s own ${own.slice(0, -1).join(", ")} and ${last} filters in the place of the step's`;
   return `The principal components of the individuals, ${method}, over the filters of the Variants step${named}, on a Variants of its own`;
+}
+
+/** What the comment of the script says on popgen2.html: the method, the
+    missing data and MAF filters the stricter of the PCA's own and the
+    Variants tab's, when the PCA has its own, and its own LD pruning, which
+    the Variants tab does not have (docs/specs/analyses/pca.md, "On
+    popgen2.html"). */
+function popgen2ScriptComment(o: PcaOptions): string {
+  const name = methodName(o.method);
+  const method =
+    o.method === "pca"
+      ? "a PCA of the genotypes"
+      : "a PCoA of the Kosman distances";
+  const narrowed = (["missing_data", "maf"] as const)
+    .filter((kind) => ownFilter(kind, o) !== null)
+    .map((kind) => FILTER_WORDS[kind]);
+  const parts = [
+    ...(narrowed.length === 0
+      ? []
+      : [
+          `the ${narrowed.join(" and ")} ${narrowed.length === 1 ? "filter" : "filters"} the stricter of the ${name}'s own and the Variants tab's`,
+        ]),
+    ...(o.ld.follow ? [] : [`the ${name}'s own LD pruning`]),
+  ];
+  const named = parts.length === 0 ? "" : `, with ${parts.join(", and ")}`;
+  return `The principal components of the individuals, ${method}, over the filters of the Variants tab${named}, on a Variants of its own`;
 }
 
 /** A comment of the script in lines of `# `, each shorter than 72

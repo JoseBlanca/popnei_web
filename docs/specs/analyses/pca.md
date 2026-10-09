@@ -1989,8 +1989,10 @@ step", which the page does not have.
   of its cells (`docs/specs/widgets/downloads.md`), so `pcaCsv` and
   `varianceCsv` serve the old page alone.
 
-The script, `script`, gives the filters the narrowing gives; the page
-shows no script yet. The check numbers are the old page's.
+The script, `script`, gives the filters the narrowing gives, and its
+comment says so: "over the filters of the Variants tab, with the
+missing data filter the stricter of the PCA's own and the Variants
+tab's, and the PCA's own LD pruning"; the page shows no script yet. The check numbers are the old page's.
 
 ### The TypeScript interface
 
