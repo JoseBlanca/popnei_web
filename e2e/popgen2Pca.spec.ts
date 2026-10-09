@@ -351,6 +351,39 @@ test("AP6 D3 a PCA held running: the bar moves; the PCA's options, the threshold
   await expect(filter).not.toHaveAttribute("aria-disabled");
 });
 
+test("AP6 D3 Run pressed within the second of an arrow key on a threshold: the PCA runs on the threshold the key gave, and is not stopped when the second passes", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await openHeld(page, "panel.nei");
+  await typeDistance(page, "50000");
+  await tab(page, "Variants").click();
+  const rate = histogram(page, "Proportion of missing genotypes");
+  await expect(rate.box).toHaveValue("0.1");
+  await rate.box.focus();
+  await page.keyboard.press("ArrowDown");
+  // The tab and Run activated with no pointer, which moves no focus. The
+  // Variants tab hidden takes the focus from the threshold, which then
+  // ends its run, in both engines on 10 October 2026, before and after
+  // the gate made Run end it; so this checks the outcome, and the test
+  // of the store the order.
+  await tab(page, "PCA").dispatchEvent("click");
+  await run(page).dispatchEvent("click");
+  await expect(stop(page)).toBeVisible();
+  await expect(
+    group(page, "Filter the variants by missing data").getByRole("radio", {
+      name: "As in the Variants tab: 0.099",
+    }),
+  ).toBeChecked();
+  // Past the quiet second after the key, a timer of the page, when a run
+  // of the keys left waiting would have changed the threshold.
+  await page.waitForTimeout(1_500);
+  await expect(stop(page)).toBeVisible();
+  await expect(
+    shown(page).getByRole("progressbar", { name: "Calculating the PCA" }),
+  ).toBeVisible();
+});
+
 test("AP6 D3 while a PCA runs Undo is greyed with the reason and Ctrl+Z undoes nothing; the column of the populations stays open and a column chosen leaves the PCA running; another variants file opened stops it, the tab ready", async ({
   page,
 }) => {

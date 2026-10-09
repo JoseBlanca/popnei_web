@@ -12,8 +12,8 @@
  * And the gate of the page, which makes a run waiting a change before
  * any other command reaches the project: Undo, Redo, a click of the
  * FILTER box, another threshold, an opening by the button, a drop or a
- * paste, a change of the individuals file (the spec, "A run waiting is
- * made a change before any other command"). The page's store is wrapped
+ * paste, a change of the individuals file, a Run (the spec, "A run
+ * waiting is made a change before any other command"). The page's store is wrapped
  * by `gatedStore`, so that every command of a screen passes the gate; an
  * opening, and a change of the individuals file, also commit a number
  * typed in the box of a threshold and not yet committed, as the old page
@@ -118,10 +118,14 @@ export function createRunGate(): RunGate {
 /** `store` with every command of a screen passing `gate` first: `apply`,
     `undo` and `redo` after every run held is made a change, and `open`
     and `applyAfresh` after that and after what is typed in a box is
-    committed, so that the fresh history drops their steps. Each takes
-    a function of the project and not a project, or nothing, so that none
-    is given a project made before the gate changed it. The rest is the
-    store's own. */
+    committed, so that the fresh history drops their steps; and
+    `startRun`, a Run or a Start again pressed, after the same, so that a
+    PCA started within the second of a run of the arrow keys runs on the
+    threshold the run gave, and is not stopped by the run's change a
+    moment later (docs/specs/steps/popgen2-pca.md, "Run and Stop"). Each
+    takes a function of the project and not a project, or nothing, so that
+    none is given a project made before the gate changed it. The rest is
+    the store's own. */
 export function gatedStore<R, F>(
   store: Popgen2Store<R, F>,
   gate: RunGate,
@@ -149,6 +153,11 @@ export function gatedStore<R, F>(
       gate.endAll();
       gate.commitTyped();
       store.applyAfresh(command);
+    },
+    startRun: (id) => {
+      gate.endAll();
+      gate.commitTyped();
+      return store.startRun(id);
     },
   };
 }

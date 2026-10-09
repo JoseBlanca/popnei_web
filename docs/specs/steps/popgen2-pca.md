@@ -433,6 +433,24 @@ individuals to minutes for several thousand.", the times measured on
 the old page in Chromium 153 and WebKit 26.6 on the owner's Mac on 29
 September 2026 (the design, "The memory and the time").
 
+**Run within the second of the arrow keys.** A run of the arrow keys
+on a threshold of the Variants tab becomes a change of the project a
+second after its last press (`popgen2-filters.md`, "When a threshold
+changes the project"). Run pressed while such a run still waits, or
+while a number typed in a threshold's box is not yet applied, first
+makes the run, and the number, a change, as the download of the
+filtered variants does before its dialog opens, and then starts the
+PCA, so that the PCA reads the threshold the user gave. The threshold
+also ends its run when it loses the focus, which the Variants tab
+hidden by the turn to the PCA tab takes from it in Chromium and WebKit
+(seen on 10 October 2026); Run ending it as well does not rest on how a
+browser moves the focus. Until 10 October 2026 Run did not, and a run
+still waiting would have started the PCA on the threshold before it,
+then stopped it with no words a moment later, as the review of work
+package 6 of the plan read the code. The gate of the page, `gatedStore` of
+`src/ui/variants/thresholdRun.ts`, does it for every Run of the page
+(`docs/specs/core/store.md`).
+
 **While a PCA runs**, what it reads is locked, so that no change leaves
 it behind (the owner's answer 2 to `docs/plans/analyses-pca.md`, 9
 October 2026): the five thresholds of the Variants tab, their lines and

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { firstProject, popgen2FirstProject } from "../core/apps.ts";
 import { keyFromWire, writeKeyOf, createKeyMemo } from "../core/keys.ts";
@@ -10,7 +10,7 @@ import {
   turnOffVariantFilter,
 } from "../core/project.ts";
 import type { VariantLoad } from "../core/project.ts";
-import type { Store } from "../core/store.ts";
+import type { Popgen2Store, Store } from "../core/store.ts";
 import { summaryResult } from "../core/testSupport.ts";
 import type {
   Job,
@@ -29,6 +29,12 @@ import {
   summaryStatsOf,
 } from "./popgen2Store.ts";
 import { startAnalysis } from "./runs.ts";
+import {
+  RUN_QUIET_MS,
+  createRunGate,
+  createThresholdRun,
+  gatedStore,
+} from "./variants/thresholdRun.ts";
 import { summaryStatus } from "./variants/words.ts";
 
 // The store of popgen2.html as its entry makes it, with a fake `send`
@@ -640,7 +646,7 @@ function pcaOf(numVars: number): JobResult {
     ends it; `a.vcf.gz` open, read, its one pass done, and the LD pruning
     of the PCA given its distance, so that the PCA is ready. */
 function storeWithPassDone(): {
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2Store<JobResult, Blob>;
   readonly jobs: readonly Job[];
   readonly keys: readonly string[];
   readonly cancels: () => number;
@@ -736,5 +742,45 @@ describe("AP6 D2 the store of popgen2.html with the PCA, a fake worker and the r
     expect(pcaKind(store)).toBe("ready");
     expect(cancels()).toBe(1);
     expect(jobs.map((job) => job.analysis)).toEqual(["variantsSummary", "pca"]);
+  });
+
+  test("Run pressed while a run of the arrow keys waits on a threshold: the run is made a change first, and the PCA runs on the new threshold and is not stopped when the second passes", () => {
+    vi.useFakeTimers();
+    try {
+      const { store: plain, keys, cancels } = storeWithPassDone();
+      const gate = createRunGate();
+      const store = gatedStore(plain, gate);
+      const missing = { of: "variants", kind: "missing_data" } as const;
+      const run = createThresholdRun({
+        gate,
+        change: (to) => {
+          store.apply(
+            "the filter of the variants by missing data changed",
+            (p) => setThreshold(p, missing, to),
+          );
+        },
+        describe: () => "the filter of the variants by missing data changed",
+        ended: () => undefined,
+      });
+
+      run.press(0.1, 0.05);
+      void startAnalysis(store, "pca");
+
+      expect(run.waiting()).toBe(false);
+      expect(pcaKind(store)).toBe("running");
+      // The PCA asked under the key of the threshold the run gave.
+      const afterRun = keys.at(-1);
+      vi.advanceTimersByTime(RUN_QUIET_MS);
+      expect(pcaKind(store)).toBe("running");
+      expect(cancels()).toBe(0);
+      plain.cancelRun("pca");
+      store.apply("the filter of the variants by missing data changed", (p) =>
+        setThreshold(p, missing, 0.1),
+      );
+      void startAnalysis(store, "pca");
+      expect(keys.at(-1)).not.toBe(afterRun);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -479,9 +479,11 @@ setting that stops nothing, which would give one command two meanings.
 
 On that page the screens reach the store through a gate,
 `gatedStore` of `src/ui/variants/thresholdRun.ts`, which makes a run of
-the arrow keys on a threshold a change before `apply`, `undo`, `redo`
-and `open`, and before `open` applies a number typed in a box and not
-yet applied. It wraps `applyAfresh` as it wraps `open`, both, so the run
+the arrow keys on a threshold a change before `apply`, `undo`, `redo`,
+`open` and `startRun`, and before `open` and `startRun` applies a
+number typed in a box and not yet applied, so that a Run pressed within
+the second of a run starts on the threshold the run gave (since 10
+October 2026, `docs/specs/steps/popgen2-pca.md`, "Run and Stop"). It wraps `applyAfresh` as it wraps `open`, both, so the run
 and the number typed are made changes and the fresh history then drops
 their steps; the count of `historyMoves` then finds no text left in a
 box to throw away.
