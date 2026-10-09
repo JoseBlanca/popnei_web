@@ -183,7 +183,8 @@ column of the populations. Choose it in the list."
 
 **The counts.** With a variants file read and a column chosen whose
 values are 20 or fewer, a table of two columns, "Population" and
-"Individuals", captioned "Individuals of panel.nei kept by the filters":
+"Individuals", captioned "Individuals of panel.nei after the filters of
+individuals":
 
 | Population | Individuals |
 |---|---|
@@ -205,14 +206,18 @@ values are 20 or fewer, a table of two columns, "Population" and
 Under the table, the first that holds:
 
 - some individuals classified and some unclassified kept: "Unclassified,
-  left out of the analyses per population: 7 individuals, 3 with an
-  empty cell in popcat and 4 that are not in panel_pops.csv: s031, s044,
-  s102 and 1 more." The count and its causes are of the individuals
-  kept; the names are of the kept not in the file. Each part is left out
-  when its count is 0, and the one cause left needs no count of its own:
-  "…: 3 individuals with an empty cell in popcat.", "…: 1 individual that
-  is not in panel_pops.csv: s031."; past three names, the count of the
-  rest. One individual: "1 individual".
+  left out of the analyses per population: 7 individuals kept, 3 with an
+  empty cell in popcat and 4 that are not in panel_pops.csv. Not in
+  panel_pops.csv: s031, s044, s102 and 1 more; the tab Individuals file
+  lists them all." The count and its causes are of the individuals
+  kept; the names are of the kept not in the file, in a sentence of
+  their own, so that they are not read as of both causes. Each part is
+  left out when its count is 0, and the one cause left needs no count of
+  its own, its names then after a colon: "…: 3 individuals kept with an
+  empty cell in popcat.", "…: 1 individual kept that is not in
+  panel_pops.csv: s031."; past three names, the count of the rest and
+  "; the tab Individuals file lists them all.", whose list holds them
+  among those of before the filters. One individual: "1 individual".
 - no individual of the variants file in the individuals file, the table
   then empty and not drawn: the warning "Warning: none of the 200
   individuals of panel.nei is in panel_pops.csv, so all of them are
@@ -224,8 +229,8 @@ Under the table, the first that holds:
   population will take them as one population."; for one, "The one
   individual kept is unclassified."
 
-Last, always with a variants file read: "Individuals of panel_pops.csv
-not in panel.nei: 18", 0 written too, which no filter changes.
+Last, always with a variants file read: "Individuals in panel_pops.csv
+but not in panel.nei: 18", 0 written too, which no filter changes.
 
 **The counts that wait.** With a threshold of the individuals on and the
 one pass not finished, once the variants file has given its individuals
@@ -251,8 +256,9 @@ which gives the column and its values before the variants file.
 
 **A column of more than 20 values** gives no table and no line of the
 unclassified: "Warning: accession has 1,845 different values, too many
-for a column of populations, so they are not counted here. If it is not
-the column of the populations, choose another in the list." The values
+for a column of populations: the individuals are counted here only for a
+column of 20 different values or fewer. If it is not the column of the
+populations, choose another in the list." The values
 are counted in the individuals file, missing ones left out, so the
 warning does not depend on the variants file or the filters. The last
 line still shows.
@@ -302,8 +308,8 @@ comes from the read, its `found` or the format of its refusal, never
 from its name.
 
 **The individuals not in the file.** When individuals of the variants
-file are not in the individuals file: the heading "Individuals of
-panel.nei not in panel_pops.csv", their full list in the order of the
+file are not in the individuals file: the heading "Individuals in
+panel.nei but not in panel_pops.csv, before the filters", their full list in the order of the
 variants file, before the filters, and the button "Copy the 4 names",
 "Copy the name" for one, with the words of the old step for the copy and
 its failure (`copyLabel`, `copiedText`, `NOT_COPIED` of
@@ -415,16 +421,16 @@ the project's (`docs/architecture.md`, section 7).
 | the heading drawn in place of the zone of the variants file when its code throws, under the box's "Variants file" | "Opening a variants file" |
 | the tabs | "Variants file"; "Individuals file" |
 | the list | "Column of the populations"; first item "None: every individual unclassified" |
-| the caption of the counts | "Individuals of panel.nei kept by the filters" |
+| the caption of the counts | "Individuals of panel.nei after the filters of individuals" |
 | the headers of the counts | "Population"; "Individuals" |
 | a count not yet known, for a screen reader | "not counted yet" |
-| the line of the rows not used | "Individuals of panel_pops.csv not in panel.nei: 18" |
+| the line of the rows not used | "Individuals in panel_pops.csv but not in panel.nei: 18" |
 | the refusals, in the box | "panel_pops.csv could not be read: " and the words of the reader spec after the colon (`docs/specs/worker/individuals.md`, "The refusals and their words"), ending as below |
-| the end of `raggedRow` and `unclosedQuote` | "Choose another separator under the tab Individuals file, or open a corrected file." |
+| the end of `raggedRow` and `unclosedQuote` | "Choose another separator in the tab Individuals file, or open a corrected file." |
 | the end of `variantsFile` | "it is a variants file; open it with Open variants file in the box Variants file." in place of the reader's words after the colon |
 | the end of `tooLarge` | "check that it is the individuals file and not the variants file." |
 | `sheetTooLarge` after the colon | "its first sheet, Hoja1, has values as far as row 1,048,576 and column XFD, more than the 20,000,000 cells an individuals file can have; delete the values outside the table.", the reader's words with the name of the file of this page |
-| `readerNotLoaded` | "panel_pops.csv could not be read: the part of the page that reads tables could not be downloaded. Check the connection and open the file again." |
+| `readerNotLoaded` | "panel_pops.csv could not be read: the reader of tables could not be loaded. Check the connection and open the file again." |
 | the end of `unreadable` | "Open it again." |
 | the end of `files`, `oldExcel`, `encrypted`, `emptySheet`, `cellError`, `headerError`, `sheetTooLarge`, whose words say what to do in Excel | "Then open it again." |
 | a worker that could not start, or a page of another build than its workers | "panel_pops.csv could not be read: the page could not start the part that reads files. Reload the page and open the file again." |
@@ -514,7 +520,7 @@ core and of the entry in their module specs.
 
 - `panel.nei` then `panel_pops.csv`, and the other order: the list on
   `popcat`, the counts p0 48, p2 84, p1 68, in that order, no line of the
-  unclassified, "Individuals of panel_pops.csv not in panel.nei: 0";
+  unclassified, "Individuals in panel_pops.csv but not in panel.nei: 0";
 - `panel_split.csv` chooses `popsplit`; `ld_pops.csv`, opened over
   `ld.nei`, chooses `pop`, its two populations; `panel_meta.csv` chooses
   `popcat` and not `altitude`;

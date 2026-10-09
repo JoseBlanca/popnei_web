@@ -520,14 +520,14 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
         }),
       ),
     ).toBe(
-      "panel_pops.csv could not be read: line 2 has 2 cells where the header has 1, read with the comma as the separator. Choose another separator under the tab Individuals file, or open a corrected file.",
+      "panel_pops.csv could not be read: line 2 has 2 cells where the header has 1, read with the comma as the separator. Choose another separator in the tab Individuals file, or open a corrected file.",
     );
     expect(
       individualsBoxNeeds(
         refused({ kind: "unclosedQuote", line: 5, separator: ";" }),
       ),
     ).toBe(
-      "panel_pops.csv could not be read: the quote that opens a cell on line 5 is never closed, read with the semicolon as the separator. Choose another separator under the tab Individuals file, or open a corrected file.",
+      "panel_pops.csv could not be read: the quote that opens a cell on line 5 is never closed, read with the semicolon as the separator. Choose another separator in the tab Individuals file, or open a corrected file.",
     );
   });
 
@@ -547,13 +547,13 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
     );
   });
 
-  test("individualsBoxNeeds says the part of the page that reads tables could not be downloaded", () => {
+  test("individualsBoxNeeds says the reader of tables could not be loaded", () => {
     expect(
       individualsBoxNeeds(
         refused({ kind: "readerNotLoaded", message: "fetch failed" }),
       ),
     ).toBe(
-      "panel_pops.csv could not be read: the part of the page that reads tables could not be downloaded. Check the connection and open the file again.",
+      "panel_pops.csv could not be read: the reader of tables could not be loaded. Check the connection and open the file again.",
     );
   });
 

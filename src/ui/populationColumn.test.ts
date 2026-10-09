@@ -414,7 +414,7 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
     expect(chosen()).toBe(0);
     expect(said).toHaveLength(1);
     expect(said[0]).toMatch(
-      /^panel_pops\.csv could not be read: .*\. Choose another separator under the tab Individuals file, or open a corrected file\.$/u,
+      /^panel_pops\.csv could not be read: .*\. Choose another separator in the tab Individuals file, or open a corrected file\.$/u,
     );
   });
 

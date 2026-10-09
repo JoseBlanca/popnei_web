@@ -2546,7 +2546,7 @@ function individualsBoxWords(
     case "tooLarge":
       return `it is ${megabytes(error.size)}, more than the ${grouped(error.max / BYTES_IN_MB)} MB an individuals file can have; check that it is the individuals file and not the variants file.`;
     case "readerNotLoaded":
-      return "the part of the page that reads tables could not be downloaded. Check the connection and open the file again.";
+      return "the reader of tables could not be loaded. Check the connection and open the file again.";
     case "sheetTooLarge":
       return `its first sheet, ${shown(error.sheet)}, has values as far as row ${grouped(error.lastRow)} and column ${error.lastColumn}, more than the ${grouped(error.max)} cells an individuals file can have; delete the values outside the table.`;
     case "empty":
@@ -2581,7 +2581,7 @@ function boxRefusedEnd(error: IndividualsFileError): string {
   switch (error.kind) {
     case "raggedRow":
     case "unclosedQuote":
-      return "Choose another separator under the tab Individuals file, or open a corrected file.";
+      return "Choose another separator in the tab Individuals file, or open a corrected file.";
     case "unreadable":
       return "Open it again.";
     case "files":

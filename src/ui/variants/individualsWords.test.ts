@@ -371,7 +371,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
 
   test("the caption, the headers and the counts, a count not known written … and read not counted yet", () => {
     expect(countsCaption("panel.nei")).toBe(
-      "Individuals of panel.nei kept by the filters",
+      "Individuals of panel.nei after the filters of individuals",
     );
     expect(POPULATION_HEADER).toBe("Population");
     expect(INDIVIDUALS_HEADER).toBe("Individuals");
@@ -390,7 +390,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       lines: [
         {
           kind: "line",
-          text: "Individuals of panel_pops.csv not in panel.nei: 0",
+          text: "Individuals in panel_pops.csv but not in panel.nei: 0",
         },
       ],
     });
@@ -411,11 +411,11 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       lines: [
         {
           kind: "line",
-          text: "Unclassified, left out of the analyses per population: 7 individuals, 3 with an empty cell in popcat and 4 that are not in panel_pops.csv: s031, s044, s102 and 1 more.",
+          text: "Unclassified, left out of the analyses per population: 7 individuals kept, 3 with an empty cell in popcat and 4 that are not in panel_pops.csv. Not in panel_pops.csv: s031, s044, s102 and 1 more; the tab Individuals file lists them all.",
         },
         {
           kind: "line",
-          text: "Individuals of panel_pops.csv not in panel.nei: 0",
+          text: "Individuals in panel_pops.csv but not in panel.nei: 0",
         },
       ],
     });
@@ -433,7 +433,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
     });
     expect(countsShown(empty, countsOf(empty), "running").lines[0]).toEqual({
       kind: "line",
-      text: "Unclassified, left out of the analyses per population: 3 individuals with an empty cell in popcat.",
+      text: "Unclassified, left out of the analyses per population: 3 individuals kept with an empty cell in popcat.",
     });
     const missing = project({
       read: tableRead(panelPopsWith(["s031", "s044", "s102"])),
@@ -441,13 +441,20 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
     expect(countsShown(missing, countsOf(missing), "running").lines[0]).toEqual(
       {
         kind: "line",
-        text: "Unclassified, left out of the analyses per population: 3 individuals that are not in panel_pops.csv: s031, s044 and s102.",
+        text: "Unclassified, left out of the analyses per population: 3 individuals kept that are not in panel_pops.csv: s031, s044 and s102.",
       },
     );
+    const five = project({
+      read: tableRead(panelPopsWith(["s031", "s044", "s102", "s150", "s160"])),
+    });
+    expect(countsShown(five, countsOf(five), "running").lines[0]).toEqual({
+      kind: "line",
+      text: "Unclassified, left out of the analyses per population: 5 individuals kept that are not in panel_pops.csv: s031, s044, s102 and 2 more; the tab Individuals file lists them all.",
+    });
     const one = project({ read: tableRead(panelPopsWith(["s031"])) });
     expect(countsShown(one, countsOf(one), "running").lines[0]).toEqual({
       kind: "line",
-      text: "Unclassified, left out of the analyses per population: 1 individual that is not in panel_pops.csv: s031.",
+      text: "Unclassified, left out of the analyses per population: 1 individual kept that is not in panel_pops.csv: s031.",
     });
     const both = project({
       read: tableRead(
@@ -458,7 +465,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
     });
     expect(countsShown(both, countsOf(both), "running").lines[0]).toEqual({
       kind: "line",
-      text: "Unclassified, left out of the analyses per population: 2 individuals, 1 with an empty cell in popcat and 1 that is not in panel_pops.csv: s031.",
+      text: "Unclassified, left out of the analyses per population: 2 individuals kept, 1 with an empty cell in popcat and 1 that is not in panel_pops.csv. Not in panel_pops.csv: s031.",
     });
   });
 
@@ -480,7 +487,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
         },
         {
           kind: "line",
-          text: "Individuals of panel_pops.csv not in panel.nei: 200",
+          text: "Individuals in panel_pops.csv but not in panel.nei: 200",
         },
       ],
     });
@@ -497,7 +504,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
         },
         {
           kind: "line",
-          text: "Individuals of panel_pops.csv not in panel.nei: 0",
+          text: "Individuals in panel_pops.csv but not in panel.nei: 0",
         },
       ],
     });
@@ -513,11 +520,11 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       lines: [
         {
           kind: "warning",
-          text: "pop has 21 different values, too many for a column of populations, so they are not counted here. If it is not the column of the populations, choose another in the list.",
+          text: "pop has 21 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
         },
         {
           kind: "line",
-          text: "Individuals of panel_pops.csv not in panel.nei: 0",
+          text: "Individuals in panel_pops.csv but not in panel.nei: 0",
         },
       ],
     });
@@ -544,7 +551,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       lines: [
         {
           kind: "warning",
-          text: "pop has 200 different values, too many for a column of populations, so they are not counted here. If it is not the column of the populations, choose another in the list.",
+          text: "pop has 200 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
         },
         {
           kind: "line",
@@ -579,7 +586,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
           { kind: "line", text: words },
           {
             kind: "line",
-            text: "Individuals of panel_pops.csv not in panel.nei: 0",
+            text: "Individuals in panel_pops.csv but not in panel.nei: 0",
           },
         ],
       });
@@ -595,11 +602,11 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
     expect(countsShown(renamed, countsOf(renamed), "running").lines).toEqual([
       {
         kind: "warning",
-        text: "p\\u202eop has 21 different values, too many for a column of populations, so they are not counted here. If it is not the column of the populations, choose another in the list.",
+        text: "p\\u202eop has 21 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
       },
       {
         kind: "line",
-        text: "Individuals of a\\u202eb.csv not in panel.nei: 0",
+        text: "Individuals in a\\u202eb.csv but not in panel.nei: 0",
       },
     ]);
   });
@@ -720,7 +727,7 @@ describe("IN5 D1 what the tab Individuals file shows", () => {
 
   test("the heading of the individuals not in the file, and the name of the table", () => {
     expect(notInFileHeading("panel.nei", "panel_pops.csv")).toBe(
-      "Individuals of panel.nei not in panel_pops.csv",
+      "Individuals in panel.nei but not in panel_pops.csv, before the filters",
     );
     expect(tableLabel("panel_pops.csv")).toBe("The table of panel_pops.csv");
     expect(tableLabel("a\u202eb.csv")).toBe("The table of a\\u202eb.csv");
@@ -780,7 +787,7 @@ describe("IN5 D1 what the status region says of a read of the individuals file",
       variantsIndividuals: null,
     });
     expect(individualsReadAnnouncement(p, keptOf(p))).toBe(
-      "panel_pops.csv read: 21 rows, the populations from pop. Warning: pop has 21 different values, too many for a column of populations, so they are not counted here. If it is not the column of the populations, choose another in the list.",
+      "panel_pops.csv read: 21 rows, the populations from pop. Warning: pop has 21 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
     );
   });
 
@@ -810,7 +817,7 @@ describe("IN5 D1 what the status region says of a read of the individuals file",
     const words = individualsReadAnnouncement(p, keptOf(p));
     expect(words).toBe(individualsBoxNeeds(p));
     expect(words).toMatch(
-      /^panel_pops\.csv could not be read: .*\. Choose another separator under the tab Individuals file, or open a corrected file\.$/u,
+      /^panel_pops\.csv could not be read: .*\. Choose another separator in the tab Individuals file, or open a corrected file\.$/u,
     );
   });
 });

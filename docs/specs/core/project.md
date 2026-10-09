@@ -1141,7 +1141,7 @@ never find one of the other not yet made (above, "The populations").
   that could not be read, in the words of `individualsStepNeeds` but for
   their ends, which are this page's: "panel_pops.csv could not be read: "
   and the words of the reader's spec after the colon, then
-  "Choose another separator under the tab Individuals file, or open a
+  "Choose another separator in the tab Individuals file, or open a
   corrected file." for `raggedRow` and `unclosedQuote`; for
   `variantsFile`, "it is a variants file; open it with Open variants
   file in the box Variants file." in place of the reader's words; for
@@ -1150,9 +1150,8 @@ never find one of the other not yet made (above, "The populations").
   file."; for `sheetTooLarge`, "its first sheet, Hoja1, has values as
   far as row 1,048,576 and column XFD, more than the 20,000,000 cells an
   individuals file can have; delete the values outside the table.", the
-  reader's words with this page's name of the file; for `readerNotLoaded`, "the part of the page that reads tables
-  could not be downloaded. Check the connection and open the file
-  again."; for a failure of the worker, by the kind of its `RunError`:
+  reader's words with this page's name of the file; for `readerNotLoaded`, "the reader of tables could not be
+  loaded. Check the connection and open the file again."; for a failure of the worker, by the kind of its `RunError`:
   a crash or a defect, "the page stopped while it read it. Open the file
   again.", and a worker that could not start or a page of another build
   than its workers, `couldNotStart` and `protocolMismatch`, "the page

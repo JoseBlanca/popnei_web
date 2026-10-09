@@ -110,7 +110,7 @@ export function noColumnQualifiedText(p: Project): string | null {
 /** The caption of the table of the counts, of the variants file
     `variantsName`. */
 export function countsCaption(variantsName: string): string {
-  return `Individuals of ${escaped(variantsName)} kept by the filters`;
+  return `Individuals of ${escaped(variantsName)} after the filters of individuals`;
 }
 
 /** The headers of the two columns of the counts. */
@@ -180,7 +180,7 @@ export function countsShown(
   const fileName = escaped(p.individuals?.name ?? "");
   const rowsLine: CountsLine = {
     kind: "line",
-    text: `Individuals of ${fileName} not in ${variantsName}: ${grouped(counts.rowsNotInVariants ?? 0)}`,
+    text: `Individuals in ${fileName} but not in ${variantsName}: ${grouped(counts.rowsNotInVariants ?? 0)}`,
   };
   const shownFirst = firstShown(counts, wait, variantsName, fileName, p);
   return {
@@ -195,7 +195,7 @@ function tooManyWarning(counts: PopulationCounts): CountsLine[] {
   return [
     {
       kind: "warning",
-      text: `${shown(counts.column)} has ${grouped(counts.numValues)} different values, too many for a column of populations, so they are not counted here. If it is not the column of the populations, choose another in the list.`,
+      text: `${shown(counts.column)} has ${grouped(counts.numValues)} different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.`,
     },
   ];
 }
@@ -282,10 +282,12 @@ function allUnclassifiedText(numKept: number): string {
 /**
  * The line of the unclassified kept, some individuals being classified:
  * their count, then each cause with its count, a cause of 0 left out, and
- * the count of a cause dropped when it is the only one: "Unclassified,
- * left out of the analyses per population: 7 individuals, 3 with an empty
- * cell in popcat and 4 that are not in panel_pops.csv: s031, s044, s102
- * and 1 more."
+ * the count of a cause dropped when it is the only one; with both causes,
+ * the names of those not in the file in a sentence of their own, so that
+ * they are not read as of both: "Unclassified, left out of the analyses
+ * per population: 7 individuals kept, 3 with an empty cell in popcat and
+ * 4 that are not in panel_pops.csv. Not in panel_pops.csv: s031, s044,
+ * s102 and 1 more; the tab Individuals file lists them all."
  */
 function unclassifiedText(
   unclassified: NonNullable<PopulationCounts["unclassified"]>,
@@ -294,26 +296,24 @@ function unclassifiedText(
 ): string {
   const { missingCell, notInFile } = unclassified;
   const cell = column === null ? "" : `an empty cell in ${shown(column)}`;
-  const outside = `${notInFile.length === 1 ? "is" : "are"} not in ${fileName}: ${namesShown(notInFile)}`;
+  const outside = `${notInFile.length === 1 ? "is" : "are"} not in ${fileName}`;
   const start = "Unclassified, left out of the analyses per population: ";
   if (notInFile.length === 0) {
-    return `${start}${counted(missingCell, "individual")} with ${cell}.`;
+    return `${start}${counted(missingCell, "individual")} kept with ${cell}.`;
   }
   if (missingCell === 0) {
-    return `${start}${counted(notInFile.length, "individual")} that ${outside}.`;
+    return `${start}${counted(notInFile.length, "individual")} kept that ${outside}: ${namesShown(notInFile)}`;
   }
-  return `${start}${counted(unclassified.kept, "individual")}, ${grouped(missingCell)} with ${cell} and ${grouped(notInFile.length)} that ${outside}.`;
+  return `${start}${counted(unclassified.kept, "individual")} kept, ${grouped(missingCell)} with ${cell} and ${grouped(notInFile.length)} that ${outside}. Not in ${fileName}: ${namesShown(notInFile)}`;
 }
 
-/** The names of individuals, past `MAX_NAMED` the count of the rest:
-    "s031, s044, s102 and 1 more". */
+/** The names of individuals with the full stop that ends them, past
+    `MAX_NAMED` the count of the rest and where they all are: "s031,
+    s044, s102 and 1 more; the tab Individuals file lists them all." */
 function namesShown(names: readonly string[]): string {
   const words = names.slice(0, MAX_NAMED).map(shown);
-  return bothOf(
-    names.length > MAX_NAMED
-      ? [...words, `${grouped(names.length - MAX_NAMED)} more`]
-      : words,
-  );
+  if (names.length <= MAX_NAMED) return `${bothOf(words)}.`;
+  return `${bothOf([...words, `${grouped(names.length - MAX_NAMED)} more`])}; the tab ${INDIVIDUALS_BOX_NAME} lists them all.`;
 }
 
 /** What the tab "Individuals file" shows: no file; a read under way,
@@ -379,12 +379,13 @@ export function individualsTabShows(
 }
 
 /** The heading of the individuals of the variants file `variantsName`
-    that the individuals file `fileName` does not have. */
+    that the individuals file `fileName` does not have, before the
+    filters. */
 export function notInFileHeading(
   variantsName: string,
   fileName: string,
 ): string {
-  return `Individuals of ${escaped(variantsName)} not in ${escaped(fileName)}`;
+  return `Individuals in ${escaped(variantsName)} but not in ${escaped(fileName)}, before the filters`;
 }
 
 /** The name of the table of the individuals file `name`, for a screen
