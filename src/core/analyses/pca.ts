@@ -87,22 +87,24 @@ const ID = "pca";
 export type PcaPage = "popgen" | "popgen2";
 
 /** The options of the PCA. Each of its three filters follows the Variants
-    step while `follow` is true, and keeps its values meanwhile, for when
-    the user sets it for the PCA again. */
+    step of the old page, or the Variants tab of popgen2.html, while
+    `follow` is true, and keeps its values meanwhile, for when the user
+    sets it for the PCA again; on popgen2.html an LD filter that follows
+    is no LD pruning, since the Variants tab has none. */
 export interface PcaOptions {
   /** The PCA of the genotypes, or the PCoA of the Kosman distances. */
   readonly method: PcaMethod;
-  /** The PCA's missing data filter: whether it follows the Variants step,
-      and its largest proportion of missing genotypes. */
+  /** The PCA's missing data filter: whether it follows the Variants step
+      or tab, and its largest proportion of missing genotypes. */
   readonly missingData: {
     readonly follow: boolean;
     readonly maxAllowedMissingRate: number;
   };
-  /** The PCA's MAF filter: whether it follows the Variants step, and its
-      largest major allele frequency. */
+  /** The PCA's MAF filter: whether it follows the Variants step or tab,
+      and its largest major allele frequency. */
   readonly maf: { readonly follow: boolean; readonly maxAllowedMaf: number };
-  /** The PCA's LD filter: whether it follows the Variants step, its
-      largest r², and its window in base pairs, `null` until the user
+  /** The PCA's LD filter: whether it follows the Variants step or tab,
+      its largest r², and its window in base pairs, `null` until the user
       types one. */
   readonly ld: {
     readonly follow: boolean;
