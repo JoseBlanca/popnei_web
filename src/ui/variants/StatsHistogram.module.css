@@ -11,26 +11,25 @@
   min-inline-size: 0;
 }
 
-/* The row over the plot: the short title, or the short title, "max:"
-   and the box, and at its end the menu "Download…", level with the
-   bottom of the box. Where the two do not fit side by side, as at 320
-   pixels, the menu goes to a line of its own under them, at its end,
-   rather than squeezing the label. */
+/* What is over the plot: the short title, or the short title, "max:"
+   and the box; and under them, on a line of its own at its end, the
+   menu "Download…". The menu is on its own line in every row and at
+   every width, so that the rows look the same: beside the box it fitted
+   in some rows and not in others, at 1280 pixels as at 320 (decided by
+   the session on 9 October 2026, the review of task 5.4 of
+   docs/plans/analyses-pca.md). */
 .top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  display: grid;
   gap: var(--space-2);
   min-inline-size: 0;
 }
 
 .top > :last-child {
-  margin-inline-start: auto;
+  justify-self: end;
 }
 
 /* The row of the short title, "max:" and the box. */
 .head {
-  flex: 1 1 auto;
   min-inline-size: 0;
 }
 

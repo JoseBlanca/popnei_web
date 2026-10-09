@@ -113,87 +113,100 @@ export function Table(props: TableProps): React.JSX.Element {
       {caption}
     </p>
   );
-  let captionOrRow = captionLine;
+  let menu: React.JSX.Element | null = null;
   if (props.download !== undefined) {
     checkValues(props.rows, columns.length);
-    captionOrRow = (
-      <div className={classOf(styles, "captionRow")}>
-        {captionLine}
-        <DownloadMenu
-          what={props.download.what}
-          items={[
-            tableItem(
-              props.download.fileName,
-              columns.map((column) => column.label),
-              props.rows,
-            ),
-          ]}
-          waiting={props.download.waiting}
-        />
-      </div>
+    menu = (
+      <DownloadMenu
+        what={props.download.what}
+        items={[
+          tableItem(
+            props.download.fileName,
+            columns.map((column) => column.label),
+            props.rows,
+          ),
+        ]}
+        waiting={props.download.waiting}
+      />
     );
   }
 
+  // A frame that scrolls is reached by the Tab key, so that a user of
+  // the keyboard scrolls it with the arrow keys (WCAG 2.1.1).
+  const scrollBox = (
+    <div
+      ref={scrollRef}
+      className={
+        limitedHeight
+          ? `${classOf(styles, "scroll")} ${classOf(styles, "limited")}`
+          : classOf(styles, "scroll")
+      }
+      {...frame.attributes}
+      {...(frame.attributes.role !== undefined && {
+        "aria-labelledby": captionId,
+      })}
+    >
+      <table aria-labelledby={captionId} className={classOf(styles, "table")}>
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th
+                key={column.id}
+                scope="col"
+                className={cellClass(column, "header")}
+              >
+                {column.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id}>
+              {columns.map((column, index) =>
+                column.isRowHeader === true ? (
+                  <th
+                    key={column.id}
+                    scope="row"
+                    className={cellClass(column, "rowHeader")}
+                  >
+                    {cellOf(row, index)}
+                  </th>
+                ) : (
+                  <td key={column.id} className={cellClass(column, "cell")}>
+                    {cellOf(row, index)}
+                  </td>
+                ),
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <div className={classOf(styles, "frame")}>
-      {captionOrRow}
+      {captionLine}
       {scrolls && (
         <p className={classOf(styles, "scrollLine")}>{SCROLL_SIDEWAYS_TEXT}</p>
       )}
       {frame.scrollsDown && (
         <p className={classOf(styles, "scrollLine")}>{SCROLL_DOWN_TEXT}</p>
       )}
-      {/* A frame that scrolls is reached by the Tab key, so that a user
-          of the keyboard scrolls it with the arrow keys (WCAG 2.1.1). */}
-      <div
-        ref={scrollRef}
-        className={
-          limitedHeight
-            ? `${classOf(styles, "scroll")} ${classOf(styles, "limited")}`
-            : classOf(styles, "scroll")
-        }
-        {...frame.attributes}
-        {...(frame.attributes.role !== undefined && {
-          "aria-labelledby": captionId,
-        })}
-      >
-        <table aria-labelledby={captionId} className={classOf(styles, "table")}>
-          <thead>
-            <tr>
-              {columns.map((column) => (
-                <th
-                  key={column.id}
-                  scope="col"
-                  className={cellClass(column, "header")}
-                >
-                  {column.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                {columns.map((column, index) =>
-                  column.isRowHeader === true ? (
-                    <th
-                      key={column.id}
-                      scope="row"
-                      className={cellClass(column, "rowHeader")}
-                    >
-                      {cellOf(row, index)}
-                    </th>
-                  ) : (
-                    <td key={column.id} className={cellClass(column, "cell")}>
-                      {cellOf(row, index)}
-                    </td>
-                  ),
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {menu === null ? (
+        scrollBox
+      ) : (
+        // The menu above the table's top right corner: the two in a box
+        // as wide as the table, or as the frame when the table is wider.
+        // A table that gains or loses its download is drawn again in it;
+        // the tables of popgen2.html have theirs from their first draw,
+        // and those of popgen.html none.
+        <div className={classOf(styles, "withMenu")}>
+          {menu}
+          {scrollBox}
+        </div>
+      )}
     </div>
   );
 }

@@ -150,12 +150,20 @@
   }
 }
 
-/* A table given a download: its caption, and the menu "Download…" at the
-   end of the same line, under it when there is no room. */
-.captionRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
+/* A table given a download: the menu "Download…" on a line of its own
+   above the table's top right corner (docs/specs/widgets/downloads.md,
+   "A table"), in a box as wide as the table, or as the frame when the
+   table is wider and scrolls in it. The caption, longer than a narrow
+   table, stays on its own line above, where it put the menu at the left
+   of the table's 212 pixels in the box of the individuals file. */
+.withMenu {
+  display: grid;
   gap: var(--space-2);
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.withMenu > :first-child {
+  justify-self: end;
 }

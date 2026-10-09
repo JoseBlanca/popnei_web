@@ -133,9 +133,9 @@ export interface RoomTitle {
     out of reach of the keyboard and of a screen reader: for each plot
     the row of its short title and the box of its threshold, a box of the
     same field, which takes the same height and wraps its title at the
-    same width, or the title alone of a plot with no threshold, with the
-    menu "Download…" at its end, and under it the room of the plot, of its
-    shape. */
+    same width, or the title alone of a plot with no threshold, the menu
+    "Download…" on its line under them, and under it the room of the
+    plot, of its shape. */
 export function PlotsRoom({ titles }: PlotsRoomProps): React.JSX.Element {
   return (
     <div

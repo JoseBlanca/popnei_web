@@ -66,7 +66,9 @@ mouse leaves, and when the button no longer waits. A menu open when it begins to
 file is dropped, closes, and does not open again by itself when the
 wait ends.
 
-An item that fails says so in words under the button, until the next
+An item that fails says so in words under the button, with the mark
+and the line of a problem the page gives its other refusals, drawn over
+what lies under the button so that no plot or box beside it moves, until the next
 choice of that menu or until the menu begins to wait: the PNG of a plot, which the browser can refuse,
 `PngError` of `src/charts/export.ts`, `tooLarge`, "The image of this
 plot is too large for a PNG in this browser; download it as SVG.", or

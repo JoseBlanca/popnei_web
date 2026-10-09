@@ -1,11 +1,11 @@
 /* The tokens are those of src/ui/tokens.css. */
 
-/* The button and, under it, the words of a PNG refused, at the end of
-   the line above the table or the plot. */
+/* The button, at the end of the line above the table or the plot, and
+   the words of a PNG refused, placed under it. */
 .download {
+  position: relative;
   display: grid;
   justify-items: end;
-  gap: var(--space-1);
 }
 
 .button {
@@ -43,12 +43,23 @@
   cursor: default;
 }
 
+/* The words of a PNG refused, under the button, at its end, drawn over
+   what lies under it, the plot, so that nothing beside moves: in the
+   flow they made one plot of a row 46 pixels lower than its neighbour
+   (the review of task 5.4 of docs/plans/analyses-pca.md). No wider than
+   the column of a plot at 320 pixels, 288. */
 .failure {
-  margin: 0;
-  max-inline-size: calc(var(--space-8) * 10);
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-1));
+  inset-inline-end: 0;
+  z-index: 1;
+  inline-size: max-content;
+  max-inline-size: min(20rem, calc(100vw - 2 * var(--space-4)));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
   color: var(--color-text);
   font-size: var(--text-sm);
-  text-align: end;
 }
 
 /* React Aria places the popover itself, in a layer at the end of the

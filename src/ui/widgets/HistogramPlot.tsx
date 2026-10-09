@@ -44,7 +44,7 @@ export interface HistogramPlotProps {
   readonly download?: PlotDownload;
   /** Places the menu, `null` with no download, and the plot's element,
       for a screen that lays something over the plot: the histograms of
-      popgen2.html put the menu in the row of the box of the threshold,
+      popgen2.html put the menu under the row of the box of the threshold,
       and the plot in the box its line is placed against, which the menu
       would otherwise push the plot down in. It is called at each render
       and must place both in the same elements every time, so that the

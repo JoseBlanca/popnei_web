@@ -77,22 +77,19 @@
   min-inline-size: 0;
 }
 
-/* The row of the title, the box and the menu in the room, as the class
-   top of StatsHistogram.module.css lays it out. */
+/* The title and the box, and the menu on its line under them, in the
+   room, as the class top of StatsHistogram.module.css lays them out. */
 .roomTop {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  display: grid;
   gap: var(--space-2);
   min-inline-size: 0;
 }
 
 .roomTop > :last-child {
-  margin-inline-start: auto;
+  justify-self: end;
 }
 
 .roomHead {
-  flex: 1 1 auto;
   min-inline-size: 0;
 }
 

@@ -4979,6 +4979,71 @@ for (const theme of ["light", "dark"] as const) {
         });
       });
 
+      test("the menu of the download of a histogram, after the Stop of the one pass", async ({
+        page,
+      }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("stopped.vcf.gz");
+        await writeBigVcf(vcf, 30_000);
+        await holdSummary(page);
+        await page.reload();
+        await pickOnNewPage(page, vcf);
+        await expect(newPageCount(page).getByRole("progressbar")).toBeVisible({
+          timeout: 60_000,
+        });
+        await release(page, "oneSoFar");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 60_000,
+        });
+        await newPageCount(page).getByRole("button", { name: "Stop" }).click();
+        const button = newPageStats(page).getByRole("button", {
+          name: "Download the plot of the proportion of missing genotypes of the variants",
+        });
+        await expect(button).toHaveAccessibleDescription(
+          "Download once stopped.vcf.gz is read to the end: its reading was stopped; start it again in the box Variants file.",
+        );
+        await button.scrollIntoViewIfNeeded();
+        await button.focus();
+        await expect(page.getByRole("tooltip")).toBeVisible();
+        await save(page, `popgen2-download-stopped${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test("a PNG of a histogram refused by the browser", async ({ page }) => {
+        // A browser that makes no PNG of the canvas.
+        await page.addInitScript(() => {
+          HTMLCanvasElement.prototype.toBlob = function toBlob(
+            callback: BlobCallback,
+          ): void {
+            callback(null);
+          };
+        });
+        await page.reload();
+        await pickOnNewPage(page, "panel.nei");
+        const button = newPageStats(page).getByRole("button", {
+          name: "Download the plot of the proportion of missing genotypes of the variants",
+        });
+        await expect(button).not.toHaveAttribute("aria-disabled", "true", {
+          timeout: 20_000,
+        });
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await button.scrollIntoViewIfNeeded();
+        await button.focus();
+        await page.keyboard.press("Enter");
+        await page.keyboard.press("ArrowDown");
+        await page.keyboard.press("Enter");
+        await expect(
+          newPageStats(page).getByText(
+            "The image of this plot could not be made as a PNG in this browser; download it as SVG.",
+          ),
+        ).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-download-refused${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
       test("the dialog of the download", async ({ page }) => {
         await pickOnNewPage(page, "low_qual.vcf.gz");
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);

@@ -24,8 +24,9 @@
  * by Tab into view.
  *
  * A PNG the browser refuses, a `PngError`, is said in words under the
- * button and in the status region, until the next choice of the menu or
- * the start of a wait; any other failure of an item, a rejection or a
+ * button, with the mark and the line of a problem, drawn over what lies
+ * under the button so that nothing beside it moves, and in the status
+ * region, until the next choice of the menu or the start of a wait; any other failure of an item, a rejection or a
  * throw, is a defect, thrown again in a promise that nothing handles,
  * which the bar of the errors of the page shows (react.md, "Errors").
  */
@@ -45,6 +46,7 @@ import { classOf } from "../classOf.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
 import styles from "./DownloadMenu.module.css";
 import type { DownloadItem } from "./downloadItems.ts";
+import { Problem } from "./Problem.tsx";
 import { WithTooltip } from "./Tooltip.tsx";
 import type { HeldTooltip } from "./Tooltip.tsx";
 
@@ -208,7 +210,9 @@ export function DownloadMenu({
         </Popover>
       </MenuTrigger>
       {failure !== null && (
-        <p className={classOf(styles, "failure")}>{failure}</p>
+        <div className={classOf(styles, "failure")}>
+          <Problem>{failure}</Problem>
+        </div>
       )}
     </div>
   );

@@ -5,8 +5,8 @@
  * with the line of the threshold the user drags over it
  * (docs/plans/thresholds.md, "Round 1 with the owner"). The expected
  * heterozygosity, on which popnei has no filter, has its short title
- * alone, and no box and no line. At the end of that row, the menu
- * "Download…" of the plot, its images and the CSV of its bins, which
+ * alone, and no box and no line. Under that row, on a line of its own at
+ * its end, the menu "Download…" of the plot, its images and the CSV of its bins, which
  * waits while the plot is drawn from part of the variants
  * (docs/specs/steps/popgen2-pca.md, "The downloads"): outside the box the
  * line of the threshold is placed against, which holds the plot alone
@@ -398,7 +398,7 @@ export function StatsHistogram({
         data={plot.data}
         onFrame={onFrame}
         download={download}
-        // The menu at the end of the row of the box, outside the box,
+        // The menu on its line under the row of the box, outside the box,
         // whose focus a commit reads; the plot alone in the box the line
         // is placed against, so that the menu does not push the plot
         // down from where the line is placed.
