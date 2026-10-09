@@ -295,23 +295,30 @@ function partsText(): string {
 }
 
 describe("the section of the statistics of the open file", () => {
-  test("the section of a second file is drawn within a few milliseconds of its read, its code already downloaded", async () => {
+  test("the section of a second file is drawn before React would release a section held for its code, its code already downloaded", async () => {
     const page = await drawPage();
     await open(page, FIRST);
     await endDone(page);
 
     // Outside act(), which would draw at once what React holds back: a
-    // section that waits for its code is drawn 300 ms after it comes.
+    // section that waits for its code is drawn 300 ms after it comes,
+    // by a timer React sets then. A timer of 250 ms set before it fires
+    // first, so the section is to be drawn before this one fires: an
+    // order of the two, which a slow machine keeps, rather than a time,
+    // which it does not.
     globalThis.IS_REACT_ACT_ENVIRONMENT = false;
     const first = sectionOf();
-    const start = performance.now();
+    const before = { fired: false };
+    const timer = setTimeout(() => {
+      before.fired = true;
+    }, 250);
     readUnwrapped(page, SECOND);
     const drawn = (): boolean => ![null, first].includes(sectionOf());
-    while (!drawn() && performance.now() - start < 1000) {
+    while (!drawn() && !before.fired) {
       await new Promise((resolve) => setTimeout(resolve, 1));
     }
+    clearTimeout(timer);
     expect(drawn()).toBe(true);
-    expect(performance.now() - start).toBeLessThan(100);
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   });
 
