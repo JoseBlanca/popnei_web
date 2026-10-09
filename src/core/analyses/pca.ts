@@ -78,6 +78,13 @@ import type {
 /** The id of the analysis. */
 const ID = "pca";
 
+/** The page a function is for, which picks the rule of the filters, the
+    defaults and the words: the old page, popgen.html, or popgen2.html
+    (docs/specs/analyses/pca.md, "On popgen2.html"). A page given by the
+    caller, rather than read from the project, keeps the project free of
+    which page made it. */
+export type PcaPage = "popgen" | "popgen2";
+
 /** The options of the PCA. Each of its three filters follows the Variants
     step while `follow` is true, and keeps its values meanwhile, for when
     the user sets it for the PCA again. */
@@ -125,6 +132,24 @@ export const PCA_DEFAULTS: PcaOptions = deepFrozen({
   missingData: { follow: true, maxAllowedMissingRate: 0.1 },
   maf: { follow: true, maxAllowedMaf: 0.95 },
   ld: { follow: true, maxAllowedR2: 0.1, maxDist: null },
+  colourBy: null,
+  axes: [1, 2, 3],
+  view: "3d",
+});
+
+/**
+ * The options of a PCA the user has not changed on popgen2.html: those of
+ * the old page, but for the LD pruning, which starts on, at r² 0.1 with no
+ * distance, so that the PCA is locked until the user types one or turns
+ * it off: the owner's numbers of 27 September 2026, and the rule of no
+ * default that depends on the genome (docs/specs/analyses/pca.md, "On
+ * popgen2.html").
+ */
+export const PCA2_DEFAULTS: PcaOptions = deepFrozen({
+  method: "pca",
+  missingData: { follow: true, maxAllowedMissingRate: 0.1 },
+  maf: { follow: true, maxAllowedMaf: 0.95 },
+  ld: { follow: false, maxAllowedR2: 0.1, maxDist: null },
   colourBy: null,
   axes: [1, 2, 3],
   view: "3d",
@@ -179,13 +204,13 @@ const OPTIONS_EXPECTED =
     same options give the same object, and `pcaFilters` finds its list. */
 const READ = new WeakMap<JsonObject, PcaOptions>();
 
-/** The options of the project for the PCA, or the defaults. Throws a
-    defect on options `parseOptions` would refuse, which no command puts
-    into a project. */
-export function pcaOptions(p: Project): PcaOptions {
+/** The options of the project for the PCA, or the defaults of the page
+    `page`, PCA_DEFAULTS or PCA2_DEFAULTS. Throws a defect on options
+    `parseOptions` would refuse, which no command puts into a project. */
+export function pcaOptions(p: Project, page: PcaPage): PcaOptions {
   const stored = p.analyses.find((a) => a.analysis === ID)?.options;
   if (stored === undefined) {
-    return PCA_DEFAULTS;
+    return page === "popgen" ? PCA_DEFAULTS : PCA2_DEFAULTS;
   }
   const known = READ.get(stored);
   if (known !== undefined) {
@@ -337,31 +362,44 @@ function axesOf(value: unknown): readonly [number, number, number] | null {
   return [first, second, third];
 }
 
-/** The lists `pcaFilters` made, by the project's filters and then by the
-    options, so that the same inputs give the same array. */
-const FILTERS = new WeakMap<
-  readonly ProjectVariantFilter[],
-  WeakMap<PcaOptions, readonly ProjectVariantFilter[]>
->();
+/** The lists `pcaFilters` made, by the page, then by the project's
+    filters and then by the options, so that the same inputs give the same
+    array and one page never gets the other's list. */
+const FILTERS: Readonly<
+  Record<
+    PcaPage,
+    WeakMap<
+      readonly ProjectVariantFilter[],
+      WeakMap<PcaOptions, readonly ProjectVariantFilter[]>
+    >
+  >
+> = Object.freeze({ popgen: new WeakMap(), popgen2: new WeakMap() });
 
 /**
  * The filters of the job: the project's filters on, in their fixed order,
- * with the PCA's own of each kind, missing data, MAF and LD, in the place
- * of the dataset's, or in the place of its kind when the dataset has none
- * (docs/specs/analyses/pca.md, "Which variants it reads"). A filter that
- * follows the Variants step puts nothing of its own in the list; the
- * observed heterozygosity is always the dataset's. An LD filter with no
- * distance is copied as it is, which `needs` locks on. The same frozen
- * value for the same inputs.
+ * with the PCA's own of each kind, missing data, MAF and LD, by the rule of
+ * the page `page` (docs/specs/analyses/pca.md, "Which variants it reads"
+ * and "On popgen2.html"). On the old page, the PCA's own filter is in the
+ * place of the dataset's, or in the place of its kind when the dataset
+ * has none. On popgen2.html, the PCA's own missing data and MAF filters
+ * narrow the Variants tab's: each is given with the smaller of its value
+ * and the Variants tab's, which keeps exactly the variants the two filters
+ * one after the other would; its LD filter keeps the old rule. On both, a
+ * filter that follows puts nothing of its own in the list, the FILTER
+ * column and the observed heterozygosity are always the dataset's, and an
+ * LD filter with no distance is copied as it is, which `needs` locks on.
+ * The same frozen value for the same inputs.
  */
 export function pcaFilters(
   filters: readonly ProjectVariantFilter[],
   o: PcaOptions,
+  page: PcaPage,
 ): readonly ProjectVariantFilter[] {
-  let byOptions = FILTERS.get(filters);
+  const byFilters = FILTERS[page];
+  let byOptions = byFilters.get(filters);
   if (byOptions === undefined) {
     byOptions = new WeakMap();
-    FILTERS.set(filters, byOptions);
+    byFilters.set(filters, byOptions);
   }
   const known = byOptions.get(o);
   if (known !== undefined) {
@@ -369,16 +407,64 @@ export function pcaFilters(
   }
   const made = Object.freeze(
     VARIANT_FILTER_ORDER.flatMap((kind): ProjectVariantFilter[] => {
-      const own = ownFilter(kind, o);
+      const dataset = filters.find((filter) => filter.kind === kind);
+      const own =
+        page === "popgen"
+          ? ownFilter(kind, o)
+          : stricterFilter(kind, o, dataset);
       if (own !== null) {
         return [own];
       }
-      const dataset = filters.find((filter) => filter.kind === kind);
       return dataset === undefined ? [] : [dataset];
     }),
   );
   byOptions.set(o, made);
   return made;
+}
+
+/**
+ * The PCA's own filter of the kind `kind` on popgen2.html, or `null` while
+ * it follows the Variants tab: the missing data and the MAF given the
+ * smaller of the PCA's value and the Variants tab's, the stricter, when
+ * the Variants tab has that filter on, `dataset`, and the PCA's value
+ * alone when it has it off; the LD filter, the FILTER column and the
+ * observed heterozygosity as `ownFilter` gives them.
+ */
+function stricterFilter(
+  kind: ProjectVariantFilter["kind"],
+  o: PcaOptions,
+  dataset: ProjectVariantFilter | undefined,
+): ProjectVariantFilter | null {
+  switch (kind) {
+    case "missing_data": {
+      if (o.missingData.follow) {
+        return null;
+      }
+      const own = o.missingData.maxAllowedMissingRate;
+      return Object.freeze({
+        kind,
+        maxAllowedMissingRate:
+          dataset?.kind === "missing_data"
+            ? Math.min(own, dataset.maxAllowedMissingRate)
+            : own,
+      });
+    }
+    case "maf": {
+      if (o.maf.follow) {
+        return null;
+      }
+      const own = o.maf.maxAllowedMaf;
+      return Object.freeze({
+        kind,
+        maxAllowedMaf:
+          dataset?.kind === "maf" ? Math.min(own, dataset.maxAllowedMaf) : own,
+      });
+    }
+    case "ld":
+    case "passed":
+    case "obs_het":
+      return ownFilter(kind, o);
+  }
 }
 
 /** The PCA's own filter of the kind `kind`, or `null` while it follows
@@ -432,8 +518,11 @@ function pruningDistanceText(name: string): string {
     field of the distance (docs/specs/analyses/pca.md, "Why it cannot
     run"). A distance kept while the filter follows the Variants step
     locks nothing, since it is not used. */
-export function pruningDistanceReason(p: Project): string | null {
-  const o = pcaOptions(p);
+export function pruningDistanceReason(
+  p: Project,
+  page: PcaPage,
+): string | null {
+  const o = pcaOptions(p, page);
   return !o.ld.follow && o.ld.maxDist === null
     ? pruningDistanceText(methodName(o.method))
     : null;
@@ -450,8 +539,8 @@ export function pruningDistanceReason(p: Project): string | null {
  * colours the points; and the PCA's own LD filter with no distance. The
  * PCoA's limit is its `keptNeeds`, since it counts the individuals kept.
  */
-function needs(p: Project): string | null {
-  const o = pcaOptions(p);
+function needs(p: Project, page: PcaPage): string | null {
+  const o = pcaOptions(p, page);
   const stepLd = o.ld.follow ? variantFilterNeeds(p) : null;
   if (stepLd !== null) {
     return stepLd;
@@ -465,7 +554,7 @@ function needs(p: Project): string | null {
   ) {
     return pcaLimitText(p.variants.name, read.individuals.length);
   }
-  return individualsNeeds(p) ?? pruningDistanceReason(p);
+  return individualsNeeds(p) ?? pruningDistanceReason(p, page);
 }
 
 /** The words of the PCA's limit on the individuals of the variants file
@@ -483,10 +572,14 @@ function pcaLimitText(fileName: string, numIndividuals: number): string {
  * PCoA of 9,381 or fewer, and while the list waits for the statistics of
  * each individual, which the store does not ask this of.
  */
-function keptNeeds(p: Project, kept: IndividualsKept): string | null {
+function keptNeeds(
+  p: Project,
+  kept: IndividualsKept,
+  page: PcaPage,
+): string | null {
   const variants = p.variants;
   if (
-    pcaOptions(p).method !== "pcoa" ||
+    pcaOptions(p, page).method !== "pcoa" ||
     kept.list.kind !== "known" ||
     variants?.read.kind !== "read"
   ) {
@@ -511,15 +604,19 @@ function keptNeeds(p: Project, kept: IndividualsKept): string | null {
     store gives through `c`, and sends it through `c`. Throws a defect when
     the variants file is not loaded, and, through `jobFilters`, on an LD
     filter with no distance, which `needs` locks. */
-function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
+function run(
+  p: Project,
+  c: WorkerClient<Job, JobResult>,
+  page: PcaPage,
+): Run<JobResult> {
   if (p.variants === null) {
     throw defect("the PCA was run with no variants file.");
   }
-  const o = pcaOptions(p);
+  const o = pcaOptions(p, page);
   return c.run({
     analysis: ID,
     fileId: p.variants.fileId,
-    filters: jobFilters(pcaFilters(filtersApplied(p), o)),
+    filters: jobFilters(pcaFilters(filtersApplied(p), o, page)),
     individuals: c.individuals,
     method: o.method,
     numCompsKept: PCA_NUM_COMPS_KEPT,
@@ -536,9 +633,9 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
  * the colour, the axes and the view, which only draw the result. Reads
  * nothing of `p.variants`, so it answers for any project.
  */
-function keyInputs(p: Project): JsonObject {
-  const o = pcaOptions(p);
-  return { method: o.method, filters: pcaFilters(filtersApplied(p), o) };
+function keyInputs(p: Project, page: PcaPage): JsonObject {
+  const o = pcaOptions(p, page);
+  return { method: o.method, filters: pcaFilters(filtersApplied(p), o, page) };
 }
 
 /** The name of a method in the words of the panel. */
@@ -554,11 +651,15 @@ function methodName(method: PcaMethod): "PCA" | "PCoA" {
  * pca.md, "The warnings"). Throws a defect on a result of another
  * analysis.
  */
-function warnings(result: JobResult, p: Project): readonly Warning[] {
+function warnings(
+  result: JobResult,
+  p: Project,
+  page: PcaPage,
+): readonly Warning[] {
   const r = pcaResultOf(result);
   const name = methodName(r.method);
   const found: Warning[] = [];
-  const filters = pcaFilters(filtersApplied(p), pcaOptions(p));
+  const filters = pcaFilters(filtersApplied(p), pcaOptions(p, page), page);
   if (!filters.some((filter) => filter.kind === "ld")) {
     found.push({
       code: "pruningOff",
@@ -692,13 +793,13 @@ const FILTER_WORDS: Readonly<Record<ProjectVariantFilter["kind"], string>> =
  * variants file, or with an LD filter with no distance, since it is
  * asked only of an analysis that has run.
  */
-function script(p: Project): string {
+function script(p: Project, page: PcaPage): string {
   const variants = p.variants;
   if (variants === null) {
     throw defect("the script of the PCA needs a variants file.");
   }
-  const o = pcaOptions(p);
-  const filters = jobFilters(pcaFilters(filtersApplied(p), o));
+  const o = pcaOptions(p, page);
+  const filters = jobFilters(pcaFilters(filtersApplied(p), o, page));
   const open = pythonOpenVariants(variants);
   const kept = PCA_NUM_COMPS_KEPT;
   const prints = (result: string): string[] => [
@@ -834,12 +935,16 @@ const ALL_DISTANCES_ZERO = "every distance is 0";
  * any other, with popnei's message without its backquotes. Throws a
  * defect on a project with no variants file.
  */
-export function refusalText(message: string, p: Project): string {
+export function refusalText(
+  message: string,
+  p: Project,
+  page: PcaPage,
+): string {
   const variants = p.variants;
   if (variants === null) {
     throw defect("refusalText was given a project with no variants file.");
   }
-  const o = pcaOptions(p);
+  const o = pcaOptions(p, page);
   const name = methodName(o.method);
   const fileName = escaped(variants.name);
   const nothingLeft = `there is no variant to do the ${name} with`;
@@ -911,7 +1016,11 @@ function noDistanceText(
  * (docs/specs/analyses/pca.md, "Its words"). Throws a defect on a project
  * with no variants file.
  */
-export function crashText(p: Project, numIndividuals: number): string {
+export function crashText(
+  p: Project,
+  numIndividuals: number,
+  page: PcaPage,
+): string {
   if (p.variants === null) {
     throw defect("crashText was given a project with no variants file.");
   }
@@ -920,7 +1029,7 @@ export function crashText(p: Project, numIndividuals: number): string {
     return `The calculation stopped unexpectedly. Run it again. If it stops again, load ${escaped(p.variants.name)} again in the Variants step.`;
   }
   const what =
-    pcaOptions(p).method === "pca"
+    pcaOptions(p, page).method === "pca"
       ? "principal components"
       : "principal coordinates";
   return `The calculation stopped unexpectedly, perhaps because the ${what} of ${counted(numIndividuals, "individual")}, which need about ${(bytes / 1e9).toFixed(1)} GB, did not fit in the memory of this tab; a phone or a tablet gives a tab far less than a computer. Keep fewer individuals with the filters of individuals in the Variants step, close other tabs and run it again, or calculate them with popnei in Python, outside the browser.`;
@@ -938,8 +1047,9 @@ export function statisticsFailedText(
   p: Project,
   failureText: (failure: Failure) => string,
   waited: boolean,
+  page: PcaPage,
 ): string {
-  const name = methodName(pcaOptions(p).method);
+  const name = methodName(pcaOptions(p, page).method);
   return statisticsFailedWords(
     error,
     p,
@@ -1066,7 +1176,11 @@ function kept<K extends object, V>(
  * same object for the same result, individuals file, grouping, variants
  * file and option.
  */
-export function pcaColours(r: PcaResult, p: Project): PcaColours {
+export function pcaColours(
+  r: PcaResult,
+  p: Project,
+  page: PcaPage,
+): PcaColours {
   const byColumn = kept(
     kept(
       kept(COLOURS, r, () => new WeakMap()),
@@ -1081,7 +1195,7 @@ export function pcaColours(r: PcaResult, p: Project): PcaColours {
     p.variants ?? ABSENT,
     () => new Map<string | null, PcaColours>(),
   );
-  const colourBy = pcaOptions(p).colourBy;
+  const colourBy = pcaOptions(p, page).colourBy;
   const found = byOption.get(colourBy);
   if (found !== undefined) {
     return found;
@@ -1716,27 +1830,49 @@ function deepFrozen<T>(value: T): T {
 }
 
 /**
- * The definition of the principal components, as the store knows it, for
- * both applications: the filters of individuals in its key through
- * `keyOf`, and the filters of the variants through `keyInputs`, as
- * `pcaFilters` gives them, so that the store does not lock it on the
- * Variants step's LD filter that it may not read (docs/specs/analyses/
- * pca.md, "What goes into its key"). The PCoA's limit on the known list
- * of the individuals kept is its `keptNeeds`.
+ * The definition of the principal components on the page `page`, as the
+ * store knows it: the filters of individuals in its key through `keyOf`,
+ * and the filters of the variants through `keyInputs`, as `pcaFilters`
+ * gives them by the rule of the page, so that the store does not lock it
+ * on the Variants step's LD filter that it may not read
+ * (docs/specs/analyses/pca.md, "What goes into its key" and "On
+ * popgen2.html"). The PCoA's limit on the known list of the individuals
+ * kept is its `keptNeeds`.
  */
-export const pca: AnalysisDef<Job, JobResult> = Object.freeze({
-  id: ID,
-  app: Object.freeze(["popgen", "gwas"] as const),
-  defaults: deepFrozen(optionsJson(PCA_DEFAULTS)),
-  keyVersion: 1,
-  filtersRead: Object.freeze({ variants: false, individuals: true }),
-  parseOptions,
-  keyInputs,
-  needs,
-  keptNeeds,
-  run,
-  warnings,
-  checkNumbers,
-  numCheckNumbers,
-  script,
-});
+function definitionOf(
+  page: PcaPage,
+  app: AnalysisDef<Job, JobResult>["app"],
+): AnalysisDef<Job, JobResult> {
+  return Object.freeze({
+    id: ID,
+    app,
+    defaults: deepFrozen(
+      optionsJson(page === "popgen" ? PCA_DEFAULTS : PCA2_DEFAULTS),
+    ),
+    keyVersion: 1,
+    filtersRead: Object.freeze({ variants: false, individuals: true }),
+    parseOptions,
+    keyInputs: (p: Project) => keyInputs(p, page),
+    needs: (p: Project) => needs(p, page),
+    keptNeeds: (p: Project, kept: IndividualsKept) => keptNeeds(p, kept, page),
+    run: (p: Project, c: WorkerClient<Job, JobResult>) => run(p, c, page),
+    warnings: (result: JobResult, p: Project) => warnings(result, p, page),
+    checkNumbers,
+    numCheckNumbers,
+    script: (p: Project) => script(p, page),
+  });
+}
+
+/** The principal components of the old page, listed by POPGEN_ANALYSES
+    of src/core/apps.ts, for both applications. */
+export const pca: AnalysisDef<Job, JobResult> = definitionOf(
+  "popgen",
+  Object.freeze(["popgen", "gwas"] as const),
+);
+
+/** The principal components of popgen2.html, of the same id, listed by
+    POPGEN2_ANALYSES of src/core/apps.ts after variantsSummary. */
+export const pcaOnPopgen2: AnalysisDef<Job, JobResult> = definitionOf(
+  "popgen2",
+  Object.freeze(["popgen"] as const),
+);

@@ -199,7 +199,7 @@ const NO_COLUMN_NOTE =
 describe("IP8 D3 pcaColours", () => {
   test("the populations of the worked table: A and B in their order, counts 2 and 1, and i4 in no group", () => {
     const p = project({ individuals: FOUR, meta: WORKED });
-    const c = groupsOf(pcaColours(result(FOUR), p));
+    const c = groupsOf(pcaColours(result(FOUR), p, "popgen"));
     expect(c.title).toBe("Population");
     expect(c.names).toEqual(["A", "B"]);
     expect([...c.group]).toEqual([0, 1, 0, NO_COLOUR_GROUP]);
@@ -211,7 +211,7 @@ describe("IP8 D3 pcaColours", () => {
 
   test("a result of i1, i2 and i4 alone, as a filter of individuals gives it: the names A and B still, counts 1 and 1, so B keeps its index", () => {
     const p = project({ individuals: FOUR, meta: WORKED });
-    const c = groupsOf(pcaColours(result(["i1", "i2", "i4"]), p));
+    const c = groupsOf(pcaColours(result(["i1", "i2", "i4"]), p, "popgen"));
     expect(c.names).toEqual(["A", "B"]);
     expect([...c.group]).toEqual([0, 1, NO_COLOUR_GROUP]);
     expect(c.counts).toEqual([1, 1]);
@@ -219,7 +219,7 @@ describe("IP8 D3 pcaColours", () => {
 
   test("a result of i1, i3 and i4: the names A and B, counts 2 and 0", () => {
     const p = project({ individuals: FOUR, meta: WORKED });
-    const c = groupsOf(pcaColours(result(["i1", "i3", "i4"]), p));
+    const c = groupsOf(pcaColours(result(["i1", "i3", "i4"]), p, "popgen"));
     expect(c.names).toEqual(["A", "B"]);
     expect(c.counts).toEqual([2, 0]);
     expect(c.numNone).toBe(1);
@@ -243,7 +243,7 @@ describe("IP8 D3 pcaColours", () => {
       },
       options: { colourBy: "height" },
     });
-    const c = pcaColours(result(FOUR), p);
+    const c = pcaColours(result(FOUR), p, "popgen");
     expect(c.kind).toBe("values");
     if (c.kind !== "values") return;
     expect([...c.values]).toEqual([1.5, 2, 3, NaN]);
@@ -273,7 +273,7 @@ describe("IP8 D3 pcaColours", () => {
       },
       options: { colourBy: "sex" },
     });
-    const c = groupsOf(pcaColours(result(FOUR), p));
+    const c = groupsOf(pcaColours(result(FOUR), p, "popgen"));
     expect(c.title).toBe("sex");
     expect(c.names).toEqual(["f", "m"]);
     expect([...c.group]).toEqual([0, NO_COLOUR_GROUP, 1, 0]);
@@ -305,17 +305,21 @@ describe("IP8 D3 pcaColours", () => {
       },
       options: { colourBy: "score" },
     });
-    const score = groupsOf(pcaColours(result(FOUR), p));
+    const score = groupsOf(pcaColours(result(FOUR), p, "popgen"));
     expect(score.title).toBe("score");
     expect(score.names).toEqual(["1", "5", "3", "2.5"]);
     expect([...score.group]).toEqual([0, 1, 2, 3]);
     const sick = groupsOf(
-      pcaColours(result(FOUR), {
-        ...p,
-        analyses: [
-          { analysis: "pca", options: optionsJson({ colourBy: "sick" }) },
-        ],
-      }),
+      pcaColours(
+        result(FOUR),
+        {
+          ...p,
+          analyses: [
+            { analysis: "pca", options: optionsJson({ colourBy: "sick" }) },
+          ],
+        },
+        "popgen",
+      ),
     );
     expect(sick.names).toEqual(["true", "false"]);
     expect([...sick.group]).toEqual([0, 1, 0, NO_COLOUR_GROUP]);
@@ -337,7 +341,7 @@ describe("IP8 D3 pcaColours", () => {
       },
       options: { colourBy: "score" },
     });
-    expect(groupsOf(pcaColours(result(FOUR), scores)).names).toEqual([
+    expect(groupsOf(pcaColours(result(FOUR), scores, "popgen")).names).toEqual([
       "1",
       "2",
       "3",
@@ -365,7 +369,7 @@ describe("IP8 D3 pcaColours", () => {
       },
       options: { colourBy: "altitude" },
     });
-    const c = pcaColours(result(FOUR), p);
+    const c = pcaColours(result(FOUR), p, "popgen");
     if (c.kind !== "values") {
       throw new Error(`the colours are ${c.kind}, not values`);
     }
@@ -388,14 +392,14 @@ describe("IP8 D3 pcaColours", () => {
         types: [{ kind: "categorical" }],
       },
     });
-    const c = groupsOf(pcaColours(result(names), p));
+    const c = groupsOf(pcaColours(result(names), p, "popgen"));
     expect(c.title).toBe("Population");
     expect(c.names).toEqual(["All individuals"]);
     expect(c.counts).toEqual([1001]);
     expect(c.note).toBe(
       "pop has 1,001 different values, more than the 1,000 the plot can tell apart, so the points are of one colour; the table gives each individual's value.",
     );
-    expect(pcaOptions(p).colourBy).toBeNull();
+    expect(pcaOptions(p, "popgen").colourBy).toBeNull();
     // The table gives each individual's population, as the note says
     // (stop C 9).
     expect(c.cellTexts?.slice(0, 2)).toEqual(["pi0", "pi1"]);
@@ -424,7 +428,7 @@ describe("IP8 D3 pcaColours", () => {
       },
       options: { colourBy: "plot" },
     });
-    const c = groupsOf(pcaColours(result(names), p));
+    const c = groupsOf(pcaColours(result(names), p, "popgen"));
     expect(c.title).toBe("plot");
     expect(c.names).toEqual(["All individuals"]);
     expect(c.cellTexts?.slice(0, 3)).toEqual(["ploti0", null, "ploti2"]);
@@ -437,9 +441,13 @@ describe("IP8 D3 pcaColours", () => {
 
   test("a colouring the plot can draw gives no text of each individual", () => {
     const p = project({ individuals: FOUR, meta: WORKED });
-    expect(groupsOf(pcaColours(result(FOUR), p)).cellTexts).toBeNull();
+    expect(
+      groupsOf(pcaColours(result(FOUR), p, "popgen")).cellTexts,
+    ).toBeNull();
     const none = project({ individuals: FOUR, meta: null });
-    expect(groupsOf(pcaColours(result(FOUR), none)).cellTexts).toBeNull();
+    expect(
+      groupsOf(pcaColours(result(FOUR), none, "popgen")).cellTexts,
+    ).toBeNull();
   });
 
   test("colourBy a column the table does not have: the populations, and the note", () => {
@@ -448,7 +456,7 @@ describe("IP8 D3 pcaColours", () => {
       meta: WORKED,
       options: { colourBy: "country" },
     });
-    const c = groupsOf(pcaColours(result(FOUR), p));
+    const c = groupsOf(pcaColours(result(FOUR), p, "popgen"));
     expect(c.title).toBe("Population");
     expect(c.names).toEqual(["A", "B"]);
     expect(c.note).toBe(
@@ -458,7 +466,7 @@ describe("IP8 D3 pcaColours", () => {
 
   test("with no metadata file, the one group All individuals and no note", () => {
     const p = project({ individuals: FOUR, meta: null });
-    const c = groupsOf(pcaColours(result(FOUR), p));
+    const c = groupsOf(pcaColours(result(FOUR), p, "popgen"));
     expect(c.names).toEqual(["All individuals"]);
     expect([...c.group]).toEqual([0, 0, 0, 0]);
     expect(c.counts).toEqual([4]);
@@ -472,7 +480,7 @@ describe("IP8 D3 pcaColours", () => {
       meta: null,
       options: { colourBy: "country" },
     });
-    const c = groupsOf(pcaColours(result(FOUR), p));
+    const c = groupsOf(pcaColours(result(FOUR), p, "popgen"));
     expect(c.names).toEqual(["All individuals"]);
     expect(c.note).toBe(
       "No metadata file is loaded, so the points cannot be coloured by country.",
@@ -485,7 +493,7 @@ describe("IP8 D3 pcaColours", () => {
       meta: WORKED,
       grouping: { kind: "populations", column: null },
     });
-    const c = groupsOf(pcaColours(result(FOUR), p));
+    const c = groupsOf(pcaColours(result(FOUR), p, "popgen"));
     expect(c.names).toEqual(["All individuals"]);
     expect(c.counts).toEqual([4]);
     expect(c.note).toBe(NO_COLUMN_NOTE);
@@ -497,7 +505,7 @@ describe("IP8 D3 pcaColours", () => {
       meta: WORKED,
       grouping: { kind: "populations", column: "popcat" },
     });
-    const c = groupsOf(pcaColours(result(FOUR), p));
+    const c = groupsOf(pcaColours(result(FOUR), p, "popgen"));
     expect(c.names).toEqual(["All individuals"]);
     expect(c.note).toBe(
       `pops.csv has no column popcat, from which the populations were taken. ${NO_COLUMN_NOTE}`,
@@ -510,7 +518,7 @@ describe("IP8 D3 pcaColours", () => {
       meta: WORKED,
       grouping: { kind: "onePopulation" },
     });
-    const c = groupsOf(pcaColours(result(FOUR), p));
+    const c = groupsOf(pcaColours(result(FOUR), p, "popgen"));
     expect(c.names).toEqual(["All individuals"]);
     expect(c.note).toBeNull();
   });
@@ -518,7 +526,7 @@ describe("IP8 D3 pcaColours", () => {
   test("with the column pop and no individual of the variants in it, every individual in no group and the note of noPopulation", () => {
     const others = ["x1", "x2"];
     const p = project({ individuals: others, meta: WORKED });
-    const c = groupsOf(pcaColours(result(others), p));
+    const c = groupsOf(pcaColours(result(others), p, "popgen"));
     expect(c.names).toEqual(["A", "B"]);
     expect([...c.group]).toEqual([NO_COLOUR_GROUP, NO_COLOUR_GROUP]);
     expect(c.counts).toEqual([0, 0]);
@@ -551,7 +559,7 @@ describe("IP8 D3 pcaColours", () => {
       meta: many(MAX_COLOUR_GROUPS + 1),
       options: { colourBy: "popcat" },
     });
-    const c = groupsOf(pcaColours(result(FOUR), over));
+    const c = groupsOf(pcaColours(result(FOUR), over, "popgen"));
     expect(c.title).toBe("popcat");
     expect(c.names).toEqual(["All individuals"]);
     expect(c.counts).toEqual([4]);
@@ -563,14 +571,16 @@ describe("IP8 D3 pcaColours", () => {
       meta: many(MAX_COLOUR_GROUPS),
       options: { colourBy: "popcat" },
     });
-    expect(groupsOf(pcaColours(result(FOUR), at)).names).toHaveLength(1000);
+    expect(groupsOf(pcaColours(result(FOUR), at, "popgen")).names).toHaveLength(
+      1000,
+    );
   });
 
   test("the same object for the same result and project, and for a change of the axes or the view; another for another colour, and the first again when it comes back", () => {
     const r = result(FOUR);
     const p = project({ individuals: FOUR, meta: WORKED });
-    const first = pcaColours(r, p);
-    expect(pcaColours(r, p)).toBe(first);
+    const first = pcaColours(r, p, "popgen");
+    expect(pcaColours(r, p, "popgen")).toBe(first);
     const axes = {
       ...p,
       analyses: [
@@ -580,24 +590,24 @@ describe("IP8 D3 pcaColours", () => {
         },
       ],
     };
-    expect(pcaColours(r, axes)).toBe(first);
+    expect(pcaColours(r, axes, "popgen")).toBe(first);
     const byNone = {
       ...p,
       analyses: [
         { analysis: "pca", options: optionsJson({ colourBy: "pop" }) },
       ],
     };
-    const other = pcaColours(r, byNone);
+    const other = pcaColours(r, byNone, "popgen");
     expect(other).not.toBe(first);
     expect(groupsOf(other).title).toBe("pop");
-    expect(pcaColours(r, p)).toBe(first);
-    expect(pcaColours(result(FOUR), p)).not.toBe(first);
+    expect(pcaColours(r, p, "popgen")).toBe(first);
+    expect(pcaColours(result(FOUR), p, "popgen")).not.toBe(first);
   });
 
   test("a new metadata file, or another column of the populations, colours the same result anew", () => {
     const r = result(FOUR);
     const p = project({ individuals: FOUR, meta: WORKED });
-    expect(groupsOf(pcaColours(r, p)).names).toEqual(["A", "B"]);
+    expect(groupsOf(pcaColours(r, p, "popgen")).names).toEqual(["A", "B"]);
     const reloaded = project({
       individuals: FOUR,
       meta: {
@@ -615,15 +625,18 @@ describe("IP8 D3 pcaColours", () => {
     });
     // The same grouping and option, and another file.
     const sameGrouping = { ...p, individuals: reloaded.individuals };
-    expect(groupsOf(pcaColours(r, sameGrouping)).names).toEqual(["C", "D"]);
+    expect(groupsOf(pcaColours(r, sameGrouping, "popgen")).names).toEqual([
+      "C",
+      "D",
+    ]);
     const regrouped = {
       ...p,
       grouping: { kind: "onePopulation" } as const,
     };
-    expect(groupsOf(pcaColours(r, regrouped)).names).toEqual([
+    expect(groupsOf(pcaColours(r, regrouped, "popgen")).names).toEqual([
       "All individuals",
     ]);
-    expect(groupsOf(pcaColours(r, p)).names).toEqual(["A", "B"]);
+    expect(groupsOf(pcaColours(r, p, "popgen")).names).toEqual(["A", "B"]);
   });
 });
 
@@ -799,7 +812,7 @@ describe("IP8 D3 pcaRows, pcaCsv and varianceCsv", () => {
   test("the CSV of the table and of the explained variance of the flow, as literals of their first rows", () => {
     const r = flowResult();
     const p = flowProject();
-    const c = pcaColours(r, p);
+    const c = pcaColours(r, p, "popgen");
     const csv = pcaCsv(r, c).split("\n");
     expect(csv.slice(0, 3)).toEqual([
       "individual,population,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10",
@@ -824,7 +837,11 @@ describe("IP8 D3 pcaRows, pcaCsv and varianceCsv", () => {
         "",
       ].join("\n"),
     );
-    const byAltitude = pcaColours(r, flowProject({ colourBy: "altitude" }));
+    const byAltitude = pcaColours(
+      r,
+      flowProject({ colourBy: "altitude" }),
+      "popgen",
+    );
     const altitude = pcaCsv(r, byAltitude).split("\n");
     expect(altitude[0]).toBe(
       "individual,altitude,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10",
@@ -853,7 +870,7 @@ describe("IP8 D3 pcaRows, pcaCsv and varianceCsv", () => {
       [-1.5, 2],
       [3, -0.25],
     ]);
-    const c = pcaColours(r, p);
+    const c = pcaColours(r, p, "popgen");
     expect(pcaCsv(r, c)).toBe(
       'individual,origin,PC1,PC2\n"x,1","a,""b""",-1.5,2\nx2,,3,-0.25\n',
     );
@@ -879,7 +896,7 @@ describe("IP8 D3 pcaRows, pcaCsv and varianceCsv", () => {
       [-1.5, 2],
       [3, -0.25],
     ]);
-    const c = pcaColours(r, p);
+    const c = pcaColours(r, p, "popgen");
     expect(pcaCsv(r, c)).toBe(
       "individual,'+origin,PC1,PC2\n'=x1,'-north,-1.5,2\nx2,,3,-0.25\n",
     );
@@ -887,7 +904,7 @@ describe("IP8 D3 pcaRows, pcaCsv and varianceCsv", () => {
 
   test("the rows: each individual with its group or value and every component kept, the same frozen array for the same result and colours", () => {
     const r = flowResult();
-    const c = pcaColours(r, flowProject({ colourBy: "altitude" }));
+    const c = pcaColours(r, flowProject({ colourBy: "altitude" }), "popgen");
     const rows = pcaRows(r, c);
     expect(rows).toHaveLength(200);
     expect(rows[0]).toEqual({
@@ -905,7 +922,7 @@ describe("IP8 D3 pcaDescription", () => {
   test("the 2D plot of the flow, coloured by popcat, with p1 highlighted, and the 3D view: the descriptions of 'Accessibility'", () => {
     const r = flowResult();
     const p = flowProject();
-    const c = groupsOf(pcaColours(r, p));
+    const c = groupsOf(pcaColours(r, p, "popgen"));
     const p1 = c.names.indexOf("p1");
     expect(c.names).toEqual(["p0", "p2", "p1"]);
     expect(pcaDescription(r, c, [1, 2], p1, p)).toBe(
@@ -919,7 +936,7 @@ describe("IP8 D3 pcaDescription", () => {
   test("coloured by altitude of panel_meta.csv: its line of the range, and no highlight", () => {
     const r = flowResult();
     const p = flowProject({ colourBy: "altitude" });
-    const c = pcaColours(r, p);
+    const c = pcaColours(r, p, "popgen");
     expect(pcaDescription(r, c, [2, 1], 0, p)).toBe(
       "Principal components of 200 individuals of panel.nei, PC2, 3.40% of the variance, across, and PC1, 3.55%, up. Coloured by altitude, from 100 to 2060; 3 individuals have no value. The table of the individuals gives each one's place.",
     );
@@ -933,7 +950,7 @@ describe("IP8 D3 pcaDescription", () => {
       [0.02, 1],
       [-7.25, 0.5],
     ]);
-    const c = pcaColours(r, p);
+    const c = pcaColours(r, p, "popgen");
     expect(pcaDescription(r, c, [1, 2], NO_COLOUR_GROUP, p)).toBe(
       "Principal components of 4 individuals of panel.nei, PC1, 10.00% of the variance, across, and PC2, 9.00%, up. Coloured by population: A, 2 individuals, centred at 0.0 on PC1 and 1.0 on PC2; B, 1, centred at 2.0 and −3.0; No population, 1, centred at −7.3 and 0.5. No population is highlighted. The table of the individuals gives each one's place.",
     );
@@ -943,7 +960,13 @@ describe("IP8 D3 pcaDescription", () => {
       [0, 0],
     ]);
     expect(
-      pcaDescription(withoutB, pcaColours(withoutB, p), [1, 2], null, p),
+      pcaDescription(
+        withoutB,
+        pcaColours(withoutB, p, "popgen"),
+        [1, 2],
+        null,
+        p,
+      ),
     ).toBe(
       "Principal components of 3 individuals of panel.nei, PC1, 10.00% of the variance, across, and PC2, 9.00%, up. Coloured by population: A, 2 individuals, centred at 2.0 on PC1 and 1.0 on PC2; No population, 1, centred at 0.0 and 0.0. The table of the individuals gives each one's place.",
     );

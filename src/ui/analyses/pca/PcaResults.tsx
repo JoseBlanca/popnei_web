@@ -146,10 +146,10 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
   const checks = useAppState((s) =>
     resultOf(statusOf(s, "individualChecks"), "individualChecks"),
   );
-  const options = pcaOptions(project);
+  const options = pcaOptions(project, "popgen");
   // The same object for the same result, table, grouping and option, so
   // that the highlight is kept with it.
-  const colours = pcaColours(result, project);
+  const colours = pcaColours(result, project, "popgen");
   const columns = colourColumns(project);
   const shownAxes = axesShown(options, result);
   const axes = shownAxes.axes;

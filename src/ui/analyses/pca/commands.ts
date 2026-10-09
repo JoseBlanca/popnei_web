@@ -13,6 +13,7 @@ import {
 } from "../../../core/analyses/pca.ts";
 import type { PcaOptions } from "../../../core/analyses/pca.ts";
 import type { JsonObject } from "../../../core/keys.ts";
+import type { Project } from "../../../core/project.ts";
 import type { PcaMethod } from "../../../worker/protocol.ts";
 import { optionCommand } from "../optionCommand.ts";
 import type { OptionCommand, OptionsOf } from "../optionCommand.ts";
@@ -51,7 +52,7 @@ function optionsJson(o: PcaOptions): JsonObject {
     write them. */
 const PCA_OPTIONS: OptionsOf<PcaOptions> = Object.freeze({
   analysis: pca,
-  read: pcaOptions,
+  read: (p: Project) => pcaOptions(p, "popgen"),
   json: optionsJson,
 });
 

@@ -29,10 +29,10 @@ export function notesOf(
   p: Project,
   stats: IndividualStats | null,
 ): readonly string[] {
-  const colours = pcaColours(r, p);
+  const colours = pcaColours(r, p, "popgen");
   return [
     colours.note,
-    axesShown(pcaOptions(p), r).note,
+    axesShown(pcaOptions(p, "popgen"), r).note,
     marksNote(colours),
     manyMissingNote(r, stats, p),
   ].filter((note) => note !== null);

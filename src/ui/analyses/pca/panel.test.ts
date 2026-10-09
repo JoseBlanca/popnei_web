@@ -165,14 +165,14 @@ describe("IP8 panel: the commands of the options", () => {
     expect(method.description).toBe(
       "the method of the principal components changed",
     );
-    expect(pcaOptions(method.command(p)).method).toBe("pcoa");
+    expect(pcaOptions(method.command(p), "popgen").method).toBe("pcoa");
 
     const own = followCommand("ld", false);
     expect(own.description).toBe(
       "the LD filter of the principal components was set for them alone",
     );
     const owned = own.command(p);
-    expect(pcaOptions(owned).ld).toEqual({
+    expect(pcaOptions(owned, "popgen").ld).toEqual({
       follow: false,
       maxAllowedR2: 0.1,
       maxDist: null,
@@ -187,13 +187,14 @@ describe("IP8 panel: the commands of the options", () => {
       "the LD filter of the principal components was set back to that of the Variants step",
     );
     // Set back, the values are kept for the next time.
-    expect(pcaOptions(back.command(withDist)).ld).toEqual({
+    expect(pcaOptions(back.command(withDist), "popgen").ld).toEqual({
       follow: true,
       maxAllowedR2: 0.1,
       maxDist: 50000,
     });
     expect(
-      pcaOptions(followCommand("missing_data", false).command(p)).missingData,
+      pcaOptions(followCommand("missing_data", false).command(p), "popgen")
+        .missingData,
     ).toEqual({
       follow: false,
       maxAllowedMissingRate: 0.1,
@@ -201,19 +202,20 @@ describe("IP8 panel: the commands of the options", () => {
     expect(
       pcaOptions(
         ownValueCommand({ kind: "maf", maxAllowedMaf: 0.9 }).command(p),
+        "popgen",
       ).maf,
     ).toEqual({ follow: true, maxAllowedMaf: 0.9 });
-    expect(pcaOptions(colourCommand("height").command(p)).colourBy).toBe(
-      "height",
-    );
+    expect(
+      pcaOptions(colourCommand("height").command(p), "popgen").colourBy,
+    ).toBe("height");
     expect(colourCommand(null).description).toBe(
       "the colour of the points of the principal components changed",
     );
     const twoD = viewCommand("2d");
     expect(twoD.description).toBe("the principal components were drawn in 2D");
-    const after = pcaOptions(twoD.command(withDist));
+    const after = pcaOptions(twoD.command(withDist), "popgen");
     expect(after.view).toBe("2d");
-    expect(after.ld).toEqual(pcaOptions(withDist).ld);
+    expect(after.ld).toEqual(pcaOptions(withDist, "popgen").ld);
     expect(after.method).toBe("pca");
   });
 
@@ -224,18 +226,20 @@ describe("IP8 panel: the commands of the options", () => {
       maxAllowedMissingRate: 0.02,
     }).command(followCommand("missing_data", false).command(p));
     const back = followCommand("missing_data", true).command(typed);
-    expect(pcaOptions(back).missingData).toEqual({
+    expect(pcaOptions(back, "popgen").missingData).toEqual({
       follow: true,
       maxAllowedMissingRate: 0.02,
     });
     expect(
-      pcaOptions(followCommand("missing_data", false).command(back))
+      pcaOptions(followCommand("missing_data", false).command(back), "popgen")
         .missingData,
     ).toEqual({ follow: false, maxAllowedMissingRate: 0.02 });
     const maf = ownValueCommand({ kind: "maf", maxAllowedMaf: 0.98 }).command(
       followCommand("maf", false).command(p),
     );
-    expect(pcaOptions(followCommand("maf", true).command(maf)).maf).toEqual({
+    expect(
+      pcaOptions(followCommand("maf", true).command(maf), "popgen").maf,
+    ).toEqual({
       follow: true,
       maxAllowedMaf: 0.98,
     });
@@ -245,19 +249,19 @@ describe("IP8 panel: the commands of the options", () => {
     const p = sampleProject();
     const swapped = axisCommand([1, 2, 3], 0, 2);
     expect(swapped.description).toBe("the components on the axes changed");
-    expect(pcaOptions(swapped.command(p)).axes).toEqual([2, 1, 3]);
-    expect(pcaOptions(axisCommand([1, 2, 3], 2, 7).command(p)).axes).toEqual([
-      1, 2, 7,
-    ]);
+    expect(pcaOptions(swapped.command(p), "popgen").axes).toEqual([2, 1, 3]);
+    expect(
+      pcaOptions(axisCommand([1, 2, 3], 2, 7).command(p), "popgen").axes,
+    ).toEqual([1, 2, 7]);
     // Axes beyond the result: the choice starts from those shown.
     const beyond = withOptions(p, { axes: [4, 5, 6] });
     expect(
-      pcaOptions(axisCommand([1, 2, 3], 1, 3).command(beyond)).axes,
+      pcaOptions(axisCommand([1, 2, 3], 1, 3).command(beyond), "popgen").axes,
     ).toEqual([1, 3, 2]);
     // Two components shown, the third of the options repeating one of them.
     const repeating = withOptions(p, { axes: [3, 1, 2] });
     expect(
-      pcaOptions(axisCommand([2, 1], 0, 1).command(repeating)).axes,
+      pcaOptions(axisCommand([2, 1], 0, 1).command(repeating), "popgen").axes,
     ).toEqual([1, 2, 3]);
   });
 });
@@ -271,7 +275,7 @@ describe("IP8 panel: the data of the plots", () => {
   test("the 2D and 3D data share the colours, the highlight, the labels and the title", () => {
     const r = result();
     const p = sampleProject();
-    const c = pcaColours(r, p);
+    const c = pcaColours(r, p, "popgen");
     const flat = scatterData(r, c, [2, 1, 3], 1, p);
     expect(flat.title).toBe("Principal components, PC2 and PC1");
     expect(flat.xLabel).toBe("PC2 (30.00%)");
@@ -302,7 +306,7 @@ describe("IP8 panel: the data of the plots", () => {
   test("the 3D data of other components name them for the tooltip, with their labels and their highlight", () => {
     const r = result();
     const p = sampleProject();
-    const c = pcaColours(r, p);
+    const c = pcaColours(r, p, "popgen");
     const deep = pca3dData(r, c, [3, 1, 2], 0, p);
     expect(deep.axisNames).toEqual(["PC3", "PC1", "PC2"]);
     expect(deep.axisLabels).toEqual([
@@ -371,7 +375,7 @@ describe("IP8 panel: the explained variance and the table", () => {
     expect(varianceCsvName("panel.nei", "pcoa")).toBe(
       "panel.pcoa_variance.csv",
     );
-    const rows = pcaRows(r, pcaColours(r, sampleProject()));
+    const rows = pcaRows(r, pcaColours(r, sampleProject(), "popgen"));
     const second = rows[1];
     if (second === undefined) throw new Error("no second row");
     expect(rowCells(second, "No population")).toEqual([
@@ -389,7 +393,7 @@ describe("IP8 panel: the explained variance and the table", () => {
 
   test("the rows sorted by a component, by the colour with none last, and not sorted", () => {
     const r = result();
-    const rows = pcaRows(r, pcaColours(r, sampleProject()));
+    const rows = pcaRows(r, pcaColours(r, sampleProject(), "popgen"));
     expect(sortedRows(rows, null)).toBe(rows);
     expect(
       sortedRows(rows, { column: "pc1", direction: "descending" }).map(

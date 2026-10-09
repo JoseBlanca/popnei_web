@@ -69,9 +69,11 @@ export function PcaOptionsPart(): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
   // The same object while the options of the project are the same.
-  const options = useAppState((s) => pcaOptions(s.project));
+  const options = useAppState((s) => pcaOptions(s.project, "popgen"));
   const filters = useAppState((s) => s.project.filters);
-  const ldReason = useAppState((s) => pruningDistanceReason(s.project));
+  const ldReason = useAppState((s) =>
+    pruningDistanceReason(s.project, "popgen"),
+  );
   const headingId = useId();
   const lineId = useId();
   const ldReasonId = useId();
@@ -90,7 +92,7 @@ export function PcaOptionsPart(): React.JSX.Element {
     // The focus stays on the radio button, so the reason that the choice
     // made appear beside the field of the distance is announced.
     if (kind === "ld" && choice === "own") {
-      const reason = pruningDistanceReason(store.getState().project);
+      const reason = pruningDistanceReason(store.getState().project, "popgen");
       if (reason !== null) announce(reason);
     }
   };

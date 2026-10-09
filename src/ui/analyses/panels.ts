@@ -181,14 +181,20 @@ const PCA: AnalysisUi = Object.freeze({
   resultName: "the plot and the table",
   plural: true,
   readyLines: pcaReadyLines,
-  refusalText: pcaRefusalText,
-  statisticsFailedText: pcaStatisticsFailedText,
+  refusalText: (message: string, p: Project): string =>
+    pcaRefusalText(message, p, "popgen"),
+  statisticsFailedText: (
+    error: AnalysisError,
+    p: Project,
+    failureText: (failure: Failure) => string,
+    waited: boolean,
+  ): string => pcaStatisticsFailedText(error, p, failureText, waited, "popgen"),
   Results: PcaResults,
   Options: PcaOptionsPart,
   runningLine: (p: Project): string | null =>
     p.variants === null ? null : decompositionLine(p.variants.name),
   workerFailedText: (p: Project, kept: IndividualsKept | null): string =>
-    crashText(p, individualsRunOn(p, kept)),
+    crashText(p, individualsRunOn(p, kept), "popgen"),
 });
 
 /** The panel of the distances between populations

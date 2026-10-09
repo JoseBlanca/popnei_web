@@ -1,11 +1,13 @@
 import { describe, expect, test } from "vitest";
 import {
+  PCA2_DEFAULTS,
   PCA_DEFAULTS,
   PCA_MAX_INDIVIDUALS,
   PCA_NUM_COMPS_KEPT,
   crashText,
   pca,
   pcaFilters,
+  pcaOnPopgen2,
   pcaOptions,
   pruningDistanceReason,
   refusalText,
@@ -210,7 +212,7 @@ describe("IP6 D4 pcaFilters, the rows of 'Which variants it reads'", () => {
     }),
   };
   const optionsOf = (options: Partial<PcaOptions>): PcaOptions =>
-    pcaOptions(project({ options }));
+    pcaOptions(project({ options }), "popgen");
   const obsHet: ProjectVariantFilter = {
     kind: "obs_het",
     maxAllowedObsHet: 0.9,
@@ -218,20 +220,22 @@ describe("IP6 D4 pcaFilters, the rows of 'Which variants it reads'", () => {
   const maf09: ProjectVariantFilter = { kind: "maf", maxAllowedMaf: 0.9 };
 
   test("missing data 0.1 and the defaults: missing data 0.1 and no LD filter", () => {
-    expect(pcaFilters([MISSING_01], PCA_DEFAULTS)).toEqual([
+    expect(pcaFilters([MISSING_01], PCA_DEFAULTS, "popgen")).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
     ]);
   });
 
   test("missing data 0.1 and the PCA's own LD at r² 0.1 with no distance: the LD filter with no distance", () => {
-    expect(pcaFilters([MISSING_01], optionsOf(ownLd(null)))).toEqual([
+    expect(pcaFilters([MISSING_01], optionsOf(ownLd(null)), "popgen")).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "ld", maxAllowedR2: 0.1, maxDist: null },
     ]);
   });
 
   test("missing data 0.1 and the PCA's own LD at r² 0.1 within 50,000", () => {
-    expect(pcaFilters([MISSING_01], optionsOf(ownLd(50_000)))).toEqual([
+    expect(
+      pcaFilters([MISSING_01], optionsOf(ownLd(50_000)), "popgen"),
+    ).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "ld", maxAllowedR2: 0.1, maxDist: 50_000 },
     ]);
@@ -243,7 +247,7 @@ describe("IP6 D4 pcaFilters, the rows of 'Which variants it reads'", () => {
       ...own.maf(0.95),
       ...ownLd(50_000),
     });
-    expect(pcaFilters([MISSING_01], o)).toEqual([
+    expect(pcaFilters([MISSING_01], o, "popgen")).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.05 },
       { kind: "maf", maxAllowedMaf: 0.95 },
       { kind: "ld", maxAllowedR2: 0.1, maxDist: 50_000 },
@@ -251,14 +255,16 @@ describe("IP6 D4 pcaFilters, the rows of 'Which variants it reads'", () => {
   });
 
   test("missing data 0.1 and MAF 0.9 with the defaults: the dataset's two", () => {
-    expect(pcaFilters([MISSING_01, maf09], PCA_DEFAULTS)).toEqual([
+    expect(pcaFilters([MISSING_01, maf09], PCA_DEFAULTS, "popgen")).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "maf", maxAllowedMaf: 0.9 },
     ]);
   });
 
   test("missing data 0.1 and MAF 0.9 with the PCA's own MAF 0.98, looser: the PCA's in the place of the dataset's", () => {
-    expect(pcaFilters([MISSING_01, maf09], optionsOf(own.maf(0.98)))).toEqual([
+    expect(
+      pcaFilters([MISSING_01, maf09], optionsOf(own.maf(0.98)), "popgen"),
+    ).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "maf", maxAllowedMaf: 0.98 },
     ]);
@@ -266,7 +272,7 @@ describe("IP6 D4 pcaFilters, the rows of 'Which variants it reads'", () => {
 
   test("missing data, heterozygosity and LD r² 0.3 within 10,000 with the defaults: the dataset's three", () => {
     expect(
-      pcaFilters([MISSING_01, obsHet, ld(0.3, 10_000)], PCA_DEFAULTS),
+      pcaFilters([MISSING_01, obsHet, ld(0.3, 10_000)], PCA_DEFAULTS, "popgen"),
     ).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "obs_het", maxAllowedObsHet: 0.9 },
@@ -276,7 +282,9 @@ describe("IP6 D4 pcaFilters, the rows of 'Which variants it reads'", () => {
 
   test("the same with the PCA's own missing data 0.02 and LD within 50,000: the heterozygosity stays the dataset's", () => {
     const o = optionsOf({ ...own.missingData(0.02), ...ownLd(50_000) });
-    expect(pcaFilters([MISSING_01, obsHet, ld(0.3, 10_000)], o)).toEqual([
+    expect(
+      pcaFilters([MISSING_01, obsHet, ld(0.3, 10_000)], o, "popgen"),
+    ).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.02 },
       { kind: "obs_het", maxAllowedObsHet: 0.9 },
       { kind: "ld", maxAllowedR2: 0.1, maxDist: 50_000 },
@@ -284,7 +292,9 @@ describe("IP6 D4 pcaFilters, the rows of 'Which variants it reads'", () => {
   });
 
   test("the dataset's LD with no distance, which the PCA follows, is copied with maxDist null", () => {
-    expect(pcaFilters([MISSING_01, ld(0.3, null)], PCA_DEFAULTS)).toEqual([
+    expect(
+      pcaFilters([MISSING_01, ld(0.3, null)], PCA_DEFAULTS, "popgen"),
+    ).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "ld", maxAllowedR2: 0.3, maxDist: null },
     ]);
@@ -292,7 +302,11 @@ describe("IP6 D4 pcaFilters, the rows of 'Which variants it reads'", () => {
 
   test("the dataset's LD with no distance and the PCA's own within 50,000: the PCA's in its place", () => {
     expect(
-      pcaFilters([MISSING_01, ld(0.3, null)], optionsOf(ownLd(50_000))),
+      pcaFilters(
+        [MISSING_01, ld(0.3, null)],
+        optionsOf(ownLd(50_000)),
+        "popgen",
+      ),
     ).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "ld", maxAllowedR2: 0.1, maxDist: 50_000 },
@@ -300,7 +314,7 @@ describe("IP6 D4 pcaFilters, the rows of 'Which variants it reads'", () => {
   });
 
   test("no filter in the dataset and the PCA's own missing data 0.05: that filter alone", () => {
-    expect(pcaFilters([], optionsOf(own.missingData(0.05)))).toEqual([
+    expect(pcaFilters([], optionsOf(own.missingData(0.05)), "popgen")).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.05 },
     ]);
   });
@@ -309,7 +323,7 @@ describe("IP6 D4 pcaFilters, the rows of 'Which variants it reads'", () => {
     const o = optionsOf({
       ld: { follow: true, maxAllowedR2: 0.1, maxDist: 50_000 },
     });
-    expect(pcaFilters([MISSING_01], o)).toEqual([
+    expect(pcaFilters([MISSING_01], o, "popgen")).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
     ]);
   });
@@ -317,10 +331,10 @@ describe("IP6 D4 pcaFilters, the rows of 'Which variants it reads'", () => {
   test("the same frozen value twice for the same inputs", () => {
     const filters = [MISSING_01, maf09];
     const o = optionsOf(ownLd(50_000));
-    const first = pcaFilters(filters, o);
-    expect(pcaFilters(filters, o)).toBe(first);
+    const first = pcaFilters(filters, o, "popgen");
+    expect(pcaFilters(filters, o, "popgen")).toBe(first);
     expect(Object.isFrozen(first)).toBe(true);
-    expect(pcaFilters([MISSING_01, maf09], o)).not.toBe(first);
+    expect(pcaFilters([MISSING_01, maf09], o, "popgen")).not.toBe(first);
   });
 
   test("a MAF of the PCA's own at 1 is a MAF filter at 1, and a filter of the step turned off is not the dataset's", () => {
@@ -328,20 +342,226 @@ describe("IP6 D4 pcaFilters, the rows of 'Which variants it reads'", () => {
       ...project({ options: own.maf(1) }),
       filtersOff: [ld(0.3, 50_000)],
     });
-    expect(pcaFilters(p.filters, pcaOptions(p))).toEqual([
+    expect(pcaFilters(p.filters, pcaOptions(p, "popgen"), "popgen")).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "maf", maxAllowedMaf: 1 },
     ]);
   });
 
   test("the options of a project with no entry are PCA_DEFAULTS, and with an entry the same object while it does not change", () => {
-    expect(pcaOptions(project())).toBe(PCA_DEFAULTS);
+    expect(pcaOptions(project(), "popgen")).toBe(PCA_DEFAULTS);
     const p = project({ options: ownLd(50_000) });
-    expect(pcaOptions(p)).toBe(pcaOptions(p));
-    expect(pcaOptions(p).ld).toEqual({
+    expect(pcaOptions(p, "popgen")).toBe(pcaOptions(p, "popgen"));
+    expect(pcaOptions(p, "popgen").ld).toEqual({
       follow: false,
       maxAllowedR2: 0.1,
       maxDist: 50_000,
+    });
+  });
+});
+
+describe("AP2 D1 pcaFilters on popgen2.html, the table of 'On popgen2.html'", () => {
+  /** The options of popgen2.html, PCA2_DEFAULTS with `change` over them,
+      frozen. */
+  const options2 = (change: Partial<PcaOptions> = {}): PcaOptions =>
+    deepFreeze<PcaOptions>({ ...PCA2_DEFAULTS, ...change });
+  const ownMissing = (rate: number): Partial<PcaOptions> => ({
+    missingData: { follow: false, maxAllowedMissingRate: rate },
+  });
+  const ownMaf = (maf: number): Partial<PcaOptions> => ({
+    maf: { follow: false, maxAllowedMaf: maf },
+  });
+  const ldNoDistance = { kind: "ld", maxAllowedR2: 0.1, maxDist: null };
+
+  test("PCA2_DEFAULTS: the missing data and the MAF following the Variants tab, the LD pruning on at r² 0.1 with no distance", () => {
+    expect(PCA2_DEFAULTS).toEqual({
+      method: "pca",
+      missingData: { follow: true, maxAllowedMissingRate: 0.1 },
+      maf: { follow: true, maxAllowedMaf: 0.95 },
+      ld: { follow: false, maxAllowedR2: 0.1, maxDist: null },
+      colourBy: null,
+      axes: [1, 2, 3],
+      view: "3d",
+    });
+    expect(Object.isFrozen(PCA2_DEFAULTS.ld)).toBe(true);
+  });
+
+  test("the Variants tab's missing data 0.1 and PCA2_DEFAULTS: missing data 0.1, LD r² 0.1 with no distance", () => {
+    expect(pcaFilters([missing(0.1)], options2(), "popgen2")).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      ldNoDistance,
+    ]);
+  });
+
+  test("missing data 0.1 and the PCA's own 0.05: missing data 0.05, LD", () => {
+    expect(
+      pcaFilters([missing(0.1)], options2(ownMissing(0.05)), "popgen2"),
+    ).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+      ldNoDistance,
+    ]);
+  });
+
+  test("missing data 0.03 and the PCA's own 0.05: missing data 0.03, LD", () => {
+    expect(
+      pcaFilters([missing(0.03)], options2(ownMissing(0.05)), "popgen2"),
+    ).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.03 },
+      ldNoDistance,
+    ]);
+  });
+
+  test("missing data off and the PCA's own 0.05: missing data 0.05, LD", () => {
+    expect(pcaFilters([], options2(ownMissing(0.05)), "popgen2")).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+      ldNoDistance,
+    ]);
+  });
+
+  test("missing data off and the PCA following: LD alone", () => {
+    expect(pcaFilters([], options2(), "popgen2")).toEqual([ldNoDistance]);
+  });
+
+  test("MAF 0.95 and the PCA's own 0.9: missing data 0.1, MAF 0.9, LD", () => {
+    expect(
+      pcaFilters(
+        [missing(0.1), { kind: "maf", maxAllowedMaf: 0.95 }],
+        options2(ownMaf(0.9)),
+        "popgen2",
+      ),
+    ).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "maf", maxAllowedMaf: 0.9 },
+      ldNoDistance,
+    ]);
+  });
+
+  test("MAF off and the PCA's own 0.9: missing data 0.1, MAF 0.9, LD", () => {
+    expect(
+      pcaFilters([missing(0.1)], options2(ownMaf(0.9)), "popgen2"),
+    ).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "maf", maxAllowedMaf: 0.9 },
+      ldNoDistance,
+    ]);
+  });
+
+  test("any Variants tab and the LD following: no LD", () => {
+    const following = options2({
+      ld: { follow: true, maxAllowedR2: 0.1, maxDist: 50_000 },
+    });
+    expect(pcaFilters([missing(0.1)], following, "popgen2")).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+    ]);
+    expect(pcaFilters([], following, "popgen2")).toEqual([]);
+    expect(
+      pcaFilters(
+        [missing(0.03), { kind: "maf", maxAllowedMaf: 0.9 }],
+        options2({
+          ...ownMissing(0.05),
+          ld: { follow: true, maxAllowedR2: 0.1, maxDist: null },
+        }),
+        "popgen2",
+      ),
+    ).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.03 },
+      { kind: "maf", maxAllowedMaf: 0.9 },
+    ]);
+  });
+
+  test("FILTER and observed heterozygosity 0.5 on, PCA2_DEFAULTS: FILTER, missing data 0.1, observed heterozygosity 0.5, LD, in that order", () => {
+    expect(
+      pcaFilters(
+        [
+          { kind: "passed" },
+          missing(0.1),
+          { kind: "obs_het", maxAllowedObsHet: 0.5 },
+        ],
+        options2(),
+        "popgen2",
+      ),
+    ).toEqual([
+      { kind: "passed" },
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "obs_het", maxAllowedObsHet: 0.5 },
+      ldNoDistance,
+    ]);
+  });
+
+  test("the same inputs twice give the same frozen value", () => {
+    const filters = [missing(0.03)];
+    const o = options2(ownMissing(0.05));
+    const first = pcaFilters(filters, o, "popgen2");
+    expect(pcaFilters(filters, o, "popgen2")).toBe(first);
+    expect(Object.isFrozen(first)).toBe(true);
+    expect(first.every((filter) => Object.isFrozen(filter))).toBe(true);
+  });
+
+  test("the two pages asked in turn on the same inputs each get their own list", () => {
+    const filters = [missing(0.03)];
+    const o = options2({
+      ...ownMissing(0.05),
+      ld: { follow: true, maxAllowedR2: 0.1, maxDist: null },
+    });
+    const old = [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }];
+    const narrowed = [{ kind: "missing_data", maxAllowedMissingRate: 0.03 }];
+    expect(pcaFilters(filters, o, "popgen")).toEqual(old);
+    expect(pcaFilters(filters, o, "popgen2")).toEqual(narrowed);
+    expect(pcaFilters(filters, o, "popgen")).toEqual(old);
+    const other = [missing(0.03)];
+    expect(pcaFilters(other, o, "popgen2")).toEqual(narrowed);
+    expect(pcaFilters(other, o, "popgen")).toEqual(old);
+  });
+
+  test("the options of a project with no entry are PCA2_DEFAULTS on popgen2.html and PCA_DEFAULTS on the old page", () => {
+    expect(pcaOptions(project(), "popgen2")).toBe(PCA2_DEFAULTS);
+    expect(pcaOptions(project(), "popgen")).toBe(PCA_DEFAULTS);
+    const p = project({ options: ownLd(50_000) });
+    expect(pcaOptions(p, "popgen2")).toBe(pcaOptions(p, "popgen"));
+  });
+});
+
+describe("AP2 D2 the key of the PCA on popgen2.html", () => {
+  /** A project of popgen2.html whose PCA has its own missing data at 0.05
+      and its LD pruning within 50,000, with the Variants tab's missing
+      data at `rate`. */
+  const at = (rate: number): Project =>
+    project({
+      filters: [missing(rate)],
+      options: {
+        missingData: { follow: false, maxAllowedMissingRate: 0.05 },
+        ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
+      },
+    });
+
+  test("the Variants tab's missing data from 0.1 to 0.08 while the PCA's own is 0.05: the same key; to 0.03, another; back to 0.1, the first", () => {
+    const first = keyOfPca(at(0.1), "0.2.2", pcaOnPopgen2);
+    expect(keyOfPca(at(0.08), "0.2.2", pcaOnPopgen2)).toBe(first);
+    expect(keyOfPca(at(0.03), "0.2.2", pcaOnPopgen2)).not.toBe(first);
+    expect(keyOfPca(at(0.1), "0.2.2", pcaOnPopgen2)).toBe(first);
+  });
+
+  test("the key holds the filters the narrowing gives, the Variants tab's 0.03 in the place of the PCA's 0.05", () => {
+    expect(pcaOnPopgen2.keyInputs(at(0.03))).toEqual({
+      method: "pca",
+      filters: [
+        { kind: "missing_data", maxAllowedMissingRate: 0.03 },
+        { kind: "ld", maxAllowedR2: 0.1, maxDist: 50_000 },
+      ],
+    });
+  });
+
+  test("a project with no entry has the key of PCA2_DEFAULTS, the LD pruning with no distance among its filters", () => {
+    expect(pcaOnPopgen2.keyInputs(project())).toEqual({
+      method: "pca",
+      filters: [
+        { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+        { kind: "ld", maxAllowedR2: 0.1, maxDist: null },
+      ],
+    });
+    expect(pcaOnPopgen2.defaults).toEqual({
+      ...PCA2_DEFAULTS,
+      axes: [1, 2, 3],
     });
   });
 });
@@ -522,27 +742,27 @@ describe("IP6 D4 needs", () => {
   });
 
   test("pruningDistanceReason gives the same words in the same cases, also while another reason comes first", () => {
-    expect(pruningDistanceReason(project({ options: ownLd(null) }))).toBe(
-      PRUNING_DISTANCE,
-    );
     expect(
-      pruningDistanceReason(project({ options: ownLd(50_000) })),
+      pruningDistanceReason(project({ options: ownLd(null) }), "popgen"),
+    ).toBe(PRUNING_DISTANCE);
+    expect(
+      pruningDistanceReason(project({ options: ownLd(50_000) }), "popgen"),
     ).toBeNull();
-    expect(pruningDistanceReason(project())).toBeNull();
+    expect(pruningDistanceReason(project(), "popgen")).toBeNull();
     const reading = project({
       options: ownLd(null),
       individualsFile: "pending",
     });
     expect(pca.needs(reading)).toBe("Reading pops.csv.");
-    expect(pruningDistanceReason(reading)).toBe(PRUNING_DISTANCE);
+    expect(pruningDistanceReason(reading, "popgen")).toBe(PRUNING_DISTANCE);
   });
 
   test("under the PCoA the reason names the PCoA, in both places", () => {
     const pcoa = project({ options: { method: "pcoa", ...ownLd(null) } });
-    expect(pruningDistanceReason(pcoa)).toBe(
+    expect(pruningDistanceReason(pcoa, "popgen")).toBe(
       PRUNING_DISTANCE.replaceAll("of the PCA", "of the PCoA"),
     );
-    expect(pca.needs(pcoa)).toBe(pruningDistanceReason(pcoa));
+    expect(pca.needs(pcoa)).toBe(pruningDistanceReason(pcoa, "popgen"));
   });
 
   test("the step's LD filter on with no distance: the reason of variantFilterNeeds while the PCA follows it, none with its own at 50,000, and none once 20,000 is typed in the step", () => {
@@ -1107,6 +1327,7 @@ describe("IP6 D4 refusalText", () => {
       refusalText(
         "there are no variants to do a PCA with",
         project({ variantsName: "empty.vcf", numVars: 0 }),
+        "popgen",
       ),
     ).toBe(
       "empty.vcf has no variants, so there is no variant to do the PCA with. Load another variants file in the Variants step.",
@@ -1117,12 +1338,17 @@ describe("IP6 D4 refusalText", () => {
     const words =
       "No variant of panel.nei is left after the filters of the PCA, so there is no variant to do the PCA with. Loosen the filters the PCA has for itself in its options above, or those of the Variants step that it follows; the Count button of the Variants step shows how many each filter of the step keeps.";
     expect(
-      refusalText("there are no variants to do a PCA with", project()),
+      refusalText(
+        "there are no variants to do a PCA with",
+        project(),
+        "popgen",
+      ),
     ).toBe(words);
     expect(
       refusalText(
         "there are no variants to do a PCA with",
         project({ numVars: 1200 }),
+        "popgen",
       ),
     ).toBe(words);
   });
@@ -1132,6 +1358,7 @@ describe("IP6 D4 refusalText", () => {
       refusalText(
         "no variant has more than one dosage among its called genotypes, so none of them varies and there is nothing to do a PCA with",
         project(),
+        "popgen",
       ),
     ).toBe(
       "No variant left after the filters varies among the individuals kept, so there is nothing to do the PCA with. This happens with one individual, or a few of one line; keep more individuals with the filters of individuals in the Variants step.",
@@ -1139,7 +1366,9 @@ describe("IP6 D4 refusalText", () => {
   });
 
   test("the LD filter over a file not sorted, the PCA's own: ldOrderText with the LD filter of the PCA", () => {
-    expect(refusalText(LD_NOT_SORTED, vcf({ options: ownLd(50_000) }))).toBe(
+    expect(
+      refusalText(LD_NOT_SORTED, vcf({ options: ownLd(50_000) }), "popgen"),
+    ).toBe(
       "The LD filter of the PCA needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and load it again, or set the LD filter of the PCA back to as in the Variants step.",
     );
   });
@@ -1149,6 +1378,7 @@ describe("IP6 D4 refusalText", () => {
       refusalText(
         LD_NOT_SORTED,
         vcf({ filters: [MISSING_01, ld(0.3, 10_000)] }),
+        "popgen",
       ),
     ).toBe(
       "The LD pruning of the Variants step needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and load it again, or turn off the LD pruning in the Variants step.",
@@ -1160,6 +1390,7 @@ describe("IP6 D4 refusalText", () => {
       refusalText(
         "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies",
         vcf({ variantsName: "tetraploid.vcf.gz" }),
+        "popgen",
       ),
     ).toBe(
       "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
@@ -1172,6 +1403,7 @@ describe("IP6 D4 refusalText", () => {
       refusalText(
         "4 of the 10 pairs of individuals have no distance, the first of them `a` and `e`, and `s082` is in 3 of them; those pairs were called together at no variant; take that individual out with `filterIndividuals`, or run the PCA of the variants, which gives every individual a projection",
         pcoa,
+        "popgen",
       ),
     ).toBe(
       "4 pairs of individuals of panel.nei have no variant called in both, so they have no Kosman distance and the PCoA cannot place them; s082 is in 3 of them. Remove the individuals with many missing genotypes with the filters of individuals in the Variants step, or use the PCA of the genotypes, which places every individual.",
@@ -1180,6 +1412,7 @@ describe("IP6 D4 refusalText", () => {
       refusalText(
         "1 of the 6 pairs of individuals has no distance, the first of them `s082` and `s090`, and `s082` is in 1 of them; those pairs were called together at no variant; take that individual out with `filterIndividuals`, or run the PCA of the variants, which gives every individual a projection",
         pcoa,
+        "popgen",
       ),
     ).toBe(
       "1 pair of individuals of panel.nei has no variant called in both, so it has no Kosman distance and the PCoA cannot place it; s082 is in it. Remove the individuals with many missing genotypes with the filters of individuals in the Variants step, or use the PCA of the genotypes, which places every individual.",
@@ -1192,6 +1425,7 @@ describe("IP6 D4 refusalText", () => {
       refusalText(
         "there is 1 individual, and a principal coordinate analysis places 2 at least by the distance of each pair",
         pcoa,
+        "popgen",
       ),
     ).toBe(
       "The filters of individuals keep one individual of panel.nei, and the PCoA needs two at least to place them. Keep more individuals with the filters of individuals in the Variants step.",
@@ -1200,6 +1434,7 @@ describe("IP6 D4 refusalText", () => {
       refusalText(
         "every distance is 0, so the individuals are all at one point and there is nothing to do a PCoA with",
         pcoa,
+        "popgen",
       ),
     ).toBe(
       "Every two of the individuals kept have the same alleles at every variant both have called, so their Kosman distances are all 0 and the PCoA has nothing to place. Keep more individuals, or more variants, with the filters of the Variants step.",
@@ -1208,13 +1443,14 @@ describe("IP6 D4 refusalText", () => {
 
   test("the PCoA's empty pass, with variants in the source and without", () => {
     const pcoa = project({ options: { method: "pcoa" } });
-    expect(refusalText(EMPTY_PASS, pcoa)).toBe(
+    expect(refusalText(EMPTY_PASS, pcoa, "popgen")).toBe(
       "No variant of panel.nei is left after the filters of the PCoA, so there is no variant to do the PCoA with. Loosen the filters the PCoA has for itself in its options above, or those of the Variants step that it follows; the Count button of the Variants step shows how many each filter of the step keeps.",
     );
     expect(
       refusalText(
         "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
         pcoa,
+        "popgen",
       ),
     ).toBe(
       "panel.nei has no variants, so there is no variant to do the PCoA with. Load another variants file in the Variants step.",
@@ -1226,6 +1462,7 @@ describe("IP6 D4 refusalText", () => {
       refusalText(
         "the principal components of 12000 individuals hold about 7 GB, more than the 4 GB of memory wasm can address",
         project(),
+        "popgen",
       ),
     ).toBe(limitWords("12,000"));
   });
@@ -1235,6 +1472,7 @@ describe("IP6 D4 refusalText", () => {
       refusalText(
         "popnei: `numCompsKept` is not an option of `doPcaFromVariants`.",
         project(),
+        "popgen",
       ),
     ).toBe(
       "popnei could not calculate the principal components: popnei: numCompsKept is not an option of doPcaFromVariants. Change the settings, or load the variants file again, to run it again.",
@@ -1246,6 +1484,7 @@ describe("IP6 D4 refusalText", () => {
       refusalText(
         "anything",
         deepFreeze<Project>({ ...project(), variants: null }),
+        "popgen",
       ),
     ).toThrow(
       /^popnei_web defect: refusalText was given a project with no variants file/,
@@ -1305,29 +1544,29 @@ describe("IP6 D4 ldOrderText, the words of an LD filter over a file not sorted",
 
 describe("IP6 D4 crashText", () => {
   test("a PCA of 4,000 individuals gives the words of memory with about 0.8 GB", () => {
-    expect(crashText(project(), 4000)).toBe(
+    expect(crashText(project(), 4000, "popgen")).toBe(
       "The calculation stopped unexpectedly, perhaps because the principal components of 4,000 individuals, which need about 0.8 GB, did not fit in the memory of this tab; a phone or a tablet gives a tab far less than a computer. Keep fewer individuals with the filters of individuals in the Variants step, close other tabs and run it again, or calculate them with popnei in Python, outside the browser.",
     );
   });
 
   test("2,264 individuals give the words of memory, and 2,263 those of any calculation", () => {
-    expect(crashText(project(), 2264)).toContain(
+    expect(crashText(project(), 2264, "popgen")).toContain(
       "perhaps because the principal components of 2,264 individuals, which need about 0.3 GB,",
     );
-    expect(crashText(project(), 2263)).toBe(
+    expect(crashText(project(), 2263, "popgen")).toBe(
       "The calculation stopped unexpectedly. Run it again. If it stops again, load panel.nei again in the Variants step.",
     );
   });
 
   test("a PCoA at the same numbers, with the principal coordinates", () => {
     const pcoa = project({ options: { method: "pcoa" } });
-    expect(crashText(pcoa, 4000)).toContain(
+    expect(crashText(pcoa, 4000, "popgen")).toContain(
       "perhaps because the principal coordinates of 4,000 individuals, which need about 0.8 GB,",
     );
-    expect(crashText(pcoa, 2264)).toContain(
+    expect(crashText(pcoa, 2264, "popgen")).toContain(
       "the principal coordinates of 2,264",
     );
-    expect(crashText(pcoa, 2263)).toBe(
+    expect(crashText(pcoa, 2263, "popgen")).toBe(
       "The calculation stopped unexpectedly. Run it again. If it stops again, load panel.nei again in the Variants step.",
     );
   });
@@ -1337,7 +1576,9 @@ describe("IP6 D4 statisticsFailedText", () => {
   test("the statistics refused, with the PCA named and then the PCoA", () => {
     const error = { kind: "refused", message: "anything" } as const;
     const failureText = (): string => "unused";
-    expect(statisticsFailedText(error, project(), failureText, true)).toMatch(
+    expect(
+      statisticsFailedText(error, project(), failureText, true, "popgen"),
+    ).toMatch(
       /^The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the PCA was not run\. popnei could not calculate the statistics of each individual: anything\./,
     );
     expect(
@@ -1346,6 +1587,7 @@ describe("IP6 D4 statisticsFailedText", () => {
         project({ options: { method: "pcoa" } }),
         failureText,
         true,
+        "popgen",
       ),
     ).toContain("so the PCoA was not run.");
   });
@@ -1354,7 +1596,7 @@ describe("IP6 D4 statisticsFailedText", () => {
     const error = { kind: "refused", message: "anything" } as const;
     const failureText = (): string => "unused";
     expect(
-      statisticsFailedText(error, project(), failureText, false),
+      statisticsFailedText(error, project(), failureText, false, "popgen"),
     ).toContain("could not be calculated, so the PCA cannot run. popnei");
     expect(
       statisticsFailedText(
@@ -1362,6 +1604,7 @@ describe("IP6 D4 statisticsFailedText", () => {
         project({ options: { method: "pcoa" } }),
         failureText,
         false,
+        "popgen",
       ),
     ).toContain("so the PCoA cannot run.");
   });
