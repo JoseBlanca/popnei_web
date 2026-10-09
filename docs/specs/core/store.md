@@ -125,7 +125,12 @@ command after which the history starts afresh, through which that page
 sends the changes of its individuals file, so that they are no steps
 of its Undo, which comes back the same day, and stop nothing that a
 command would not (below, "On popgen2.html: no notice, and a history of
-the filters"). No code yet. The store is the one object of core that
+the filters"). Revised again that day for the owner's answer 2 to the
+plan `docs/plans/analyses-pca.md`: while a PCA runs, that page locks
+the filters it reads and makes the keys and buttons of Undo and Redo
+wait, so on that page no change the screen allows leaves a calculation
+behind, and the setting's stop is a guard; the store's rule is the same
+for every change. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -391,6 +396,25 @@ PCA left running for an Undo would go on out of sight, with the
 calculation worker and up to 3 GB of the tab, and the download of the
 filtered variants would wait for it with words that send the user to a
 Stop the PCA tab no longer shows.
+
+The page keeps those changes from happening while a calculation runs,
+as the owner answered on 9 October 2026 (answer 2 of
+`docs/plans/analyses-pca.md`). While the PCA is `running`, its screen
+greys the filters the PCA reads, the thresholds and the FILTER box of
+the Variants tab, the column of the populations and the PCA's own
+options, with the words of `docs/specs/steps/popgen2-pca.md` (work
+package 6 of that plan); and the buttons and keys of Undo and Redo
+wait, as the download of the filtered variants waits (work package 4).
+The changes of the individuals file stay open, through `applyAfresh`
+(below), and leave the PCA running: its key holds neither the file nor
+its column (`docs/specs/analyses/pca.md`, "What goes into its key").
+The writing of the filtered variants takes the page out of reach in a
+modal dialog while it runs (`docs/specs/steps/popgen2-download.md`).
+So on that page no change the screen allows leaves a calculation
+behind, and the setting's stop is a guard: the store does not know of
+the lock, applies the same rule after every change, and so a change the
+lock missed leaves nothing running out of sight. Its other half, no
+notice, is what the page needs of it in every change.
 
 **`stopLeftBehind`**, a setting of `createStore`, true on that page and
 absent on `popgen.html`. With it, after a command, an undo, a redo or
@@ -1909,6 +1933,11 @@ analyses:
   project has the individuals file, `undo` and `redo` `null`,
   `historyMoves` one more; the one pass in flight not cancelled. A
   command that gives the same project: the state the same object.
+- A PCA in flight, `applyAfresh` of `loadIndividuals`, the change the
+  page does not lock (answer 2 of 9 October 2026): no `cancel()`, the
+  PCA still `running`, nothing to undo. The lock of the filters and the
+  waiting keys are the screen's, verified in work packages 6 and 4 of
+  `docs/plans/analyses-pca.md`.
 - Through the gate of the page, a run of the arrow keys waiting and
   `applyAfresh`: the run's change made first, then nothing to undo.
 
