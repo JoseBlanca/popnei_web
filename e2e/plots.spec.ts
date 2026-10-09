@@ -1767,13 +1767,16 @@ test("PA4 D3 in DejaVu Sans, names of up to 26 characters under the columns and 
   const [, , , titleBottom = Infinity] = found.titles[0] ?? [];
   expect(titleBottom, "the name of the value").toBeLessThanOrEqual(barTop);
   // A slanted name ends where its column meets the axis: its right edge
-  // within 8 pixels of the middle of the column, and its top from 0 to
-  // 12 pixels below the axis.
+  // within 8 pixels of the middle of the column, and its top from 1 pixel
+  // above the axis to 12 below it. The pixel is Firefox's, whose box of a
+  // slanted text is likely taller than the letters: its top stood 0.3
+  // pixels above the axis in Firefox 155 on GitHub's runner on 9 October
+  // 2026 (run 37897260261).
   for (const { text, box, origin } of found.columns) {
     const [, top = Number.NaN, right = Number.NaN] = box;
     const [middle = Number.NaN, axis = Number.NaN] = origin;
     expect(Math.abs(right - middle), `${text} across`).toBeLessThanOrEqual(8);
-    expect(top - axis, `${text} down`).toBeGreaterThanOrEqual(0);
+    expect(top - axis, `${text} down`).toBeGreaterThanOrEqual(-1);
     expect(top - axis, `${text} down`).toBeLessThanOrEqual(12);
   }
 });
