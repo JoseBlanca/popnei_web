@@ -473,3 +473,35 @@ describe("IP10 D3 the cases of the reader spec: cellNumber", () => {
     expect(cellNumber(1.75, ".")).toBe(1.75);
   });
 });
+
+describe("IN1 D1 the types of a column of numbers read with the decimal comma", () => {
+  test("three numbers of a CSV read with the comma are continuous, though String writes them with a point", () => {
+    const table = {
+      columns: ["id", "h"],
+      rows: [
+        ["A", 1.5],
+        ["B", 1.7],
+        ["C", 1.9],
+      ],
+    };
+    expect(inferColumnTypes(table, ",")).toEqual([
+      { kind: "identifier" },
+      { kind: "continuous" },
+    ]);
+  });
+
+  test("two numbers of a CSV read with the comma are binary, the larger as 1", () => {
+    const table = {
+      columns: ["id", "h"],
+      rows: [
+        ["A", 2.5],
+        ["B", 10.5],
+      ],
+    };
+    expect(inferColumnTypes(table, ",")[1]).toEqual({
+      kind: "binary",
+      one: "10.5",
+      zero: "2.5",
+    });
+  });
+});

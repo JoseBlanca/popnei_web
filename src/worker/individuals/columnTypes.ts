@@ -97,7 +97,7 @@ export function inferColumnTypes(
   return table.columns.map((_, index) =>
     index === 0
       ? { kind: "identifier" }
-      : typeOfValues(distinctTexts(table, index), decimal),
+      : typeOfValues(distinctValues(table, index, decimal)),
   );
 }
 
@@ -125,21 +125,35 @@ function cellAt(row: readonly Cell[], index: number): Cell {
   return cell;
 }
 
-/** The distinct texts of the column at `index`, in the order of the
-    rows. */
-function distinctTexts(table: IndividualsTable, index: number): string[] {
-  const texts = new Set<string>();
-  for (const row of table.rows) {
-    const text = cellText(cellAt(row, index));
-    if (text !== null) texts.add(text);
-  }
-  return [...texts];
+/** A distinct value of a column: its text, and the number its cell
+    holds, or null. */
+interface ColumnValue {
+  readonly text: string;
+  readonly number: number | null;
 }
 
-function typeOfValues(
-  values: readonly string[],
+/** The distinct values of the column at `index`, by their texts, in the
+    order of the rows, each with the number of the first of its cells read
+    with `decimal`: a number cell is its number whatever `decimal`, so that
+    a column of numbers of a CSV read with the decimal comma, which
+    `String` writes with a point, is still numbers. */
+function distinctValues(
+  table: IndividualsTable,
+  index: number,
   decimal: "." | ",",
-): ColumnType {
+): ColumnValue[] {
+  const values = new Map<string, number | null>();
+  for (const row of table.rows) {
+    const cell = cellAt(row, index);
+    const text = cellText(cell);
+    if (text !== null && !values.has(text)) {
+      values.set(text, cellNumber(cell, decimal));
+    }
+  }
+  return Array.from(values, ([text, number]) => ({ text, number }));
+}
+
+function typeOfValues(values: readonly ColumnValue[]): ColumnType {
   if (values.length === 2) {
     const [first, second] = values;
     if (first === undefined || second === undefined) {
@@ -147,12 +161,9 @@ function typeOfValues(
         "popnei_web defect: two values without a first and a second",
       );
     }
-    return binaryOf(first, second, decimal);
+    return binaryOf(first, second);
   }
-  if (
-    values.length >= 3 &&
-    values.every((value) => cellNumber(value, decimal) !== null)
-  ) {
+  if (values.length >= 3 && values.every((value) => value.number !== null)) {
     return { kind: "continuous" };
   }
   return { kind: "categorical" };
@@ -176,14 +187,17 @@ const KNOWN_PAIRS: readonly (readonly [one: string, zero: string])[] = [
 ];
 
 /**
- * The binary type of the two texts `a` and `b`, with the one coded 1: of
- * two numbers of different value the larger; of a known pair of words the
- * case; otherwise the one that comes second compared by code units. The
- * result does not depend on which of the two came first in the file.
+ * The binary type of the two values `valueA` and `valueB`, with the text
+ * of the one coded 1: of two numbers of different value the larger; of a
+ * known pair of words the case; otherwise the one that comes second
+ * compared by code units. The result does not depend on which of the two
+ * came first in the file.
  */
-function binaryOf(a: string, b: string, decimal: "." | ","): ColumnType {
-  const numberA = cellNumber(a, decimal);
-  const numberB = cellNumber(b, decimal);
+function binaryOf(valueA: ColumnValue, valueB: ColumnValue): ColumnType {
+  const a = valueA.text;
+  const b = valueB.text;
+  const numberA = valueA.number;
+  const numberB = valueB.number;
   if (numberA !== null && numberB !== null && numberA !== numberB) {
     return numberA > numberB
       ? { kind: "binary", one: a, zero: b }

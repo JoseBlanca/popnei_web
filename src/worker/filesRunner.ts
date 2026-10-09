@@ -3,9 +3,9 @@
  * the user and holds no popnei (docs/architecture.md, section 6). It
  * answers one request, `readIndividuals`, with what `readIndividualsFile`
  * makes of the file, and holds nothing between two reads but the files
- * wasm, the package of xlsx_rs, once an xlsx has loaded it
- * (docs/specs/worker/individuals.md, "The TypeScript interface" and "The
- * package of xlsx_rs, loaded on first need").
+ * wasm, table_io's package, once the first read has loaded it
+ * (docs/specs/worker/individuals.md, "The TypeScript interface" and
+ * "Loading the files wasm on first need").
  *
  * Every request gets its answer or a `crashed` or `badRequest`, after
  * which the worker closes itself (docs/specs/worker/messages.md, "A worker
@@ -14,7 +14,7 @@
  */
 
 import { readIndividualsFile } from "./individualsFile.ts";
-import type { XlsxReader } from "./individualsFile.ts";
+import type { LoadImporter } from "./individualsFile.ts";
 import {
   PROTOCOL_VERSION,
   describeMessageError,
@@ -22,16 +22,15 @@ import {
   parseToFilesRunner,
 } from "./messages.ts";
 import type { FromFilesRunner, WorkerStop } from "./messages.ts";
-import { readXlsxCells } from "./xlsxCells.ts";
 // Its types alone, which the build erases: the package itself is loaded
-// on the first xlsx, with import(), below.
-import type * as XlsxRs from "xlsx_rs";
+// on the first read, with import(), below.
+import type * as TableIo from "table_io";
 
-/** The package of xlsx_rs, its JavaScript and its wasm. */
-type FilesWasm = typeof XlsxRs;
+/** The package of table_io, its JavaScript and its wasm. */
+type FilesWasm = typeof TableIo;
 
-/** The files wasm loaded, or being loaded; `null` before the first xlsx
-    and after a load that failed, so that the next xlsx tries again. */
+/** The files wasm loaded, or being loaded; `null` before the first read
+    and after a load that failed, so that the next read tries again. */
 let filesReady: Promise<FilesWasm> | null = null;
 
 /** The address of the JavaScript of the package that the last failed
@@ -46,7 +45,7 @@ const ADDRESS = /https?:\/\/[^\s"'<>]+/u;
 
 /**
  * Imports the package, which Vite makes a file of its own downloaded only
- * here, and awaits its `init`, which fetches `xlsx_rs_bg.wasm` from beside
+ * here, and awaits its `init`, which fetches `table_io_bg.wasm` from beside
  * it. A browser may give the same failure to a later `import()` of the
  * same address without asking the network, as Chromium 153 does for the
  * life of the worker, where WebKit 26.6 asks again; so, as load3d.ts does
@@ -62,7 +61,7 @@ async function loadFiles(): Promise<FilesWasm> {
   try {
     files =
       failedAddress === null
-        ? await import("xlsx_rs")
+        ? await import("table_io")
         : await importAgain(failedAddress);
   } catch (thrown) {
     failedAddress = ADDRESS.exec(messageOf(thrown))?.[0] ?? failedAddress;
@@ -84,56 +83,42 @@ async function importAgain(address: string): Promise<FilesWasm> {
   const module: unknown = await import(/* @vite-ignore */ url.href);
   if (!isFilesWasm(module)) {
     throw new Error(
-      `popnei_web defect: ${url.href} is not the package of xlsx_rs.`,
+      `popnei_web defect: ${url.href} is not the package of table_io.`,
     );
   }
   return module;
 }
 
 /** Whether `module` has the two functions of the package the worker
-    calls, its init and readXlsx. */
+    calls, its init and importTable. */
 function isFilesWasm(module: unknown): module is FilesWasm {
   return (
     typeof module === "object" &&
     module !== null &&
     "default" in module &&
     typeof module.default === "function" &&
-    "readXlsx" in module &&
-    typeof module.readXlsx === "function"
+    "importTable" in module &&
+    typeof module.importTable === "function"
   );
 }
 
 /**
- * The cells of an xlsx, read by the files wasm, loaded on the first xlsx.
- * A load that fails, a network that drops or a page left open across a
- * deploy of the site, is forgotten and the read fails as
- * `xlsxReaderNotLoaded`, with the browser's message for the console; the
- * worker goes on, and a CSV read after it is read. A browser may keep a
- * failed `import()` as failed for the life of the worker, and then the
- * next xlsx fails the same way, which a new worker mends.
+ * The importTable of the files wasm, loaded on the first read of any
+ * file. A load that fails, a network that drops or a page left open
+ * across a deploy of the site, is forgotten and given as `notLoaded`,
+ * with the browser's message, which goes to the console; the worker goes
+ * on, and the next read tries again.
  */
-const readXlsx: XlsxReader = async (bytes) => {
-  let files: FilesWasm;
+const loadImporter: LoadImporter = async () => {
   try {
-    files = await (filesReady ??= loadFiles());
+    const files = await (filesReady ??= loadFiles());
+    return files.importTable;
   } catch (thrown) {
     filesReady = null;
     const message = messageOf(thrown);
-    console.error(
-      `popnei_web: the reader of xlsx files did not load. ${message}`,
-    );
-    return {
-      kind: "failed",
-      error: { kind: "readerNotLoaded", message },
-    };
+    console.error(`popnei_web: the reader of tables did not load. ${message}`);
+    return { notLoaded: message };
   }
-  const read = readXlsxCells(files.readXlsx, bytes);
-  if (read.kind === "failed" && read.error.kind === "files") {
-    console.error(
-      `popnei_web: xlsx_rs could not read the file. ${read.error.message}`,
-    );
-  }
-  return read;
 };
 
 /** Posts a message to the page. */
@@ -158,7 +143,12 @@ async function handle(data: unknown): Promise<void> {
       return;
     }
     const { id, file, csv } = request.value;
-    const read = await readIndividualsFile(file, csv, readXlsx);
+    const read = await readIndividualsFile(file, csv, loadImporter);
+    if (read.kind === "failed" && read.error.kind === "files") {
+      console.error(
+        `popnei_web: table_io could not read the file. ${read.error.message}`,
+      );
+    }
     post({ kind: "individuals", id, read });
   } catch (thrown) {
     stop({ kind: "crashed", message: messageOf(thrown) });

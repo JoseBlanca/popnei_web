@@ -85,8 +85,10 @@ const testOnly = {
   message: "Only the tests import testSupport.ts, fast-check and Vitest.",
 };
 const filesWasm = {
-  group: ["xlsx_rs", "xlsx_rs/*"],
-  message: "Only src/worker/filesRunner.ts calls the files wasm.",
+  group: ["table_io", "table_io/*"],
+  allowTypeImports: true,
+  message:
+    "Only src/worker/filesRunner.ts loads the files wasm, table_io; elsewhere import its types.",
 };
 const client = {
   group: ["**/worker/client*", "**/worker/messages*", "**/worker/start*"],
@@ -128,8 +130,8 @@ const workerLoaded = {
 // The same for the files wasm, which filesRunner.ts alone loads, and only
 // with import() (worker.md, "The files wasm, on first need").
 const filesWasmImportCall = {
-  selector: "ImportExpression[source.value='xlsx_rs']",
-  message: "Only src/worker/filesRunner.ts loads the files wasm, xlsx_rs.",
+  selector: "ImportExpression[source.value='table_io']",
+  message: "Only src/worker/filesRunner.ts loads the files wasm, table_io.",
 };
 const noPopneiImportCall = [
   "error",
