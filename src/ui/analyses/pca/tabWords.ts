@@ -227,9 +227,14 @@ export function pcaDownloadWhat(
   }
 }
 
-/** The words of the 3D view that could not be downloaded, on this page,
-    which saves no project: "… reload the page and run the PCA again."
-    (docs/specs/steps/popgen2-pca.md, "Its words", the errors). */
-export function pcaTabLoadFailed3d(method: PcaMethod): string {
-  return `The 3D view could not be loaded, so the 2D plot is shown in its place. If the connection works, the site may have been updated since this page was opened: reload the page and run the ${methodName(method)} again.`;
+/** The words of the 3D view that could not be downloaded, of the
+    variants file `variantsName`, on this page, which saves no project and
+    has no file open after a reload: "… reload the page, open panel.nei
+    again and run the PCA again." (docs/specs/steps/popgen2-pca.md, "Its
+    words", the errors). */
+export function pcaTabLoadFailed3d(
+  method: PcaMethod,
+  variantsName: string,
+): string {
+  return `The 3D view could not be loaded, so the 2D plot is shown in its place. If the connection works, the site may have been updated since this page was opened: reload the page, open ${escaped(variantsName)} again and run the ${methodName(method)} again.`;
 }

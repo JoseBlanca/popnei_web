@@ -220,11 +220,13 @@ describe("AP6 D3 the words of the result of the PCA tab", () => {
     expect(PLOT_WAITS_3D).toBe("Download once the 3D view is drawn.");
   });
 
-  test("the 3D view that could not be downloaded: reload the page and run it again, no project to save", () => {
-    expect(pcaTabLoadFailed3d("pca")).toBe(
-      "The 3D view could not be loaded, so the 2D plot is shown in its place. If the connection works, the site may have been updated since this page was opened: reload the page and run the PCA again.",
+  test("the 3D view that could not be downloaded: reload the page, open the file again and run it again, no project to save", () => {
+    expect(pcaTabLoadFailed3d("pca", "panel.nei")).toBe(
+      "The 3D view could not be loaded, so the 2D plot is shown in its place. If the connection works, the site may have been updated since this page was opened: reload the page, open panel.nei again and run the PCA again.",
     );
-    expect(pcaTabLoadFailed3d("pcoa")).toMatch(/run the PCoA again\.$/u);
+    expect(pcaTabLoadFailed3d("pcoa", "panel.nei")).toMatch(
+      /open panel\.nei again and run the PCoA again\.$/u,
+    );
   });
 });
 

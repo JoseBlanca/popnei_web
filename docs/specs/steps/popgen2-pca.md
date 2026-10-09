@@ -691,7 +691,8 @@ panel.nei is left after the filters of the PCA, so there is no variant
 to do the PCA with. Loosen the filters of the PCA in its options above,
 or the thresholds of the Variants tab." The words of the 3D view are
 the old panel's, but for its failure to download, which ends "reload
-the page and run the PCA again", since this page saves no project.
+the page, open panel.nei again and run the PCA again", since this page
+saves no project and a reload leaves it with no file open.
 
 The page has no help drawer yet. What the help of the PCA tab would
 say, beside the old panel's help: that its filters narrow the Variants

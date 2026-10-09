@@ -347,7 +347,9 @@ function PcaResultOf({
   const variantsName = variants.name;
   const stem = variantsStem(variantsName);
   const method = result.method;
-  const loadFailed3d = onPopgen2 ? pcaTabLoadFailed3d(method) : LOAD_FAILED_3D;
+  const loadFailed3d = onPopgen2
+    ? pcaTabLoadFailed3d(method, variantsName)
+    : LOAD_FAILED_3D;
 
   /** Applies an option, and announces the notes it made appear, since the
       focus is then on the control that made them. */
