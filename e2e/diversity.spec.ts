@@ -1361,7 +1361,14 @@ test("PA10 the default's own number typed over the default removes the table, an
   await goTo(page, "Analyses");
   await run(page);
   const field = panel(page).getByLabel(DRAW_FIELD);
-  await field.fill("40");
+  // Typed key by key over the selected 40, as a user types it. A fill
+  // puts the whole text in at once, which Playwright does in Firefox
+  // through the browser's input of composed text, likely as the end of a
+  // composition, and which over the same text changes nothing the field
+  // sees: on GitHub's runner on 9 October 2026 (run 37897260261) the 40
+  // so filled in Firefox was kept as the default.
+  await field.selectText();
+  await field.pressSequentially("40");
   await field.press("Enter");
   await expect(
     panel(page).getByText(
