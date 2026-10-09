@@ -30,6 +30,7 @@ import {
 import type {
   CsvOptions,
   IndividualsFileError,
+  TableFormat,
   Job,
   JobResult,
   LoadFormat,
@@ -148,6 +149,9 @@ export type IndividualsAnswer =
       readonly kind: "refused";
       /** The way the file is wrong. */
       readonly error: IndividualsFileError;
+      /** The format the reader found, `null` when it refused the file
+          before reading its bytes. */
+      readonly format: TableFormat | null;
     }
   /** The read failed. */
   | {
@@ -963,6 +967,7 @@ export function createClient(config: {
               finishIndividuals(running, {
                 kind: "refused",
                 error: read.error,
+                format: read.format,
               });
               break;
           }

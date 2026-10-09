@@ -99,6 +99,9 @@ function cellsOrRefusal(read: XlsxReadFields): SheetCellsRead {
       };
     }
     case "notXlsx":
+      // Until table_io replaces this reader: the kind is gone from the
+      // refusals, and table_io reads such a file as the text it is.
+      return failed({ kind: "notWorkbook" });
     case "oldExcel":
     case "encrypted":
       return failed({ kind: read.refusal });

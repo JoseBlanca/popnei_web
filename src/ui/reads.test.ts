@@ -644,12 +644,14 @@ describe("WS7 D1 the outcomes of the reads", () => {
 
     fake.individuals[0]?.end({
       kind: "refused",
+      format: "text",
       error: { kind: "duplicateIndividual", name: "s000" },
     });
     await settle();
 
     expect(individualsRead(store)).toEqual({
       kind: "failed",
+      format: "text",
       error: { kind: "duplicateIndividual", name: "s000" },
     });
   });
@@ -666,6 +668,7 @@ describe("WS7 D1 the outcomes of the reads", () => {
 
     expect(individualsRead(store)).toEqual({
       kind: "failed",
+      format: null,
       error: {
         kind: "worker",
         error: { kind: "workerFailed", message: "out of memory" },
@@ -756,7 +759,7 @@ describe("IP9 the reads of an xlsx", () => {
     expect(fake.individuals[0]?.cancels()).toBe(0);
   });
 
-  test("a refusal of an xlsx, the reader of xlsx files not downloaded, is recorded as failed", async () => {
+  test("a refusal of an xlsx, the reader of tables not downloaded, is recorded as failed", async () => {
     const { store, fake } = setUp();
     store.apply("the individuals file changed", (p) =>
       loadIndividuals(p, { fileId: POPS_ID, name: "pops.xlsx", csv: null }),
@@ -764,13 +767,15 @@ describe("IP9 the reads of an xlsx", () => {
 
     fake.individuals[0]?.end({
       kind: "refused",
-      error: { kind: "xlsxReaderNotLoaded", message: "Failed to fetch" },
+      format: null,
+      error: { kind: "readerNotLoaded", message: "Failed to fetch" },
     });
     await settle();
 
     expect(individualsRead(store)).toEqual({
       kind: "failed",
-      error: { kind: "xlsxReaderNotLoaded", message: "Failed to fetch" },
+      format: null,
+      error: { kind: "readerNotLoaded", message: "Failed to fetch" },
     });
   });
 });
@@ -792,6 +797,29 @@ describe("SF2 D2 the read of the variants file records keepsPassed", () => {
         ploidy: 2,
         numVars: null,
         keepsPassed,
+      });
+    },
+  );
+});
+
+describe("IN1 D3 a refusal recorded with the format of its file", () => {
+  test.each([["text"], ["xlsx"], [null]] as const)(
+    "a refusal of the format %o is recorded with that format",
+    async (format) => {
+      const { store, fake } = setUp();
+      pickCsv(store, A);
+
+      fake.individuals[0]?.end({
+        kind: "refused",
+        format,
+        error: { kind: "encrypted" },
+      });
+      await settle();
+
+      expect(individualsRead(store)).toEqual({
+        kind: "failed",
+        format,
+        error: { kind: "encrypted" },
       });
     },
   );

@@ -340,7 +340,7 @@ describe("WS5 D1 the example and the reasons", () => {
       ...base,
       individuals: {
         ...base.individuals,
-        read: { kind: "failed", error: { kind: "empty" } },
+        read: { kind: "failed", error: { kind: "empty" }, format: "text" },
       },
     });
     expect(diversity.needs(refused)).toBe(individualsNeeds(refused));

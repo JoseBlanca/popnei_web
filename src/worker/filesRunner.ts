@@ -124,7 +124,7 @@ const readXlsx: XlsxReader = async (bytes) => {
     );
     return {
       kind: "failed",
-      error: { kind: "xlsxReaderNotLoaded", message },
+      error: { kind: "readerNotLoaded", message },
     };
   }
   const read = readXlsxCells(files.readXlsx, bytes);

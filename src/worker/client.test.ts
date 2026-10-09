@@ -2269,9 +2269,13 @@ describe("WS2 D3 the client: what the test review found", () => {
     emit(worker, {
       kind: "individuals",
       id: sentToLight(worker)[0]?.id,
-      read: { kind: "failed", error },
+      read: { kind: "failed", error, format: "text" },
     });
-    expect(await now(read.outcome)).toEqual({ kind: "refused", error });
+    expect(await now(read.outcome)).toEqual({
+      kind: "refused",
+      error,
+      format: "text",
+    });
   });
 
   test("a run refused sets the count of failures back: one more idle crash starts the worker again", () => {
@@ -3386,4 +3390,28 @@ describe("PA2 D4 the restart after an LD decay", () => {
     expect(first.terminated).toBe(true);
     expect(order).toEqual(["k1 failed", "k6 failed"]);
   });
+});
+
+describe("IN1 D2 the refusal of the reader carries the format", () => {
+  test.each([["text"], ["xlsx"], [null]] as const)(
+    "a failed read of the format %o arrives as refused with that format",
+    async (format) => {
+      const env = setUp();
+      env.client.addFile("ind", CSV_FILE);
+      const read = env.client.readIndividuals("ind", CSV);
+      const worker = last(env.light);
+      emit(worker, LIGHT_READY);
+      const error = { kind: "encrypted" };
+      emit(worker, {
+        kind: "individuals",
+        id: sentToLight(worker)[0]?.id,
+        read: { kind: "failed", error, format },
+      });
+      expect(await now(read.outcome)).toEqual({
+        kind: "refused",
+        error,
+        format,
+      });
+    },
+  );
 });

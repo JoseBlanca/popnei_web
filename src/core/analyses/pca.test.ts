@@ -466,7 +466,7 @@ describe("IP6 D4 needs", () => {
         name: "pops.csv",
         csv: { encoding: "auto", separator: "auto", decimal: "auto" },
         typesSet: [],
-        read: { kind: "failed", error: { kind: "empty" } },
+        read: { kind: "failed", error: { kind: "empty" }, format: "text" },
       },
     });
     expect(pca.needs(refused)).not.toBeNull();

@@ -177,6 +177,7 @@ const SHORT_TABLE_READ = tableRead({
 
 const EMPTY_FILE: IndividualsRead = {
   kind: "failed",
+  format: "text",
   error: { kind: "empty" },
 };
 

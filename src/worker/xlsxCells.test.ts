@@ -91,7 +91,7 @@ describe("IP9 D1 the xlsx in node: readXlsxCells", () => {
   });
 
   test.each([
-    ["notXlsx", {}, { kind: "notXlsx" }],
+    ["notXlsx", {}, { kind: "notWorkbook" }],
     ["oldExcel", {}, { kind: "oldExcel" }],
     ["encrypted", {}, { kind: "encrypted" }],
     ["emptySheet", { sheet: "Hoja1" }, { kind: "emptySheet", sheet: "Hoja1" }],

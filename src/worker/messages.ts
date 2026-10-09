@@ -41,6 +41,7 @@ import type {
   LoadFormat,
   Opened,
   FilterColumn,
+  TableFormat,
   PassStats,
   PcaJob,
   PcaMethod,
@@ -268,6 +269,9 @@ export type IndividualsFileRead =
       readonly kind: "failed";
       /** The way the file is wrong. */
       readonly error: IndividualsFileError;
+      /** The format the reader found; `null` when the file was refused
+          before the reader read its bytes, or the reader could not tell. */
+      readonly format: TableFormat | null;
     };
 
 /**
@@ -954,14 +958,18 @@ const FILE_ERROR_KINDS: Readonly<Record<IndividualsFileError["kind"], true>> = {
   notText: true,
   variantsFile: true,
   cutShort: true,
-  notXlsx: true,
   oldExcel: true,
   encrypted: true,
+  notWorkbook: true,
   emptySheet: true,
   cellError: true,
   headerError: true,
   sheetTooLarge: true,
-  xlsxReaderNotLoaded: true,
+  readerNotLoaded: true,
+};
+const TABLE_FORMATS: Readonly<Record<TableFormat, true>> = {
+  text: true,
+  xlsx: true,
 };
 const SEPARATORS: Readonly<Record<Separator, true>> = {
   ",": true,
@@ -2518,11 +2526,24 @@ function checkFileRead(
       });
     }
     case "failed": {
-      const error = onlyField(record, place, "error", checkFileError);
+      const wrong = exactFields(record, place, ["kind", "error", "format"]);
+      if (wrong !== null) {
+        return wrong;
+      }
+      const error = field(record, "error", place, checkFileError);
       if (!error.ok) {
         return error;
       }
-      return accepted({ kind: tag, error: error.value });
+      const format = field(
+        record,
+        "format",
+        place,
+        orNull(oneOf(TABLE_FORMATS)),
+      );
+      if (!format.ok) {
+        return format;
+      }
+      return accepted({ kind: tag, error: error.value, format: format.value });
     }
   }
 }
@@ -2612,9 +2633,9 @@ function checkFileError(
     case "notText":
     case "variantsFile":
     case "cutShort":
-    case "notXlsx":
     case "oldExcel":
     case "encrypted":
+    case "notWorkbook":
       return exactFields(record, place, ["kind"]) ?? accepted({ kind: tag });
     case "emptySheet": {
       const sheet = onlyField(record, place, "sheet", isText);
@@ -2704,7 +2725,7 @@ function checkFileError(
     }
     case "files":
     case "unreadable":
-    case "xlsxReaderNotLoaded": {
+    case "readerNotLoaded": {
       const message = onlyField(record, place, "message", isText);
       if (!message.ok) {
         return message;

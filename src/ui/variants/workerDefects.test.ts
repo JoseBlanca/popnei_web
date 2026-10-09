@@ -81,6 +81,7 @@ function touch(store: Store<JobResult, Blob>): void {
   });
   store.individualsRead(INDIVIDUALS_ID, null, {
     kind: "failed",
+    format: null,
     error: {
       kind: "worker",
       error: { kind: "workerFailed", message: "the light worker stopped" },

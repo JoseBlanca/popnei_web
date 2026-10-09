@@ -216,7 +216,7 @@ describe("WS2 D1 the messages accepted", () => {
       {
         kind: "individuals",
         id: 4,
-        read: { kind: "failed", error: { kind: "empty" } },
+        read: { kind: "failed", error: { kind: "empty" }, format: "text" },
       },
     ],
     [
@@ -226,6 +226,7 @@ describe("WS2 D1 the messages accepted", () => {
         id: 4,
         read: {
           kind: "failed",
+          format: "text",
           error: {
             kind: "raggedRow",
             line: 3,
@@ -514,7 +515,11 @@ describe("WS2 D2 the messages refused", () => {
   });
 
   test("a refusal of the reader of a kind its spec does not give", () => {
-    const read = { kind: "failed", error: { kind: "tooManyColumns" } };
+    const read = {
+      kind: "failed",
+      error: { kind: "tooManyColumns" },
+      format: "text",
+    };
     expect(
       parseFromFilesRunner({ kind: "individuals", id: 4, read }),
     ).toMatchObject({
@@ -1576,9 +1581,9 @@ const fileError = fc.oneof(
   fc.constant({ kind: "notText" as const }),
   fc.constant({ kind: "variantsFile" as const }),
   fc.constant({ kind: "cutShort" as const }),
-  fc.constant({ kind: "notXlsx" as const }),
   fc.constant({ kind: "oldExcel" as const }),
   fc.constant({ kind: "encrypted" as const }),
+  fc.constant({ kind: "notWorkbook" as const }),
   fc.record({ kind: fc.constant("emptySheet" as const), sheet: text }),
   fc.record({ kind: fc.constant("cellError" as const), error: text }),
   fc.record({
@@ -1595,7 +1600,7 @@ const fileError = fc.oneof(
     max: number,
   }),
   fc.record({
-    kind: fc.constant("xlsxReaderNotLoaded" as const),
+    kind: fc.constant("readerNotLoaded" as const),
     message: text,
   }),
 );
@@ -1633,7 +1638,11 @@ const fileRead = fc.oneof(
       ),
     }),
   ),
-  fc.record({ kind: fc.constant("failed" as const), error: fileError }),
+  fc.record({
+    kind: fc.constant("failed" as const),
+    error: fileError,
+    format: fc.constantFrom("text" as const, "xlsx" as const, null),
+  }),
 );
 
 const fromFilesRunnerMessage = fc.oneof(
@@ -2042,7 +2051,7 @@ describe("IP9 D1 the messages of an xlsx", () => {
   });
 
   test.each([
-    [{ kind: "notXlsx" }],
+    [{ kind: "notWorkbook" }],
     [{ kind: "oldExcel" }],
     [{ kind: "encrypted" }],
     [{ kind: "emptySheet", sheet: "Hoja1" }],
@@ -2057,12 +2066,12 @@ describe("IP9 D1 the messages of an xlsx", () => {
         max: 2_000_000,
       },
     ],
-    [{ kind: "xlsxReaderNotLoaded", message: "Failed to fetch" }],
+    [{ kind: "readerNotLoaded", message: "Failed to fetch" }],
   ])("parseFromFilesRunner accepts the refusal %o", (error) => {
     const message = {
       kind: "individuals",
       id: 5,
-      read: { kind: "failed", error },
+      read: { kind: "failed", error, format: "xlsx" },
     };
     expect(parseFromFilesRunner(message)).toEqual({
       ok: true,
@@ -2123,7 +2132,7 @@ describe("IP9 D1 the messages of an xlsx", () => {
     const message = {
       kind: "individuals",
       id: 5,
-      read: { kind: "failed", error: { kind: "emptySheet" } },
+      read: { kind: "failed", error: { kind: "emptySheet" }, format: "xlsx" },
     };
     expect(parseFromFilesRunner(message)).toEqual({
       ok: false,
@@ -2144,6 +2153,7 @@ describe("IP9 D1 the messages of an xlsx", () => {
         id: 5,
         read: {
           kind: "failed",
+          format: "xlsx",
           error: {
             kind: "sheetTooLarge",
             sheet: "Hoja1",
@@ -3874,4 +3884,85 @@ describe("DL2 D2 the messages of a write of a VCF", () => {
       });
     },
   );
+});
+
+describe("IN1 D2 the failed read carries the format of its file", () => {
+  /** An answer of the light worker whose read failed as `read` says. */
+  function failedAnswer(read: Record<string, unknown>): unknown {
+    return { kind: "individuals", id: 7, read };
+  }
+
+  test.each([["text"], ["xlsx"], [null]] as const)(
+    "a failed read of the format %o is accepted",
+    (format) => {
+      const message = failedAnswer({
+        kind: "failed",
+        error: { kind: "empty" },
+        format,
+      });
+      expect(parseFromFilesRunner(message)).toEqual({
+        ok: true,
+        value: message,
+      });
+    },
+  );
+
+  test("a failed read without its format is missingFields", () => {
+    expect(
+      parseFromFilesRunner(
+        failedAnswer({ kind: "failed", error: { kind: "empty" } }),
+      ),
+    ).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "individuals",
+        path: "read",
+        fields: ["format"],
+      },
+    });
+  });
+
+  test.each([["csv"], ["XLSX"], [""], [1]])(
+    "a failed read of the format %o is refused at the format",
+    (format) => {
+      expect(
+        parseFromFilesRunner(
+          failedAnswer({ kind: "failed", error: { kind: "empty" }, format }),
+        ),
+      ).toMatchObject({
+        ok: false,
+        error: { messageKind: "individuals", path: "read.format" },
+      });
+    },
+  );
+
+  test.each([
+    [{ kind: "notWorkbook" }],
+    [{ kind: "readerNotLoaded", message: "Failed to fetch" }],
+  ])("the refusal %o is accepted", (error) => {
+    const message = failedAnswer({ kind: "failed", error, format: null });
+    expect(parseFromFilesRunner(message)).toEqual({
+      ok: true,
+      value: message,
+    });
+  });
+
+  test.each([
+    [{ kind: "notXlsx" }],
+    [{ kind: "xlsxReaderNotLoaded", message: "Failed to fetch" }],
+  ])("the refusal %o, a kind of before table_io, is refused", (error) => {
+    expect(
+      parseFromFilesRunner(
+        failedAnswer({ kind: "failed", error, format: "xlsx" }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        kind: "unknownValue",
+        messageKind: "individuals",
+        path: "read.error.kind",
+      },
+    });
+  });
 });

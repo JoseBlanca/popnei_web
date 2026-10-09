@@ -1280,6 +1280,7 @@ describe("WP1 D4 the records and the needs", () => {
       expect(
         recordIndividualsRead(p, NEW_ID, CSV, {
           kind: "failed",
+          format: "text",
           error: { kind: "empty" },
         }),
       ).toBe(p);
@@ -1371,6 +1372,7 @@ describe("WP1 D4 the records and the needs", () => {
       return deepFreeze(
         recordIndividualsRead(pendingProject(), NEW_ID, CSV, {
           kind: "failed",
+          format: "text",
           error,
         }),
       );
@@ -1461,6 +1463,7 @@ describe("WP1 D4 the records and the needs", () => {
       const failed = deepFreeze(
         recordIndividualsRead(p, NEW_ID, CSV, {
           kind: "failed",
+          format: null,
           error: {
             kind: "worker",
             error: { kind: "workerFailed", message: "the worker crashed" },
@@ -1519,6 +1522,7 @@ describe("WP1 D4 the records and the needs", () => {
         .individuals?.read;
       expect(recorded).toMatchObject({
         kind: "failed",
+        format: null,
         error: { kind: "worker", error: { kind: "defect" } },
       });
     },
@@ -1910,7 +1914,9 @@ describe("WP1 D4 the records and the needs", () => {
       ],
     ] as const)("the reader refused the file, %o", (error, found) => {
       expect(
-        individualsNeeds(withIndividualsRead({ kind: "failed", error })),
+        individualsNeeds(
+          withIndividualsRead({ kind: "failed", error, format: "text" }),
+        ),
       ).toBe(
         `pops.csv could not be read: ${found}. Load a metadata file in the Individuals step.`,
       );
@@ -1938,6 +1944,7 @@ describe("WP1 D4 the records and the needs", () => {
           individualsNeeds(
             withIndividualsRead({
               kind: "failed",
+              format: "text",
               error: { kind: "files", message },
             }),
           ),
@@ -1970,6 +1977,7 @@ describe("WP1 D4 the records and the needs", () => {
         individualsNeeds(
           withIndividualsRead({
             kind: "failed",
+            format: "text",
             error: { kind: "files", message: "the file is not an xlsx file." },
           }),
         ),
@@ -2015,7 +2023,9 @@ describe("WP1 D4 the records and the needs", () => {
       "the reader refused the file, %o: what it found, and load an individuals file",
       (error, found) => {
         expect(
-          individualsNeeds(withIndividualsRead({ kind: "failed", error })),
+          individualsNeeds(
+            withIndividualsRead({ kind: "failed", error, format: "text" }),
+          ),
         ).toBe(
           `pops.csv could not be read: ${found}. Load a metadata file in the Individuals step.`,
         );
@@ -2050,6 +2060,7 @@ describe("WP1 D4 the records and the needs", () => {
           individualsNeeds(
             withIndividualsRead({
               kind: "failed",
+              format: null,
               error: { kind: "worker", error },
             }),
           ),
@@ -2868,6 +2879,7 @@ describe("WP1 D5 the validation", () => {
       };
       const files: IndividualsRead = {
         kind: "failed",
+        format: null,
         error: {
           kind: "worker",
           // @ts-expect-error -- a refusal of the xlsx reader is the kind files of IndividualsFileError
@@ -3245,7 +3257,7 @@ describe("WP1 D5 the validation", () => {
 /** A failed read of the individuals file with the refusal `error`, and
     its variants file read. */
 function refusedWith(error: IndividualsFileError): Project {
-  return withIndividualsRead({ kind: "failed", error });
+  return withIndividualsRead({ kind: "failed", error, format: "text" });
 }
 
 /** The sample project with its individuals file refused as `error`,
@@ -3405,6 +3417,7 @@ describe("WS1 D3 the additions to project.ts", () => {
       individualsNeeds(
         withIndividualsRead({
           kind: "failed",
+          format: null,
           error: {
             kind: "worker",
             error: {
@@ -3435,7 +3448,7 @@ describe("WS1 D3 the additions to project.ts", () => {
     const data = fileWith({
       individuals: {
         ...individualsOf(sampleProject()),
-        read: { kind: "failed", error },
+        read: { kind: "failed", error, format: "text" },
       },
     });
     expect(errorOf(parse(data))).toMatchObject({ kind: "wrongValue", path });
@@ -3496,6 +3509,7 @@ describe("WS1 D3 the additions to project.ts", () => {
         ...individualsOf(sampleProject()),
         read: {
           kind: "failed",
+          format: "text",
           error: { kind: "unclosedQuote", line: 7, separator: "|" },
         },
       },
@@ -3653,7 +3667,9 @@ describe("WS1 D3 the additions to project.ts", () => {
       "the reader refused the file, %o: what it found, and what mends it there",
       (error, words) => {
         expect(
-          individualsStepNeeds(withIndividualsRead({ kind: "failed", error })),
+          individualsStepNeeds(
+            withIndividualsRead({ kind: "failed", error, format: "text" }),
+          ),
         ).toBe(`pops.csv could not be read: ${words}`);
       },
     );
@@ -3682,6 +3698,7 @@ describe("WS1 D3 the additions to project.ts", () => {
           individualsStepNeeds(
             withIndividualsRead({
               kind: "failed",
+              format: null,
               error: { kind: "worker", error },
             }),
           ),
@@ -6218,6 +6235,7 @@ describe("IP4 D2 the types of the columns: the types", () => {
     const typesSet: readonly ColumnTypeOf[] = [["st", STATUS_YES]];
     const p = recordedWith(typesSet, {
       kind: "failed",
+      format: "text",
       error: { kind: "empty" },
     });
     expect(p.individuals?.read.kind).toBe("failed");
@@ -6461,6 +6479,7 @@ describe("IP4 D3 a metadata file not given", () => {
     expect(
       recordIndividualsRead(p, SAMPLE_INDIVIDUALS_ID, csv, {
         kind: "failed",
+        format: null,
         error: { kind: "worker", error: { kind: "workerFailed", message: "" } },
       }),
     ).toBe(p);
@@ -6570,6 +6589,7 @@ describe("IP4 D3 the words after a worker that could not start", () => {
     );
     const individuals = withIndividualsRead({
       kind: "failed",
+      format: null,
       error: notStarted,
     });
     expect(individualsNeeds(individuals)).toBe(
@@ -6796,7 +6816,10 @@ function xlsxRefusedWith(
     ...p,
     app,
     grouping: app === "gwas" ? { kind: "roles", roles: [] } : p.grouping,
-    individuals: { ...individualsOf(p), read: { kind: "failed", error } },
+    individuals: {
+      ...individualsOf(p),
+      read: { kind: "failed", error, format: "xlsx" },
+    },
   });
 }
 
@@ -6804,10 +6827,7 @@ function xlsxRefusedWith(
     read:" (docs/specs/worker/individuals.md, "The refusals and their
     words"). */
 const XLSX_REFUSALS: readonly (readonly [IndividualsFileError, string])[] = [
-  [
-    { kind: "notXlsx" },
-    "it is not an Excel workbook, although its name ends in .xlsx; if it is a CSV or a TSV, give it a name that ends in .csv",
-  ],
+  [{ kind: "notWorkbook" }, "it is a zip file that holds no Excel workbook"],
   [
     { kind: "oldExcel" },
     "it is a workbook of Excel 97–2003, although its name ends in .xlsx; in Excel, save it as Excel Workbook (.xlsx)",
@@ -6853,7 +6873,7 @@ const XLSX_REFUSALS: readonly (readonly [IndividualsFileError, string])[] = [
 ];
 
 const XLSX_NOT_LOADED =
-  "pops.xlsx could not be read: the part of the application that reads Excel files could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again.";
+  "pops.xlsx could not be read: the part of the application that reads tables could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again.";
 
 describe("IP9 the words of an xlsx refused", () => {
   test.each(XLSX_REFUSALS)(
@@ -6876,7 +6896,7 @@ describe("IP9 the words of an xlsx refused", () => {
 
   test("the reader of xlsx files not downloaded takes no end, beside a Run button and in the step", () => {
     const p = xlsxRefusedWith({
-      kind: "xlsxReaderNotLoaded",
+      kind: "readerNotLoaded",
       message: "Failed to fetch dynamically imported module",
     });
     expect(individualsNeeds(p)).toBe(XLSX_NOT_LOADED);
@@ -6954,7 +6974,7 @@ describe("IP9 the words of an xlsx refused", () => {
 
   test.each([
     ...XLSX_REFUSALS,
-    [{ kind: "xlsxReaderNotLoaded", message: "Failed to fetch" }, ""],
+    [{ kind: "readerNotLoaded", message: "Failed to fetch" }, ""],
   ] as const)(
     "the validation of a project file takes a failed read of %o with its fields",
     (error) => {
@@ -6974,7 +6994,11 @@ describe("IP9 the words of an xlsx refused", () => {
           ...p,
           individuals: {
             ...individualsOf(p),
-            read: { kind: "failed", error: { kind: "unnamedColumn", column } },
+            read: {
+              kind: "failed",
+              error: { kind: "unnamedColumn", column },
+              format: "xlsx",
+            },
           },
         }),
       );
@@ -7001,6 +7025,7 @@ describe("IP9 the words of an xlsx refused", () => {
             ...individualsOf(p),
             read: {
               kind: "failed",
+              format: "text",
               error: {
                 kind: "headerError",
                 row: 1,
@@ -7036,7 +7061,7 @@ describe("IP9 the words of an xlsx refused", () => {
           ...p,
           individuals: {
             ...individualsOf(p),
-            read: { kind: "failed", error: refusal },
+            read: { kind: "failed", error: refusal, format: "xlsx" },
           },
         }),
       );
@@ -7724,6 +7749,43 @@ describe("SF3 D2 the first project of popgen.html", () => {
     expect(firstProject("popgen")).toEqual({
       ...emptyProject("popgen"),
       filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+    });
+  });
+});
+
+describe("IN1 D3 the failed read recorded with its format", () => {
+  test.each([["text"], ["xlsx"], [null]] as const)(
+    "recordIndividualsRead keeps the format %o of a failed read",
+    (format) => {
+      const read: IndividualsRead = {
+        kind: "failed",
+        error: { kind: "encrypted" },
+        format,
+      };
+      const p = recordIndividualsRead(pendingProject(), NEW_ID, CSV, read);
+      expect(p.individuals?.read).toStrictEqual(read);
+    },
+  );
+
+  test("a project with a failed read of the format xlsx reads back from its JSON, and one of another format is refused at the format", () => {
+    const p = withIndividualsRead({
+      kind: "failed",
+      error: { kind: "encrypted" },
+      format: "xlsx",
+    });
+    expect(parse(projectJson(p))).toStrictEqual({ ok: true, value: p });
+    const data: unknown = JSON.parse(
+      JSON.stringify({
+        ...p,
+        individuals: {
+          ...individualsOf(p),
+          read: { kind: "failed", error: { kind: "encrypted" }, format: "csv" },
+        },
+      }),
+    );
+    expect(parse(data)).toMatchObject({
+      ok: false,
+      error: { kind: "wrongValue", path: ["individuals", "read", "format"] },
     });
   });
 });

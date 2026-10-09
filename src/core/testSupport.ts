@@ -1108,10 +1108,13 @@ const individualsRead: fc.Arbitrary<IndividualsRead> = fc.oneof(
       columns,
       found,
     })),
-  individualsFileError.map((error): IndividualsRead => ({
-    kind: "failed",
-    error,
-  })),
+  fc
+    .tuple(individualsFileError, fc.constantFrom("text", "xlsx", null))
+    .map(([error, format]): IndividualsRead => ({
+      kind: "failed",
+      error,
+      format,
+    })),
   runError
     .filter(
       (error): error is Exclude<RunError, { kind: "files" }> =>
@@ -1120,6 +1123,7 @@ const individualsRead: fc.Arbitrary<IndividualsRead> = fc.oneof(
     .map((error): IndividualsRead => ({
       kind: "failed",
       error: { kind: "worker", error },
+      format: null,
     })),
   fc.constant<IndividualsRead>({ kind: "notGiven" }),
 );

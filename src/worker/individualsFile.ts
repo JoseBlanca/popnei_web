@@ -67,6 +67,7 @@ export async function readIndividualsFile(
         size: file.size,
         max: MAX_INDIVIDUALS_FILE_BYTES,
       },
+      format: null,
     };
   }
   let buffer: ArrayBuffer;
@@ -79,18 +80,19 @@ export async function readIndividualsFile(
         kind: "unreadable",
         message: unreadableMessage(error),
       },
+      format: null,
     };
   }
   if (csv === null) return readXlsxFile(new Uint8Array(buffer), readXlsx);
   const decoded = decode(new Uint8Array(buffer), csv.encoding);
   if (decoded === "notText" || decoded === "cutShort") {
-    return { kind: "failed", error: { kind: decoded } };
+    return { kind: "failed", error: { kind: decoded }, format: "text" };
   }
   const read = readCsv(decoded.text, {
     separator: csv.separator,
     decimal: csv.decimal,
   });
-  if (!read.ok) return { kind: "failed", error: read.error };
+  if (!read.ok) return { kind: "failed", error: read.error, format: "text" };
   return {
     kind: "read",
     table: read.value.table,
@@ -113,9 +115,15 @@ async function readXlsxFile(
   readXlsx: XlsxReader,
 ): Promise<IndividualsFileRead> {
   const cells = await readXlsx(bytes);
-  if (cells.kind === "failed") return cells;
+  if (cells.kind === "failed") {
+    return {
+      kind: "failed",
+      error: cells.error,
+      format: cells.error.kind === "readerNotLoaded" ? null : "xlsx",
+    };
+  }
   const read = readSheet(cells.cells);
-  if (!read.ok) return { kind: "failed", error: read.error };
+  if (!read.ok) return { kind: "failed", error: read.error, format: "xlsx" };
   return {
     kind: "read",
     table: read.value.table,

@@ -406,7 +406,8 @@ describe("WS6 D1 what is written", () => {
     }
     for (const read of [
       { kind: "pending" },
-      { kind: "failed", error: { kind: "empty" } },
+      { kind: "failed", error: { kind: "empty" }, format: "text" },
+      { kind: "failed", error: { kind: "encrypted" }, format: "xlsx" },
       { kind: "notGiven" },
     ] as const) {
       const p = deepFreeze<Project>({
@@ -3335,7 +3336,7 @@ describe("IP4 D4 the project file of stage 4", () => {
     };
     for (const read of [
       { kind: "pending" },
-      { kind: "failed", error: { kind: "empty" } },
+      { kind: "failed", error: { kind: "empty" }, format: "text" },
     ]) {
       expect(
         readProjectFile(withRead(read), "popgen", POPGEN_DEFS, OLD_PAGE),

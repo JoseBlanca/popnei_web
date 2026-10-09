@@ -3233,7 +3233,7 @@ function modelledStore(): {
                   ...sample,
                   found: individuals.csv === null ? null : sample.found,
                 }
-              : { kind: "failed", error: { kind: "empty" } },
+              : { kind: "failed", error: { kind: "empty" }, format: "text" },
           );
         }
         break;

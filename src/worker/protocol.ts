@@ -73,9 +73,9 @@ export type IndividualFilterKind = IndividualFilter["kind"];
 
 /**
  * A cell of the individuals file: text, a number, a boolean, or `null`
- * when it is missing, an empty cell, `NA` or `-`. The cells of a CSV or
- * TSV are text as written in the file; numbers and booleans come only
- * from an xlsx.
+ * when it is missing, an empty cell, `NA` or `-`. Numbers and booleans
+ * come from the numeric and boolean columns table_io finds, in any
+ * format; an integer column with a value beyond 2^53 is kept as texts.
  */
 export type Cell = string | number | boolean | null;
 
@@ -143,6 +143,13 @@ export interface CsvFound {
   readonly undecodedLine: number | null;
 }
 
+/** The format of the individuals file as the reader found it from its
+    first bytes, never from its name: a text file, a CSV or a TSV, or an
+    xlsx. It decides how a refusal names a place, a line or a row and a
+    column as Excel names them, and whether the screens offer the options
+    of a CSV beside it. */
+export type TableFormat = "text" | "xlsx";
+
 /**
  * The ways the individuals file can be refused. The spec of the reader,
  * docs/specs/worker/individuals.md, owns this union and the words of
@@ -165,9 +172,8 @@ export type IndividualsFileError =
       readonly found: number;
       readonly separator: Separator;
     }
-  /** The files wasm, xlsx_rs, could not open an xlsx as a workbook: a
-      file cut short, damaged or of another format; its message, for the
-      console. */
+  /** The files wasm, table_io, could not read the file: a zip or a
+      sheet damaged or cut short; its message, for the console. */
   | { readonly kind: "files"; readonly message: string }
   /** Values in a column with no name in the header; `column` is counted
       from 1, and for an xlsx is the column of the sheet, A being 1. */
@@ -188,7 +194,8 @@ export type IndividualsFileError =
   /** The browser could not read the file, with its message, for the
       console. */
   | { readonly kind: "unreadable"; readonly message: string }
-  /** Not a text file. */
+  /** Neither a text file nor an xlsx: a byte 0 outside UTF-16, a
+      gzipped or another binary file. */
   | { readonly kind: "notText" }
   /** A variants file, a VCF, picked as the individuals file: its first
       line starts with `##fileformat=VCF` or `#CHROM`. */
@@ -196,13 +203,13 @@ export type IndividualsFileError =
   /** A UTF-16 file that ends in the middle of a character, and may have
       been cut short. */
   | { readonly kind: "cutShort" }
-  // From stage 4, an xlsx (docs/specs/worker/files.md, "The refusals"):
-  /** Not a zip file, as every xlsx is: most often a CSV named .xlsx. */
-  | { readonly kind: "notXlsx" }
+  // From stage 4, an xlsx:
   /** A workbook of Excel 97–2003, or another file of the old Office. */
   | { readonly kind: "oldExcel" }
   /** An xlsx saved with a password. */
   | { readonly kind: "encrypted" }
+  /** A zip that holds no workbook, a .docx or a .zip of other files. */
+  | { readonly kind: "notWorkbook" }
   /** The first sheet that is not hidden, named `sheet`, has no value. */
   | { readonly kind: "emptySheet"; readonly sheet: string }
   /** A cell holds an error calamine does not know, `error`, "#SPILL!". */
@@ -226,9 +233,9 @@ export type IndividualsFileError =
       readonly lastColumn: string;
       readonly max: number;
     }
-  /** The files wasm could not be downloaded; the browser's message, for
-      the console. */
-  | { readonly kind: "xlsxReaderNotLoaded"; readonly message: string };
+  /** The files wasm could not be downloaded or started, for a file of
+      any format; the browser's message, for the console. */
+  | { readonly kind: "readerNotLoaded"; readonly message: string };
 
 /**
  * How far a run has gone: the four numbers popnei's `Variants.onProgress`

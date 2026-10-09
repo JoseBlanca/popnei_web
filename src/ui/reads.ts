@@ -172,12 +172,14 @@ export function createReads(deps: {
         store.individualsRead(fileId, csv, {
           kind: "failed",
           error: outcome.error,
+          format: outcome.format,
         });
         return;
       case "failed":
         store.individualsRead(fileId, csv, {
           kind: "failed",
           error: { kind: "worker", error: outcome.error },
+          format: null,
         });
         return;
       case "cancelled":

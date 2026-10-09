@@ -163,6 +163,7 @@ describe("WS4 D3 the bytes", () => {
     const bytes = [0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00];
     expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual({
       kind: "failed",
+      format: "text",
       error: { kind: "notText" },
     });
   });
@@ -171,6 +172,7 @@ describe("WS4 D3 the bytes", () => {
     const bytes = [...singleBytes("id,pop\nA,P1\nB,P2"), 0x00, 0x0a];
     expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual({
       kind: "failed",
+      format: "text",
       error: { kind: "notText" },
     });
   });
@@ -186,6 +188,7 @@ describe("WS4 D3 the bytes", () => {
     };
     expect(await readCsvFile(source, AUTO)).toEqual({
       kind: "failed",
+      format: null,
       error: { kind: "tooLarge", size: 20_000_001, max: 20_000_000 },
     });
     expect(calls).toBe(0);
@@ -202,6 +205,7 @@ describe("WS4 D3 the bytes", () => {
     };
     expect(await readCsvFile(source, AUTO)).toEqual({
       kind: "failed",
+      format: null,
       error: {
         kind: "unreadable",
         message: "NotReadableError: the file changed",
@@ -217,6 +221,7 @@ describe("WS4 D3 the bytes", () => {
     };
     expect(await readCsvFile(source, AUTO)).toEqual({
       kind: "failed",
+      format: null,
       error: { kind: "unreadable", message: "NotReadableError" },
     });
   });
@@ -229,6 +234,7 @@ describe("WS4 D3 the bytes", () => {
     };
     expect(await readCsvFile(source, AUTO)).toEqual({
       kind: "failed",
+      format: null,
       error: { kind: "unreadable", message: "NotFoundError: gone" },
     });
   });
@@ -278,6 +284,7 @@ describe("WS4 D3 the bytes", () => {
   test("a refusal of the reader of the text is the failed read", async () => {
     expect(await readCsvFile(blobOf(singleBytes("id,pop\n")), AUTO)).toEqual({
       kind: "failed",
+      format: "text",
       error: { kind: "empty" },
     });
   });
@@ -288,6 +295,7 @@ describe("WS4 D3 the bytes", () => {
     expect(bytes.length).toBeGreaterThan(10_000);
     expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual({
       kind: "failed",
+      format: "text",
       error: { kind: "notText" },
     });
   });
@@ -408,6 +416,7 @@ describe("WS4 D3 the owner's decisions of 25 September on the bytes", () => {
     for (const bytes of [little, big]) {
       expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual({
         kind: "failed",
+        format: "text",
         error: { kind: "cutShort" },
       });
     }
@@ -419,6 +428,7 @@ describe("WS4 D3 the owner's decisions of 25 September on the bytes", () => {
     for (const bytes of [little, big]) {
       expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual({
         kind: "failed",
+        format: "text",
         error: { kind: "cutShort" },
       });
     }
@@ -489,12 +499,13 @@ describe("IP9 D1 the xlsx in node: readIndividualsFile", () => {
     });
     expect(await readIndividualsFile(blobOf([0x50]), null, readXlsx)).toEqual({
       kind: "failed",
+      format: "xlsx",
       error: { kind: "empty" },
     });
   });
 
   test.each([
-    [{ kind: "notXlsx" }],
+    [{ kind: "notWorkbook" }],
     [{ kind: "oldExcel" }],
     [{ kind: "encrypted" }],
     [{ kind: "emptySheet", sheet: "Hoja1" }],
@@ -508,7 +519,7 @@ describe("IP9 D1 the xlsx in node: readIndividualsFile", () => {
         max: 2_000_000,
       },
     ],
-    [{ kind: "xlsxReaderNotLoaded", message: "Failed to fetch" }],
+    [{ kind: "readerNotLoaded", message: "Failed to fetch" }],
     [{ kind: "files", message: "Zip error" }],
   ] as const)(
     "the refusal %o of the files wasm is the failed read",
@@ -518,6 +529,7 @@ describe("IP9 D1 the xlsx in node: readIndividualsFile", () => {
         {
           kind: "failed",
           error,
+          format: error.kind === "readerNotLoaded" ? null : "xlsx",
         },
       );
     },
@@ -535,6 +547,7 @@ describe("IP9 D1 the xlsx in node: readIndividualsFile", () => {
     };
     expect(await readIndividualsFile(file, null, readXlsx)).toEqual({
       kind: "failed",
+      format: null,
       error: { kind: "tooLarge", size: 20_000_001, max: 20_000_000 },
     });
     expect(reads).toBe(0);

@@ -25,6 +25,7 @@ import type {
   LoadFormat,
   Pops,
   RunError,
+  TableFormat,
   VariantFilter,
   VariantFilterKind,
   VcfReadOptions,
@@ -170,7 +171,9 @@ export interface IndividualsSource {
   readonly fileId: string;
   /** The name of the file, as the browser gives it. */
   readonly name: string;
-  /** How a CSV or TSV is read; `null` for an xlsx. */
+  /** How a text file is read, set for every load since 9 October 2026,
+      an xlsx too, since the reader finds the format from the bytes;
+      `null` for an xlsx of a project saved before. */
   readonly csv: CsvOptions | null;
   /** The types the user set, each by the name of its column, applied by
       the read or waiting for a read that allows them (`typesLost`); never
@@ -205,6 +208,11 @@ export type IndividualsRead =
                 IndividualsFileError, never a failure of the worker. */
             readonly error: Exclude<RunError, { readonly kind: "files" }>;
           };
+      /** The format the reader found, which decides how a place is named
+          and whether the options of a CSV are offered; `null` for a file
+          refused before the reader read it, or for a failure of the
+          worker. */
+      readonly format: TableFormat | null;
     }
   /** Named by an opened project, not read when the project was saved, so
       the project file holds no table of it and the page no copy of the
@@ -1894,6 +1902,7 @@ export function recordIndividualsRead(
       read: {
         kind: "failed",
         error: { kind: "worker", error: { kind: "defect", message } },
+        format: null,
       },
     },
   };
@@ -2349,7 +2358,7 @@ function individualsReadNeeds(
       }
       const words = `${name} could not be read${saying(individualsFileRefusalWords(error, app, individuals.csv === null))}.`;
       // Its words say what to do, and take no end.
-      return error.kind === "xlsxReaderNotLoaded"
+      return error.kind === "readerNotLoaded"
         ? words
         : `${words} ${ends.refusedEnd(error)}`;
     }
@@ -2401,15 +2410,15 @@ function stepRefusedEnd(error: IndividualsFileError, app: AppId): string {
     case "tooLarge":
     case "notText":
     case "cutShort":
-    case "notXlsx":
     case "oldExcel":
     case "encrypted":
+    case "notWorkbook":
     case "emptySheet":
     case "cellError":
     case "headerError":
     case "sheetTooLarge":
       return "Load a corrected file.";
-    case "xlsxReaderNotLoaded":
+    case "readerNotLoaded":
       return "";
   }
 }
@@ -2926,12 +2935,12 @@ function individualsFileRefusalWords(
       return "it ends in the middle of a character and may have been cut short";
     case "files":
       return "it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again";
-    case "notXlsx":
-      return "it is not an Excel workbook, although its name ends in .xlsx; if it is a CSV or a TSV, give it a name that ends in .csv";
     case "oldExcel":
       return "it is a workbook of Excel 97–2003, although its name ends in .xlsx; in Excel, save it as Excel Workbook (.xlsx)";
     case "encrypted":
       return "it is protected by a password; in Excel, save a copy without the password";
+    case "notWorkbook":
+      return "it is a zip file that holds no Excel workbook";
     case "emptySheet":
       return `its first sheet, ${shown(error.sheet)}, is empty, and only the first sheet is read; put the table in the first sheet`;
     case "cellError":
@@ -2940,8 +2949,8 @@ function individualsFileRefusalWords(
       return `the header has the error ${shown(error.error)} at row ${grouped(error.row)}, column ${columnLetters(error.column)}, where the name of a column should be; in Excel, type the name of the column in that cell`;
     case "sheetTooLarge":
       return `its first sheet, ${shown(error.sheet)}, has values as far as row ${grouped(error.lastRow)} and column ${error.lastColumn}, more than the ${grouped(error.max)} cells a ${FILE_WORDS[app]} can have; delete the values outside the table`;
-    case "xlsxReaderNotLoaded":
-      return "the part of the application that reads Excel files could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again";
+    case "readerNotLoaded":
+      return "the part of the application that reads tables could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again";
   }
 }
 
@@ -3401,7 +3410,7 @@ const RUN_ERROR_KINDS: Kinds<RunError["kind"]> = {
 const INDIVIDUALS_READ_KINDS: Kinds<IndividualsRead["kind"]> = {
   pending: { fields: [], words: "not yet read" },
   read: { fields: ["table", "columns", "found"], words: "read" },
-  failed: { fields: ["error"], words: "not readable" },
+  failed: { fields: ["error", "format"], words: "not readable" },
   notGiven: { fields: [], words: "not read when the project was saved" },
 };
 
@@ -3419,7 +3428,7 @@ const INDIVIDUALS_ERROR_KINDS: Kinds<IndividualsFileError["kind"] | "worker"> =
     },
     files: {
       fields: ["message"],
-      words: "a refusal of the reader of xlsx files",
+      words: "a refusal of the reader of tables",
     },
     unnamedColumn: { fields: ["column"], words: "a column with no name" },
     emptyIndividual: {
@@ -3438,9 +3447,9 @@ const INDIVIDUALS_ERROR_KINDS: Kinds<IndividualsFileError["kind"] | "worker"> =
     notText: { fields: [], words: "a file that is not text" },
     variantsFile: { fields: [], words: "a variants file" },
     cutShort: { fields: [], words: "a file cut short" },
-    notXlsx: { fields: [], words: "an xlsx that is not a workbook" },
     oldExcel: { fields: [], words: "a workbook of Excel 97–2003" },
     encrypted: { fields: [], words: "a workbook protected by a password" },
+    notWorkbook: { fields: [], words: "a zip that holds no workbook" },
     emptySheet: { fields: ["sheet"], words: "an empty first sheet" },
     cellError: { fields: ["error"], words: "a cell with an error" },
     headerError: {
@@ -3451,9 +3460,9 @@ const INDIVIDUALS_ERROR_KINDS: Kinds<IndividualsFileError["kind"] | "worker"> =
       fields: ["sheet", "lastRow", "lastColumn", "max"],
       words: "a sheet too large",
     },
-    xlsxReaderNotLoaded: {
+    readerNotLoaded: {
       fields: ["message"],
-      words: "the reader of xlsx files not downloaded",
+      words: "the reader of tables not downloaded",
     },
     worker: { fields: ["error"], words: "a failure of the application" },
   };
@@ -3503,6 +3512,11 @@ const FOUND_ENCODING_WORDS: Readonly<Record<CsvFound["encoding"], string>> = {
   "utf-8": ENCODING_WORDS["utf-8"],
   "windows-1252": ENCODING_WORDS["windows-1252"],
   "utf-16": "UTF-16",
+};
+
+const TABLE_FORMAT_WORDS: Readonly<Record<TableFormat, string>> = {
+  text: "text",
+  xlsx: "xlsx",
 };
 
 const FOUND_SEPARATOR_WORDS: Readonly<Record<CsvFound["separator"], string>> = {
@@ -4233,7 +4247,17 @@ function parseIndividualsRead(
     }
     case "failed": {
       const error = parseIndividualsError(fields["error"], [...path, "error"]);
-      return error.ok ? success({ kind, error: error.value }) : error;
+      if (!error.ok) {
+        return error;
+      }
+      const format = parseNullable(
+        fields["format"],
+        [...path, "format"],
+        (v, at) => parseOneOf(v, at, TABLE_FORMAT_WORDS),
+      );
+      return format.ok
+        ? success({ kind, error: error.value, format: format.value })
+        : format;
     }
     case "notGiven":
       return success({ kind });
@@ -4330,13 +4354,13 @@ function parseIndividualsError(
     case "notText":
     case "variantsFile":
     case "cutShort":
-    case "notXlsx":
     case "oldExcel":
     case "encrypted":
+    case "notWorkbook":
       return success({ kind });
     case "files":
     case "unreadable":
-    case "xlsxReaderNotLoaded": {
+    case "readerNotLoaded": {
       const message = parseText(fields["message"], [...path, "message"]);
       return message.ok ? success({ kind, message: message.value }) : message;
     }
@@ -5211,6 +5235,10 @@ const FIELD_WORDS: readonly FieldWords[] = [
   [
     ["individuals", "read", "error", REST],
     () => "the reason the individuals file could not be read",
+  ],
+  [
+    ["individuals", "read", "format"],
+    () => "the format found of the individuals file",
   ],
   [["grouping"], () => "the grouping of the individuals"],
   [["grouping", "kind"], () => "the grouping of the individuals"],
