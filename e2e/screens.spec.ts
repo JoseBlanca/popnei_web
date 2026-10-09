@@ -4423,11 +4423,9 @@ async function panelPopsMade(
   };
 }
 
-/** Shows the tab "Individuals file" of popgen2.html. */
+/** Shows the tab "Individuals" of popgen2.html. */
 async function individualsTabOnNewPage(page: Page): Promise<void> {
-  await page
-    .getByRole("tab", { name: "Individuals file", exact: true })
-    .click();
+  await page.getByRole("tab", { name: "Individuals", exact: true }).click();
 }
 
 /** The button of the download of the filtered variants on popgen2.html. */
@@ -4485,7 +4483,7 @@ for (const theme of ["light", "dark"] as const) {
       test("the input page with no file, each tab shown", async ({ page }) => {
         await save(page, `popgen2-input-no-file${at}-${theme}`);
         await page
-          .getByRole("tab", { name: "Individuals file", exact: true })
+          .getByRole("tab", { name: "Individuals", exact: true })
           .click();
         await expect(page.getByText("No individuals file open.")).toBeVisible();
         await save(page, `popgen2-input-no-file-individuals-tab${at}-${theme}`);
@@ -4501,7 +4499,7 @@ for (const theme of ["light", "dark"] as const) {
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
         await save(page, `popgen2-input-tabs${at}-${theme}`);
         await page
-          .getByRole("tab", { name: "Individuals file", exact: true })
+          .getByRole("tab", { name: "Individuals", exact: true })
           .click();
         await expect(page.getByText("No individuals file open.")).toBeVisible();
         await save(page, `popgen2-input-tabs-individuals${at}-${theme}`);

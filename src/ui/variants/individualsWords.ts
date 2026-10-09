@@ -38,8 +38,7 @@ import type {
 import { firstSheetText, sizeText } from "../steps/individuals/words.ts";
 import { chainButton, chainStatuses } from "./chain.ts";
 
-/** The heading of the box of the individuals file, and the label of its
-    tab. */
+/** The heading of the box of the individuals file. */
 export const INDIVIDUALS_BOX_NAME = "Individuals file";
 
 /** What the tab of the individuals file says with no individuals file. */
@@ -64,7 +63,7 @@ export function noIndividualsFileText(variants: VariantSource | null): string {
     when their code throws, under the box's "Individuals file". */
 export const INDIVIDUALS_LINES_NAME = "What the individuals file holds";
 
-/** The heading drawn in the tab "Individuals file" in place of what it
+/** The heading drawn in the tab "Individuals" in place of what it
     shows when its code throws. */
 export const INDIVIDUALS_TAB_CONTENT_NAME =
   "How the individuals file was read and what it holds";
@@ -356,7 +355,7 @@ function namesShown(names: readonly string[]): string {
   return `${bothOf([...words, `${grouped(names.length - MAX_NAMED)} more`])}; the tab ${INDIVIDUALS_BOX_NAME} lists them all.`;
 }
 
-/** What the tab "Individuals file" shows: no file; a read under way,
+/** What the tab "Individuals" shows: no file; a read under way,
     `options` when the last read of the load was of a text file, so that
     the selects of the options stay drawn; a file refused, `options` when
     it was read as text; or a file read, `options` for a text file and,

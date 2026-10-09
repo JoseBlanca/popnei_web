@@ -1,5 +1,5 @@
 /**
- * The table of the individuals file under the tab "Individuals file" of
+ * The table of the individuals file under the tab "Individuals" of
  * popgen2.html, as the sortable table takes it
  * (docs/specs/steps/popgen2-input.md, "The table"): every column and row
  * of the file in its order, each cell as `cellShown` writes it, and the

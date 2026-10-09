@@ -41,9 +41,9 @@ function individualsBox(page: Page): Locator {
 }
 
 /** The label of the tab named `name`. */
-function tab(page: Page, name: "Variants file" | "Individuals file"): Locator {
+function tab(page: Page, name: "Variants" | "Individuals"): Locator {
   return page
-    .getByRole("tablist", { name: "The files" })
+    .getByRole("tablist", { name: "Files and analyses" })
     .getByRole("tab", { name, exact: true });
 }
 
@@ -148,7 +148,7 @@ test("IN3 D2 the tabs by the keyboard alone: the row is one stop of the Tab key,
   // of the tabs.
   let presses = 0;
   while (
-    !(await tab(page, "Variants file").evaluate(
+    !(await tab(page, "Variants").evaluate(
       (element) => element === document.activeElement,
     ))
   ) {
@@ -156,18 +156,15 @@ test("IN3 D2 the tabs by the keyboard alone: the row is one stop of the Tab key,
     presses += 1;
     expect(presses).toBeLessThanOrEqual(6);
   }
-  await expect(tab(page, "Variants file")).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  await expect(tab(page, "Variants")).toHaveAttribute("aria-selected", "true");
   await expect(
     page.getByText("No variants file open. Open one in the box Variants file."),
   ).toBeVisible();
   await expect(page.getByText("No individuals file open.")).toBeHidden();
 
   await page.keyboard.press("ArrowRight");
-  await expect(tab(page, "Individuals file")).toBeFocused();
-  await expect(tab(page, "Individuals file")).toHaveAttribute(
+  await expect(tab(page, "Individuals")).toBeFocused();
+  await expect(tab(page, "Individuals")).toHaveAttribute(
     "aria-selected",
     "true",
   );
@@ -177,31 +174,33 @@ test("IN3 D2 the tabs by the keyboard alone: the row is one stop of the Tab key,
   ).toBeHidden();
 
   await page.keyboard.press("ArrowLeft");
-  await expect(tab(page, "Variants file")).toBeFocused();
-  await expect(tab(page, "Variants file")).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  await expect(tab(page, "Variants")).toBeFocused();
+  await expect(tab(page, "Variants")).toHaveAttribute("aria-selected", "true");
 
+  // End reaches the last tab, Distances, which is greyed with no file
+  // (e2e/popgen2Tabs.spec.ts): the tab shown stays shown.
+  await page.keyboard.press("ArrowRight");
   await page.keyboard.press("End");
-  await expect(tab(page, "Individuals file")).toHaveAttribute(
+  await expect(
+    page
+      .getByRole("tablist", { name: "Files and analyses" })
+      .getByRole("tab", { name: "Distances", exact: true }),
+  ).toBeFocused();
+  await expect(tab(page, "Individuals")).toHaveAttribute(
     "aria-selected",
     "true",
   );
   await page.keyboard.press("Home");
-  await expect(tab(page, "Variants file")).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  await expect(tab(page, "Variants")).toHaveAttribute("aria-selected", "true");
 
   // One stop: the Tab key leaves the row for the tab shown, and Shift+Tab
   // comes back to the label of the tab shown.
-  await page.keyboard.press("End");
+  await page.keyboard.press("ArrowRight");
   await page.keyboard.press("Tab");
-  await expect(tab(page, "Variants file")).not.toBeFocused();
-  await expect(tab(page, "Individuals file")).not.toBeFocused();
+  await expect(tab(page, "Variants")).not.toBeFocused();
+  await expect(tab(page, "Individuals")).not.toBeFocused();
   await page.keyboard.press("Shift+Tab");
-  await expect(tab(page, "Individuals file")).toBeFocused();
+  await expect(tab(page, "Individuals")).toBeFocused();
 });
 
 test("IN3 D2 a threshold moved, the other tab shown and back: the threshold, its line over the plot and the plot at the same place and width as before", async ({
@@ -216,11 +215,11 @@ test("IN3 D2 a threshold moved, the other tab shown and back: the threshold, its
   const lineBefore = await boxOf(histogram.line);
   const boxBefore = await boxOf(histogram.box);
 
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   await expect(histogram.group).toBeHidden();
   await expect(page.getByText("No individuals file open.")).toBeVisible();
 
-  await tab(page, "Variants file").click();
+  await tab(page, "Variants").click();
   await expect(histogram.group).toBeVisible();
   await expect(histogram.box).toHaveValue("0.05");
   expect(await boxOf(histogram.svg)).toEqual(plotBefore);
@@ -239,9 +238,9 @@ test("IN3 D2 the plots of a hidden tab: a window resized with the other tab show
   await histogram.box.press("Enter");
   const narrow = await boxOf(histogram.svg);
 
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   await page.setViewportSize({ width: 1280, height: 900 });
-  await tab(page, "Variants file").click();
+  await tab(page, "Variants").click();
   // As wide as the box the page gives it, which is not its width before.
   await expect
     .poll(() =>
@@ -271,8 +270,8 @@ test("IN3 D2 a number typed in the box of a threshold, with no Enter, is applied
   await histogram.box.fill("0.07");
 
   // The box commits its number as it loses the focus to the tab.
-  await tab(page, "Individuals file").click();
-  await tab(page, "Variants file").click();
+  await tab(page, "Individuals").click();
+  await tab(page, "Variants").click();
   await expect(histogram.box).toHaveValue("0.07");
   await expect
     .poll(async () => (await boxOf(histogram.line)).x)
@@ -283,14 +282,14 @@ test("IN3 D2 the tab not shown is never reached by the Tab key, with the plots o
   page,
 }) => {
   await openDone(page, "panel.vcf.gz");
-  await tab(page, "Individuals file").click();
-  await expect(tab(page, "Individuals file")).toBeFocused();
+  await tab(page, "Individuals").click();
+  await expect(tab(page, "Individuals")).toBeFocused();
   for (let press = 0; press < 30; press += 1) {
     await page.keyboard.press("Tab");
     expect(await focusInInert(page)).toBe(false);
   }
   // And backwards from the label.
-  await tab(page, "Individuals file").focus();
+  await tab(page, "Individuals").focus();
   for (let press = 0; press < 30; press += 1) {
     await page.keyboard.press("Shift+Tab");
     expect(await focusInInert(page)).toBe(false);
@@ -303,8 +302,8 @@ test("IN3 D2 the status region goes on speaking of the plots while their tab is 
   await recordAnnouncements(page);
   await openPage(page);
   await pick(page, "panel.vcf.gz");
-  await tab(page, "Individuals file").click();
-  await expect(tab(page, "Individuals file")).toHaveAttribute(
+  await tab(page, "Individuals").click();
+  await expect(tab(page, "Individuals")).toHaveAttribute(
     "aria-selected",
     "true",
   );
@@ -313,7 +312,7 @@ test("IN3 D2 the status region goes on speaking of the plots while their tab is 
   await expect
     .poll(async () => (await announced(page)).join(" "), { timeout: 20_000 })
     .toContain("The statistics of panel.vcf.gz are calculated.");
-  await expect(tab(page, "Individuals file")).toHaveAttribute(
+  await expect(tab(page, "Individuals")).toHaveAttribute(
     "aria-selected",
     "true",
   );
@@ -326,7 +325,7 @@ for (const width of [320, 1280]) {
   }) => {
     await page.setViewportSize({ width, height: 900 });
     await openDone(page, "panel.vcf.gz");
-    for (const shown of ["Individuals file", "Variants file"] as const) {
+    for (const shown of ["Individuals", "Variants"] as const) {
       await tab(page, shown).click();
       expect(
         await page.evaluate(
@@ -348,7 +347,7 @@ for (const width of [320, 1280]) {
       expect(individuals.x).toBeGreaterThanOrEqual(variants.x + variants.width);
       expect(individuals.width).toBe(variants.width);
     }
-    for (const name of ["Variants file", "Individuals file"] as const) {
+    for (const name of ["Variants", "Individuals"] as const) {
       await expect(tab(page, name)).toBeVisible();
       const label = await boxOf(tab(page, name));
       expect(label.x).toBeGreaterThanOrEqual(0);
@@ -380,17 +379,17 @@ test("IN3 D2 axe on the page with each tab shown, light and dark, with no file a
     "No individuals file: every individual is unclassified.",
   );
   await expectAxeBothSchemes(page, makeAxeBuilder);
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   await expectAxeBothSchemes(page, makeAxeBuilder);
 
-  await tab(page, "Variants file").click();
+  await tab(page, "Variants").click();
   await pick(page, "panel.vcf.gz");
   await expect(page.locator("svg.chart")).toHaveCount(6, { timeout: 20_000 });
   await expect(individualsBox(page)).toContainText(
     "No individuals file: all 200 individuals of panel.vcf.gz are unclassified, and the analyses per population will take them as one population.",
   );
   await expectAxeBothSchemes(page, makeAxeBuilder);
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   await expectAxeBothSchemes(page, makeAxeBuilder);
 });
 
@@ -627,7 +626,7 @@ test("IN6 D2 four rows left out and three cells of popcat emptied: the line of t
   ).toBeVisible({ timeout: 20_000 });
   await expectAxeBothSchemes(page, makeAxeBuilder);
 
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   const missing = page.getByRole("region", {
     name: "Individuals in panel.nei but not in missing.csv, before the filters",
   });
@@ -672,7 +671,7 @@ test("IN6 D2 Copy the 4 names where the page may not write the clipboard, not gr
   await openPage(page);
   await pick(page, "panel.nei");
   await pickIndividuals(page, { name: "missing.csv", text });
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   const copy = page.getByRole("button", { name: "Copy the 4 names" });
   await expect(copy).toBeVisible({ timeout: 20_000 });
   await copy.click();
@@ -759,8 +758,8 @@ test("IN6 D2 None chosen: every individual kept unclassified; the separator set 
   await expect(counts(page)).toHaveCount(0);
   await expectAxeBothSchemes(page, makeAxeBuilder);
 
-  await tab(page, "Individuals file").click();
-  const panel = page.getByRole("tabpanel", { name: "Individuals file" });
+  await tab(page, "Individuals").click();
+  const panel = page.getByRole("tabpanel", { name: "Individuals" });
   await chooseIn(page, panel, "Separator", "Semicolon");
   await expect(panel.getByRole("button", { name: "Separator" })).toContainText(
     "Semicolon",
@@ -906,8 +905,8 @@ test("IN6 D2 a CSV of semicolons read with the comma: the refusal of its row in 
     text: "id;pop;h\ns000;p0;1,75\ns001;p1;2,5\n",
   });
   await expect(columnList(page)).toContainText("pop", { timeout: 20_000 });
-  await tab(page, "Individuals file").click();
-  const panel = page.getByRole("tabpanel", { name: "Individuals file" });
+  await tab(page, "Individuals").click();
+  const panel = page.getByRole("tabpanel", { name: "Individuals" });
   await chooseIn(page, panel, "Separator", "Comma");
   const separator = panel.getByRole("button", { name: "Separator" });
   await expect(
@@ -958,8 +957,8 @@ test("IN6 D2 a CSV named .xlsx is read as text, with its options under the tab; 
   const text = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
   await openPage(page);
   await pickIndividuals(page, { name: "pops.xlsx", text });
-  await tab(page, "Individuals file").click();
-  const panel = page.getByRole("tabpanel", { name: "Individuals file" });
+  await tab(page, "Individuals").click();
+  const panel = page.getByRole("tabpanel", { name: "Individuals" });
   await expect(panel.getByText("200 rows, 2 columns")).toBeVisible({
     timeout: 20_000,
   });
@@ -996,7 +995,7 @@ test("IN6 D2 the table of the file sorted by a header and scrolled, the other ta
 }) => {
   await openPage(page);
   await pickIndividuals(page, "panel_pops.csv");
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   const grid = page.getByRole("grid", { name: "The table of panel_pops.csv" });
   await expect(grid).toBeVisible({ timeout: 20_000 });
   const header = grid.getByRole("columnheader", { name: /^popcat/u });
@@ -1027,9 +1026,9 @@ test("IN6 D2 the table of the file sorted by a header and scrolled, the other ta
   const before = await firstInView();
   await expectAxeBothSchemes(page, makeAxeBuilder);
 
-  await tab(page, "Variants file").click();
+  await tab(page, "Variants").click();
   await expect(grid).toBeHidden();
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   await expect(grid).toBeVisible();
   await expect(header).toHaveAttribute("aria-sort", "descending");
   await expect.poll(firstInView).toBe(before);
@@ -1054,7 +1053,7 @@ test("IN6 D2 a file name of 80 characters at 320 pixels: Remove, the name in the
   await expect(
     individualsBox(page).getByRole("button", { name: `Remove ${name}` }),
   ).toBeVisible();
-  for (const shown of ["Individuals file", "Variants file"] as const) {
+  for (const shown of ["Individuals", "Variants"] as const) {
     await tab(page, shown).click();
     expect(
       await page.evaluate(
@@ -1120,20 +1119,20 @@ test("IN6 D2 axe on the box and the tab with no file, a file being read, a file 
     individualsBox(page).getByText("Reading panel_pops.csv.", { exact: true }),
   ).toBeVisible();
   await expectAxeBothSchemes(page, makeAxeBuilder);
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   await expect(
     page
-      .getByRole("tabpanel", { name: "Individuals file" })
+      .getByRole("tabpanel", { name: "Individuals" })
       .getByText("Reading panel_pops.csv.", { exact: true }),
   ).toBeVisible();
   await expectAxeBothSchemes(page, makeAxeBuilder);
   await expect(columnList(page)).toHaveCount(0);
   answer();
-  await tab(page, "Variants file").click();
+  await tab(page, "Variants").click();
 
   await expectCounts(page, ALL_COUNTS);
   await expectAxeBothSchemes(page, makeAxeBuilder);
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   await expect(
     page.getByRole("grid", { name: "The table of panel_pops.csv" }),
   ).toBeVisible();
@@ -1366,7 +1365,7 @@ test("IN6 D2 an individuals file pasted into the zone of its box is opened as on
   await expect(
     individualsBox(page).getByRole("button", { name: "Remove panel_pops.csv" }),
   ).toBeVisible();
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   await expect(
     page.getByRole("grid", { name: "The table of panel_pops.csv" }),
   ).toBeVisible();
@@ -1380,7 +1379,7 @@ test("IN6 D2 individuals_10000.xlsx sorted by a header: in the first frame after
 }) => {
   await openPage(page);
   await pickIndividuals(page, "individuals_10000.xlsx");
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   const grid = page.getByRole("grid", {
     name: "The table of individuals_10000.xlsx",
   });
@@ -1430,7 +1429,7 @@ test("IN6 D2 individuals_10000.xlsx at 320 pixels: the table of 20 columns scrol
   await page.setViewportSize({ width: 320, height: 900 });
   await openPage(page);
   await pickIndividuals(page, "individuals_10000.xlsx");
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   const grid = page.getByRole("grid", {
     name: "The table of individuals_10000.xlsx",
   });
@@ -1450,7 +1449,7 @@ test("IN6 D2 individuals_10000.xlsx scrolled sideways: every header in view, the
 }) => {
   await openPage(page);
   await pickIndividuals(page, "individuals_10000.xlsx");
-  await tab(page, "Individuals file").click();
+  await tab(page, "Individuals").click();
   const grid = page.getByRole("grid", {
     name: "The table of individuals_10000.xlsx",
   });

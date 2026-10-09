@@ -290,7 +290,7 @@ function buttonOf(words: string): HTMLButtonElement | null {
   );
 }
 
-describe("IN3 the page in two boxes and two tabs", () => {
+describe("IN3 the page in two boxes and the row of tabs", () => {
   test("with no file: the two boxes with their words of no file, the zone in the box of the variants file, then the two tabs with the variants file's shown", async () => {
     await drawPage();
     const variantsBox = region("Variants file");
@@ -303,16 +303,29 @@ describe("IN3 the page in two boxes and two tabs", () => {
     );
     const tabs = [...container.querySelectorAll('[role="tab"]')];
     expect(tabs.map((tab) => tab.textContent)).toEqual([
-      "Variants file",
-      "Individuals file",
+      "Variants",
+      "Individuals",
+      "PCA",
+      "Populations",
+      "Distances",
     ]);
     expect(tabs.map((tab) => tab.getAttribute("aria-selected"))).toEqual([
       "true",
       "false",
+      "false",
+      "false",
+      "false",
+    ]);
+    expect(tabs.map((tab) => tab.getAttribute("aria-disabled"))).toEqual([
+      null,
+      null,
+      "true",
+      "true",
+      "true",
     ]);
     expect(
       container.querySelector('[role="tablist"]')?.getAttribute("aria-label"),
-    ).toBe("The files");
+    ).toBe("Files and analyses");
     // The boxes come before the row of the tabs in the page.
     const tabList = container.querySelector('[role="tablist"]');
     expect(
@@ -325,10 +338,14 @@ describe("IN3 the page in two boxes and two tabs", () => {
     expect(container.textContent).toContain(
       "No variants file open. Open one in the box Variants file.",
     );
-    // The tab not shown is drawn, inert.
+    // The tabs not shown are drawn, inert, those of the analyses with
+    // their reasons.
     const hidden = [...container.querySelectorAll("[inert]")];
     expect(hidden.map((element) => element.textContent)).toEqual([
       "No individuals file open.",
+      "The PCA needs a variants file. Open one in the box Variants file.",
+      "The analyses of the populations need a variants file. Open one in the box Variants file.",
+      "The distances between populations need a variants file. Open one in the box Variants file.",
     ]);
   });
 
@@ -400,12 +417,10 @@ describe("IN3 the boundary of the zone that opens a variants file", () => {
   test("after a throw in the zone, a turn of the tab draws the zone again, and a file can be opened from it", async () => {
     const store = await drawWithZoneThrowing("c".repeat(32));
     await act(async () => {
-      tabOf("Individuals file").click();
+      tabOf("Individuals").click();
       await Promise.resolve();
     });
-    expect(tabOf("Individuals file").getAttribute("aria-selected")).toBe(
-      "true",
-    );
+    expect(tabOf("Individuals").getAttribute("aria-selected")).toBe("true");
     const button = buttonOf("Open variants file…");
     expect(button).not.toBeNull();
     expect(region("Variants file")?.contains(button)).toBe(true);

@@ -2,11 +2,15 @@
  * The body of popgen2.html (docs/specs/steps/popgen2-input.md, "The order
  * of the page"): the page's one heading, "Popnei"; under it the two boxes
  * of the files, side by side from 720 pixels and one above the other
- * below, the variants file's first; and under them the two tabs, "Variants
- * file" and "Individuals file", the first shown when the page opens and
- * never changed by the page. Both tabs stay drawn, the one not shown inert
- * and hidden, so that a turn to the other and back finds the plots and the
- * thresholds as they were ("Both tabs kept drawn").
+ * below, the variants file's first; and under them the row of five tabs,
+ * "Variants", "Individuals", "PCA", "Populations" and "Distances"
+ * (docs/specs/steps/popgen2-pca.md, "The row of tabs"), the first shown
+ * when the page opens and never changed by the page. Every tab stays
+ * drawn, those not shown inert and hidden, so that a turn to another and
+ * back finds the plots and the thresholds as they were ("Both tabs kept
+ * drawn"). A tab of the analyses that cannot run, from `analysisTabs` of
+ * core, is greyed with its reason, and shows the reason in place of its
+ * content while it is shown greyed.
  *
  * The box of the variants file holds the lines of the file open, in a
  * boundary of errors made again for each file, which draws their name
@@ -16,10 +20,10 @@
  * opening, and the button the user pressed, which holds the focus, would
  * be replaced, leaving the focus on nothing. It has a boundary of its
  * own, made again at each turn of the tabs, so that a throw in it leaves
- * the page a way to open a file without a reload. The tab "Variants file" holds
+ * the page a way to open a file without a reload. The tab "Variants" holds
  * the statistics of the file open (docs/plans/file-stats.md), and the
  * status region says what changes away from the focus, whichever tab is
- * shown. The tab "Individuals file" is in a boundary made again for
+ * shown. The tab "Individuals" is in a boundary made again for
  * each individuals file, as the statistics are for each variants file.
  * The page holds the words of the last file not opened, which the
  * opening says and the box shows, and the tab shown, which is the
@@ -27,18 +31,26 @@
  */
 import { useId, useRef, useState } from "react";
 
+import { analysisTabs } from "../../core/popgen2Tabs.ts";
+import type { AnalysisTabId, TabGreyed } from "../../core/popgen2Tabs.ts";
 import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { StatusRegion } from "../shell/StatusRegion.tsx";
 import { useAppState } from "../store.tsx";
 import { Tabs } from "../widgets/Tabs.tsx";
+import {
+  greyedText,
+  ANALYSES_TABS_LABEL,
+  DISTANCES_NOT_BUILT,
+  PAGE_TAB_LABELS,
+  PCA_HEADING,
+  POPULATIONS_NOT_BUILT,
+} from "./analysisTabsWords.ts";
+import type { PageTab } from "./analysisTabsWords.ts";
 import { IndividualsBox } from "./IndividualsBox.tsx";
 import { IndividualsTab } from "./IndividualsTab.tsx";
-import {
-  INDIVIDUALS_BOX_NAME,
-  INDIVIDUALS_TAB_CONTENT_NAME,
-} from "./individualsWords.ts";
+import { INDIVIDUALS_TAB_CONTENT_NAME } from "./individualsWords.ts";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
 import type { StatsShown } from "./announceChanges.ts";
@@ -46,15 +58,11 @@ import { StatsSection } from "./StatsSection.tsx";
 import styles from "./VariantsPage.module.css";
 import { VariantsSummary } from "./VariantsSummary.tsx";
 import {
-  FILES_TABS_LABEL,
   INFO_NAME,
   NO_VARIANTS_FILE_TAB,
   OPENING_NAME,
   OPENING_ZONE_NAME,
 } from "./words.ts";
-
-/** The ids of the two tabs of the files. */
-type FileTab = "variants" | "individuals";
 
 /** What the page is drawn with. */
 export interface VariantsPageProps {
@@ -77,12 +85,15 @@ export function VariantsPage({
 }: VariantsPageProps): React.JSX.Element {
   const openButton = useRef<HTMLButtonElement>(null);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
-  const [tab, setTab] = useState<FileTab>("variants");
+  const [tab, setTab] = useState<PageTab>("variants");
   const variantsHeadingId = useId();
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
   const individualsId = useAppState(
     (s) => s.project.individuals?.fileId ?? null,
   );
+  // The same object while the reasons are the same, so that a threshold
+  // moved does not draw the row again.
+  const greyed = useAppState((s) => analysisTabs(s.project, s.individualsKept));
   return (
     <>
       <main className={classOf(styles, "page")}>
@@ -135,15 +146,15 @@ export function VariantsPage({
           </section>
           <IndividualsBox autoRuns={autoRuns} tab={tab} />
         </div>
-        <Tabs<FileTab>
-          label={FILES_TABS_LABEL}
+        <Tabs<PageTab>
+          label={ANALYSES_TABS_LABEL}
           selected={tab}
           onChange={setTab}
           keepHidden
           tabs={[
             {
               id: "variants",
-              label: OPENING_NAME,
+              label: PAGE_TAB_LABELS.variants,
               content: (
                 <>
                   {fileId === null && (
@@ -161,7 +172,7 @@ export function VariantsPage({
             },
             {
               id: "individuals",
-              label: INDIVIDUALS_BOX_NAME,
+              label: PAGE_TAB_LABELS.individuals,
               content: (
                 // Another load is another boundary, which has caught
                 // nothing, as the statistics of the variants file have.
@@ -174,10 +185,55 @@ export function VariantsPage({
                 </ErrorBoundary>
               ),
             },
+            analysisTab(
+              "pca",
+              greyed.pca,
+              <h2 className={classOf(styles, "boxHeading")}>{PCA_HEADING}</h2>,
+            ),
+            analysisTab(
+              "populations",
+              greyed.populations,
+              <p className={classOf(styles, "boxLine")}>
+                {POPULATIONS_NOT_BUILT}
+              </p>,
+            ),
+            analysisTab(
+              "distances",
+              greyed.distances,
+              <p className={classOf(styles, "boxLine")}>
+                {DISTANCES_NOT_BUILT}
+              </p>,
+            ),
           ]}
         />
       </main>
       <StatusRegion />
     </>
   );
+}
+
+/** A tab of the analyses: greyed with the words of `reason`, which are
+    then its content too, or showing `content`. */
+function analysisTab(
+  id: AnalysisTabId,
+  reason: TabGreyed | null,
+  content: React.ReactNode,
+): {
+  readonly id: AnalysisTabId;
+  readonly label: string;
+  readonly content: React.ReactNode;
+  readonly greyed: string | null;
+} {
+  const words = reason === null ? null : greyedText(id, reason);
+  return {
+    id,
+    label: PAGE_TAB_LABELS[id],
+    content:
+      words === null ? (
+        content
+      ) : (
+        <p className={classOf(styles, "boxLine")}>{words}</p>
+      ),
+    greyed: words,
+  };
 }

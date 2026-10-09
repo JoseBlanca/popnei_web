@@ -328,7 +328,7 @@ function box(): HTMLElement {
   return regionOf("Individuals file");
 }
 
-/** The panel of the tab "Individuals file", the second, shown or kept
+/** The panel of the tab "Individuals", the second, shown or kept
     drawn hidden; a hidden panel has no id that names it. */
 function tab(): HTMLElement {
   const panel =
@@ -698,9 +698,12 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
       drawn.tabThrows = true;
       await pickIndividuals("pops.csv");
       await recorded(store, readOf(POPS));
+      // In the tab Individuals, before the heading of the PCA tab.
+      const pca = before.indexOf("PCA");
       expect(headings()).toEqual([
-        ...before,
+        ...before.slice(0, pca),
         "How the individuals file was read and what it holds",
+        ...before.slice(pca),
       ]);
       expect(paragraphs(tab())).toEqual([]);
       drawn.tabThrows = false;

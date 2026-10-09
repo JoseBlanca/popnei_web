@@ -53,17 +53,13 @@ export const OPEN_ANOTHER_LABEL = "Open another variants file…";
 export const PASTE_LABEL = "Paste a variants file";
 
 /** The heading of the box of the variants file, at the top of the page,
-    which ends with the zone that opens one, and the label of its tab. */
+    which ends with the zone that opens one. */
 export const OPENING_NAME = "Variants file";
 
 /** The heading drawn in place of the zone that opens a variants file
     when its code throws, under the heading of its box, "Variants file",
     so that a screen reader does not hear the box's name twice. */
 export const OPENING_ZONE_NAME = "Opening a variants file";
-
-/** The name of the row of the two tabs of the files, which a screen
-    reader reads before their labels. */
-export const FILES_TABS_LABEL = "The files";
 
 /** What the tab of the variants file says before a variants file is
     open. */

@@ -1,5 +1,5 @@
 /**
- * The table of the individuals file under the tab "Individuals file" of
+ * The table of the individuals file under the tab "Individuals" of
  * popgen2.html, as `SortableTable` takes it
  * (docs/specs/steps/popgen2-input.md, "The table"): every column of the
  * file in its order, the first, the names, the header of each row; every
