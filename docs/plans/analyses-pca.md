@@ -994,3 +994,26 @@ both pages keep their PCA under the id `pca` with `keyVersion` 1, while
 one project gives the two pages different filters; the cache is safe,
 a project file would not be, and today `popgen2.html` neither saves nor
 opens one. The PCA spec and the design now say so.
+
+The fixes of work package 2's review, 9 October 2026: commits 296fbba
+to 4a5c250, the sixteen findings all taken. Each of the five tests that
+could not fail was seen failing on the code broken on purpose. The new
+module `src/core/analyses/fileRefusals.ts` holds the refusals of the
+variants file for the box Variants file and the PCA, the box's words
+unchanged; `pcaPageOf(def)` gives the page from the definition the store
+runs; `followCommand` refuses by type the calls `popgen2.html` has no
+step for. Checks at 4a5c250: Vitest 4,717 tests in 137 files; `AP2` 52
+tests; the old page's flows of the PCA and `e2e/openVariants.spec.ts`
+266 in Chromium and WebKit; the typecheck, the lint and the format
+check clean.
+
+Left for work package 6: a file changed on disk since the one pass is a
+failure, not a refusal, and its words still come from the old page's
+`failureText` of `src/ui/analyses/words.ts`; the PCA tab gives them this
+page's words. Until then the old page's options part, given the
+definition of `popgen2.html`, sends `stricterCommand` at the Variants
+tab's value when "own" is chosen, as "Its filters" asks; work package 6
+replaces that part. From the stale review, for work package 6: with the
+Variants tab's threshold off, "Stricter for the PCA" writes the PCA's
+own value at the top of the field, a new key and a second run of the
+same variants.
