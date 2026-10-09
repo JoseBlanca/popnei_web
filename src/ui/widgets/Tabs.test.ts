@@ -336,6 +336,58 @@ describe("AP1 D2 a greyed tab is reached, refused and said", () => {
     expect(document.activeElement).toBe(tabElement("second"));
   });
 
+  test("aria-disabled and the description follow the reason across drawings, open, greyed, open, greyed", () => {
+    for (const reason of [null, REASON, null, REASON]) {
+      drawGreyed("first", reason);
+      const second = tabElement("second");
+      if (reason === null) {
+        expect(second.hasAttribute("aria-disabled")).toBe(false);
+        expect(second.hasAttribute("aria-describedby")).toBe(false);
+      } else {
+        expect(second.getAttribute("aria-disabled")).toBe("true");
+        expect(
+          document.getElementById(second.getAttribute("aria-describedby") ?? "")
+            ?.textContent,
+        ).toBe(REASON);
+      }
+    }
+  });
+
+  test("a tooltip open on a greyed tab goes when the tab stops being greyed, and the tab is described by nothing", () => {
+    drawGreyed("first");
+    focusFirst();
+    press("ArrowRight");
+    expect(tooltip()).toBe(REASON);
+    drawGreyed("first", null);
+    expect(document.querySelector('[role="tooltip"]')).toBeNull();
+    expect(tabElement("second").hasAttribute("aria-describedby")).toBe(false);
+    // And it does not come back by itself when the tab is greyed again.
+    focusFirst();
+    drawGreyed("first");
+    expect(document.querySelector('[role="tooltip"]')).toBeNull();
+  });
+
+  test("a click on a greyed tab shows its tooltip, and the tab shown stays shown", () => {
+    drawGreyed("first");
+    act(() => {
+      tabElement("second").click();
+    });
+    expect(tooltip()).toBe(REASON);
+    expect(chosen).toEqual([]);
+    expect(selectedTab()).toBe("The first");
+  });
+
+  test("Enter on a greyed tab shows its tooltip again after Escape hid it", () => {
+    drawGreyed("first");
+    focusFirst();
+    press("ArrowRight");
+    press("Escape");
+    expect(tooltip()).toBeNull();
+    press("Enter");
+    expect(tooltip()).toBe(REASON);
+    expect(chosen).toEqual([]);
+  });
+
   test("an empty reason is refused as a defect, since it would give an empty tooltip and an empty description", () => {
     expect(() => {
       drawGreyed("first", "");

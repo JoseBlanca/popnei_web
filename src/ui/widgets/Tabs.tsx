@@ -29,12 +29,15 @@
  * keeps its place among the arrow keys, its tooltip shows when the focus
  * or the pointer rests on it, the reason is its description, and a choice
  * of it, by a click, Enter, Space or the arrow key that reached it, is
- * refused: the tab shown stays shown. React Aria lets through no
+ * refused: the tab shown stays shown, and the tooltip shows, which a
+ * press would otherwise close. The tooltip opens under the row, at its
+ * start, and stays through a scroll while the focus is in the row
+ * (`HeldTooltip` of Tooltip.tsx). React Aria lets through no
  * `aria-disabled` on a tab it does not disable, so the widget sets it on
  * the tab's element after each drawing, for a screen reader to say
  * "dimmed"; the tests of the widget check that it stays.
  */
-import { useId } from "react";
+import { useId, useRef, useState } from "react";
 import {
   Tabs as AriaTabs,
   Tab,
@@ -46,6 +49,7 @@ import type { Key } from "react-aria-components";
 import { classOf } from "../classOf.ts";
 import styles from "./Tabs.module.css";
 import { WithTooltip } from "./Tooltip.tsx";
+import type { HeldTooltip } from "./Tooltip.tsx";
 
 /** One tab: its label and what its panel holds; `Id` is the union of
     the ids of the tabs of a set. */
@@ -89,6 +93,26 @@ export function Tabs<Id extends string>({
 }: TabsProps<Id>): React.JSX.Element {
   const reasonsId = useId();
   const reasonId = (id: Id): string => `${reasonsId}-${id}`;
+  const listRef = useRef<HTMLDivElement>(null);
+  // The tab whose reason's tooltip is open, held here so that a press on
+  // a greyed tab, which React Aria would let close it, opens it.
+  const [reasonShown, setReasonShown] = useState<Id | null>(null);
+  if (
+    reasonShown !== null &&
+    !tabs.some((tab) => tab.id === reasonShown && isGreyed(tab))
+  ) {
+    setReasonShown(null);
+  }
+  const heldFor = (tab: TabItem<Id>): HeldTooltip => ({
+    isOpen: reasonShown === tab.id,
+    onOpenChange: (isOpen) => {
+      setReasonShown((shown) =>
+        isOpen ? tab.id : shown === tab.id ? null : shown,
+      );
+    },
+    hasFocus: () => listRef.current?.contains(document.activeElement) ?? false,
+    placedUnder: listRef,
+  });
   return (
     <AriaTabs
       selectedKey={selected}
@@ -101,18 +125,26 @@ export function Tabs<Id extends string>({
           );
         }
         if (isGreyed(chosen)) {
+          // Refused, and the reason shown, for a click, a tap, Enter or
+          // Space that would see nothing happen otherwise.
+          setReasonShown(chosen.id);
           return;
         }
         onChange(chosen.id);
       }}
       className={classOf(styles, "tabs")}
     >
-      <TabList aria-label={label} className={classOf(styles, "list")}>
+      <TabList
+        ref={listRef}
+        aria-label={label}
+        className={classOf(styles, "list")}
+      >
         {tabs.map((tab) => (
           <WithTooltip
             key={tab.id}
             text={tab.greyedReason ?? null}
             drawnElsewhereId={reasonId(tab.id)}
+            held={heldFor(tab)}
           >
             {(describedBy) => (
               <Tab

@@ -249,9 +249,16 @@ follows the counts before the thresholds.
 used, and has neither the bar under its label nor the weight of its
 words that mark the tab shown. The arrow keys move the focus onto it,
 and stop there, and its tooltip then shows; the mouse resting on it
-shows it too. A click, Enter or Space does not show it, and neither
-does the arrow key that reached it: the content under the row stays
-that of the tab shown before. The next arrow key moves the focus on,
+shows it too, and so does a click, a tap, Enter or Space on it, which
+show nothing else: the content under the row stays that of the tab
+shown before, as it does for the arrow key that reached it. The
+tooltip stays while the focus is on the tab, through a scroll of the
+page that brings the tab into view, and while the mouse is over the
+tab or the tooltip; it goes with Escape, when the focus or the mouse
+leaves, and when the tab is no longer greyed. A click that did nothing
+visible, or a tap on a touch screen, where no mouse rests on the tab,
+would otherwise leave the user without the reason (since 9 October
+2026, by the review of the first work package of the plan). The next arrow key moves the focus on,
 and shows the tab it reaches if that one is not greyed.
 
 **A tab that becomes greyed while it is shown**, the PCA tab while
@@ -619,8 +626,10 @@ what it downloads, where it is drawn.
 **A greyed tab** (4.1.2, 2.1.1, 1.3.1): it carries `aria-disabled`, set
 by the widget, and its reason as its description, so a screen reader
 says "PCA, tab, dimmed, 3 of 5" and then the reason. Its tooltip shows
-on the focus and on the mouse, stays while the mouse is over it, and
-goes with Escape (1.4.13). The tab shown keeps "selected" for a screen
+on the focus, on the mouse and on a press, stays while the focus or the
+mouse is on it, and goes with Escape (1.4.13). It opens under the row,
+at its start, so that at 320 px the tooltip of a tab on the first line
+does not hide the second. The tab shown keeps "selected" for a screen
 reader while the focus rests on a greyed one, so the user can tell
 which content is under the row. A greyed tab is not told by colour
 alone (1.4.1): it never has the bar and the weight of the tab shown,
