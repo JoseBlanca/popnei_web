@@ -536,8 +536,10 @@ Deliverables:
    needs no individuals file: the tabs by the keyboard alone, the row
    one stop of the Tab key, the arrows, Home and End; a threshold moved,
    the other tab shown and back, the threshold, its line over the plot
-   and the plot at the same width as before; a number half typed in the
-   box of a threshold kept through a turn; the hidden tab never reached
+   and the plot at the same width as before; a number typed in the box
+   of a threshold with no Enter applied as the focus goes to the tab, as
+   a click anywhere else applies it (the session's decision of 9 October
+   2026, after the review); the hidden tab never reached
    by the Tab key; the status region still speaking of the plots while
    their tab is hidden; 320 px wide, no sideways scroll, the boxes one
    above the other and the two labels visible; the focus on "Open

@@ -304,8 +304,11 @@ reader reads (React Aria's `shouldForceMount` keeps it drawn and marks
 it inert, which takes it out of the keyboard and the screen reader, and
 a rule of the page's styles hides it), as "What a hidden tab
 keeps", below, argues. So a turn to the other tab and back finds
-everything as it was: the plots, a number half typed in the box of a
-threshold, the sort and the place of the table. A plot whose tab is
+everything as it was: the plots, the sort and the place of the table. A
+number typed in the box of a threshold with no Enter is applied as the
+focus goes to the tab, as a click anywhere else on the page applies it
+(decided by the session on 9 October 2026, after the review of work
+package 3). A plot whose tab is
 hidden keeps its last drawing, and draws again at the size of its box
 when the tab is shown, since every plot watches the size of its box
 (`src/charts/plot2d.ts`, the ResizeObserver of `createPlot2d`, "An
