@@ -72,12 +72,16 @@ const DATA: HistogramData = {
   yLabel: "Variants",
 };
 
+/** The CSV the screen writes, counted, so that a test sees it written
+    at the choice alone. */
+const csv = vi.fn(() => "left_edge,right_edge,count\n0,0.5,3\n0.5,1,4\n");
+
 const DOWNLOAD: PlotDownload = {
   what: "the plot of the MAF of the variants",
   stem: "panel",
   imageWhat: "maf_variants",
-  csvWhat: "maf_variants",
-  csv: () => "left_edge,right_edge,count\n0,0.5,3\n0.5,1,4\n",
+  csvWhat: "maf_variants.bins",
+  csv,
   waiting: null,
 };
 
@@ -89,6 +93,7 @@ beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.mocked(downloadText).mockClear();
   vi.mocked(downloadFile).mockClear();
+  csv.mockClear();
   pngScales.length = 0;
   plots.made = 0;
   plots.destroyed = 0;
@@ -184,12 +189,16 @@ describe("AP5 D3 the download of a histogram, from the handle usePlot gives", ()
     expect(announcer.getState()).toBe("Saving panel.maf_variants.png.");
   });
 
-  test("Data as CSV saves the text the screen writes at the choice", async () => {
+  test("Data as CSV saves the text the screen writes at the choice, under the name of the data", async () => {
     draw(DOWNLOAD);
+    draw(DOWNLOAD);
+    expect(csv).not.toHaveBeenCalled();
     await choose("Data as CSV");
+    expect(csv).toHaveBeenCalledTimes(1);
+    expect(announcer.getState()).toBe("Saving panel.maf_variants.bins.csv.");
     expect(vi.mocked(downloadText).mock.calls).toEqual([
       [
-        "panel.maf_variants.csv",
+        "panel.maf_variants.bins.csv",
         "left_edge,right_edge,count\n0,0.5,3\n0.5,1,4\n",
         "text/csv",
       ],

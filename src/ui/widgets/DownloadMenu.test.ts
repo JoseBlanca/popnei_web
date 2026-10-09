@@ -181,11 +181,13 @@ const SORTABLE_COLUMNS: readonly SortableColumn<Id>[] = [
 ];
 
 /** Three rows sorted down by the missing rate, as the screen sorts
-    them, their texts rounded and their values in full. */
+    them, their texts rounded and their values in full; in another order
+    than by their names, "=b", "a", "c", so that a CSV in that order
+    fails. */
 const SORTED_ROWS: readonly SortableRow[] = [
-  { id: "=b", cells: ["=b", "0.9000"], values: ["=b", 0.9000000000000001] },
+  { id: "c", cells: ["c", "0.9000"], values: ["c", 0.9000000000000001] },
   { id: "a", cells: ["a", "0.5000"], values: ["a", 0.5] },
-  { id: "c", cells: ["c", "—"], values: ["c", null] },
+  { id: "=b", cells: ["=b", "—"], values: ["=b", null] },
 ];
 
 describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
@@ -207,7 +209,7 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
     const saved = savedText();
     expect(saved.name).toBe("panel_pops.table.csv");
     expect(saved.text).toBe(
-      "Individual,Missing rate\n'=b,0.9000000000000001\na,0.5\nc,\n",
+      "Individual,Missing rate\nc,0.9000000000000001\na,0.5\n'=b,\n",
     );
     expect(announcer.getState()).toBe("Saving panel_pops.table.csv.");
   });
