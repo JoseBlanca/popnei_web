@@ -23,8 +23,9 @@
  * reads, so that a control the Tab key reaches is scrolled clear of it
  * (WCAG 2.4.11). Its height is the same whatever its line says, so that
  * nothing under it moves when it starts or stops saying something. While
- * the details of an error are shown it scrolls with the page, and the
- * room is 0.
+ * an error of the application is shown it scrolls with the page, at its
+ * top, and the room is 0: fixed, its error covered half the window at
+ * 200% zoom and all of it at 400%, Close out of reach.
  *
  * Its line is not a live region: its percentage and its clock change
  * every second. What starts and ends is said by the page's status
@@ -140,6 +141,8 @@ export function Band({
   const { said, say, clear } = useSaid();
   if (error === null && detailsShown) setDetailsShown(false);
   const details = detailsShown && error !== null;
+  // While an error is shown, the band scrolls with the page.
+  const scrolls = error !== null;
 
   const headerRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -148,14 +151,14 @@ export function Band({
   useLayoutEffect(() => {
     const header = headerRef.current;
     if (header === null) return;
-    const giveBack = keepRoom(header, details);
-    if (details) return giveBack;
+    const giveBack = keepRoom(header, scrolls);
+    if (scrolls) return giveBack;
     const stopClearing = keepFocusClear(header);
     return () => {
       stopClearing();
       giveBack();
     };
-  }, [details]);
+  }, [scrolls]);
 
   // The number of the last copy of the details, raised by Close, so that
   // a copy that settles after it, or after a later copy, says nothing.
@@ -189,7 +192,7 @@ export function Band({
     <header
       ref={headerRef}
       aria-label={BAND_NAME}
-      className={classOf(styles, details ? "bandScrolls" : "band")}
+      className={classOf(styles, scrolls ? "bandScrolls" : "band")}
     >
       <div className={classOf(styles, "column")}>
         <div className={classOf(styles, "line")}>

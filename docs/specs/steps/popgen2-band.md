@@ -142,10 +142,9 @@ that line alone: the heading stays, and the defect is shown in the line
 of an error, which is worked out from the log of the errors alone, as
 every later error is.
 
-It stays at the top of the window in every state but one: while the
-details of an error are shown it scrolls with the page, so that at
-320 px it never covers more than a few lines ("An error of the
-application", below).
+It stays at the top of the window in every state but one: while an
+error of the application is shown it scrolls with the page, so that it
+never covers the window ("An error of the application", below).
 
 ### The line
 
@@ -290,12 +289,19 @@ back, and a copy of the details still under way says nothing when it
 ends. The error bar has no Save on this page, which saves no project,
 and none is added.
 
-While the details are shown the band scrolls with the page, so that at
-320 px it never covers more than a few lines of the window. The line of
-the error takes several lines at 320 px, three to five with a message
-of a line, the one case where the band is more than one line high, and
-pushes the page down when it comes: an error of the application is
-rare, and the page must be reloaded after it.
+While an error is shown, with its details or without them, the band
+scrolls with the page, at the top of it, and covers nothing. The line
+of the error takes several lines at 320 px, three to five with a
+message of a line, the one case where the band is more than one line
+high, and pushes the page down when it comes: an error of the
+application is rare, and the page must be reloaded after it. Fixed at
+the top of the window, an error band covered half the window at 200%
+zoom and all of it at 400%, with Close out of reach, in Chromium and
+WebKit (the review of work package 5 of `docs/plans/no-undo.md`, 10
+October 2026). An error that comes while the page is scrolled down is
+therefore above what the window shows; the alert reads it, and the
+Tab key from the top of the page reaches it first. Details pressed with
+the page scrolled shows the details under it, in the window.
 
 ### What stays elsewhere
 
@@ -493,8 +499,8 @@ height, always. It is set in `src/ui/base.css` beside the padding at
 the bottom that keeps a control clear of the notices,
 `scroll-padding-block-end: var(--toast-room)`, as
 `scroll-padding-block-start: var(--band-room)`, a token the band sets
-to its height. While the details of an error are shown it scrolls with
-the page and covers nothing, and the token is 0.
+to its height. While an error of the application is shown it scrolls
+with the page and covers nothing, and the token is 0.
 
 At 320 px wide (1.4.10) "Popnei" and the status share one line, the
 status in its short form, and the page under it does not scroll
@@ -568,8 +574,10 @@ pass held by `e2e/holdWorker.ts`:
   again: the link back;
 - an error of the application thrown on purpose, as the flows of the
   error bar throw it (`docs/specs/entry.md`, "How it is verified"): the
-  line of the error in an alert, Details and Close; a PCA held running
-  at the same time shows both lines;
+  line of the error in an alert, Details and Close, the band scrolling
+  with the page; Details reached by the keyboard with the page scrolled
+  to its end, the details in the window; a PCA held running at the same
+  time shows both lines;
 - the page scrolled to its end with a PCA held running: the band at the
   top of the window; each control reached by the Tab key from the end
   of the page back to the top, in WebKit as in Chromium, below the

@@ -452,7 +452,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     await expect(link).toBeVisible();
   });
 
-  test("NU5 D3 an error of the application beside a PCA held running: both lines, the error in an alert, Details shows the count and Copy the details, Close empties it and gives the focus to the heading; axe light and dark with the error and with its details", async ({
+  test("NU5 D3 an error of the application beside a PCA held running: both lines, the error in an alert, the band scrolling with the page, Details reached with the page scrolled shows the count and Copy the details in the window, Close empties it and gives the focus to the heading; axe light and dark with the error and with its details", async ({
     page,
     makeAxeBuilder,
   }) => {
@@ -482,16 +482,28 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       "aria-expanded",
       "false",
     );
+    // With an error shown the band scrolls with the page, and covers
+    // nothing of the window, at 400% zoom among others.
+    expect(
+      await band(page).evaluate(
+        (element) => getComputedStyle(element).position,
+      ),
+    ).toBe("static");
     await expectAxeBothSchemes(page, makeAxeBuilder);
 
-    await bandButton(page, "Details").click();
+    // Details reached by the keyboard with the page scrolled to its end:
+    // the details under it are in the window.
+    await page.evaluate(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight);
+    });
+    await bandButton(page, "Details").focus();
+    await page.keyboard.press("Enter");
     await expect(bandButton(page, "Details")).toHaveAttribute(
       "aria-expanded",
       "true",
     );
     await expect(band(page)).toContainText("1 more error followed it.");
-    await expect(bandButton(page, "Copy the details")).toBeVisible();
-    // With its details shown the band scrolls with the page.
+    await expect(bandButton(page, "Copy the details")).toBeInViewport();
     expect(
       await band(page).evaluate(
         (element) => getComputedStyle(element).position,

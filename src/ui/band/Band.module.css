@@ -13,8 +13,9 @@
   color: var(--color-text);
 }
 
-/* While the details of an error are shown: in the flow of the page, so
-   that it scrolls with it and never covers more than a few lines. */
+/* While an error of the application is shown: in the flow of the page,
+   at its top, so that it scrolls with it and covers nothing of the
+   window, at 400% zoom among others. */
 .bandScrolls {
   border-block-end: 1px solid var(--color-border);
   background: var(--color-background);
