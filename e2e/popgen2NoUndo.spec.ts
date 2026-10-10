@@ -186,6 +186,13 @@ function tableCaptionOf(page: Page): Locator {
   return shown(page).getByText(/^The place of each of the 200 individuals/u);
 }
 
+/** The same caption, whether the PCA's panel is shown or not: the row
+    of tabs keeps every panel drawn, so the result is read with the focus
+    left where it is. */
+function pcaCaption(page: Page): Locator {
+  return page.getByText(/^The place of each of the 200 individuals/u);
+}
+
 /** Shows the PCA tab once the one pass has ended, types the distance of
     the LD pruning, 50000, presses Run and waits for the result. */
 async function runPca(page: Page): Promise<void> {
@@ -258,18 +265,22 @@ test("NU2 D3 Ctrl+Z, Meta+Z, Ctrl+Shift+Z, Meta+Shift+Z and Ctrl+Y on the headin
   await tab(page, "Variants").click();
   const missing = threshold(page, MISSING_TITLE);
 
+  // Each key alone, and everything read after it: the page keeps one
+  // past project, so an undo and a redo pressed in a row would cancel
+  // out and a check at the end alone would see nothing.
   for (const place of [heading(page), missing.slider, missing.box]) {
-    await place.focus();
     for (const keys of UNDO_KEYS) {
+      await place.focus();
       await page.keyboard.press(keys);
+      await expect(filterBox(page)).not.toBeChecked();
+      await expect(missing.slider).toHaveValue("0.05");
+      await expect(missing.box).toHaveValue("0.05");
+      await expect(pcaCaption(page)).toBeAttached();
     }
     // A run of the keys would end with the focus: nothing waits here.
     await place.blur();
   }
 
-  await expect(filterBox(page)).not.toBeChecked();
-  await expect(missing.slider).toHaveValue("0.05");
-  await expect(missing.box).toHaveValue("0.05");
   await tab(page, "PCA").click();
   await expect(tableCaptionOf(page)).toBeVisible();
   expect(await runsPosted(page)).toBe(posted);
@@ -357,12 +368,19 @@ test("NU2 D3 a box reached by Tab, its text selected, Ctrl+Y and Meta+Y: the box
   expect(await liveSaid(page)).not.toContain("Empty");
 });
 
-test("NU2 D3 a run of the arrow keys waiting on a line, Ctrl+Z and Ctrl+Y: the line stays where the presses put it, and the run becomes a change at its second", async ({
+test("NU2 D3 a run of the arrow keys waiting on a line, each key of Undo and Redo: the line stays where the presses put it, and the run becomes a change at its second, which leaves the PCA's result behind", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   await openPage(page);
   await pick(page, "panel.vcf.gz");
   await expectDone(page, "panel.vcf.gz");
+  // The PCA's result, which the run's change leaves behind, since the
+  // PCA's filter of missing data follows the Variants tab's; and the
+  // distance typed for it, the last change, which an undo would take
+  // back and remove the result with it.
+  await runPca(page);
+  await tab(page, "Variants").click();
   const missing = threshold(page, MISSING_TITLE);
   await expect(missing.slider).toHaveValue("0.1");
   // The page's timers stand still from here, so that the run waits at the
@@ -374,14 +392,23 @@ test("NU2 D3 a run of the arrow keys waiting on a line, Ctrl+Z and Ctrl+Y: the l
     await page.keyboard.press("ArrowLeft");
   }
   await expect(missing.slider).toHaveValue("0.097");
+  const box = await missing.box.inputValue();
 
+  // Each key alone, and everything read after it, as in the flow above.
   for (const keys of UNDO_KEYS) {
     await page.keyboard.press(keys);
+    await expect(missing.slider).toHaveValue("0.097");
+    await expect(missing.slider).toBeFocused();
+    await expect(missing.box).toHaveValue(box);
+    await expect(filterBox(page)).toBeChecked();
+    await expect(pcaCaption(page)).toBeAttached();
   }
-  await expect(missing.slider).toHaveValue("0.097");
-  await expect(missing.slider).toBeFocused();
 
+  // The run is no change yet: the result is still there until its second
+  // has passed.
+  await expect(pcaCaption(page)).toBeAttached();
   await page.clock.runFor(1_000);
+  await expect(pcaCaption(page)).toHaveCount(0);
   await expect(missing.box).toHaveValue("0.097");
   await expect(missing.slider).toHaveValue("0.097");
   await expect(undoOrRedo(page)).toHaveCount(0);
