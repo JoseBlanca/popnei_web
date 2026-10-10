@@ -232,7 +232,11 @@ MAF, the LD switch, its r² and its distance. Nothing else starts it:
 not "Colour the points by", the axes, 3D or 2D, the turn of the 3D
 view, the individuals file, its column of the populations, nor a turn
 to another tab, since the key holds none of them
-(`docs/specs/analyses/pca.md`, "On popgen2.html", the key). The live
+(`docs/specs/analyses/pca.md`, "On popgen2.html", the key). A change of
+the project that is not of the key, the end of a read of the
+individuals file among them, still starts the quiet second again, so a
+PCA about to start then starts up to a second later, for the same
+values: nothing stale is shown. The live
 state ends at a Stop of the PCA, in this tab or in the band, during a
 run or during the quiet second, as the owner chose on 10 October 2026
 (open point 1 of the design); at the opening of another variants file,
@@ -393,7 +397,9 @@ start.
 **A value set back is calculated again.** The store of the page keeps
 no result for values the screen no longer shows (`docs/specs/core/store.md`,
 `dropLeftBehind`), so a threshold moved and moved back starts the PCA
-twice, once for each change that reaches the project. The one
+twice when the two changes are more than a second apart, once for each,
+and once, for the value set back, when they are within the second,
+which the second change puts off. The one
 exception is a lock: the LD distance emptied keeps the result it had,
 not shown, and the same distance typed again shows it with no
 calculation; another distance calculates.
@@ -441,7 +447,7 @@ state: for the new file, the PCA waits for its Run.
 
 **The download of the filtered variants** waits while a PCA runs, as
 built, also one started by itself; pressed during the quiet second, it
-goes first, and the PCA starts once its dialog closes
+goes first, and the PCA starts a second after its dialog closes
 (`popgen2-download.md`, "While a PCA runs", "When the PCA starts by
 itself").
 
@@ -1256,9 +1262,14 @@ focus is on a threshold of the Variants tab.
   slider held, a list open, digits not confirmed, the dialog of the
   download open, keeps it from starting for 3 s, and its release starts
   the second; the PCA is calculated for the key of the project when the
-  second runs out; nothing starts while a PCA, the one pass or a write
-  runs; a value set back starts it again; the colour of the points, the
-  individuals file and its column start nothing; a Stop, during a run or
+  second runs out; nothing starts while a PCA or a write runs; a value
+  set back starts it again; the colour of the points, the individuals
+  file and a change of its column start nothing; Run refused while a
+  write runs; Run within a run of the arrow keys sends the value the
+  run holds. The one pass running while the PCA is live cannot be
+  reached on this page, since the pass runs once for each load and a
+  new load ends the live state, so the guard that holds the PCA behind
+  it (`holderOf` of `src/ui/autoRuns.ts`) is not checked here; a Stop, during a run or
   during the second, ends the live state, and a change then starts
   nothing until Run; another variants file ends it; the LD distance
   emptied and typed again with the same value shows the result kept,

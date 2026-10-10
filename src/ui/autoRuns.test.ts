@@ -10,6 +10,7 @@ import {
   loadIndividuals,
   loadVariants,
   setAnalysisOptions,
+  setGrouping,
   setVariantFilter,
 } from "../core/project.ts";
 import type { VariantLoad } from "../core/project.ts";
@@ -1310,6 +1311,13 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
         csv: null,
       }),
     );
+    page.store.apply("the column of the populations changed", (p) =>
+      setGrouping(p, { kind: "populations", column: "popcat" }),
+    );
+    expect(page.raw.getState().project.grouping).toEqual({
+      kind: "populations",
+      column: "popcat",
+    });
     await wait(3000);
     expect(page.pcaRequests()).toHaveLength(1);
     expect(page.pca().kind).toBe("done");

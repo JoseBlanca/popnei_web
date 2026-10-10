@@ -166,8 +166,9 @@ for the PCA tab that the page gains; the design of that piece,
 `docs/designs/analyses-pca.md`, answer 5, gave the words.)
 
 **When the PCA starts by itself**, from 10 October 2026: once the PCA
-is live, a change of a threshold or of the FILTER box starts it again a
-second after the user stops changing things
+is live, a change of a threshold, of the FILTER box or of an option of
+the PCA, its method, its sliders, its LD switch, r² and distance,
+starts it again a second after the user stops changing things
 (`docs/specs/steps/popgen2-pca.md`, "The PCA calculated again by
 itself"), and from its start the button waits as above, up to 4 minutes
 on a file of 9,381 individuals (134 to 259 s on the owner's Mac), a
@@ -178,9 +179,10 @@ in the band, or "Stop recalculating" in the PCA tab before the PCA
 starts, which keeps the PCA from starting again until its Run is
 pressed. During the second before it starts, the button is usable: a
 press opens the dialog, and the PCA does not start while the dialog is
-open, nor while the file is written; it starts once the dialog closes,
-for the filters on the screen then, if the PCA is still live and has no
-result for them. So a write never waits behind a PCA, and a PCA never
+open, nor while the file is written; it starts a second after the
+dialog closes, the quiet second that the close of the dialog, a change
+under way that ends, starts, for the filters and options on the screen
+then, if the PCA is still live and has no result for them. So a write never waits behind a PCA, and a PCA never
 starts behind a write.
 
 ### The dialog
