@@ -16,7 +16,7 @@
  * alert, so that the whole sentence is not read out again when the
  * status region already says what the Save did.
  */
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 
 import { classOf } from "../classOf.ts";
 import type { Defect, Defects } from "../defects.ts";
@@ -36,6 +36,7 @@ import {
   saveLabel,
 } from "./barSave.ts";
 import type { PageStore } from "../store.tsx";
+import { useSaid } from "./said.ts";
 
 /** What the bar is drawn with. */
 export interface ErrorBarProps {
@@ -50,66 +51,6 @@ export interface ErrorBarProps {
   /** The version of the application, for Copy the details. */
   readonly appVersion: string;
 }
-
-/**
- * The text of the bar's status region, and `say`, which empties it and
- * writes `text` a frame later: a screen reader reads a text written
- * again only if it changed, so a second Save, which gives the same words,
- * would otherwise not be heard; and `clear`, which empties it.
- *
- * Each text is written with `failedNow()`, whether the last save failed
- * when it was written, and `said` gives it only while `failed`, the same
- * as the bar's first line reads, is still that; a text whose moment has
- * passed is emptied as the bar is drawn, so that it does not come back.
- * Its words, "could not be saved" or "handed to the browser", would
- * otherwise contradict a first line changed by a Save of the header.
- */
-function useSaid(
-  failedNow: () => boolean,
-  failed: boolean,
-): {
-  readonly said: string;
-  readonly say: (text: string) => void;
-  readonly clear: () => void;
-} {
-  const [said, setSaid] = useState<Said>(NOTHING_SAID);
-  const pending = useRef<number | null>(null);
-  const cancel = (): void => {
-    if (pending.current !== null) cancelAnimationFrame(pending.current);
-    pending.current = null;
-  };
-  useEffect(() => cancel, []);
-  // A text written with another state of the saves than the present one
-  // is emptied here, in the drawing, as react.dev's "adjusting some state
-  // when a prop changes" does.
-  const current = said.text === "" || said.failed === failed;
-  if (!current) setSaid(NOTHING_SAID);
-  return {
-    said: current ? said.text : "",
-    say: (text) => {
-      cancel();
-      const failedThen = failedNow();
-      setSaid(NOTHING_SAID);
-      pending.current = requestAnimationFrame(() => {
-        pending.current = null;
-        setSaid({ text, failed: failedThen });
-      });
-    },
-    clear: () => {
-      cancel();
-      setSaid(NOTHING_SAID);
-    },
-  };
-}
-
-/** A text of the bar's status region, with whether the last save had
-    failed when it was written. */
-interface Said {
-  readonly text: string;
-  readonly failed: boolean;
-}
-
-const NOTHING_SAID: Said = Object.freeze({ text: "", failed: false });
 
 /** The error bar: empty regions until the first error, then its words
     and its buttons. */

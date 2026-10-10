@@ -64,6 +64,7 @@ import {
 } from "../shell/barSave.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { keepingFocus } from "../shell/focusKept.ts";
+import { useSaid } from "../shell/said.ts";
 import type { Announcer } from "../shell/status.ts";
 import type { PageStore } from "../store.tsx";
 import { stoppedText } from "../variants/words.ts";
@@ -565,38 +566,6 @@ function useStoppedMethod(
     the 10 s of `STOPPING_MAX_MS`, a little later, so that the look falls
     after them. */
 const STOPPING_LOOK_MS = 10_050;
-
-/** The text of the band's own status region, and `say`, which empties it
-    and writes `text` a frame later, so that a second Copy, which gives
-    the same words, is heard; and `clear`, which empties it. */
-function useSaid(): {
-  readonly said: string;
-  readonly say: (text: string) => void;
-  readonly clear: () => void;
-} {
-  const [said, setSaid] = useState("");
-  const pending = useRef<number | null>(null);
-  const cancel = (): void => {
-    if (pending.current !== null) cancelAnimationFrame(pending.current);
-    pending.current = null;
-  };
-  useEffect(() => cancel, []);
-  return {
-    said,
-    say: (text) => {
-      cancel();
-      setSaid("");
-      pending.current = requestAnimationFrame(() => {
-        pending.current = null;
-        setSaid(text);
-      });
-    },
-    clear: () => {
-      cancel();
-      setSaid("");
-    },
-  };
-}
 
 /**
  * Keeps room at the top of the page for the band `header`, as tall as
