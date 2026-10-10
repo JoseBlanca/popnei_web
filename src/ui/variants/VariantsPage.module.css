@@ -11,15 +11,7 @@
   padding: var(--space-4);
 }
 
-/* The heading at the start of its line, and Undo and Redo at its end,
-   on one line at 320 pixels as well. */
-.headingLine {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
+/* The heading of the page, alone on its line. */
 .title {
   margin: 0;
   font-size: var(--text-xl);

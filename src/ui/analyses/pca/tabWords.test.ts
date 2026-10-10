@@ -12,7 +12,6 @@ import { pcaOnPopgen2 } from "../../../core/analyses/pca.ts";
 import type { IndividualsKept } from "../../../core/individualsKept.ts";
 import { setAnalysisOptions, setThreshold } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
-import type { Store } from "../../../core/store.ts";
 import { summaryResult } from "../../../core/testSupport.ts";
 import type {
   Job,
@@ -23,6 +22,7 @@ import type {
   RunError,
 } from "../../../worker/protocol.ts";
 import { createPopgen2Store, openVariantsFile } from "../../popgen2Store.ts";
+import type { Popgen2PageStore } from "../../popgen2Store.ts";
 import { WAITS_FOR_STATISTICS_TEXT } from "../words.ts";
 import {
   pcaEndAnnouncement,
@@ -48,7 +48,7 @@ function pageStore(
   numIndividuals = 2,
   method: PcaMethod = "pca",
 ): {
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly end: (index: number, outcome: Outcome<JobResult>) => void;
   readonly keys: readonly string[];
 } {
@@ -107,7 +107,7 @@ function pageStore(
 
 /** The pass started and done in `store`, the first job. */
 function passDone(
-  store: Store<JobResult, Blob>,
+  store: Popgen2PageStore<JobResult, Blob>,
   keys: readonly string[],
   end: (index: number, outcome: Outcome<JobResult>) => void,
 ): void {
@@ -137,7 +137,7 @@ function pcaResult(): JobResult {
 }
 
 /** The project of `store`. */
-function projectOf(store: Store<JobResult, Blob>): Project {
+function projectOf(store: Popgen2PageStore<JobResult, Blob>): Project {
   return store.getState().project;
 }
 
@@ -245,7 +245,7 @@ describe("AP6 D3 the words of the result of the PCA tab", () => {
 });
 
 describe("AP6 D2 the status region at the end of a run of the PCA, over the store of the page", () => {
-  test('done: "PCA of panel.nei calculated.", once, and nothing for an undo that brings it back', () => {
+  test('done: "PCA of panel.nei calculated.", once, and nothing when a threshold moved and set back leaves the PCA ready', () => {
     const { store, keys, end } = pageStore();
     passDone(store, keys, end);
     const ready = store.getState();
@@ -263,7 +263,9 @@ describe("AP6 D2 the status region at the end of a run of the PCA, over the stor
       setThreshold(p, { of: "variants", kind: "missing_data" }, 0.2),
     );
     const removed = store.getState();
-    store.undo();
+    store.apply("the filter of the variants by missing data changed", (p) =>
+      setThreshold(p, { of: "variants", kind: "missing_data" }, 0.1),
+    );
     expect(pcaEndAnnouncement(removed, store.getState())).toBeNull();
   });
 

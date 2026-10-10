@@ -17,7 +17,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { loadVariants, setGrouping, setThreshold } from "../../core/project.ts";
 import type { IndividualsReadGiven } from "../../core/project.ts";
-import type { Store } from "../../core/store.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import type {
   Cell,
@@ -36,6 +35,7 @@ import {
   POPGEN2_CHAIN,
   createPopgen2Store,
 } from "../popgen2Store.ts";
+import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
@@ -177,7 +177,7 @@ function readOf(
 /** The page drawn, its store, the requests of the fake worker, the
     analyses it starts by itself, and the files picked. */
 interface Drawn {
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly requests: Request[];
   readonly autoRuns: AutoRuns;
 }
@@ -246,7 +246,9 @@ async function drawPage(): Promise<Drawn> {
 }
 
 /** Opens `panel.nei` and records its read, with INDIVIDUALS. */
-async function openVariants(store: Store<JobResult, Blob>): Promise<void> {
+async function openVariants(
+  store: Popgen2PageStore<JobResult, Blob>,
+): Promise<void> {
   await act(async () => {
     store.apply("a new variants file was loaded", (p) =>
       loadVariants(p, {
@@ -287,7 +289,7 @@ async function pickIndividuals(name: string): Promise<void> {
 /** Records the read `read` of FILE_ID with the options the project
     holds. */
 async function recorded(
-  store: Store<JobResult, Blob>,
+  store: Popgen2PageStore<JobResult, Blob>,
   read: IndividualsReadGiven,
 ): Promise<void> {
   await act(async () => {
@@ -300,7 +302,7 @@ async function recorded(
 
 /** Chooses the column `column` in the list, as its item does. */
 async function choose(
-  store: Store<JobResult, Blob>,
+  store: Popgen2PageStore<JobResult, Blob>,
   column: string | null,
 ): Promise<void> {
   const command = columnItemCommand(
@@ -376,7 +378,7 @@ function countRows(): string[][] {
 
 /** The descriptions of the history of `store`, the last one first, as
     Undo would name them. */
-function undoNames(store: Store<JobResult, Blob>): string | null {
+function undoNames(store: Popgen2PageStore<JobResult, Blob>): string | null {
   return store.getState().undo;
 }
 
@@ -688,7 +690,9 @@ describe("IN6 D1 the commands of the box and the tab, with their descriptions", 
     const { store } = await drawPage();
     const sent = (command: {
       readonly description: string;
-      readonly command: Parameters<Store<JobResult, Blob>["apply"]>[1];
+      readonly command: Parameters<
+        Popgen2PageStore<JobResult, Blob>["apply"]
+      >[1];
     }): void => {
       store.apply(command.description, command.command);
     };
@@ -946,7 +950,7 @@ describe("AP3 D3 the changes of the individuals file are no steps of Undo; the c
   /** A step of the history before the change, a threshold of the
       individuals. */
   const thresholdStep = async (
-    store: Store<JobResult, Blob>,
+    store: Popgen2PageStore<JobResult, Blob>,
   ): Promise<void> => {
     await act(async () => {
       store.apply("the threshold of the missing genotypes changed", (p) =>
@@ -1016,12 +1020,6 @@ describe("AP3 D3 the changes of the individuals file are no steps of Undo; the c
       kind: "populations",
       column: null,
     });
-    act(() => {
-      store.undo();
-    });
-    expect(store.getState().project.grouping).toEqual({
-      kind: "populations",
-      column: "popcat",
-    });
+    expect(undoNames(store)).toBe("the column of the populations changed");
   });
 });

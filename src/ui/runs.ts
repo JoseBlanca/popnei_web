@@ -29,7 +29,7 @@ const started = new Map<number, number>();
  * on its own, outside the promise.
  */
 export function startAnalysis<R, F>(
-  store: Store<R, F>,
+  store: Pick<Store<R, F>, "startRun" | "runEnded">,
   id: AnalysisId,
 ): Promise<void> | null {
   const runs = store.startRun(id);
@@ -44,7 +44,7 @@ export function startAnalysis<R, F>(
  * when the store starts none.
  */
 export function startWriting<R, F>(
-  store: Store<R, F>,
+  store: Pick<Store<R, F>, "startWrite" | "runEnded">,
   format: WriteFormat,
 ): Promise<void> | null {
   const runs = store.startWrite(format);
@@ -57,7 +57,7 @@ export function startWriting<R, F>(
     first rejects the promise, and each other one is thrown on its own,
     outside the promise, which the window's `error` event takes. */
 async function awaitEach<R, F>(
-  store: Store<R, F>,
+  store: Pick<Store<R, F>, "runEnded">,
   runs: readonly Run<R | Written<F>>[],
 ): Promise<void> {
   const ends = await Promise.allSettled(

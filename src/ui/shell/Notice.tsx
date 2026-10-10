@@ -13,7 +13,7 @@
  * calculations it left behind. The next command, undo, redo or opening
  * replaces it with a new toast.
  */
-import { useAppState, useStore } from "../store.tsx";
+import { useAppState, useUndoStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { Toast } from "../widgets/Toast.tsx";
 import { useAnnouncer } from "./announcer.tsx";
@@ -23,7 +23,7 @@ import { noticeText } from "./words.ts";
 
 /** The notice of the store, while there is one. */
 export function Notice(): React.JSX.Element {
-  const store = useStore();
+  const store = useUndoStore();
   const announcer = useAnnouncer();
   const shellWords = useShellWords();
   const notice = useAppState((s) => s.notice);

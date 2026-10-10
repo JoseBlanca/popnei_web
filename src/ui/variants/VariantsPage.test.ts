@@ -29,11 +29,11 @@ import {
   setIndividualFilter,
 } from "../../core/project.ts";
 import { summaryResult } from "../../core/testSupport.ts";
-import type { Store } from "../../core/store.ts";
 import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
 import { createAutoRuns } from "../autoRuns.ts";
 import { FilesProvider } from "../files.tsx";
 import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "../popgen2Store.ts";
+import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { statusOf } from "../analyses/status.ts";
 import { startAnalysis } from "../runs.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
@@ -208,7 +208,7 @@ async function settled(): Promise<void> {
     with the analyses it starts by itself; a file picked is kept under
     `pickedId`, and with none given the test picks no file. */
 async function drawPage(pickedId?: string): Promise<{
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly requests: Request[];
 }> {
   const requests: Request[] = [];
@@ -276,7 +276,7 @@ async function drawPage(pickedId?: string): Promise<{
 
 /** Opens the `.nei` file `name` under `fileId` and records its read. */
 async function open(
-  store: Store<JobResult, Blob>,
+  store: Popgen2PageStore<JobResult, Blob>,
   fileId: string,
   name: string,
 ): Promise<void> {
@@ -468,7 +468,7 @@ function tabOf(label: string): HTMLElement {
     which the boundary of the zone catches. */
 async function drawWithZoneThrowing(
   pickedId?: string,
-): Promise<Store<JobResult, Blob>> {
+): Promise<Popgen2PageStore<JobResult, Blob>> {
   inject.zoneThrows = true;
   const { store } = await drawPage(pickedId);
   expect(caught).toEqual([new Error("the zone could not be drawn")]);
@@ -524,7 +524,7 @@ describe("IN3 the boundary of the zone that opens a variants file", () => {
 /** Opens an individuals file that puts i1 in p0 and i2 in p1, chooses
     its column pop, and keeps i1 alone. */
 async function openPopulationsKeepingI1(
-  store: Store<JobResult, Blob>,
+  store: Popgen2PageStore<JobResult, Blob>,
 ): Promise<void> {
   const fileId = "d".repeat(32);
   const csv = { encoding: "auto", separator: "auto", decimal: "auto" } as const;

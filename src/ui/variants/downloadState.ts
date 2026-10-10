@@ -14,7 +14,6 @@ import type { Project } from "../../core/project.ts";
 import type {
   AnalysisStatus,
   AppState,
-  Store,
   WriteStatus,
 } from "../../core/store.ts";
 import type {
@@ -33,6 +32,7 @@ import {
   noVariantText,
   analysisWaitsText,
 } from "./downloadWords.ts";
+import type { PageStore } from "../store.tsx";
 
 /** What `downloadPlace` reads beyond the one pass, the write and the
     filters. */
@@ -289,10 +289,7 @@ export type WriteEnd =
  * throws, a defect of ours, the store is not told, and the throw goes
  * on. Gives how the write ended.
  */
-export function endOfWrite(
-  store: Store<JobResult, Blob>,
-  download: DownloadFile,
-): WriteEnd {
+export function endOfWrite(store: PageStore, download: DownloadFile): WriteEnd {
   const { write, project } = store.getState();
   switch (write?.kind) {
     case "done":
@@ -318,10 +315,7 @@ export function endOfWrite(
  * `done`, and then tells the store. A defect in any other state, in
  * which neither button is drawn.
  */
-export function saveAgain(
-  store: Store<JobResult, Blob>,
-  download: DownloadFile,
-): void {
+export function saveAgain(store: PageStore, download: DownloadFile): void {
   const { write, project } = store.getState();
   if (write?.kind !== "saved" && write?.kind !== "done") {
     throw new Error(

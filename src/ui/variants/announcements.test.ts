@@ -2,10 +2,11 @@ import { describe, expect, test } from "vitest";
 
 import { loadVariants } from "../../core/project.ts";
 import type { VariantLoad } from "../../core/project.ts";
-import type { AppState, Store } from "../../core/store.ts";
+import type { AppState } from "../../core/store.ts";
 import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import { createPopgen2Store } from "../popgen2Store.ts";
+import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
 import { STATS_PROGRESS_KIND, statsAnnouncementsOf } from "./statsWords.ts";
 import { announcementsOf, summaryStatus } from "./words.ts";
@@ -14,7 +15,7 @@ const FILE_ID = "0123456789abcdef0123456789abcdef";
 
 /** The store of the new page with a fake `send` ended by hand. */
 function setUp(): {
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly sent: ((outcome: Outcome<JobResult>) => void)[];
   /** The function of each request that gives the store a result so far. */
   readonly soFar: ((result: JobResult) => void)[];
@@ -59,7 +60,7 @@ const NEI: VariantLoad = {
 
 /** What the region says of `change` applied to the store. */
 function said(
-  store: Store<JobResult, Blob>,
+  store: Popgen2PageStore<JobResult, Blob>,
   change: () => void,
 ): readonly string[] {
   const before: AppState<JobResult, Blob> = store.getState();
@@ -79,7 +80,7 @@ const TWO_HUNDRED: readonly string[] = Array.from(
 );
 
 /** Opens the VCF and records its read of 200 individuals. */
-function openRead(store: Store<JobResult, Blob>): void {
+function openRead(store: Popgen2PageStore<JobResult, Blob>): void {
   store.apply("a new variants file was loaded", (p) => loadVariants(p, VCF));
   store.variantsRead(FILE_ID, {
     kind: "read",
@@ -303,7 +304,7 @@ describe("what the status region of the new page says of the statistics of the o
   /** What the region says of the statistics as `change` is made and the
       outcomes it gave settle. */
   async function statsSaid(
-    store: Store<JobResult, Blob>,
+    store: Popgen2PageStore<JobResult, Blob>,
     change: () => void,
   ): Promise<readonly string[]> {
     const before = store.getState();

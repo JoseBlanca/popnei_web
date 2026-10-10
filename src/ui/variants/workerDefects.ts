@@ -10,18 +10,14 @@
  * (docs/specs/steps/popgen2-download.md, "When the write fails"). Each
  * failure is reported once.
  */
-import type { Store } from "../../core/store.ts";
-import type { JobResult } from "../../worker/protocol.ts";
 import type { Defects } from "../defects.ts";
 import { summaryStatus } from "./words.ts";
+import type { PageStore } from "../store.tsx";
 
 /** Gives `defects` each defect of our own code that an opening or the
     pass of the count met in the worker, and each stop of the worker
     during one of them, once for each failure. */
-export function reportDefects(
-  store: Store<JobResult, Blob>,
-  defects: Defects,
-): void {
+export function reportDefects(store: PageStore, defects: Defects): void {
   // The status of the summary of the variants file, the one pass of the
   // count and the statistics, at the last change.
   let then = summaryStatus(store.getState());

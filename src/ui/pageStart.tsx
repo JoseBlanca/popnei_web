@@ -15,10 +15,8 @@ import { I18nProvider } from "react-aria-components";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 
-import type { Store } from "../core/store.ts";
 import { createClient } from "../worker/client.ts";
 import type { Client } from "../worker/client.ts";
-import type { JobResult } from "../worker/protocol.ts";
 import { makeFilesWorker, makeRunnerWorker } from "../worker/start.ts";
 import { createDefects, isResizeObserverNoise } from "./defects.ts";
 import type { Defects } from "./defects.ts";
@@ -27,6 +25,7 @@ import type { Files } from "./files.tsx";
 import { createReads } from "./reads.ts";
 import type { Saving } from "./saving.ts";
 import { ErrorBar } from "./shell/ErrorBar.tsx";
+import type { PageStore } from "./store.tsx";
 
 declare global {
   /** The version of the application, the number in package.json, which
@@ -88,10 +87,7 @@ function listenForDefects(defects: Defects): void {
 
 /** Draws the error bar again, with the store and the saving once they
     are made. */
-export type DrawBar = (
-  store: Store<JobResult, Blob> | null,
-  saving: Saving | null,
-) => void;
+export type DrawBar = (store: PageStore | null, saving: Saving | null) => void;
 
 /**
  * Steps 1 and 2 of the opening, then the page's own: the guard steps
@@ -146,7 +142,7 @@ export interface Senders {
 }
 
 /** The store, the worker client and the files of a page. */
-export interface Connected<S extends Store<JobResult, Blob>> {
+export interface Connected<S extends PageStore> {
   readonly store: S;
   readonly client: Client;
   readonly files: Files;
@@ -160,7 +156,7 @@ export interface Connected<S extends Store<JobResult, Blob>> {
  * that popnei's wasm loads while the user looks for their file, and the
  * files of the page over it.
  */
-export function connectStore<S extends Store<JobResult, Blob>>(
+export function connectStore<S extends PageStore>(
   makeStore: (senders: Senders) => S,
 ): Connected<S> {
   let client: Client | null = null;
@@ -191,7 +187,7 @@ export function connectStore<S extends Store<JobResult, Blob>>(
 
 /** Asks for the reads the project of `store` waits for, now and after
     every change of it. */
-export function syncReads(store: Store<JobResult, Blob>, client: Client): void {
+export function syncReads(store: PageStore, client: Client): void {
   const reads = createReads({ store, client });
   store.subscribe(() => {
     reads.sync();

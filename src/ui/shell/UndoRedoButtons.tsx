@@ -1,56 +1,37 @@
 /**
- * Undo and Redo, the two buttons and their keys, which both pages draw:
- * popgen.html in the header of its shell, beside Open project… and Save
- * project (docs/specs/shell.md, "The header"), and popgen2.html at the
- * right end of the line of its heading "Popnei"
- * (docs/specs/steps/popgen2-pca.md, "Undo and Redo").
+ * Undo and Redo, the two buttons and their keys, in the header of the
+ * shell of popgen.html, beside Open project… and Save project
+ * (docs/specs/shell.md, "The header"). popgen2.html has no Undo and no
+ * Redo since 10 October 2026 (docs/specs/steps/popgen2-pca.md, "No Undo
+ * and no Redo").
  *
  * Undo and Redo are described by what they would take back or bring
- * again, "Undo: the filter of the variants by missing data changed". On
- * popgen.html both are always drawn, and disabled when they have none.
- * On popgen2.html, with `onlyWithStep`, each is drawn only while it has
- * one, and is otherwise not in the page at all, neither a stop of the Tab
- * key nor found by a screen reader; each stands in a place of its own,
- * which keeps the width of its button while it is hidden, so that neither
- * moves when the other comes or goes, and a second click lands where the
- * first did.
- *
- * On popgen2.html, while a run of the arrow keys on a threshold waits to
- * become a change (thresholdRun.ts), Undo names that change, which a
- * press makes before it undoes it, as Ctrl+Z does; and Redo is not
- * offered, since that change leaves nothing to redo. When a press takes
- * the last step and its button goes, or becomes disabled on popgen.html,
- * the focus moves to the other, which that press has just offered, since
- * the browser would otherwise drop the focus to the start of the page
- * (WCAG 2.4.3). When a button with the focus goes on popgen2.html for any
- * other reason, as when a file dropped on a box while Redo has the focus
- * starts the history afresh, the focus goes to the `<h1>` of the page,
- * as it does when an undo or a redo removes another control that had the
- * focus (focusKept.ts). An undo or a redo is
- * announced as undoRedo.ts says.
+ * again, "Undo: the filter of the variants by missing data changed".
+ * Both are always drawn, and disabled when they have none. When a press
+ * takes the last step and its button becomes disabled, the focus moves
+ * to the other, which that press has just enabled, since the browser
+ * would otherwise drop the focus to the start of the page (WCAG 2.4.3).
+ * When an undo or a redo removes another control that had the focus,
+ * the focus goes to the `<h1>` of the step (focusKept.ts). An undo or a
+ * redo is announced as undoRedo.ts says.
  *
  * The keys, Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y, and Cmd+Z and Cmd+Shift+Z on
- * macOS, are caught on the whole window while this part is drawn, which on
- * both pages is from their opening, whether or not a button is shown, as
- * shortcuts.ts says: a key with no step to take does nothing and does not
- * reach the browser's own undo. The page may make Undo and Redo wait,
- * with a reason, as popgen2.html is to do while a PCA runs: the keys then
- * do nothing, and a button drawn is greyed with the reason and does
- * nothing when pressed. The browser's own undo in a text field is kept
- * from reaching another field.
+ * macOS, are caught on the whole window while this part is drawn, which
+ * is from the opening of the page, as shortcuts.ts says: a key with no
+ * step to take does nothing and does not reach the browser's own undo.
+ * The browser's own undo in a text field is kept from reaching another
+ * field.
  *
- * The two buttons, or their two places, are drawn with nothing around
- * them, so that the page places them.
+ * The two buttons are drawn with nothing around them, so that the header
+ * places them.
  */
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 
-import { classOf } from "../classOf.ts";
-import { useAppState, useStore } from "../store.tsx";
-import { useEndRuns, usePendingChange } from "../variants/runGate.tsx";
+import { useAppState, useUndoStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { useAnnouncer } from "./announcer.tsx";
-import { focusHeadingIfLeft, keepingFocus } from "./focusKept.ts";
+import { keepingFocus } from "./focusKept.ts";
 import {
   keysAction,
   ownerOfKeys,
@@ -59,69 +40,15 @@ import {
 } from "./shortcuts.ts";
 import type { Shortcut } from "./shortcuts.ts";
 import { undoOrRedo } from "./undoRedo.ts";
-import styles from "./UndoRedoButtons.module.css";
-
-/** What Undo and Redo are drawn with. */
-export interface UndoRedoButtonsProps {
-  /** popgen2.html's setting: each button drawn only while it has a step
-      to take, in a place of its own kept while it is hidden, and the
-      focus of a button that goes for another reason than its own press
-      given to the heading. Absent, as on popgen.html, both are always
-      drawn, disabled when they have no step. */
-  readonly onlyWithStep?: boolean;
-  /** The reason Undo and Redo wait, or `null` when they do not: while
-      given, the keys do nothing and do not reach the browser's own undo,
-      and a button drawn is greyed, with the reason as its tooltip and its
-      description, and does nothing when pressed, as popgen2.html is to
-      make them while a PCA runs, "Stop the PCA to change the filters."
-      (docs/specs/steps/popgen2-pca.md, "Undo and Redo", "While a PCA
-      runs"). `null` when absent. */
-  readonly waits?: string | null;
-}
 
 /** The buttons Undo and Redo, and the keys of both on the window. */
-export function UndoRedoButtons({
-  onlyWithStep = false,
-  waits = null,
-}: UndoRedoButtonsProps): React.JSX.Element {
-  const store = useStore();
+export function UndoRedoButtons(): React.JSX.Element {
+  const store = useUndoStore();
   const announcer = useAnnouncer();
-  const pending = usePendingChange();
-  const endRuns = useEndRuns();
   const undoText = useAppState((s) => s.undo);
-  const storeRedo = useAppState((s) => s.redo);
-  // A run waiting will be the step Undo takes back, and will leave nothing
-  // to redo; the run is made a change before an undo or a redo.
-  const shownUndo = pending ?? undoText;
-  const redoText = pending === null ? storeRedo : null;
+  const redoText = useAppState((s) => s.redo);
   const undoRef = useRef<HTMLButtonElement | null>(null);
   const redoRef = useRef<HTMLButtonElement | null>(null);
-
-  // The ref of each button, which keeps its element for the focus; on
-  // popgen2.html, a button that leaves the page with the focus hands it
-  // to the heading, unless the press that removed it has given it to the
-  // other. React lets go of the element before it takes it off the page,
-  // so that it still has the focus then.
-  const refUndo = useCallback(
-    (node: HTMLButtonElement | null): void => {
-      const before = undoRef.current;
-      undoRef.current = node;
-      if (node === null && before !== null && onlyWithStep) {
-        focusHeadingIfLeft(before);
-      }
-    },
-    [onlyWithStep],
-  );
-  const refRedo = useCallback(
-    (node: HTMLButtonElement | null): void => {
-      const before = redoRef.current;
-      redoRef.current = node;
-      if (node === null && before !== null && onlyWithStep) {
-        focusHeadingIfLeft(before);
-      }
-    },
-    [onlyWithStep],
-  );
 
   /** Undoes or redoes, from the button or the keyboard. */
   const change = (which: Shortcut): void => {
@@ -129,11 +56,9 @@ export function UndoRedoButtons({
       which === "undo" ? [undoRef, redoRef] : [redoRef, undoRef];
     const hadFocus =
       own.current !== null && document.activeElement === own.current;
-    // A run waiting is made a change first, so that an undo finds it.
-    endRuns();
-    // Drawn at once, so that the other button is drawn or enabled before
-    // it is given the focus; and a control that had the focus and left
-    // the page with the change hands it to the h1 of the page.
+    // Drawn at once, so that the other button is enabled before it is
+    // given the focus; and a control that had the focus and left the
+    // page with the change hands it to the h1 of the step.
     keepingFocus(() => {
       flushSync(() => {
         undoOrRedo(store, announcer, which);
@@ -152,7 +77,7 @@ export function UndoRedoButtons({
       const action = keysAction({
         handled: event.defaultPrevented,
         owner: ownerOfKeys(event.target),
-        waits: waits !== null,
+        waits: false,
       });
       if (action === "leave") return;
       event.preventDefault();
@@ -178,59 +103,26 @@ export function UndoRedoButtons({
     };
   });
 
-  const undo = (
-    <Button
-      label="Undo"
-      ref={refUndo}
-      isDisabled={shownUndo === null}
-      hint={shownUndo === null ? null : `Undo: ${shownUndo}`}
-      waiting={waits}
-      onPress={() => {
-        change("undo");
-      }}
-    />
-  );
-  const redo = (
-    <Button
-      label="Redo"
-      ref={refRedo}
-      isDisabled={redoText === null}
-      hint={redoText === null ? null : `Redo: ${redoText}`}
-      waiting={waits}
-      onPress={() => {
-        change("redo");
-      }}
-    />
-  );
-  if (!onlyWithStep) {
-    return (
-      <>
-        {undo}
-        {redo}
-      </>
-    );
-  }
   return (
-    <span className={classOf(styles, "places")}>
-      <span className={classOf(styles, "place")} data-place="undo">
-        <ButtonWidth label="Undo" />
-        {shownUndo !== null && undo}
-      </span>
-      <span className={classOf(styles, "place")} data-place="redo">
-        <ButtonWidth label="Redo" />
-        {redoText !== null && redo}
-      </span>
-    </span>
-  );
-}
-
-/** The words of a button, drawn as the button would be and unseen, by
-    the eye and by a screen reader, which give its place the button's
-    width and height while it is hidden. */
-function ButtonWidth({ label }: { readonly label: string }): React.JSX.Element {
-  return (
-    <span aria-hidden="true" className={classOf(styles, "width")}>
-      {label}
-    </span>
+    <>
+      <Button
+        label="Undo"
+        ref={undoRef}
+        isDisabled={undoText === null}
+        hint={undoText === null ? null : `Undo: ${undoText}`}
+        onPress={() => {
+          change("undo");
+        }}
+      />
+      <Button
+        label="Redo"
+        ref={redoRef}
+        isDisabled={redoText === null}
+        hint={redoText === null ? null : `Redo: ${redoText}`}
+        onPress={() => {
+          change("redo");
+        }}
+      />
+    </>
   );
 }

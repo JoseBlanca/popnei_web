@@ -17,7 +17,6 @@ import {
   setThreshold,
 } from "../core/project.ts";
 import type { IndividualsReadGiven, Project } from "../core/project.ts";
-import type { Popgen2Store } from "../core/store.ts";
 import type {
   Cell,
   CsvOptions,
@@ -28,6 +27,7 @@ import type {
 } from "../worker/protocol.ts";
 import { choosePopulationColumns } from "./populationColumn.ts";
 import { createPopgen2Store } from "./popgen2Store.ts";
+import type { Popgen2PageStore } from "./popgen2Store.ts";
 import { createRunGate, gatedStore } from "./variants/thresholdRun.ts";
 
 /** The options of a CSV a file is opened with. */
@@ -98,7 +98,7 @@ function loadId(n: number): string {
     entry's watch of the store itself, what it said and the columns it
     chose, each sent as `populationColumnChosen`. */
 function page(): {
-  readonly store: Popgen2Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly gate: ReturnType<typeof createRunGate>;
   readonly said: string[];
   readonly chosen: () => number;
@@ -122,7 +122,7 @@ function page(): {
   // The entry's own store, the store itself and not the gated one, which
   // counts what it sends; the test's commands go to `store`, as the
   // screens' do.
-  const counted: Popgen2Store<JobResult, Blob> = {
+  const counted: Popgen2PageStore<JobResult, Blob> = {
     ...raw,
     populationColumnChosen: (fileId, column) => {
       chosen += 1;
@@ -140,7 +140,7 @@ function page(): {
 }
 
 /** Opens `panel.nei` in `store`, read with its 200 individuals. */
-function openVariants(store: Popgen2Store<JobResult, Blob>): void {
+function openVariants(store: Popgen2PageStore<JobResult, Blob>): void {
   const fileId = "ffffffffffffffffffffffffffffffff";
   store.apply("a new variants file was loaded", (p) =>
     loadVariants(p, {
@@ -163,7 +163,7 @@ function openVariants(store: Popgen2Store<JobResult, Blob>): void {
 /** Opens the individuals file `name` as the load `fileId`, as the box
     does, with nothing to undo after it. */
 function openIndividuals(
-  store: Popgen2Store<JobResult, Blob>,
+  store: Popgen2PageStore<JobResult, Blob>,
   fileId: string,
   name = "panel_pops.csv",
 ): void {
@@ -173,7 +173,7 @@ function openIndividuals(
 /** Records the read `read` of the load `fileId` with the options the
     project holds, and lets the entry's microtask run. */
 async function recorded(
-  store: Popgen2Store<JobResult, Blob>,
+  store: Popgen2PageStore<JobResult, Blob>,
   fileId: string,
   read: IndividualsReadGiven,
 ): Promise<void> {
@@ -188,7 +188,7 @@ function columnOf(p: Project): string | null | undefined {
 }
 
 /** Chooses "None" in the list, as the screen does. */
-function chooseNone(store: Popgen2Store<JobResult, Blob>): void {
+function chooseNone(store: Popgen2PageStore<JobResult, Blob>): void {
   store.apply("the column of the populations changed", (p) =>
     setGrouping(p, { kind: "populations", column: null }),
   );
@@ -197,7 +197,7 @@ function chooseNone(store: Popgen2Store<JobResult, Blob>): void {
 /** Sets the separator of the CSV, as the select of the tab does, with
     nothing to undo after it. */
 function setSeparator(
-  store: Popgen2Store<JobResult, Blob>,
+  store: Popgen2PageStore<JobResult, Blob>,
   separator: CsvOptions["separator"],
 ): void {
   store.applyAfresh((p) => setCsvOptions(p, { ...AUTO, separator }));
@@ -341,31 +341,13 @@ describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of pop
     ]);
   });
 
-  test("an undo and a redo send nothing and say nothing", async () => {
-    const { store, said, chosen } = page();
-    openVariants(store);
-    openIndividuals(store, loadId(1));
-    await recorded(store, loadId(1), readOf(PANEL_POPS));
-    chooseNone(store);
-    store.undo();
-    store.redo();
-    store.undo();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(chosen()).toBe(1);
-    expect(said).toHaveLength(1);
-    expect(columnOf(store.getState().project)).toBe("popcat");
-  });
-
-  test("the column the entry chose leaves nothing to undo; the user's None, undone and redone, is kept through a change of separator", async () => {
+  test("the column the entry chose leaves nothing to undo; the user's None is kept through a change of separator", async () => {
     const { store, said, chosen } = page();
     openVariants(store);
     openIndividuals(store, loadId(1));
     await recorded(store, loadId(1), readOf(PANEL_POPS));
     expect(store.getState().undo).toBeNull();
     chooseNone(store);
-    store.undo();
-    expect(columnOf(store.getState().project)).toBe("popcat");
-    store.redo();
     expect(columnOf(store.getState().project)).toBeNull();
     setSeparator(store, ",");
     await recorded(store, loadId(1), readOf(PANEL_POPS));
@@ -377,7 +359,7 @@ describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of pop
     ]);
   });
 
-  test("a run of the arrow keys on a threshold still held when a read is recorded goes on waiting, and when it ends is a step whose undo keeps the column", async () => {
+  test("a run of the arrow keys on a threshold still held when a read is recorded goes on waiting, and when it ends is a step that keeps the column", async () => {
     const { store, gate, chosen } = page();
     openVariants(store);
     openIndividuals(store, loadId(1));
@@ -402,7 +384,6 @@ describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of pop
     expect(store.getState().undo).toBe(
       "the threshold of the missing genotypes changed",
     );
-    store.undo();
     expect(columnOf(store.getState().project)).toBe("popcat");
   });
 
@@ -420,7 +401,7 @@ describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of pop
     expect(store.getState().undo).toBeNull();
   });
 
-  test("a threshold moved while the read waited is still a step after the read, and its undo keeps the column", async () => {
+  test("a threshold moved while the read waited is still a step after the read, and the column is chosen with it", async () => {
     const { store, chosen } = page();
     openVariants(store);
     openIndividuals(store, loadId(1));
@@ -433,11 +414,9 @@ describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of pop
     expect(store.getState().undo).toBe(
       "the threshold of the missing genotypes changed",
     );
-    store.undo();
-    const back = store.getState().project;
-    expect(columnOf(back)).toBe("popcat");
-    expect(back.individualFilters).toBe(opened.individualFilters);
-    expect(store.getState().undo).toBeNull();
+    const after = store.getState().project;
+    expect(columnOf(after)).toBe("popcat");
+    expect(after.individualFilters).not.toBe(opened.individualFilters);
   });
 
   test("a refusal sends nothing and says the words of the box", async () => {

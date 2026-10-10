@@ -129,7 +129,8 @@ describe("SF7 D2 the FILTER box of popgen2.html", () => {
       "the variants that failed their FILTER are kept",
     );
 
-    store.undo();
+    const on = passedFilterChange(true);
+    store.apply(on.description, on.command);
 
     expect(passedFilterOn(store.getState().project)).toBe(true);
     expect(jobs).toHaveLength(1);

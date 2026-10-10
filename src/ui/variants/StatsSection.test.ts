@@ -23,7 +23,6 @@ import {
 
 import { VARIANT_FINE_BINS } from "../../core/analyses/variantChecks.ts";
 import { loadVariants } from "../../core/project.ts";
-import type { Store } from "../../core/store.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import type {
   Job,
@@ -42,6 +41,7 @@ import {
   POPGEN2_CHAIN,
   createPopgen2Store,
 } from "../popgen2Store.ts";
+import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
@@ -83,7 +83,7 @@ const SECOND = "fedcba9876543210fedcba9876543210";
 /** The page: its store, the analyses it starts by itself, the requests
     sent, and the open button the section gives the focus to. */
 interface Page {
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly autoRuns: AutoRuns;
   readonly requests: Request[];
   readonly openButton: React.RefObject<HTMLButtonElement | null>;

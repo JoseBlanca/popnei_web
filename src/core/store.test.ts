@@ -9095,6 +9095,34 @@ describe("NU1 D3 a store made with stopLeftBehind alone keeps a result left behi
   });
 });
 
+describe("NU2 D1 the history of a store made with stopLeftBehind alone, whose undo can be read", () => {
+  test("another variants file opened after two steps and an undo: nothing to undo or redo, the filters as the user left them, no notice; an undo then leaves the state the same object", () => {
+    const made = popgen2Store(true);
+    moveMissing(made.store, 0.2);
+    made.store.apply("the MAF filter changed", (p) =>
+      setThreshold(p, { of: "variants", kind: "maf" }, 0.3),
+    );
+    made.store.undo();
+    expect(made.store.getState().undo).toBe(
+      "the filter of the variants by missing data changed",
+    );
+    expect(made.store.getState().redo).toBe("the MAF filter changed");
+    const filters = made.store.getState().project.filters;
+
+    made.store.open((p) =>
+      loadVariants(p, { ...POPGEN2_LOAD, fileId: OTHER_VARIANTS_ID }),
+    );
+
+    const opened = made.store.getState();
+    expect(opened.undo).toBeNull();
+    expect(opened.redo).toBeNull();
+    expect(opened.notice).toBeNull();
+    expect(opened.project.filters).toStrictEqual(filters);
+    made.store.undo();
+    expect(made.store.getState()).toBe(opened);
+  });
+});
+
 describe("NU1 D4 stoppedAwaitingWorker, from a Stop until the calculation worker is ready again", () => {
   test("cancelRun of the PCA in flight: stoppedAwaitingWorker is the PCA; of the one pass in flight: the one pass", () => {
     const made = popgen2Store(true, true);

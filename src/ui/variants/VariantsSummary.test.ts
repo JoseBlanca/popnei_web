@@ -14,11 +14,11 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { loadVariants } from "../../core/project.ts";
 import { summaryResult } from "../../core/testSupport.ts";
-import type { Store } from "../../core/store.ts";
 import type { Job, JobResult, Outcome, Run } from "../../worker/protocol.ts";
 import { createAutoRuns } from "../autoRuns.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "../popgen2Store.ts";
+import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
@@ -43,7 +43,7 @@ interface Request {
 /** The page: its store, the analyses it starts by itself, which start
     only at the test's `sync`, and the requests sent. */
 interface Page {
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly autoRuns: AutoRuns;
   readonly requests: Request[];
   /** The texts given to the status region, in their order. */

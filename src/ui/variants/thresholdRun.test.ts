@@ -126,7 +126,7 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
     expect(told).toBe(6);
   });
 
-  test("a run waiting is made a change before any other command reaches the project, Undo and an opening among them, and the gate lets it go once ended", () => {
+  test("a run waiting is made a change before another command reaches the project, and the gate lets it go once ended", () => {
     const gate = createRunGate();
     const store = gatedStore(
       createPopgen2Store({
@@ -162,23 +162,9 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
     expect(store.getState().undo).toBe(
       "the variants that failed their FILTER are kept",
     );
-    store.undo();
-    expect(store.getState().undo).toBe("the MAF filter was turned on");
+    // The run's change came first, and the command after it.
     expect(filtersOf(store.getState().project)).toContain("maf");
-    store.undo();
-    expect(filtersOf(store.getState().project)).not.toContain("maf");
-
-    // Undo with a run waiting undoes the run, made a step first.
-    store.redo();
-    store.redo();
-    run.press(0.9, 0.8);
-    store.undo();
-    expect(store.getState().redo).toBe("the MAF filter was turned on");
-
-    // Redo with a run waiting: the run clears what Redo would bring.
-    run.press(0.9, 0.7);
-    store.redo();
-    expect(store.getState().redo).toBe(null);
+    expect(filtersOf(store.getState().project)).not.toContain("passed");
 
     // Nothing held after: the timer makes no second change.
     const before = store.getState();

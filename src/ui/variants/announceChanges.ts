@@ -7,13 +7,14 @@
  * entry calls it once, before the page is drawn; a test calls it over the
  * store of the page and the section alone.
  */
-import type { AppState, Store } from "../../core/store.ts";
+import type { AppState } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { pcaEndAnnouncement } from "../analyses/pca/tabWords.ts";
 import type { Announcer } from "../shell/status.ts";
 import { noVariantAnnouncement } from "./downloadState.ts";
 import { statsAnnouncementsOf } from "./statsWords.ts";
 import { announcementsOf } from "./words.ts";
+import type { PageStore } from "../store.tsx";
 
 /**
  * Called by the section of the statistics of the load `fileId` once it is
@@ -36,7 +37,7 @@ export type StatsShown = (fileId: string) => () => void;
  * since the file was read. Returns what the section calls once drawn.
  */
 export function announceChanges(
-  store: Store<JobResult, Blob>,
+  store: PageStore,
   announcer: Announcer,
   countButton: () => HTMLButtonElement | null,
 ): StatsShown {

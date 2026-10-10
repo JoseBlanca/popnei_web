@@ -41,8 +41,8 @@ import { individualsReadAnnouncement } from "./variants/individualsWords.ts";
  *
  * The page chooses when the grouping names no column the list offers,
  * but for a "None" the user chose for that load id: the grouping turned
- * to "None" from a column by a command the entry did not send, an undo
- * included, marks the load id, and turned back to a column unmarks it.
+ * to "None" from a column by a command the entry did not send marks the
+ * load id, and turned back to a column unmarks it.
  * The marks are kept here, in memory, as the screen keeps the tab shown.
  */
 export function choosePopulationColumns(deps: {

@@ -16,7 +16,6 @@ import {
   setVariantFilter,
   turnOffVariantFilter,
 } from "../../core/project.ts";
-import type { Store } from "../../core/store.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import type {
   FilterColumn,
@@ -29,6 +28,7 @@ import type {
 } from "../../worker/protocol.ts";
 import { runningAnalysisOf } from "../analyses/status.ts";
 import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
+import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { ANNOUNCE_DELAY_MS, createAnnouncer } from "../shell/status.ts";
 import { PAGE_TAB_LABELS } from "./analysisTabsWords.ts";
 import { announceChanges } from "./announceChanges.ts";
@@ -39,6 +39,7 @@ import {
   saveAgain,
 } from "./downloadState.ts";
 import type { DownloadPlace } from "./downloadState.ts";
+import { passedFilterChange } from "./passedFilter.ts";
 import { summaryStatus } from "./words.ts";
 
 vi.mock("../../core/noVariantKept.ts", { spy: true });
@@ -57,7 +58,7 @@ interface Sent<J> {
     of its variants, with the filters of the page's first project: the
     FILTER box ticked and the missing rate of the variants at 0.1. */
 function storeOfPanel(): {
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly jobs: Sent<Job>[];
   readonly writes: Sent<WriteJob>[];
 } {
@@ -123,7 +124,7 @@ function pass(failedAll: boolean): VariantsSummaryResult {
 }
 
 /** What takes the place of the button in the store's state now. */
-function placeOf(store: Store<JobResult, Blob>): DownloadPlace {
+function placeOf(store: Popgen2PageStore<JobResult, Blob>): DownloadPlace {
   const state = store.getState();
   return downloadPlace(
     summaryStatus(state),
@@ -136,7 +137,7 @@ function placeOf(store: Store<JobResult, Blob>): DownloadPlace {
 
 /** Starts the one pass and ends it with `result`. */
 function finishPass(
-  store: Store<JobResult, Blob>,
+  store: Popgen2PageStore<JobResult, Blob>,
   jobs: readonly Sent<Job>[],
   result: VariantsSummaryResult,
 ): void {
@@ -164,7 +165,7 @@ function vcfWritten(numVars = 1152): Written<Blob> {
 /** Writes a VCF with the one pass finished, and ends the write with
     `written`. */
 function writeEnded(
-  store: Store<JobResult, Blob>,
+  store: Popgen2PageStore<JobResult, Blob>,
   writes: readonly Sent<WriteJob>[],
   written: Written<Blob>,
 ): void {
@@ -470,7 +471,7 @@ describe("DL7 D1 when there is nothing to download, and a file written and not h
     });
   });
 
-  test("the sentence goes, and the button is back, when a change makes it uncertain, and comes again when the change is undone", () => {
+  test("the sentence goes, and the button is back, when a change makes it uncertain, and comes again when the change is set back", () => {
     const { store, jobs } = storeOfPanel();
     finishPass(store, jobs, pass(true));
     expect(placeOf(store).kind).toBe("sentence");
@@ -480,7 +481,8 @@ describe("DL7 D1 when there is nothing to download, and a file written and not h
     );
     expect(placeOf(store)).toStrictEqual({ kind: "enabled" });
 
-    store.undo();
+    const on = passedFilterChange(true);
+    store.apply(on.description, on.command);
     expect(placeOf(store)).toStrictEqual({
       kind: "sentence",
       text: "None of the 100 variants of panel.vcf.gz pass the filters, so there is nothing to download.",
@@ -628,7 +630,7 @@ describe("DL7 D1 the status region says the sentence of no variant once", () => 
     the LD pruning within 50,000 and `change` over them, and starts it,
     which the fake worker never ends. */
 function startPca(
-  store: Store<JobResult, Blob>,
+  store: Popgen2PageStore<JobResult, Blob>,
   change: Partial<PcaOptions> = {},
 ): void {
   store.apply("the LD pruning of the PCA changed", (p) =>

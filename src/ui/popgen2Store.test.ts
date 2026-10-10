@@ -14,7 +14,7 @@ import {
   turnOffVariantFilter,
 } from "../core/project.ts";
 import type { VariantLoad } from "../core/project.ts";
-import type { Popgen2Store, Store } from "../core/store.ts";
+import type { Store } from "../core/store.ts";
 import { summaryResult } from "../core/testSupport.ts";
 import type {
   Job,
@@ -31,6 +31,7 @@ import {
   createPopgen2Store,
   openVariantsFile,
 } from "./popgen2Store.ts";
+import type { Popgen2PageStore } from "./popgen2Store.ts";
 import { startAnalysis } from "./runs.ts";
 import {
   RUN_QUIET_MS,
@@ -221,7 +222,7 @@ describe("SF5 D5 the store of popgen2.html", () => {
 });
 
 describe("SF7 round an opening on popgen2.html starts the history afresh", () => {
-  test("the first file and another leave nothing to undo or redo, keep the filters as the user left them, stop the pass of the file before and give no notice", () => {
+  test("the first file and another leave nothing in the history, keep the filters as the user left them, stop the pass of the file before and give no notice", () => {
     const cancelled: number[] = [];
     let sent = 0;
     const store = createPopgen2Store({
@@ -266,11 +267,6 @@ describe("SF7 round an opening on popgen2.html starts the history afresh", () =>
     store.apply("the MAF filter changed", (p) =>
       setThreshold(p, { of: "variants", kind: "maf" }, 0.3),
     );
-    store.undo();
-    expect(store.getState().undo).toBe(
-      "the variants that failed their FILTER are kept",
-    );
-    expect(store.getState().redo).toBe("the MAF filter changed");
     const filtered = store.getState().project;
     const moves = store.getState().historyMoves;
 
@@ -289,8 +285,6 @@ describe("SF7 round an opening on popgen2.html starts the history afresh", () =>
     );
     expect(cancelled).toEqual([1]);
     expect(summaryStatus(opened).kind).toBe("locked");
-    store.undo();
-    expect(store.getState()).toBe(opened);
   });
 });
 
@@ -307,7 +301,7 @@ interface Sent<J> {
     `panel.vcf.gz` of the individuals s000 and s001 opened and read, with
     the filters of the page's first project. */
 function storeOfPanel(): {
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly jobs: Sent<Job>[];
   readonly writes: Sent<WriteJob>[];
 } {
@@ -649,7 +643,7 @@ function pcaOf(numVars: number): JobResult {
     ends it; `a.vcf.gz` open, read, its one pass done, and the LD pruning
     of the PCA given its distance, so that the PCA is ready. */
 function storeWithPassDone(): {
-  readonly store: Popgen2Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly jobs: readonly Job[];
   readonly keys: readonly string[];
   readonly cancels: () => number;
@@ -705,48 +699,13 @@ function storeWithPassDone(): {
 }
 
 /** The state of the PCA in the store. */
-function pcaKind(store: Store<JobResult, Blob>): string | undefined {
+function pcaKind(
+  store: Pick<Store<JobResult, Blob>, "getState">,
+): string | undefined {
   return store.getState().analyses.find((a) => a.id === "pca")?.status.kind;
 }
 
-describe("AP6 D2 the store of popgen2.html with the PCA, a fake worker and the real history", () => {
-  test("an undo of a change that removed the PCA's result gives done again, with no request to the worker", () => {
-    const { store, jobs, end } = storeWithPassDone();
-    expect(pcaKind(store)).toBe("ready");
-    store.startRun("pca");
-    end(1, pcaOf(548));
-    expect(pcaKind(store)).toBe("done");
-
-    store.apply("the filter of the variants by missing data changed", (p) =>
-      setThreshold(p, { of: "variants", kind: "missing_data" }, 0.2),
-    );
-    expect(pcaKind(store)).toBe("ready");
-    expect(store.getState().notice).toBeNull();
-
-    store.undo();
-
-    expect(pcaKind(store)).toBe("done");
-    expect(jobs.map((job) => job.analysis)).toEqual(["variantsSummary", "pca"]);
-  });
-
-  test("a PCA running when a threshold changes is stopped at once, and an undo gives ready, with no request", () => {
-    const { store, jobs, cancels } = storeWithPassDone();
-    store.startRun("pca");
-    expect(pcaKind(store)).toBe("running");
-
-    store.apply("the filter of the variants by missing data changed", (p) =>
-      setThreshold(p, { of: "variants", kind: "missing_data" }, 0.2),
-    );
-    expect(cancels()).toBe(1);
-    expect(pcaKind(store)).toBe("ready");
-
-    store.undo();
-
-    expect(pcaKind(store)).toBe("ready");
-    expect(cancels()).toBe(1);
-    expect(jobs.map((job) => job.analysis)).toEqual(["variantsSummary", "pca"]);
-  });
-
+describe("AP6 D2 the store of popgen2.html with the PCA, a fake worker and the gate", () => {
   test("Run pressed while a run of the arrow keys waits on a threshold: the run is made a change first, and the PCA runs on the new threshold and is not stopped when the second passes", () => {
     vi.useFakeTimers();
     try {
@@ -785,5 +744,55 @@ describe("AP6 D2 the store of popgen2.html with the PCA, a fake worker and the r
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("NU2 D1 the store of popgen2.html has no Undo, keeps one past project and drops what a change leaves behind", () => {
+  test("its type has neither undo nor redo", () => {
+    const { store } = storeWithPassDone();
+    // @ts-expect-error -- the page's store has no undo
+    const undo: unknown = store.undo;
+    // @ts-expect-error -- nor redo
+    const redo: unknown = store.redo;
+    // The functions are still there at run time, for the history the
+    // code of popgen.html needs; no screen of the page reaches them.
+    expect([typeof undo, typeof redo]).toEqual(["function", "function"]);
+  });
+
+  test("its history keeps one past project: after three commands one undo leaves nothing to undo, and a second changes nothing", () => {
+    const { store: page } = storeWithPassDone();
+    // Read through the type of a store that has undo, as only a test can.
+    const store = page as unknown as Store<JobResult, Blob>;
+    for (const value of [0.2, 0.3, 0.4]) {
+      store.apply("the MAF filter changed", (p) =>
+        setThreshold(p, { of: "variants", kind: "maf" }, value),
+      );
+    }
+
+    store.undo();
+
+    expect(store.getState().undo).toBeNull();
+    const project = store.getState().project;
+    store.undo();
+    expect(store.getState().project).toBe(project);
+  });
+
+  test("a PCA done, a threshold moved and set back by a command: ready, not done, and no request sent", () => {
+    const { store, jobs, end } = storeWithPassDone();
+    store.startRun("pca");
+    end(1, pcaOf(548));
+    expect(pcaKind(store)).toBe("done");
+    const missing = { of: "variants", kind: "missing_data" } as const;
+
+    store.apply("the filter of the variants by missing data changed", (p) =>
+      setThreshold(p, missing, 0.2),
+    );
+    store.apply("the filter of the variants by missing data changed", (p) =>
+      setThreshold(p, missing, 0.1),
+    );
+
+    expect(pcaKind(store)).toBe("ready");
+    expect(store.getState().notice).toBeNull();
+    expect(jobs.map((job) => job.analysis)).toEqual(["variantsSummary", "pca"]);
   });
 });

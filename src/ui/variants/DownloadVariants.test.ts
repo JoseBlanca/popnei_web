@@ -18,10 +18,10 @@ import {
   setVariantFilter,
   turnOffVariantFilter,
 } from "../../core/project.ts";
-import type { Popgen2Store, Store } from "../../core/store.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import type { JobResult, Run, Written } from "../../worker/protocol.ts";
 import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
+import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
 import { StoreProvider } from "../store.tsx";
@@ -68,7 +68,7 @@ function runOf(id: number): Run<never> {
     certain that nothing passes. The writes sent are ended with
     `written`. */
 function storeOfPanel(): {
-  readonly store: Popgen2Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly endWrite: (written: Written<Blob>) => void;
 } {
   let lastId = 0;
@@ -138,7 +138,7 @@ const WRITTEN: Written<Blob> = {
 };
 
 /** Draws the download in <StrictMode> over `store` and `gate`. */
-function draw(store: Popgen2Store<JobResult, Blob>, gate: RunGate): void {
+function draw(store: Popgen2PageStore<JobResult, Blob>, gate: RunGate): void {
   act(() => {
     root.render(
       createElement(
@@ -177,7 +177,7 @@ function placeText(): HTMLParagraphElement | null {
 }
 
 /** Ticks the FILTER box, which makes it certain that nothing passes. */
-function tickFilter(store: Store<JobResult, Blob>): void {
+function tickFilter(store: Popgen2PageStore<JobResult, Blob>): void {
   store.apply("the FILTER box changed", (p) =>
     setVariantFilter(p, { kind: "passed" }),
   );

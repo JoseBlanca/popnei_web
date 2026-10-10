@@ -20,9 +20,9 @@ import {
   vi,
 } from "vitest";
 
-import type { Store } from "../../core/store.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import type { Job, JobResult, Outcome, Run } from "../../worker/protocol.ts";
+import type { Popgen2PageStore } from "../popgen2Store.ts";
 
 /** How the download of the code of the section goes: held until `gate`
     resolves, then failed when `fail`; `calls` counts the downloads. */
@@ -66,7 +66,7 @@ const SECOND = "fedcba9876543210fedcba9876543210";
 /** The page: its store, the requests sent, every text the status
     region said, and the loads whose section was drawn, its code there. */
 interface Page {
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly requests: Request[];
   readonly said: string[];
   readonly shown: string[];

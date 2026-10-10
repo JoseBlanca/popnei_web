@@ -18,14 +18,13 @@
  */
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-import type { Store } from "../../core/store.ts";
-import type { JobResult } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
 import type { Defect, Defects } from "../defects.ts";
 import type { Saving } from "../saving.ts";
 import { Button } from "../widgets/Button.tsx";
 import styles from "./ErrorBar.module.css";
 import { barText, saveFromBar, saveLabel } from "./barSave.ts";
+import type { PageStore } from "../store.tsx";
 
 /** What the bar is drawn with. */
 export interface ErrorBarProps {
@@ -33,7 +32,7 @@ export interface ErrorBarProps {
   readonly defects: Defects;
   /** The store, once the entry has made it; `null` before, when the bar
       says that the application met the error as it started. */
-  readonly store: Store<JobResult, Blob> | null;
+  readonly store: PageStore | null;
   /** The saving of the entry, made with the store; `null` before, when
       there is no project to save. */
   readonly saving: Saving | null;

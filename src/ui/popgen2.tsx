@@ -13,8 +13,6 @@
 import "./tokens.css";
 import "./base.css";
 
-import type { Store } from "../core/store.ts";
-import type { JobResult } from "../worker/protocol.ts";
 import { createAutoRuns } from "./autoRuns.ts";
 import type { AutoRuns } from "./autoRuns.ts";
 import type { Defects } from "./defects.ts";
@@ -32,6 +30,7 @@ import { startAnalysis } from "./runs.ts";
 import { AnnouncerProvider } from "./shell/announcer.tsx";
 import { createAnnouncer } from "./shell/status.ts";
 import { StoreProvider } from "./store.tsx";
+import type { PageStore } from "./store.tsx";
 import { VariantsPage } from "./variants/VariantsPage.tsx";
 import { announceChanges } from "./variants/announceChanges.ts";
 import { RunGateProvider } from "./variants/runGate.tsx";
@@ -96,7 +95,7 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
     (docs/plans/live-stats.md). A change of the store
     starts them after the listeners of that change have all run, so that a
     start is not made in the middle of telling them. */
-function startByThemselves(store: Store<JobResult, Blob>): AutoRuns {
+function startByThemselves(store: PageStore): AutoRuns {
   const autoRuns = createAutoRuns({
     store,
     groups: POPGEN2_AUTO_GROUPS,

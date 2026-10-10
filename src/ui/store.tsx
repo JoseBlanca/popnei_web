@@ -6,22 +6,31 @@
  */
 import { createContext, useContext, useSyncExternalStore } from "react";
 
-import type { AppState, Popgen2Store, Store } from "../core/store.ts";
+import type { AppState, Store } from "../core/store.ts";
 import type { JobResult } from "../worker/protocol.ts";
+import type { Popgen2PageStore } from "./popgen2Store.ts";
 
 // The store of the application holds the results of its workers,
 // JobResult, and the file of the filtered variants they wrote, a Blob;
-// on popgen2.html it is the store made with no notice, which has the
-// changes that leave no step.
+// on popgen2.html it is the store made with no notice and no Undo,
+// which has the changes that leave no step.
 const StoreContext = createContext<
-  Store<JobResult, Blob> | Popgen2Store<JobResult, Blob> | null
+  Store<JobResult, Blob> | Popgen2PageStore<JobResult, Blob> | null
 >(null);
+
+/** The store as the code shared by both pages sees it: no undo and no
+    redo, which popgen2.html has not; `useUndoStore` gives them on
+    popgen.html. */
+export type PageStore<R = JobResult, F = Blob> = Omit<
+  Store<R, F>,
+  "undo" | "redo"
+>;
 
 /** Gives the store to every component under it. */
 export const StoreProvider = StoreContext.Provider;
 
 /** The store of the page. Throws a defect outside a `StoreProvider`. */
-export function useStore(): Store<JobResult, Blob> {
+export function useStore(): PageStore {
   const store = useContext(StoreContext);
   if (store === null) {
     throw new Error("popnei_web defect: useStore outside a StoreProvider");
@@ -29,10 +38,24 @@ export function useStore(): Store<JobResult, Blob> {
   return store;
 }
 
-/** The store of popgen2.html, with the changes that leave no step.
-    Throws a defect outside a `StoreProvider`, and under one that gives
-    the store of popgen.html, which has none of them. */
-export function usePopgen2Store(): Popgen2Store<JobResult, Blob> {
+/** The store of popgen.html, with its undo and redo. Throws a defect
+    outside a `StoreProvider`, and under one that gives the store of
+    popgen2.html, which has no Undo. */
+export function useUndoStore(): Store<JobResult, Blob> {
+  const store = useContext(StoreContext);
+  if (store === null || "applyAfresh" in store) {
+    throw new Error(
+      "popnei_web defect: useUndoStore outside a StoreProvider of the store of popgen.html",
+    );
+  }
+  return store;
+}
+
+/** The store of popgen2.html, with the changes that leave no step and
+    no undo nor redo. Throws a defect outside a `StoreProvider`, and
+    under one that gives the store of popgen.html, which has none of
+    those changes. */
+export function usePopgen2Store(): Popgen2PageStore<JobResult, Blob> {
   const store = useContext(StoreContext);
   if (store === null || !("applyAfresh" in store)) {
     throw new Error(

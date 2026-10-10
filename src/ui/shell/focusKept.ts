@@ -28,21 +28,6 @@ export function keepingFocus(change: () => void): void {
   });
 }
 
-/**
- * Called as `leaving` is about to leave the page, as React lets go of
- * its element: when it has the focus, schedules, in a microtask, a move
- * of the focus to the `<h1>` of the page once it has left, unless
- * something took the focus meanwhile; it returns nothing. So a button that a command removes, whatever sent the
- * command, does not leave the focus on nothing; the button that a press
- * of its own hands the focus to keeps it.
- */
-export function focusHeadingIfLeft(leaving: Element): void {
-  if (leaving.ownerDocument.activeElement !== leaving) return;
-  queueMicrotask(() => {
-    toHeadingIfLost(leaving);
-  });
-}
-
 /** Gives the focus to the `<h1>` of the page when `before`, which had
     it, has left the page and nothing has the focus now. */
 function toHeadingIfLost(before: Element): void {

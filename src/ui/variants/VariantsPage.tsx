@@ -1,8 +1,9 @@
 /**
  * The body of popgen2.html (docs/specs/steps/popgen2-input.md, "The order
- * of the page"): the page's one heading, "Popnei", with Undo and Redo at
- * the right end of its line (docs/specs/steps/popgen2-pca.md, "Undo and
- * Redo"); under it the two boxes
+ * of the page"): the page's one heading, "Popnei", alone on its line, as
+ * the page has no Undo and no Redo since 10 October 2026
+ * (docs/specs/steps/popgen2-pca.md, "No Undo and no Redo"); under it the
+ * two boxes
  * of the files, side by side from 720 pixels and one above the other
  * below, the variants file's first; and under them the row of five tabs,
  * "Variants", "Individuals", "PCA", "Populations" and "Distances"
@@ -35,10 +36,8 @@ import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { StatusRegion } from "../shell/StatusRegion.tsx";
-import { UndoRedoButtons } from "../shell/UndoRedoButtons.tsx";
 import { useAppState } from "../store.tsx";
 import { ANALYSES_TABS_LABEL } from "./analysisTabsWords.ts";
-import { useFiltersLock } from "./filtersLock.ts";
 import { IndividualsBox } from "./IndividualsBox.tsx";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
@@ -72,26 +71,14 @@ export function VariantsPage({
   const [tab, setTab] = useState<PageTab>("variants");
   const variantsHeadingId = useId();
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
-  const filtersLock = useFiltersLock();
   return (
     <>
       <main className={classOf(styles, "page")}>
-        {/* The line of the heading, with Undo and Redo at its right end,
-            each drawn only while it has a step, in places that stay, so
-            that the line keeps its height and the page under it does not
-            move when Undo comes (docs/specs/steps/popgen2-pca.md, "Undo
-            and Redo"). Their keys are caught on the whole page from its
-            opening. */}
-        <div className={classOf(styles, "headingLine")}>
-          {/* It takes the focus after Close of the error bar, and when a
-              button of Undo or Redo with the focus goes, and is not in
-              the order of the Tab key. */}
-          <h1 tabIndex={-1} className={classOf(styles, "title")}>
-            Popnei
-          </h1>
-          {/* They wait while a PCA runs, as the filters it reads do. */}
-          <UndoRedoButtons onlyWithStep waits={filtersLock} />
-        </div>
+        {/* It takes the focus after Close of the error bar, and is not in
+            the order of the Tab key. */}
+        <h1 tabIndex={-1} className={classOf(styles, "title")}>
+          Popnei
+        </h1>
         <div className={classOf(styles, "boxes")}>
           <section
             aria-labelledby={variantsHeadingId}

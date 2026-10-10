@@ -8,9 +8,13 @@
  * `variantsSummary`, as the statistics of each individual, so that the
  * individuals kept are worked out from that pass finished; and the
  * writing of the filtered variants, as a VCF or a `.nei` file
- * (docs/specs/analyses/writeVariants.md, "On popgen2.html"); and the
- * setting `stopLeftBehind`, under which a change makes no notice and
- * stops what it leaves behind.
+ * (docs/specs/analyses/writeVariants.md, "On popgen2.html"); the
+ * settings `stopLeftBehind`, under which a change makes no notice and
+ * stops what it leaves behind, and `dropLeftBehind`, under which no
+ * result is kept for values the screen no longer shows; and a history of
+ * one past project, which the page, with no Undo since 10 October 2026,
+ * does not reach (docs/specs/core/store.md, "On popgen2.html: no notice,
+ * no Undo, and no result kept for values left behind").
  * Apart from the entry, so that a test in node makes the store with what
  * the page gives it.
  */
@@ -23,7 +27,6 @@ import {
   writeCountsOf,
 } from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
-import { MAX_UNDO_STEPS } from "../core/history.ts";
 import { loadVariants } from "../core/project.ts";
 import type { AnalysisId, VariantLoad } from "../core/project.ts";
 import { createStore } from "../core/store.ts";
@@ -45,6 +48,21 @@ export const POPGEN2_CHAIN: readonly AnalysisId[] = Object.freeze([
 export const POPGEN2_AUTO_GROUPS: readonly (readonly AnalysisId[])[] =
   Object.freeze([POPGEN2_CHAIN]);
 
+/** The store of popgen2.html as its screens see it: no undo, no redo,
+    so that a screen of that page that calls them does not compile. The
+    store keeps its history, which the code of popgen.html needs, and
+    the state still names its undo and redo, which no screen of the page
+    reads. */
+export type Popgen2PageStore<R, F = never> = Omit<
+  Popgen2Store<R, F>,
+  "undo" | "redo"
+>;
+
+/** The past projects the page's store keeps: one, the least the history
+    takes, where the old page keeps 200; the page has no Undo to reach
+    them. */
+const POPGEN2_UNDO_STEPS = 1;
+
 /** What the store of the page is made with beyond `src/core/apps.ts`. */
 export interface Popgen2StoreDeps {
   /** Sends a calculation under its key, `Client.run` of the worker
@@ -62,7 +80,7 @@ export interface Popgen2StoreDeps {
 /** Makes the store of the new page. It sends nothing while it is made. */
 export function createPopgen2Store(
   deps: Popgen2StoreDeps,
-): Popgen2Store<JobResult, Blob> {
+): Popgen2PageStore<JobResult, Blob> {
   return createStore<Job, JobResult, Blob>({
     first: popgen2FirstProject(),
     analyses: POPGEN2_ANALYSES,
@@ -76,25 +94,26 @@ export function createPopgen2Store(
     write: { send: deps.sendWrite, countsOf: writeCountsOf },
     appVersion: deps.appVersion,
     cacheMaxBytes: CACHE_MAX_BYTES,
-    maxUndoSteps: MAX_UNDO_STEPS,
+    maxUndoSteps: POPGEN2_UNDO_STEPS,
     // The page has no steps, so the words of no individual kept send the
     // user to none (docs/specs/steps/popgen2-download.md, "Its words").
     keptNoneStep: null,
     // The page draws no notice, so a calculation a change leaves behind
     // is stopped at once rather than run on out of sight
-    // (docs/specs/core/store.md, "On popgen2.html: no notice, and a
-    // history of the filters").
+    // (docs/specs/core/store.md, "On popgen2.html: no notice, no Undo,
+    // and no result kept for values left behind").
     stopLeftBehind: true,
+    // And what the screen shows is the result of the values on it, or
+    // nothing: a value set back is calculated again, not shown from the
+    // cache.
+    dropLeftBehind: true,
   });
 }
 
 /**
  * Opens on popgen2.html the variants file of `load`, the first or
  * another: the project with that file and every filter as the user left
- * it, as a new history with nothing to undo or redo, so that the page's
- * Undo and Redo serve the changes of the filters alone, as the owner
- * asked on 8 October 2026 (docs/specs/steps/popgen2-filters.md, "Undo,
- * Redo and their keys"). The pass of the file before, if it runs, is
+ * it, as a new history. The pass of the file before, if it runs, is
  * stopped, and no notice is made.
  */
 export function openVariantsFile(

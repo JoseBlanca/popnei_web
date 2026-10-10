@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 
 import { loadIndividuals, loadVariants } from "../../core/project.ts";
-import type { Store } from "../../core/store.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import type {
   JobResult,
@@ -11,6 +10,7 @@ import type {
 } from "../../worker/protocol.ts";
 import { createDefects } from "../defects.ts";
 import { createPopgen2Store } from "../popgen2Store.ts";
+import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { startAnalysis, startWriting } from "../runs.ts";
 import { SUMMARY_ID, summaryStatus } from "./words.ts";
 import { reportDefects } from "./workerDefects.ts";
@@ -20,7 +20,7 @@ const FILE_ID = "0123456789abcdef0123456789abcdef";
 /** The store of the new page with a fake `send` ended by hand, and
     panel.nei open and read. */
 function setUp(): {
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly sent: ((outcome: Outcome<JobResult>) => void)[];
 } {
   const sent: ((outcome: Outcome<JobResult>) => void)[] = [];
@@ -61,7 +61,7 @@ function setUp(): {
 const INDIVIDUALS_ID = "00000000000000000000000000000001";
 
 /** Loads an individuals file, whose read `touch` records later. */
-function loadPops(store: Store<JobResult, Blob>): void {
+function loadPops(store: Popgen2PageStore<JobResult, Blob>): void {
   store.apply("an individuals file was loaded", (p) =>
     loadIndividuals(p, {
       fileId: INDIVIDUALS_ID,
@@ -74,7 +74,7 @@ function loadPops(store: Store<JobResult, Blob>): void {
 /** Changes the store with no change of the user, which keeps the
     failures shown: the individuals file of `loadPops` read, or not; the
     test fails when no listener was called. */
-function touch(store: Store<JobResult, Blob>): void {
+function touch(store: Popgen2PageStore<JobResult, Blob>): void {
   const calls = { count: 0 };
   const stop = store.subscribe(() => {
     calls.count += 1;
@@ -253,7 +253,7 @@ describe("the defects of the worker given to the error bar of the new page", () 
 /** The store of the new page with fakes of `send` and `sendWrite` ended
     by hand, panel.nei open and read, and its one pass finished. */
 async function setUpWrite(): Promise<{
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly writes: ((outcome: Outcome<Written<Blob>>) => void)[];
 }> {
   const sent: ((outcome: Outcome<JobResult>) => void)[] = [];
