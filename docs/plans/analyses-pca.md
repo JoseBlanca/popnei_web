@@ -1558,3 +1558,18 @@ again the tab shows only the progress, the old result gone. Since it
 changes the history and the cache of `docs/architecture.md`, it gets a
 design, `docs/designs/no-undo.md`, for the owner's approval before its
 code, on this branch, after round 1.
+
+A measurement for the design, 10 October 2026, thrown away after: on
+`popgen2.html`, a PCA and a PCoA of 9,381 individuals of 300 variants,
+the LD pruning off, Run, Stop after 40 s, Run again at once, Stop after
+40 s; the memory of the engine's processes summed, sampled every 250 ms;
+Apple M5 Pro, 64 GB, Chromium 153 and WebKit 26.6, one run each, under
+load averages of 21 to 48 from another agent's runs. Chromium held both
+runs for about 2 s after the Stop, at most 2.83 GB (PCA) and 3.96 GB
+(PCoA), then one run's. WebKit did not give the stopped run's memory
+back during the next 40 s: 4.22 GB (PCA) and 4.18 GB (PCoA) at the
+peak, and 3.72 GB 29 s after the last Stop with nothing running.
+Asked again with these numbers, the owner chose on 10 October 2026 to
+keep the lock of the filters while a PCA runs: a change waits for the
+PCA to end or be stopped, and after it ends a change of a parameter
+the PCA reads starts it again by itself. So a change never stops a run.
