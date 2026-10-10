@@ -112,17 +112,23 @@ to a screen reader:
 
 | the words at 1280 px | the short form, under 30 rem wide |
 |---|---|
-| "Reading panel.vcf.gz · 45%" | "Reading · 45%" |
+| "Statistics of panel.vcf.gz · 45%" | "Statistics · 45%" |
 | "PCA running · 1:20" | "PCA · 1:20" |
 | "Writing panel.filtered.vcf.gz · 45%" | "Writing · 45%" |
 | "Stopping the PCA…" | "Stopping…" |
-| "The PCA starts again in a moment" | "PCA in a moment" |
+| "The PCA starts again in a moment" | "PCA soon" |
 | "The PCA starts again when the download is written or closed" | "PCA later" |
 | "PCA: 2 warnings, in the PCA tab" | "PCA: 2 warnings" |
 | "PCA: could not be calculated, in the PCA tab" | "PCA: failed" |
 
 "PCoA" in place of "PCA" under the PCoA. The flows check that each fits
-one line at 320 px with "Popnei" and its button.
+one line at 320 px with "Popnei" and its button, the whole "Stop
+recalculating" among them: so that it fits, under 30 rem the heading
+"Popnei" is in the large text of the page, `--text-lg`, and the parts
+of the line stand a quarter of a rem apart, which leaves 73 px for the
+words beside "Stop recalculating" in Chromium 153 and WebKit 26.6 on the
+owner's Mac; "PCoA soon" takes 71 px there (measured on 10 October
+2026).
 
 It stands below the page's popovers, tooltips and dialogs in the order
 in which they cover one another, so that a menu or a tooltip near the
@@ -145,11 +151,11 @@ line of the band under it (below, "An error of the application").
 
 | what holds | the words | the control after them |
 |---|---|---|
-| the one pass is running | "Reading panel.vcf.gz · 45%", the share of the bytes of the file read so far, from the progress of the pass; "Reading panel.vcf.gz" until its first progress | Stop |
-| the one pass is about to start by itself, after the file is opened or at Start again, the moment the box shows its Stop for it (`docs/architecture.md`, section 5) | "Reading panel.vcf.gz" | Stop, which keeps it from starting, as the box's does |
+| the one pass is running | "Statistics of panel.vcf.gz · 45%", the share of the bytes of the file read so far, from the progress of the pass; "Statistics of panel.vcf.gz" until its first progress; named as the box names the pass, "Calculating the statistics of panel.vcf.gz…" | Stop |
+| the one pass is about to start by itself, after the file is opened or at Start again, the moment the box shows its Stop for it (`docs/architecture.md`, section 5) | "Statistics of panel.vcf.gz" | Stop, which keeps it from starting, as the box's does |
 | the PCA is running, started by Run or by itself | "PCA running · 1:20", the time since it started, minutes and seconds, as the clock of the PCA tab; "PCoA running · 1:20" under the PCoA | Stop |
 | the filtered variants are being written | "Writing panel.filtered.vcf.gz · 45%", the name the dialog of the download shows | none: the dialog has the Stop, and keeps the band out of reach while it is open |
-| a Stop of the PCA or of the one pass is under way (below, "Stopping") | "Stopping the PCA…", "Stopping the PCoA…"; "Stopping the reading of panel.vcf.gz…" | none |
+| a Stop of the PCA or of the one pass is under way (below, "Stopping") | "Stopping the PCA…", "Stopping the PCoA…"; "Stopping the statistics of panel.vcf.gz…" | none |
 | the PCA is about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment"; while the dialog of the download holds it, the dialog's words, "The PCA starts again when the download is written or closed" (`popgen2-pca.md`, "Its words") | Stop recalculating, the PCA tab's |
 | the PCA has a result with warnings, and the PCA tab is not the tab shown | "PCA: 1 warning, in the PCA tab"; "PCA: 2 warnings, in the PCA tab"; "PCoA: …" under the PCoA; the words are a link | none |
 | the PCA could not be calculated, and the PCA tab is not the tab shown | "PCA: could not be calculated, in the PCA tab"; "PCoA: …"; a link | none |
@@ -248,8 +254,11 @@ the first error in them (`docs/specs/shell.md`, "The error bar"):
   else of the band, which has nothing to read;
 - the calculation worker stopped during the one pass, `countStopped`:
   "The application stopped as it counted the variants and calculated
-  the statistics: ‹message›. Start again, and if it stops again, reload
-  the page and open your files again.";
+  the statistics: ‹message›. Press Start again in the box Variants file,
+  and if it stops again, reload the page and open your files again.",
+  which names where Start again is, since the band stands apart from
+  the box; the error bar of `popgen.html`, which never shows this
+  sentence, keeps its words;
 - any other: "The application met an error of its own: ‹message›.
   Reload the page, and open your files again."
 
@@ -295,7 +304,7 @@ screen that cannot happen says why.
 | empty | "Popnei" alone: nothing runs, nothing to point to, no error; also while the PCA is live and not about to start | nothing in the band |
 | locked | cannot happen: the band has no action that can be refused; a Stop is shown only while there is something to stop | |
 | ready | as empty: nothing runs | |
-| running | "Reading panel.vcf.gz · 45%" or "PCA running · 1:20" with Stop; "Writing …" with nothing to press; "Stopping …"; "The PCA starts again in a moment" with Stop recalculating | Stop or Stop recalculating, where there is one |
+| running | "Statistics of panel.vcf.gz · 45%" or "PCA running · 1:20" with Stop; "Writing …" with nothing to press; "Stopping …"; "The PCA starts again in a moment" with Stop recalculating | Stop or Stop recalculating, where there is one |
 | done | the link to the warnings or the error of the PCA while another tab is shown; otherwise as empty | follow the link |
 | results removed | cannot happen: the band shows no result | |
 | error | the line of an error of the application under the line of the heading, whatever that line says, with Details and Close | Details, Copy the details, Close |
@@ -356,15 +365,15 @@ change; it is still the screen's, not the project's
 
 | where | the words |
 |---|---|
-| the one pass running | "Reading panel.vcf.gz · 45%"; before its first progress, "Reading panel.vcf.gz" |
+| the one pass running | "Statistics of panel.vcf.gz · 45%"; before its first progress, "Statistics of panel.vcf.gz" |
 | the PCA running | "PCA running · 1:20"; "PCoA running · 1:20"; under a minute, "PCA running · 0:12" |
 | the write | "Writing panel.filtered.vcf.gz · 45%"; "Writing panel.filtered.nei · 45%" |
-| a Stop under way | "Stopping the PCA…"; "Stopping the PCoA…"; "Stopping the reading of panel.vcf.gz…" |
+| a Stop under way | "Stopping the PCA…"; "Stopping the PCoA…"; "Stopping the statistics of panel.vcf.gz…" |
 | the PCA about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment"; while the dialog of the download is open, "The PCA starts again when the download is written or closed"; "The PCoA starts again when the download is written or closed" |
 | the link to the warnings | "PCA: 1 warning, in the PCA tab"; "PCA: 2 warnings, in the PCA tab"; "PCoA: 1 warning, in the PCA tab" |
 | the link to an error | "PCA: could not be calculated, in the PCA tab"; "PCoA: could not be calculated, in the PCA tab" |
 | the buttons | "Stop"; "Stop recalculating"; "Details"; "Close"; "Copy the details" |
-| the name of the Stop for a screen reader | "Stop reading panel.vcf.gz"; "Stop the PCA"; "Stop the PCoA"; "Stop recalculating the PCA"; "Stop recalculating the PCoA" |
+| the name of the Stop for a screen reader | "Stop the statistics of panel.vcf.gz"; "Stop the PCA"; "Stop the PCoA"; "Stop recalculating the PCA"; "Stop recalculating the PCoA" |
 | an error of the application | the three sentences of `barText` on this page, "An error of the application", with the message in each |
 | its details | "1 more error followed it."; "3 more errors followed it." |
 | the band's own status region | "The details were copied."; "The details could not be copied. Select them in the box below and copy them." |
@@ -436,8 +445,8 @@ first error are in it, so that the count of later errors is not read
 out again (`docs/specs/shell.md`, "The error bar"). The details have
 their own status region for the words of Copy the details.
 
-The words of the line are its text, so a screen reader reads "Reading
-panel.vcf.gz, 45%" as it is shown; the Stop is named by what it stops,
+The words of the line are its text, so a screen reader reads
+"Statistics of panel.vcf.gz, 45%" as it is shown; the Stop is named by what it stops,
 "Stop the PCA", since three buttons named "Stop" would not say which.
 The link is a link, read with its words.
 
@@ -475,11 +484,14 @@ sideways; the line of an error may take two more.
 
 At 1280 px the band spans the window, "Popnei", the words and the
 button within the 48 rem of the page's column, the heading at its start,
-the words after it and the control after them, on one line. At 320 px
+the words 1 rem after it and the control 1 rem after them, on one line,
+the control beside the words it acts on and not at the far end of the
+column. At 320 px
 the same, within the 16 px margins of the page, the status in its short
-form and in the small text of the page, `--text-sm`, so that the
-longest, "PCoA in a moment" with Stop, fits beside "Popnei"; the flows
-check that it does. In light and dark it takes the page's background
+form and in the small text of the page, `--text-sm`, the heading in
+`--text-lg` and the parts a quarter of a rem apart, so that the
+longest, "PCoA soon" with the whole "Stop recalculating", fits beside
+"Popnei"; the flows check that it does. In light and dark it takes the page's background
 and the colour of its text, with the border of the page under it
 always; its error, the colour of danger of each theme.
 
@@ -517,7 +529,7 @@ engines that start on the owner's Mac, on `panel.nei`,
 `panel_pops.csv` and a VCF large enough to read for a few seconds, the
 pass held by `e2e/holdWorker.ts`:
 
-- a file opened, the pass held: the band reads "Reading panel.nei"
+- a file opened, the pass held: the band reads "Statistics of panel.nei"
   then a percentage, and its Stop stops the pass, the box then offering
   Start again;
 - the PCA run and held: "PCA running · 0:0…" with no Stop while the
@@ -544,7 +556,7 @@ pass held by `e2e/holdWorker.ts`:
   band's rectangle, not under it; the same with nothing running, the
   band then showing "Popnei" alone at the top of the window;
 - after the band's Stop, the focus on the heading "Popnei";
-- the one pass about to start, its start held: "Reading panel.nei" with
+- the one pass about to start, its start held: "Statistics of panel.nei" with
   Stop, which keeps it from starting;
 - with the download's dialog open and an error thrown: the band's alert
   heard, its element not inert;
@@ -553,7 +565,8 @@ pass held by `e2e/holdWorker.ts`:
   (51 px, "Its place"),
   and the top of the two boxes at the same place in each; at 320 px no
   sideways scroll, and each short form with its button on one line
-  beside "Popnei"; a screen reader's text of the status the whole
+  beside "Popnei", "PCA soon" with the whole "Stop recalculating"
+  among them, the words not cut; a screen reader's text of the status the whole
   words; the `<h1>` "Popnei" inside the band, the only `<h1>` of the
   page;
 - the time from a Stop of a PCA of 9,381 individuals to the end of

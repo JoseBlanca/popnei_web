@@ -128,9 +128,9 @@ describe("NU5 D2 the band drawn", () => {
     const { announcer } = await drawBand(testPage);
     const announce = vi.spyOn(announcer, "announce");
     await settled();
-    expect(container.textContent).toContain("Reading panel.nei");
+    expect(container.textContent).toContain("Statistics of panel.nei");
 
-    await press(button("Stop reading panel.nei"));
+    await press(button("Stop the statistics of panel.nei"));
 
     expect(stop).toHaveBeenCalledWith(POPGEN2_CHAIN);
     expect(announce).toHaveBeenCalledWith(

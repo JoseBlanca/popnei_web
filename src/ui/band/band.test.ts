@@ -58,11 +58,11 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     expect(testPage.band().error).toBeNull();
     testPage.defects.report(new Error("gone"), "countStopped", null);
     expect(testPage.band().error?.text).toBe(
-      "The application stopped as it counted the variants and calculated the statistics: gone. Start again, and if it stops again, reload the page and open your files again.",
+      "The application stopped as it counted the variants and calculated the statistics: gone. Press Start again in the box Variants file, and if it stops again, reload the page and open your files again.",
     );
   });
 
-  test("the one pass about to start, then running: the name of the file, then the share of its bytes read, rounded down, with the Stop of the pass", async () => {
+  test("the one pass about to start, then running: the statistics of the file, then the share of its bytes read, rounded down, with the Stop of the pass", async () => {
     const testPage = page(SUMMARY);
     // The file read, the pass not yet sent: about to start.
     expect(testPage.band().line).toEqual({
@@ -70,10 +70,10 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       name: "panel.nei",
       share: null,
     });
-    expect(words(testPage.band())).toBe("Reading panel.nei");
+    expect(words(testPage.band())).toBe("Statistics of panel.nei");
     expect(stopOf(testPage.band().line)).toEqual({
       label: "Stop",
-      name: "Stop reading panel.nei",
+      name: "Stop the statistics of panel.nei",
       stops: "pass",
     });
 
@@ -85,8 +85,8 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       pass: 1,
       numPasses: 1,
     });
-    expect(words(testPage.band())).toBe("Reading panel.nei · 12%");
-    expect(lineWords(testPage.band().line, 0)?.short).toBe("Reading · 12%");
+    expect(words(testPage.band())).toBe("Statistics of panel.nei · 12%");
+    expect(lineWords(testPage.band().line, 0)?.short).toBe("Statistics · 12%");
 
     pass?.progress({
       bytesRead: 9999,
@@ -94,16 +94,18 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       pass: 1,
       numPasses: 1,
     });
-    expect(words(testPage.band())).toBe("Reading panel.nei · 99%");
+    expect(words(testPage.band())).toBe("Statistics of panel.nei · 99%");
   });
 
-  test("the one pass stopped: Stopping the reading of the file until the new worker is ready, then nothing", async () => {
+  test("the one pass stopped: Stopping the statistics of the file until the new worker is ready, then nothing", async () => {
     const testPage = page(SUMMARY);
     await flush();
     testPage.auto.stop(POPGEN2_CHAIN);
     testPage.stoppingSince = 0;
 
-    expect(words(testPage.band())).toBe("Stopping the reading of panel.nei…");
+    expect(words(testPage.band())).toBe(
+      "Stopping the statistics of panel.nei…",
+    );
     expect(lineWords(testPage.band().line, 0)?.short).toBe("Stopping…");
     expect(stopOf(testPage.band().line)).toBeNull();
 
@@ -198,7 +200,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     await flush();
 
     expect(words(testPage.band())).toBe("The PCA starts again in a moment");
-    expect(lineWords(testPage.band().line, 0)?.short).toBe("PCA in a moment");
+    expect(lineWords(testPage.band().line, 0)?.short).toBe("PCA soon");
     expect(stopOf(testPage.band().line)).toEqual({
       label: "Stop recalculating",
       name: "Stop recalculating the PCA",
@@ -215,7 +217,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     pcoa.setPca({ ld: { follow: false, maxAllowedR2: 0.2, maxDist: 50_000 } });
     await flush();
     expect(words(pcoa.band())).toBe("The PCoA starts again in a moment");
-    expect(lineWords(pcoa.band().line, 0)?.short).toBe("PCoA in a moment");
+    expect(lineWords(pcoa.band().line, 0)?.short).toBe("PCoA soon");
   });
 
   test("the PCA about to start while the dialog of the download holds it: the dialog's words, with Stop recalculating; the PCoA so named", async () => {

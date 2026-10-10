@@ -1,7 +1,7 @@
 /**
  * The band at the top of popgen2.html, on the built site
  * (docs/specs/steps/popgen2-band.md, "How it is checked", In
- * Playwright): the one pass held, "Reading panel.nei" and its share, and
+ * Playwright): the one pass held, "Statistics of panel.nei" and its share, and
  * the band's Stop; the PCA held running, its clock, the same in the
  * Variants tab, and the band's Stop, after which a threshold moved
  * starts nothing; the PCA live and a threshold moved, about to start
@@ -283,7 +283,7 @@ async function runPca(
 }
 
 test.describe("NU5 D3 the band of popgen2.html", () => {
-  test("NU5 D3 a file opened, the pass held: Reading panel.nei, then its share; the band's Stop stops the pass, the box offers Start again, the status region says it, and the focus is on the heading; axe light and dark", async ({
+  test("NU5 D3 a file opened, the pass held: Statistics of panel.nei, then its share; the band's Stop stops the pass, the box offers Start again, the status region says it, and the focus is on the heading; axe light and dark", async ({
     page,
     makeAxeBuilder,
   }) => {
@@ -297,16 +297,16 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     await pick(page, "panel.nei");
     await expect
       .poll(() => lineText(page))
-      .toMatch(/^Popnei Reading panel\.nei · \d+% Stop$/u);
+      .toMatch(/^Popnei Statistics of panel\.nei · \d+% Stop$/u);
     const texts = (await bandStates(page)).map((state) => state.text);
     // The name alone before the first progress, if it was drawn, comes
     // before any share.
     expect(texts.find((text) => text !== "Popnei")).toMatch(
-      /^Popnei Reading panel\.nei( · \d+%)? Stop$/u,
+      /^Popnei Statistics of panel\.nei( · \d+%)? Stop$/u,
     );
     await expectAxeBothSchemes(page, makeAxeBuilder);
 
-    await bandButton(page, "Stop reading panel.nei").press("Enter");
+    await bandButton(page, "Stop the statistics of panel.nei").press("Enter");
     await expect(
       variantsBox(page).getByRole("button", { name: "Start again" }),
     ).toBeVisible();
@@ -628,10 +628,12 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
         .poll(() => lineText(page))
         .toMatch(
           width === 320
-            ? /^Popnei Reading · \d+% Stop$/u
-            : /^Popnei Reading panel\.nei · \d+% Stop$/u,
+            ? /^Popnei Statistics · \d+% Stop$/u
+            : /^Popnei Statistics of panel\.nei · \d+% Stop$/u,
         );
-      expect(await band(page).ariaSnapshot()).toContain("Reading panel.nei");
+      expect(await band(page).ariaSnapshot()).toContain(
+        "Statistics of panel.nei",
+      );
       await release(page, "allSoFar");
       await release(page, "result");
       await runPca(page);
@@ -687,10 +689,71 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
         .poll(() => lineText(page))
         .toBe(
           width === 320
-            ? "Popnei PCA in a moment"
+            ? "Popnei PCA soon"
             : "Popnei The PCA starts again in a moment",
         );
       await expectAxeBothSchemes(page, makeAxeBuilder);
+      await page.mouse.up();
+      await expect
+        .poll(() => lineText(page), { timeout: RESULT_TIMEOUT })
+        .toBe("Popnei");
+      // About to start with the Variants tab shown, held by the thumb of
+      // its major allele frequency pressed, which the PCA follows, its
+      // own missing data now stricter than the tab's: the words with the
+      // whole Stop recalculating, which fits the line, the words not cut.
+      await tab(page, "Variants").click();
+      const maf = page
+        .getByRole("region", { name: "Statistics of the file" })
+        .getByRole("group", { name: "Major allele frequency", exact: true })
+        .getByRole("slider");
+      await maf.focus();
+      await maf.press("ArrowLeft");
+      const variantsThumb = maf.locator("xpath=../..");
+      await variantsThumb.scrollIntoViewIfNeeded();
+      const thumbBox = await variantsThumb.boundingBox();
+      if (thumbBox === null) throw new Error("no thumb");
+      await page.mouse.move(
+        thumbBox.x + thumbBox.width / 2,
+        thumbBox.y + thumbBox.height / 2,
+      );
+      await page.mouse.down();
+      await expect
+        .poll(() => lineText(page))
+        .toBe(
+          width === 320
+            ? "Popnei PCA soon Stop recalculating"
+            : "Popnei The PCA starts again in a moment Stop recalculating",
+        );
+      const fit = await heading(page).evaluate((h1) => {
+        const line = h1.parentElement;
+        const words = h1.nextElementSibling;
+        const button = line?.querySelector("button");
+        if (
+          line === null ||
+          !(words instanceof HTMLElement) ||
+          button === null ||
+          button === undefined
+        ) {
+          return null;
+        }
+        const lineBox = line.getBoundingClientRect();
+        const wordsBox = words.getBoundingClientRect();
+        const buttonBox = button.getBoundingClientRect();
+        return {
+          wordsCut: words.scrollWidth > words.clientWidth,
+          buttonInLine: buttonBox.right <= lineBox.right + 0.5,
+          buttonOneLine: buttonBox.height < 2 * 14 * 1.5,
+          gap: Math.round(buttonBox.left - wordsBox.right),
+        };
+      });
+      expect(fit).toEqual({
+        wordsCut: false,
+        buttonInLine: true,
+        buttonOneLine: true,
+        // The control 1 rem after its words at 1280 px, a quarter of a rem
+        // under 30 rem.
+        gap: width === 320 ? 4 : 16,
+      });
       await page.mouse.up();
       await expect
         .poll(() => lineText(page), { timeout: RESULT_TIMEOUT })

@@ -831,7 +831,7 @@ test("OV2 a crash of the worker during the count goes to the error bar, which sa
     info(page).getByRole("button", { name: "Start again" }),
   ).toBeVisible();
   await expect(page.getByRole("alert")).toHaveText(
-    /^The application stopped as it counted the variants and calculated the statistics: .*a crash of the test.*\. Start again, and if it stops again, reload the page and open your files again\.$/u,
+    /^The application stopped as it counted the variants and calculated the statistics: .*a crash of the test.*\. Press Start again in the box Variants file, and if it stops again, reload the page and open your files again\.$/u,
   );
   await expectNoViolations(makeAxeBuilder);
 });

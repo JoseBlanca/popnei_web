@@ -6260,7 +6260,7 @@ for (const theme of ["light", "dark"] as const) {
         await page.reload();
         await pickOnNewPage(page, "panel.nei");
         await release(page, "oneSoFar");
-        await expect(band(page)).toContainText(/Reading.* · \d+%/u);
+        await expect(band(page)).toContainText(/Statistics.* · \d+%/u);
         await page.mouse.move(0, 0);
         await save(page, `popgen2-band-reading${at}-${theme}`, {
           fullPage: false,

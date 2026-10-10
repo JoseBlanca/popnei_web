@@ -48,8 +48,9 @@ export type BarPage = "starting" | "saving" | "noSaving";
     without its last full stop, since the sentence adds its own: with the
     saving, that the project is intact and to save it, or, once
     `saveFailed`, that it could not be saved; on a page that saves no
-    project, to start again after the worker stopped during the pass of
-    the count and the statistics, as the box offers, and otherwise to
+    project, to press Start again in the box of the variants file after
+    the worker stopped during the pass of the count and the statistics,
+    and otherwise to
     reload the page and open the files again; before the store, as the page started, to reload. */
 export function barText(
   first: Pick<Defect, "message" | "origin">,
@@ -63,9 +64,11 @@ export function barText(
   }
   if (page === "noSaving") {
     // A worker stopped during the pass of the chain is mended by the box's
-    // Start again; one stopped during an opening, or a defect, is not.
+    // Start again, which the words name, since the band that shows them
+    // stands apart from the box; one stopped during an opening, or a
+    // defect, is not.
     if (first.origin === "countStopped") {
-      return `The application stopped as it counted the variants and calculated the statistics: ${text}. Start again, and if it stops again, reload the page and open your files again.`;
+      return `The application stopped as it counted the variants and calculated the statistics: ${text}. Press Start again in the box Variants file, and if it stops again, reload the page and open your files again.`;
     }
     return `The application met an error of its own: ${text}. Reload the page, and open your files again.`;
   }

@@ -24,9 +24,9 @@ export const DETAILS_LABEL = "Details";
 
 /** The words of the line, whole and in their short form. */
 export interface LineWords {
-  /** The whole words: "Reading panel.vcf.gz · 45%". */
+  /** The whole words: "Statistics of panel.vcf.gz · 45%". */
   readonly full: string;
-  /** The short form under 30 rem: "Reading · 45%". */
+  /** The short form under 30 rem: "Statistics · 45%". */
   readonly short: string;
 }
 
@@ -52,9 +52,11 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
     case "nothing":
       return null;
     case "reading":
+      // The one pass, named as the box names it, "Calculating the
+      // statistics of panel.nei…".
       return {
-        full: withShare(`Reading ${escaped(line.name)}`, line.share),
-        short: withShare("Reading", line.share),
+        full: withShare(`Statistics of ${escaped(line.name)}`, line.share),
+        short: withShare("Statistics", line.share),
       };
     case "pcaRunning": {
       const name = methodName(line.method);
@@ -74,7 +76,7 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
         full:
           line.what.kind === "pca"
             ? `Stopping the ${methodName(line.what.method)}…`
-            : `Stopping the reading of ${escaped(line.what.name)}…`,
+            : `Stopping the statistics of ${escaped(line.what.name)}…`,
         short: "Stopping…",
       };
     case "aboutToStart": {
@@ -88,7 +90,7 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
           }
         : {
             full: `The ${name} starts again in a moment`,
-            short: `${name} in a moment`,
+            short: `${name} soon`,
           };
     }
     case "result":
@@ -98,7 +100,7 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
 
 /**
  * The Stop after the words of `line`, or `null` when it has none: the
- * Stop of the one pass, "Stop reading panel.vcf.gz"; of the PCA running,
+ * Stop of the one pass, "Stop the statistics of panel.vcf.gz"; of the PCA running,
  * "Stop the PCA"; while the PCA is about to start, "Stop
  * recalculating", named "Stop recalculating the PCA". "PCoA" under the
  * PCoA. None for the PCA while the PCA tab, which shows its own, is
@@ -114,7 +116,7 @@ export function stopOf(line: BandLine): BandStop | null {
     case "reading":
       return {
         label: "Stop",
-        name: `Stop reading ${escaped(line.name)}`,
+        name: `Stop the statistics of ${escaped(line.name)}`,
         stops: "pass",
       };
     case "pcaRunning":

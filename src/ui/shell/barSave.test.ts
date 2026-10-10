@@ -141,11 +141,11 @@ describe("WS9 the Save of the error bar", () => {
     );
   });
 
-  test("the first line of the bar for the worker stopped during the pass of the count and the statistics says Start again, as the box does, and for one stopped during an opening, to reload", () => {
+  test("the first line of the bar for the worker stopped during the pass of the count and the statistics says to press Start again in the box of the variants file, and for one stopped during an opening, to reload", () => {
     expect(
       barText(defect("out of memory", "countStopped"), "noSaving", false),
     ).toBe(
-      "The application stopped as it counted the variants and calculated the statistics: out of memory. Start again, and if it stops again, reload the page and open your files again.",
+      "The application stopped as it counted the variants and calculated the statistics: out of memory. Press Start again in the box Variants file, and if it stops again, reload the page and open your files again.",
     );
     expect(
       barText(defect("out of memory", "openingStopped"), "noSaving", false),

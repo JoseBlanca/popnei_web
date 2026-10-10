@@ -300,7 +300,6 @@ function Line({ line, page, onLink }: LineProps): React.JSX.Element | null {
         <Button
           label={stop.label}
           name={stop.name}
-          {...(stop.label !== "Stop" && { shortLabel: "Stop" })}
           onPress={() => {
             pressStop(stop, page);
           }}
