@@ -441,7 +441,12 @@ Deliverables:
    bullet "Live" of the screen spec's "How it is checked", In
    Playwright, every check of it, and the two flows of
    `popgen2-download.md`'s "How it is checked" of 10 October 2026.
-   Axe in the state about to start, light and dark.
+   Axe in the state about to start, light and dark. Added on 10 October
+   2026 by the review of task 3.2: besides the PCA's slider, a
+   threshold line of the Variants tab moved and then held still for
+   3 s, a thumb pressed and held without moving for 3 s, and a menu
+   "Download…" held open for 3 s, each with the PCA live: no start
+   until the release, and the line or thumb where the user left it.
 4. The flows that were there pass: `e2e/popgen2Pca.spec.ts`,
    `popgen2Download.spec.ts`, `popgen2Downloads.spec.ts` and the old
    page's flows of the PCA, `e2e/pca*.spec.ts`.
@@ -486,7 +491,11 @@ Tasks:
   short line beside Run says why nothing starts by itself any more
   ("Stopped; press Run to calculate the PCA again", spec first); (e)
   the gate's listener reads `underWay() === 0` on each call, and any
-  screen that shows the count reads it the same way.
+  screen that shows the count reads it the same way. (f) the line of the quiet
+  second while the download dialog holds it says "The PCA starts again
+  when the download is written or closed."; the gate's count carries no
+  kind, so the tab reads that the dialog is open from the dialog's own
+  state, not from the gate.
 - [ ] 4.3 The measurement of deliverable 6, alone on the machine.
   Stands on 4.2.
 
