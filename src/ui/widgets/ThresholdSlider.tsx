@@ -40,10 +40,11 @@
  * state of its own for that, so it is the value given back unchanged
  * that holds the thumb where it is.
  *
- * On popgen2.html a drag is a change under way (changeHold.ts), held
- * from the first move of the pointer to its release, after the end of
- * the drag is given, or until the line leaves the page; a key holds
- * nothing here, since the threshold holds its run of the keys itself.
+ * On popgen2.html a press of the pointer on the thumb is a change under
+ * way (changeHold.ts), held from the press, moved or held still, to its
+ * release or the browser cancelling it, after the end of the drag is
+ * given, or until the line leaves the page; a key holds nothing here,
+ * since the threshold holds its run of the keys itself.
  */
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { Slider, SliderThumb, SliderTrack } from "react-aria-components";
@@ -130,7 +131,7 @@ export function ThresholdSlider({
   // The latest onDragEnd, for the listener of the release, made at the
   // press.
   const dragEndRef = useRef(onDragEnd);
-  // The drag under way, held from its first move.
+  // The press under way, held from the press, moved or held still.
   const hold = useChangeHold();
   useLayoutEffect(() => {
     dragEndRef.current = onDragEnd;
@@ -195,6 +196,7 @@ export function ThresholdSlider({
     ownerWindow.addEventListener("pointerup", release);
     ownerWindow.addEventListener("pointercancel", release);
     drag.current = { moved: null, stop };
+    hold.take();
   };
 
   return (
@@ -225,7 +227,6 @@ export function ThresholdSlider({
                 return;
               }
               dragged.moved = moved;
-              hold.take();
               onChange(moved, "pointer");
             }}
           >

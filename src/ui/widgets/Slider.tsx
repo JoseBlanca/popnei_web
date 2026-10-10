@@ -27,12 +27,13 @@
  * Aria's slider has no state of its own for that, so it is the value
  * given back unchanged that holds the thumb where it is.
  *
- * On popgen2.html a drag is a change under way (changeHold.ts), held
- * from the first move of the pointer to the end of the drag, or until
- * the slider leaves the page; a key is a change at once, and holds
- * nothing.
+ * On popgen2.html a press of the pointer is a change under way
+ * (changeHold.ts), held from the press, moved or held still, to the end
+ * of the drag, to the browser cancelling the press, a touch
+ * interrupted, or until the slider leaves the page; a key is a change at
+ * once, and holds nothing.
  */
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Slider as AriaSlider,
   Label,
@@ -42,7 +43,7 @@ import {
 } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
-import { useHoldWhile } from "./changeHold.ts";
+import { useChangeHold } from "./changeHold.ts";
 import styles from "./Slider.module.css";
 import { WaitingTooltip } from "./WaitingTooltip.tsx";
 import { ariaDisabledRef, describedByOf } from "./waiting.ts";
@@ -99,8 +100,26 @@ export function Slider({
   // input's own change, which a screen reader of a phone makes and which
   // React Aria ends with no `onChangeEnd`, is given at once.
   const dragging = useRef(false);
-  // A drag under way, from its first move to its end.
-  useHoldWhile(moving !== null);
+  // The press under way, held from the press of the pointer: a thumb
+  // pressed and held still is a change the user is in the middle of.
+  const hold = useChangeHold();
+  // The function that stops listening for the browser cancelling the
+  // press, while one is held: React Aria ends a press on the track only
+  // at the release, so a touch interrupted would hold for good.
+  const stopCancel = useRef<(() => void) | null>(null);
+  const endPress = (): void => {
+    stopCancel.current?.();
+    stopCancel.current = null;
+    hold.release();
+  };
+  // A slider gone while pressed listens no more; its hold goes with it.
+  useEffect(
+    () => () => {
+      stopCancel.current?.();
+      stopCancel.current = null;
+    },
+    [],
+  );
   const shown = waits ? value : (moving ?? value);
   const text = valueText(shown);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -143,14 +162,19 @@ export function Slider({
               dragging.current = false;
               setMoving(null);
               // A press with no move ends where it started, and changes
-              // nothing; a key was given at its change.
-              if (
-                !waits &&
-                dragged &&
-                Number.isFinite(ended) &&
-                ended !== value
-              ) {
-                onChangeEnd(ended);
+              // nothing; a key was given at its change. The hold goes
+              // after the value is given.
+              try {
+                if (
+                  !waits &&
+                  dragged &&
+                  Number.isFinite(ended) &&
+                  ended !== value
+                ) {
+                  onChangeEnd(ended);
+                }
+              } finally {
+                endPress();
               }
             }}
           >
@@ -175,6 +199,21 @@ export function Slider({
                   trackRef.current?.contains(target) === true
                 ) {
                   dragging.current = true;
+                  hold.take();
+                  const ownerWindow =
+                    event.currentTarget.ownerDocument.defaultView;
+                  if (stopCancel.current === null && ownerWindow !== null) {
+                    const cancelled = (): void => {
+                      endPress();
+                    };
+                    ownerWindow.addEventListener("pointercancel", cancelled);
+                    stopCancel.current = () => {
+                      ownerWindow.removeEventListener(
+                        "pointercancel",
+                        cancelled,
+                      );
+                    };
+                  }
                 }
               }}
             >

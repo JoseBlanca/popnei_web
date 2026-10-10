@@ -101,13 +101,17 @@ function thumbOf(): HTMLElement {
   return thumb;
 }
 
-function pointer(type: string, x: number): PointerEvent {
+function pointer(
+  type: string,
+  x: number,
+  pointerType: "mouse" | "touch" = "mouse",
+): PointerEvent {
   return new PointerEvent(type, {
     bubbles: true,
     cancelable: true,
     composed: true,
     pointerId: 1,
-    pointerType: "mouse",
+    pointerType,
     isPrimary: true,
     button: 0,
     buttons: type === "pointerup" ? 0 : 1,
@@ -303,7 +307,7 @@ describe("NU3 D2 the line holds a drag under way", () => {
     }
   };
 
-  test("held from the first move of the pointer to its release, which ends the drag before letting go", () => {
+  test("held from the press of the pointer to its release, which ends the drag before letting go", () => {
     withWidth(() => {
       const gate = createRunGate();
       const calls: Calls = { moves: [], dragEnds: [] };
@@ -311,7 +315,7 @@ describe("NU3 D2 the line holds a drag under way", () => {
       act(() => {
         thumbOf().dispatchEvent(pointer("pointerdown", 50));
       });
-      expect(gate.underWay()).toBe(0);
+      expect(gate.underWay()).toBe(1);
       act(() => {
         window.dispatchEvent(pointer("pointermove", 40));
       });
@@ -331,17 +335,42 @@ describe("NU3 D2 the line holds a drag under way", () => {
       expect(gate.underWay()).toBe(0);
       expect(calls.dragEnds).toHaveLength(1);
       expect(seen).toEqual([1]);
-
-      // A press that moves nothing holds nothing.
-      act(() => {
-        thumbOf().dispatchEvent(pointer("pointerdown", 30));
-      });
-      act(() => {
-        window.dispatchEvent(pointer("pointerup", 30));
-      });
-      expect(gate.underWay()).toBe(0);
     });
   });
+
+  test.each(["mouse", "touch"] as const)(
+    "a thumb pressed by %s and held still holds from the press, and lets go at its release, ending no drag",
+    (pointerType) => {
+      const gate = createRunGate();
+      const calls: Calls = { moves: [], dragEnds: [] };
+      draw(calls, 0.5, false, gate);
+      act(() => {
+        thumbOf().dispatchEvent(pointer("pointerdown", 50, pointerType));
+      });
+      expect(gate.underWay()).toBe(1);
+      act(() => {
+        window.dispatchEvent(pointer("pointerup", 50, pointerType));
+      });
+      expect(gate.underWay()).toBe(0);
+      expect(calls.dragEnds).toEqual([]);
+    },
+  );
+
+  test.each(["mouse", "touch"] as const)(
+    "a press by %s cancelled by the browser lets its hold go",
+    (pointerType) => {
+      const gate = createRunGate();
+      draw({ moves: [], dragEnds: [] }, 0.5, false, gate);
+      act(() => {
+        thumbOf().dispatchEvent(pointer("pointerdown", 50, pointerType));
+      });
+      expect(gate.underWay()).toBe(1);
+      act(() => {
+        window.dispatchEvent(pointer("pointercancel", 50, pointerType));
+      });
+      expect(gate.underWay()).toBe(0);
+    },
+  );
 
   test("a press of a key takes no hold", () => {
     const gate = createRunGate();

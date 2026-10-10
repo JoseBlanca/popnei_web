@@ -264,7 +264,9 @@ control to the next. A change under way is one the user is making that
 has not reached the project yet:
 
 - the pointer held on the thumb of a slider of the PCA, or on the line
-  of a threshold, after it moved: from the first move to the release;
+  of a threshold, moved or held still: a thumb pressed holds from the
+  press to the release, or to the browser cancelling the press, a touch
+  interrupted;
 - a list or a menu open, a popover of the page: the method and the
   other lists of the PCA tab, the components on the axes and "Colour
   the points by", the column of the populations in the box of the
