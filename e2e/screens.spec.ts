@@ -5603,9 +5603,13 @@ for (const theme of ["light", "dark"] as const) {
           "1, keeps every variant",
           { timeout: 20_000 },
         );
-        // Reached with the Tab key from its box, over the plot, so that
-        // the ring shows.
+        // Reached with the Tab key from its box, over the menu
+        // "Download…" of the plot and the plot, so that the ring shows.
         await het.getByRole("textbox").focus();
+        await page.keyboard.press("Tab");
+        await expect(
+          het.getByRole("button", { name: /^Download the plot of/u }),
+        ).toBeFocused();
         await page.keyboard.press("Tab");
         await expect(het.getByRole("slider")).toBeFocused();
         // The run of the keys waits while the picture is taken: the
