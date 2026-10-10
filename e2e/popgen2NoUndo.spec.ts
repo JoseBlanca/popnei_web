@@ -272,6 +272,7 @@ test("NU2 D3 Ctrl+Z, Meta+Z, Ctrl+Shift+Z, Meta+Shift+Z and Ctrl+Y on the headin
     for (const keys of UNDO_KEYS) {
       await place.focus();
       await page.keyboard.press(keys);
+      await expect(place).toBeFocused();
       await expect(filterBox(page)).not.toBeChecked();
       await expect(missing.slider).toHaveValue("0.05");
       await expect(missing.box).toHaveValue("0.05");
@@ -468,6 +469,7 @@ test("NU2 D3 0.9 typed in a box and committed, another file opened: Ctrl+Z and M
     await expectKept();
     await heading(page).focus();
     await page.keyboard.press(keys);
+    await expect(heading(page)).toBeFocused();
     await expectKept();
   }
   // The box committed again as the focus leaves it: still 0.9, on.
