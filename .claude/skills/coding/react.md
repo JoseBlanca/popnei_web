@@ -106,6 +106,16 @@ export function useAppState<T>(select: (state: AppState<JobResult>) => T): T {
 }
 ```
 
+The two pages have stores of different shapes, so `store.tsx` gives
+three hooks where the sketch above gives one, chosen by what a screen
+needs (built on 10 October 2026, `docs/plans/no-undo.md`): `useStore`,
+for code shared by both pages, the store without `undo` and `redo`;
+`usePopgen2Store`, on `popgen2.html` alone, for `applyAfresh` and the
+column of the populations; and `useUndoStore`, on `popgen.html` alone,
+for its Undo, Redo and notice. Each of the last two throws a defect
+under the other page's store, so a screen that reaches for Undo on
+`popgen2.html` fails at its first render as well as at the compiler.
+
 - **`useSyncExternalStore`, and never `useState` plus an effect that
   subscribes.** It is React's hook for state that lives outside React. It
   reads the value during the render, so that two components never show
@@ -330,6 +340,14 @@ step, in the shell, and the one place where focus is moved by hand: React
 Aria moves it for dialogs, menus and toasts, and returns it when they
 close.
 
+The second place: a control that has the focus and leaves the page by
+itself, not by the user's press of it, a Stop that goes when the run
+ends, takes the focus with it to the `<body>`, and the next Tab starts
+from the top of the page while a screen reader says nothing. So a
+control that can go by itself gives the focus, when it had it, to the
+page's heading, as the band of `popgen2.html` does (the review of work
+package 5 of `docs/plans/no-undo.md`, 10 October 2026).
+
 ## Lists and keys
 
 - **The key of an item is its identity in the data**: the id of the
@@ -429,24 +447,42 @@ ends, results removed, is heard only through a live region.
   file stops the calculations at once, and its notice says so, "2
   calculations stopped because a new variants file was loaded · Undo",
   as the owner decided on 25 September 2026.
-- **`popgen2.html` has no notice**, as the owner decided on 8 October
-  2026, and what is above holds for `popgen.html` alone. Its store is
-  made with `stopLeftBehind` (`docs/specs/core/store.md`, "On
-  popgen2.html: no notice, and a history of the filters"): a change
-  stops at once every calculation whose key the new project no longer
-  gives, and an undo that gives the key back finds the result in the
-  cache or leaves the analysis ready for the user's Run. So that no
-  change stops a PCA without a word, the page locks what a running PCA
-  reads, the thresholds, the FILTER box and the PCA's own options, each
-  greyed with "Stop the PCA to change the filters." as its tooltip and
-  its description, and the buttons and keys of Undo and Redo wait
-  (`docs/specs/steps/popgen2-pca.md`, "While a PCA runs"). Opening a
-  variants or an individuals file there is no step of Undo; only the
-  changes of the filters and the column of the populations are. Its
-  Undo and Redo are two buttons at the top right of the page's column
-  of 48 rem, each shown only while it has a step to take
-  (`docs/specs/steps/popgen2-pca.md`, "Undo and Redo"), with the keys of
-  "Keyboard shortcuts" below.
+- **`popgen2.html` has no notice and no Undo**, as the owner decided on
+  8 and 10 October 2026, and what is above holds for `popgen.html`
+  alone. Its store is made with `stopLeftBehind` and `dropLeftBehind`
+  (`docs/specs/core/store.md`, "On popgen2.html: no notice, no Undo,
+  and no result kept for values left behind"): a change stops at once
+  every calculation whose key the new project no longer gives, and
+  removes the result of such a key. So that no change stops a PCA
+  without a word, the page locks what a running PCA reads, the
+  thresholds, the FILTER box and the PCA's own options, each greyed with
+  "Stop the PCA in the PCA tab to change the filters; then press Run
+  there to calculate it again." as its tooltip and its description
+  (`docs/specs/steps/popgen2-pca.md`, "While a PCA runs"); the owner
+  kept this lock on 10 October 2026, after WebKit was measured keeping
+  a stopped PCA's 2 GB for 40 s and more. Once the user's Run has made
+  the PCA live, `src/ui/autoRuns.ts` starts it again by itself a second
+  after the last change, when no control holds a change under way: a
+  drag, an open list, a box with text not yet given, a run of the arrow
+  keys (the gate of `src/ui/variants/thresholdRun.ts`, which the widgets
+  hold through `RunGateProvider`). A widget added to that page takes the
+  same hold, from the press to the commit, or the PCA starts under the
+  user's hand. Stop ends the live state until the next Run. The traps
+  the reviews of `docs/plans/no-undo.md` found, on 10 October 2026:
+  React Aria's `Slider` calls no `onChange` for a thumb pressed and held
+  still, so the hold starts at the press, not at the first change; a
+  touch drag the browser cancels ends with `pointercancel` before its
+  value reaches the project; a right-click takes no hold; a box holds
+  from its first key to its commit, not while its text differs from its
+  number, which "0.1" on the way to "0.15" does not; and a hold, or any
+  count of things under way, is let go in a `finally`, since a listener
+  that threw left one counted and the PCA never started again.
+- **The band of `popgen2.html`**, `src/ui/band/`, is the page's line at
+  the top of the window: the heading "Popnei", what runs with its Stop,
+  and the errors of the application in the place of the error bar
+  (`docs/specs/steps/popgen2-band.md`). It reads the store and the
+  live state of `autoRuns.ts` through one subscription each, and its
+  Stop of the PCA ends the live state, as the tab's does.
 - **Errors of a run** are shown in the panel of the analysis with the
   message and are announced as the end of the run is; `role="alert"` is
   kept for what interrupts, which here is only the bar of an error of the
@@ -461,11 +497,21 @@ field, where they belong to the text. No other shortcut in the first
 version: each one is a
 key that some screen reader or browser also wants.
 
+On `popgen2.html`, which has no Undo, the same keys outside a text field
+are refused, with `preventDefault`, and do nothing. Left to the browser,
+Ctrl+Y in Chromium on macOS emptied a number box reached by Tab, and a
+screen reader said "Empty" (the review of work package 2 of
+`docs/plans/no-undo.md`, 10 October 2026). Inside a text field they
+stay the field's own.
+
 ## The states of an analysis
 
 The panel of every analysis shows one of the seven states of a screen
 spec (`writing-specs` skill): empty, locked with its reason, ready,
-running with its progress, done, results removed with the notice, error. Core gives the
+running with its progress, done, results removed with the notice, error;
+on `popgen2.html`, which has no notice, the PCA has no state of results
+removed, and has one more, about to start by itself
+(`docs/specs/steps/popgen2-pca.md`, "The states"). Core gives the
 status as a discriminated union, and a shared component,
 `src/ui/analyses/AnalysisPanel.tsx`, draws the frame of each state and
 switches over it with every case named, so that a new state is a type
@@ -555,7 +601,14 @@ left:
 
 ```
 src/ui/
-  store.tsx                 StoreProvider, useStore, useAppState
+  store.tsx                 StoreProvider, useStore, useAppState, and the
+                            hooks of each page's store
+  popgen2Store.ts           the store of popgen2.html, with no Undo
+  autoRuns.ts               what popgen2.html starts by itself: the one
+                            pass, and the PCA once live
+  pageTab.ts                the tab shown on popgen2.html, which the row
+                            of tabs and the band both change
+  band/                     the band of popgen2.html, at the top
   shell/                    the header, the stepper, the summary line, the
                             notices, the status region, ErrorBoundary.tsx
   steps/variants/

@@ -213,7 +213,7 @@ that cannot happen gets a line that says why:
 | ready | it can run, with its options |
 | running | it is running, with its progress, and it can be cancelled |
 | done | the result, with its warnings |
-| results removed | a change took the result off the screen, with the notice and its undo; on `popgen2.html`, which has no notice, the analysis is ready again and an undo brings the result back from the cache |
+| results removed | a change took the result off the screen, with the notice and its undo; on `popgen2.html`, which has no notice and no Undo since 10 October 2026, there is no such state: the change removes the result, and the PCA, once live, is about to start again by itself |
 | error | the calculation failed, with what happened and what to do |
 
 The reason a screen is locked is text on the screen and not a greyed

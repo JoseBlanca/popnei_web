@@ -101,9 +101,11 @@ does not go through the key.
   with another project than the result's.
 - The notice of results removed, undo and redo, and a project file
   opened, which loads no result: do they give what section 3 says? On
-  `popgen2.html`, which has no notice: does a change stop at once what
-  it leaves behind, does an undo find the result in the cache, and can
-  any change the lock of a running PCA misses stop it without a word?
+  `popgen2.html`, which has no notice and no Undo: does a change stop at
+  once what it leaves behind and remove its result, can any change the
+  lock of a running PCA misses stop it without a word, and can the PCA
+  that starts again by itself read a project older than the last change,
+  or start while a control still holds a change under way?
 
 Evidence: two projects that differ in one input and give the same key,
 as a Vitest test or a call in node; or a sequence of actions in the

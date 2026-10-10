@@ -276,11 +276,15 @@ export function createClient(make: {
   cost, and one that runs ends its worker, as below; either way its
   outcome is `cancelled`. An undo that asks for that key again later sends
   it again, which costs its time and never its correctness. That is
-  `popgen.html`. `popgen2.html` has no notice, so its store, made with
-  `stopLeftBehind`, cancels such a request at the change itself, and the
-  page locks what a running PCA reads so that no change of the user's
-  stops it unseen (`docs/specs/core/store.md`, "On popgen2.html: no
-  notice, and a history of the filters").
+  `popgen.html`. `popgen2.html` has no notice and no Undo, so its store,
+  made with `stopLeftBehind` and `dropLeftBehind`, cancels such a
+  request at the change itself and keeps no result of it, and the page
+  locks what a running PCA reads so that no change of the user's stops
+  it unseen (`docs/specs/core/store.md`, "On popgen2.html: no notice, no
+  Undo, and no result kept for values left behind"). A request left
+  behind still sends its outcome; the store drops popnei's and the
+  worker's failures of it, and keeps `reopenFailed`, which reaches every
+  later request.
 
 ### Errors are values
 

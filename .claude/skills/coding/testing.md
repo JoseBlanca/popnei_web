@@ -553,6 +553,12 @@ diploid variants of 200 individuals in three populations of 48, 68 and
   rather than a longer timeout for every test.
 - Each test starts from a fresh page, and none depends on another having
   run before it.
+- Each key or action is checked alone, from a state where it would do
+  something. The flows of Undo's five keys on `popgen2.html` first
+  pressed all five in a row, and passed with Undo wired back, since one
+  key did what another was meant not to (the review of work package 2
+  of `docs/plans/no-undo.md`, 10 October 2026). A flow that guards
+  against a defect is seen to fail with the defect put back.
 - What is proven in `src/core` is not proven again here. That undo brings
   the diversity back with no calculation is shown by the core tests,
   which count the requests; the flow checks that the numbers come back

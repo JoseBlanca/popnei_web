@@ -342,7 +342,17 @@ as it would on `:hover` or `:checked`:
 - **Nothing covers what has focus.** A sticky header or a toast region
   that sits over the page leaves room, `scroll-padding-block-start` on
   the scrolling element, so that a field reached by Tab is not hidden
-  under it (WCAG 2.4.11).
+  under it (WCAG 2.4.11). The padding moves nothing under a pointer: a
+  click on a control half under the band of `popgen2.html` was lost,
+  and the flows read the rectangles of the band and of the control.
+- **What is fixed at the top stays short.** A fixed element whose height
+  grows with its text, an error with its details, covered half the
+  window at 200% zoom and all of it at 400%, with its Close out of
+  reach, in Chromium and WebKit; so while it holds an error the band of
+  `popgen2.html` scrolls with the page, and is brought into view when
+  the error comes. In print a fixed element is drawn on every page, so
+  `@media print` makes it static (the review of work package 5 of
+  `docs/plans/no-undo.md`, 10 October 2026).
 
 ## Contrast and colour
 

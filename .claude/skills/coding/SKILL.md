@@ -176,11 +176,14 @@ is what the core layer adds to them.
   of popnei, the reads of the files and `runEnded`, which change what the
   screens show and make no step of undo. `docs/specs/core/store.md` has
   them whole, and `react.md` how the screens read it. The store of
-  `popgen2.html` is made with `stopLeftBehind`: it makes no notice, the
-  description only names the step of Undo, and a change stops at once
-  what it leaves behind; and it adds `applyAfresh`, a change that starts
-  the history afresh, for the opening of its individuals file, which is
-  no step of Undo there.
+  `popgen2.html` is made with `stopLeftBehind` and `dropLeftBehind`: a
+  change makes no notice, stops at once every calculation it leaves
+  behind, and keeps no result for values the screen no longer shows,
+  since that page has had no Undo since 10 October 2026
+  (`docs/designs/no-undo.md`). Its screens get the store without `undo`
+  and `redo`, so that a call to them does not compile, and its history
+  keeps one past project that nothing reaches; `applyAfresh`, a change
+  that starts the history afresh, opens its individuals file.
 - **A run is started by core and awaited by `src/ui`.** The `run` of an
   analysis builds its request, hands it to the client that core was given,
   and returns the `Run` handle of `src/worker/protocol.ts` without waiting
