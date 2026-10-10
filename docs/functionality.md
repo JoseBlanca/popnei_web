@@ -146,14 +146,12 @@ depends on a value the user changed and has no undo: what it shows is always
 the result of the values on the screen, calculated again when they
 change, and nothing is undone. Ctrl+Z and Cmd+Z put back the
 number of a box with something typed in it and undo the typing in a
-field of text; elsewhere on the page they and the keys of Redo do
-nothing. Nothing on the page gives the thresholds their starting
+field of text; elsewhere on the page they and the keys of Redo,
+Ctrl+Y, Ctrl+Shift+Z and Cmd+Shift+Z, do nothing. Nothing on the page gives the thresholds their starting
 values back, and no line on it says that it has no Undo, as the owner
 decided on 10 October 2026, asked how a user gets a threshold back
 to its starting value.
-Undo and Redo stood at the
-right end of the line of the heading from 9 to 10 October 2026, and
-`popgen.html` keeps its own. While a PCA runs, the thresholds and the
+`popgen.html` keeps its own Undo and Redo. While a PCA runs, the thresholds and the
 FILTER box are greyed, with "Stop the PCA in the PCA tab to change the
 filters; then press Run there to calculate it again.", so that nothing
 the PCA reads changes under it; once the PCA has been run for the
@@ -209,12 +207,13 @@ runs the button waits too, greyed, with "Waits for the PCA to end; or
 stop it in the PCA tab." beside it ("the PCoA" for a PCoA), from 9
 October 2026. From 10 October 2026, once the PCA has been run for the
 file, a change of a filter starts it again a second later, and the
-button then waits for it, up to 4 minutes on a file of 9,381
-individuals, as the owner chose that day rather than a download that
+button then waits for it, 128 s in WebKit and 215 s in Chromium for
+a VCF of 300 variants of 9,381 individuals on an Apple M5 Pro (the
+measurement NU4 D6 of docs/plans/no-undo.md), as the owner chose that day rather than a download that
 stops the PCA; a user who wants the file first presses Stop, or "Stop
 recalculating" in the PCA tab, which keeps the PCA from starting again
-until Run. A press of the button during that second goes first: the
-PCA does not start while the dialog is open or the file is written,
+until Run. A press of the button during that second is served before
+the PCA: the PCA does not start while the dialog is open or the file is written,
 and starts a second after the dialog closes. While the file is written
 the band at the top of the page says so (section 5). When the
 write ends the browser's download starts by itself, and the button
@@ -592,10 +591,11 @@ give the principal components that go into the GWAS as covariates.
   (docs/designs/no-undo.md), once Run has been pressed for the file, a
   later change of what the PCA reads takes its result off the screen
   and calculates it again by itself a second after the user stops
-  changing things, a second that waits while a slider is held, a list
-  or a menu is open, a number is being typed or the dialog of the
-  download is open, during which the PCA tab says "The PCA starts
-  again in a moment, once the filters and its options stop changing.";
+  changing things: the second is counted from the last change, or from
+  the moment the last control lets go, whichever is later, and no
+  second is counted while a slider is held, a list or a menu is open,
+  a number is being typed or the dialog of the download is open. Meanwhile the PCA tab says "The PCA starts again
+  in a moment, once the filters and its options stop changing.";
   a value set back is calculated again too, since the
   page keeps no result for values it no longer shows. A screen reader
   hears, as it starts, "Calculating the PCA again. To change the
@@ -608,7 +608,8 @@ give the principal components that go into the GWAS as covariates.
   ends the automatic runs too, since each new run would fail the same
   way; another variants file waits for its own Run. A band at the top of the
   window, from 10 October 2026, holds the page's heading, "Popnei",
-  and says what the page is doing whichever tab the user is in: the
+  alone while nothing runs, and says what the page is doing whichever
+  tab the user is in: the
   reading of the variants file or the PCA running, each with its Stop,
   the PCA about to start again with "Stop recalculating", "Stopping
   the PCA…" after a Stop, the writing of the filtered variants, a link
