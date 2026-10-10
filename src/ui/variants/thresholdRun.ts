@@ -74,8 +74,12 @@ export interface RunGate {
 export interface HeldRun {
   /** Tells the gate the run moved, so that what Undo names follows it. */
   readonly moved: () => void;
-  /** Lets the run go, once it ended. */
-  readonly release: () => void;
+  /** Lets the run go, once it ended, and then calls `made`, which makes
+      the change the run ended in; the listeners are told after it, so
+      that one told the count fell to 0 reads the new project. The run is
+      let go before `made`, so that its change, which passes the gate,
+      finds nothing of it to end. */
+  readonly release: (made?: () => void) => void;
 }
 
 /** Makes the gate of a page, with nothing held. */
@@ -101,8 +105,10 @@ export function createRunGate(): RunGate {
       tell();
       return {
         moved: tell,
-        release: () => {
-          if (runs.delete(held)) tell();
+        release: (made) => {
+          const wasHeld = runs.delete(held);
+          made?.();
+          if (wasHeld) tell();
         },
       };
     },
@@ -245,8 +251,11 @@ export function createThresholdRun(deps: ThresholdRunDeps): ThresholdRun {
     const { from, to, timer, held } = waiting;
     waiting = null;
     clearTimeout(timer);
-    held?.release();
-    if (to !== from) deps.change(to);
+    const made = (): void => {
+      if (to !== from) deps.change(to);
+    };
+    if (held === null) made();
+    else held.release(made);
     deps.ended();
   };
 

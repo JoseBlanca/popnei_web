@@ -495,3 +495,65 @@ describe("NU3 D1 the gate counts the changes under way", () => {
 function unsent(): never {
   throw new Error("the test started a pass");
 }
+
+describe("NU1 the listeners of the gate see the change a run of the keys made", () => {
+  const maf = { of: "variants", kind: "maf" } as const;
+  /** The store of the page through a gate, a run of the MAF threshold
+      whose change passes the gate as the page's does, and the MAF value a
+      listener read each time the count of the changes under way was 0. */
+  const setUp = (): {
+    readonly gate: ReturnType<typeof createRunGate>;
+    readonly run: ReturnType<typeof createThresholdRun>;
+    readonly seen: (number | null)[];
+  } => {
+    const gate = createRunGate();
+    const store = gatedStore(
+      createPopgen2Store({
+        send: () => unsent(),
+        sendWrite: () => {
+          throw new Error("popnei_web defect: no write is sent here");
+        },
+        appVersion: "0.1.0",
+      }),
+      gate,
+    );
+    const run = createThresholdRun({
+      gate,
+      change: (to) => {
+        store.apply("the MAF filter was turned on", (p) =>
+          setThreshold(p, maf, to),
+        );
+      },
+      describe: () => "the MAF filter was turned on",
+      ended: () => undefined,
+    });
+    const seen: (number | null)[] = [];
+    gate.subscribe(() => {
+      if (gate.underWay() === 0) {
+        seen.push(thresholdValue(store.getState().project, maf));
+      }
+    });
+    return { gate, run, seen };
+  };
+
+  test("a run ended by its quiet second: the listener told at 0 reads the new value", () => {
+    const { run, seen } = setUp();
+    run.press(1, 0.05);
+    vi.advanceTimersByTime(RUN_QUIET_MS);
+    expect(seen).toEqual([0.05]);
+  });
+
+  test("a run ended by the focus leaving: the listener told at 0 reads the new value", () => {
+    const { run, seen } = setUp();
+    run.press(1, 0.05);
+    run.end();
+    expect(seen).toEqual([0.05]);
+  });
+
+  test("a run ended by another command: the listener told at 0 reads the new value", () => {
+    const { gate, run, seen } = setUp();
+    run.press(1, 0.05);
+    gate.endAll();
+    expect(seen).toEqual([0.05]);
+  });
+});
