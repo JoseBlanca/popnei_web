@@ -626,6 +626,25 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     expect(await page.evaluate(() => window.scrollY)).toBe(before);
   });
 
+  test("NU5 D3 printed, the band is at the top of the first page alone, in the flow of the page, with no room kept above it", async ({
+    page,
+  }) => {
+    await page.goto("popgen2.html");
+    await expect.poll(() => lineText(page)).toBe("Popnei");
+    await page.emulateMedia({ media: "print" });
+    expect(
+      await page.evaluate(() => {
+        const header = document.querySelector("#defects header");
+        return header === null
+          ? null
+          : [
+              getComputedStyle(header).position,
+              getComputedStyle(document.body).paddingBlockStart,
+            ];
+      }),
+    ).toEqual(["static", "0px"]);
+  });
+
   test("NU5 D3 the dialog of the download open and an error thrown: the band's alert says it, and is not inert", async ({
     page,
   }) => {

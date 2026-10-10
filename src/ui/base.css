@@ -42,6 +42,14 @@ body {
   line-height: var(--leading-body);
 }
 
+/* Printed, the band of popgen2.html is in the flow of the first page
+   (Band.module.css), and no room is kept above the page for it. */
+@media print {
+  body {
+    padding-block-start: 0;
+  }
+}
+
 h1,
 h2,
 h3 {

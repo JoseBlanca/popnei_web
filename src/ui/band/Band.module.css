@@ -13,6 +13,14 @@
   color: var(--color-text);
 }
 
+/* Printed: in the flow of the first page, not over the top of every
+   page, as Chromium printed it to a PDF. */
+@media print {
+  .band {
+    position: static;
+  }
+}
+
 /* While an error of the application is shown: in the flow of the page,
    at its top, so that it scrolls with it and covers nothing of the
    window, at 400% zoom among others. */

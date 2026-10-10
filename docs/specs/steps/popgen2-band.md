@@ -145,6 +145,8 @@ every later error is.
 It stays at the top of the window in every state but one: while an
 error of the application is shown it scrolls with the page, so that it
 never covers the window ("An error of the application", below).
+Printed, it stands at the top of the first page, in the flow of the
+page, and not over the top of every page.
 
 ### The line
 
