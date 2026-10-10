@@ -163,6 +163,13 @@ there with no time limit (`popgen2-pca.md`, "Stop"); the band offers it
 only within the quiet second, when the PCA is about to start and the
 user may be in another tab.
 
+While the PCA tab is shown, the band keeps its words about the PCA,
+running or about to start, and drops their Stop and Stop recalculating,
+as it drops the link: the tab shows the same buttons under its options,
+and two buttons of the same words on one screen would leave the user
+asking which to press. The Stop of the one pass stays, since the box of
+the variants file is not in that tab.
+
 Only one calculation runs at a time in the calculation worker, so at
 most one of the first three holds. A running calculation wins over a
 Stop under way, since the next calculation after a Stop waits for the
@@ -510,8 +517,9 @@ pass held by `e2e/holdWorker.ts`:
 - a file opened, the pass held: the band reads "Reading panel.nei"
   then a percentage, and its Stop stops the pass, the box then offering
   Start again;
-- the PCA run and held: "PCA running · 0:0…", the same while the
-  Variants tab is shown; its Stop in the band: the PCA tab shows Run,
+- the PCA run and held: "PCA running · 0:0…" with no Stop while the
+  PCA tab is shown, and with it while the Variants tab is; its Stop in
+  the band: the PCA tab shows Run,
   the status region says "PCA stopped. Press Run in the PCA tab to
   calculate it again.", and a threshold moved then starts nothing;
 - the PCA live, a threshold moved in the Variants tab: "The PCA starts
@@ -554,7 +562,9 @@ pass held by `e2e/holdWorker.ts`:
 **The screens**, `--project=screens`, at 1280 and 320 px, light and
 dark: `popgen2-band-empty`, "Popnei" alone, `popgen2-band-reading`,
 `popgen2-band-pca-running`, `popgen2-band-stopping`,
-`popgen2-band-about-to-start`, `popgen2-band-writing` (behind the
+`popgen2-band-about-to-start`, `popgen2-band-pca-tab-about-to-start`
+(the PCA tab shown, the words and no Stop recalculating in the band),
+`popgen2-band-writing` (behind the
 dialog), `popgen2-band-warning`, `popgen2-band-error` and
 `popgen2-band-error-details`, and `popgen2-band-error-running`, both
 lines.

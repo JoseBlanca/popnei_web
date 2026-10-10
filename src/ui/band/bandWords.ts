@@ -94,7 +94,8 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
  * Stop of the one pass, "Stop reading panel.vcf.gz"; of the PCA running,
  * "Stop the PCA"; while the PCA is about to start, "Stop
  * recalculating", named "Stop recalculating the PCA". "PCoA" under the
- * PCoA.
+ * PCoA. None for the PCA while the PCA tab, which shows its own, is
+ * shown.
  */
 export function stopOf(line: BandLine): BandStop | null {
   switch (line.kind) {
@@ -110,13 +111,14 @@ export function stopOf(line: BandLine): BandStop | null {
         stops: "pass",
       };
     case "pcaRunning":
+      if (!line.withStop) return null;
       return {
         label: "Stop",
         name: `Stop the ${methodName(line.method)}`,
         stops: "pca",
       };
     case "aboutToStart":
-      return recalculating(line.method);
+      return line.withStop ? recalculating(line.method) : null;
   }
 }
 

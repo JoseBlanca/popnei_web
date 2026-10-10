@@ -80,11 +80,13 @@ export type BandLine =
       readonly share: number | null;
     }
   /** The PCA runs, started by Run or by itself, as the request `runId`,
-      whose clock the band reads. Its Stop is the PCA tab's. */
+      whose clock the band reads. Its Stop is the PCA tab's, offered
+      while another tab is shown, `withStop`. */
   | {
       readonly kind: "pcaRunning";
       readonly method: PcaMethod;
       readonly runId: number;
+      readonly withStop: boolean;
     }
   /** The filtered variants are being written into the file `name`,
       `share` of the pass done, `null` before its first progress. No Stop:
@@ -97,8 +99,13 @@ export type BandLine =
   /** A Stop waits for the calculation worker to start again. */
   | { readonly kind: "stopping"; readonly what: Stopping }
   /** The PCA live is about to start again by itself: Stop
-      recalculating. */
-  | { readonly kind: "aboutToStart"; readonly method: PcaMethod }
+      recalculating, the PCA tab's, offered while another tab is shown,
+      `withStop`. */
+  | {
+      readonly kind: "aboutToStart";
+      readonly method: PcaMethod;
+      readonly withStop: boolean;
+    }
   /** The PCA's result has `warnings` warnings, or it could not be
       calculated, `warnings` then `null`, and another tab than the PCA's
       is shown: the link to the PCA tab. */
@@ -168,9 +175,12 @@ function lineOf(page: BandPage): BandLine {
     };
   }
 
+  // The PCA tab shows its own Stop and Stop recalculating; the band
+  // offers them while another tab is shown.
+  const withStop = page.tab !== "pca";
   const pca = pcaStatus(state);
   if (pca.kind === "running") {
-    return { kind: "pcaRunning", method, runId: pca.runId };
+    return { kind: "pcaRunning", method, runId: pca.runId, withStop };
   }
 
   const write = state.write;
@@ -196,7 +206,7 @@ function lineOf(page: BandPage): BandLine {
 
   const live = page.pcaLive;
   if (live.kind === "live" && live.aboutToStart !== null && !live.running) {
-    return { kind: "aboutToStart", method };
+    return { kind: "aboutToStart", method, withStop };
   }
 
   if (page.tab !== "pca") {

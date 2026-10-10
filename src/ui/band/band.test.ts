@@ -128,9 +128,12 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       stops: "pca",
     });
 
-    // The same line whatever tab is shown.
+    // The same words while the PCA tab is shown, without the Stop, which
+    // the tab shows.
     testPage.tab = "pca";
-    expect(testPage.band().line.kind).toBe("pcaRunning");
+    expect(words(testPage.band(), 61)).toBe("PCA running · 1:01");
+    expect(stopOf(testPage.band().line)).toBeNull();
+    testPage.tab = "variants";
 
     testPage.auto.pause("pca");
     testPage.setPca({ method: "pcoa" });
@@ -201,6 +204,12 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       name: "Stop recalculating the PCA",
       stops: "live",
     });
+
+    // The same words while the PCA tab is shown, without Stop
+    // recalculating, which the tab shows.
+    testPage.tab = "pca";
+    expect(words(testPage.band())).toBe("The PCA starts again in a moment");
+    expect(stopOf(testPage.band().line)).toBeNull();
 
     const pcoa = await pcaDone(SUMMARY, "pcoa", 548);
     pcoa.setPca({ ld: { follow: false, maxAllowedR2: 0.2, maxDist: 50_000 } });

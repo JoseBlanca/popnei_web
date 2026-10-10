@@ -331,9 +331,10 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     await openHeldPassDone(page);
     await runPca(page);
 
+    // The PCA tab shown: the words, and its Stop in the tab alone.
     await expect
       .poll(() => lineText(page))
-      .toMatch(/^Popnei PCA running · 0:0\d Stop$/u);
+      .toMatch(/^Popnei PCA running · 0:0\d$/u);
     await tab(page, "Variants").click();
     await expect
       .poll(() => lineText(page))
@@ -460,6 +461,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     await page.goto("popgen2.html");
     await openHeldPassDone(page);
     await runPca(page);
+    await tab(page, "Variants").click();
     await expect
       .poll(() => lineText(page))
       .toMatch(/^Popnei PCA running · 0:\d\d Stop$/u);
@@ -522,7 +524,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
         await runPca(page);
         await expect
           .poll(() => lineText(page))
-          .toMatch(/^Popnei PCA running · 0:\d\d Stop$/u);
+          .toMatch(/^Popnei PCA running · 0:\d\d$/u);
       }
       await tab(page, "Variants").click();
       await page.evaluate(() => {
@@ -633,6 +635,15 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       await release(page, "allSoFar");
       await release(page, "result");
       await runPca(page);
+      // The PCA tab shown: the words, without the Stop the tab shows.
+      await expect
+        .poll(() => lineText(page))
+        .toMatch(
+          width === 320
+            ? /^Popnei PCA · 0:\d\d$/u
+            : /^Popnei PCA running · 0:\d\d$/u,
+        );
+      await tab(page, "Variants").click();
       await expect
         .poll(() => lineText(page))
         .toMatch(
@@ -646,10 +657,11 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       await expect
         .poll(() => lineText(page), { timeout: 15_000 })
         .toBe("Popnei");
+      await tab(page, "PCA").click();
       await run(page).click();
       await expect
         .poll(() => lineText(page))
-        .toMatch(/^Popnei PCA( running)? · 0:\d\d Stop$/u);
+        .toMatch(/^Popnei PCA( running)? · 0:\d\d$/u);
       await release(page, "pca");
       await expect(caption(page)).toBeAttached({ timeout: RESULT_TIMEOUT });
       await expect.poll(() => lineText(page)).toBe("Popnei");
@@ -670,12 +682,13 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       if (box === null) throw new Error("no thumb");
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
       await page.mouse.down();
+      // In the PCA tab, the words without the tab's Stop recalculating.
       await expect
         .poll(() => lineText(page))
         .toBe(
           width === 320
-            ? "Popnei PCA in a moment Stop"
-            : "Popnei The PCA starts again in a moment Stop recalculating",
+            ? "Popnei PCA in a moment"
+            : "Popnei The PCA starts again in a moment",
         );
       await expectAxeBothSchemes(page, makeAxeBuilder);
       await page.mouse.up();

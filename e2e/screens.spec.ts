@@ -6301,45 +6301,57 @@ for (const theme of ["light", "dark"] as const) {
         await page.unrouteAll({ behavior: "ignoreErrors" });
       });
 
-      test("NU5 D5 the band with the PCA about to start, the Variants tab shown", async ({
-        page,
-      }) => {
-        await page.clock.install();
-        await page.reload();
-        await pickOnNewPage(page, "panel.nei");
-        const tabs = page.getByRole("tablist", { name: "Files and analyses" });
-        await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
-        const panel = page.getByRole("tabpanel");
-        const field = panel.getByRole("textbox", {
-          name: /^Distance within which variants are compared/u,
+      for (const inTab of ["variants", "pca"] as const) {
+        test(`NU5 D5 the band with the PCA about to start, the ${inTab === "pca" ? "PCA" : "Variants"} tab shown`, async ({
+          page,
+        }) => {
+          await page.clock.install();
+          await page.reload();
+          await pickOnNewPage(page, "panel.nei");
+          const tabs = page.getByRole("tablist", {
+            name: "Files and analyses",
+          });
+          await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+          const panel = page.getByRole("tabpanel");
+          const field = panel.getByRole("textbox", {
+            name: /^Distance within which variants are compared/u,
+          });
+          await expect(field).toBeVisible({ timeout: 20_000 });
+          await field.fill("50000");
+          await field.press("Enter");
+          await panel.getByRole("button", { name: "Run", exact: true }).click();
+          await expect(
+            panel.getByText(/^The place of each of the 200 individuals/u),
+          ).toBeVisible({ timeout: 30_000 });
+          // The plots of the Variants tab drawn before the clock stops,
+          // which they wait for.
+          await tabs
+            .getByRole("tab", { name: "Variants", exact: true })
+            .click();
+          await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+          await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+          // The page's timers stand still, so that the quiet second does
+          // not run out before the picture.
+          await page.clock.pauseAt(Date.now() + 1000);
+          const missing = panel.getByRole("slider", {
+            name: /^Maximum proportion of missing genotypes for the PCA$/u,
+          });
+          await missing.focus();
+          await missing.press("ArrowLeft");
+          if (inTab === "variants") {
+            await tabs
+              .getByRole("tab", { name: "Variants", exact: true })
+              .click();
+          }
+          await expect(band(page)).toContainText(/in a moment/u);
+          await page.mouse.move(0, 0);
+          await save(
+            page,
+            `popgen2-band-${inTab === "pca" ? "pca-tab-" : ""}about-to-start${at}-${theme}`,
+            { fullPage: false },
+          );
         });
-        await expect(field).toBeVisible({ timeout: 20_000 });
-        await field.fill("50000");
-        await field.press("Enter");
-        await panel.getByRole("button", { name: "Run", exact: true }).click();
-        await expect(
-          panel.getByText(/^The place of each of the 200 individuals/u),
-        ).toBeVisible({ timeout: 30_000 });
-        // The plots of the Variants tab drawn before the clock stops,
-        // which they wait for.
-        await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
-        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
-        await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
-        // The page's timers stand still, so that the quiet second does
-        // not run out before the picture.
-        await page.clock.pauseAt(Date.now() + 1000);
-        const missing = panel.getByRole("slider", {
-          name: /^Maximum proportion of missing genotypes for the PCA$/u,
-        });
-        await missing.focus();
-        await missing.press("ArrowLeft");
-        await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
-        await expect(band(page)).toContainText(/in a moment/u);
-        await page.mouse.move(0, 0);
-        await save(page, `popgen2-band-about-to-start${at}-${theme}`, {
-          fullPage: false,
-        });
-      });
+      }
 
       test("NU5 D5 the band writing the filtered variants, behind the dialog", async ({
         page,
