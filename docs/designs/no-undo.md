@@ -274,6 +274,19 @@ do nothing, which a user would see no differently. Safari is said to
 reopen the last closed tab at Cmd+Z when the page does not take the
 key; not tried.
 
+Revised on 10 October 2026, as built in work package 2 of
+`docs/plans/no-undo.md`: the page does catch the keys on the whole page
+to do nothing (`refuseUndoKeys` of `src/ui/shell/shortcuts.ts`, a
+listener of the window that prevents the browser's own action of a key
+no control took), except in a text field, which keeps its own undo. The
+option set aside above turned out to be seen by a user: with no
+listener, Ctrl+Y in Chromium on macOS, where it is the "yank" of the
+system, emptied a number box reached by Tab, and a screen reader
+announced "Empty" (seen by two reviewers in Chromium; WebKit did
+nothing). It may also keep Safari from reopening a closed tab at Cmd+Z,
+which only the owner can try. What the user can do is unchanged: the
+keys still do nothing.
+
 ### 7. The one pass, and the download of the filtered variants
 
 The one pass reads no filter, so no change stops it, and the PCA starts

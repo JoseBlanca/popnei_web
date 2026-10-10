@@ -712,3 +712,29 @@ The owner answered on 10 October 2026, after the `ux` review of work
 package 2: nothing on the page gives the starting values of the
 thresholds back (no reset, no starting value shown), and no line says
 the page has no Undo.
+
+### Work package 2, 10 October 2026
+
+Commits 79e06e6a (2.1, the page's store with no Undo, one past project
+and `dropLeftBehind`; Undo and Redo left the page here, since the new
+type would not compile with them) and 09c67e41 (2.2). The review, every
+category the plan gives (`spec`, `tests`, `stale`, `errors`, `api`,
+`react`, `accessibility`, `ux`, `browser`): fourteen findings held,
+fixed in 74d4e7b3 to 0c337cd8, test first where a behaviour changed.
+The ones a user would meet: Ctrl+Y in Chromium on macOS emptied a number
+box reached by Tab and a screen reader heard "Empty" (the page now
+refuses the browser's own action of the undo and redo keys outside a
+text field, and the design's choice 6 says so); the spec said Ctrl+Y
+in a box with digits typed put the number back, which the code never
+did. The ones that would have hidden a defect: the flows of the keys
+pressed all five in a row, so Undo and Redo wired back would have
+passed them (each key is now checked alone, and the flows were seen to
+fail with Undo wired back); the arrow keys' hold could stay counted
+for good after a listener threw; the page's store still carried Undo at
+run time. The `ux` reviewer asked how a user gets a threshold back to
+its starting value; the owner answered nothing, and no line about
+Undo. Task 4.2 gained what this review left for it.
+
+Checks after the fixes: typecheck, lint, format clean; Vitest 153
+files, 5,029 tests; in Chromium and WebKit the flows of `popgen2.html`
+and `e2e/shell.spec.ts`, 308.
