@@ -301,7 +301,7 @@ const SHOWN = [
 ] as const;
 
 for (const width of [1280, 320]) {
-  test(`TH round 1 at ${String(width)} px: each head is one row, the short title, max: and the box, with the plot under it; the plot does not move as a threshold turns from grey to red`, async ({
+  test(`TH round 1 at ${String(width)} px: each head is one row, the short title, max: and the box, with the button "Download…" and the plot under it; the plot does not move as a threshold turns from grey to red`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -323,8 +323,16 @@ for (const width of [1280, 320]) {
       expect(visible).toBe(SHOWN[i]);
       const labelBox = await label.boundingBox();
       const inputBox = await box.boundingBox();
+      const menuBox = await group
+        .getByRole("button", { name: /^Download / })
+        .boundingBox();
       const plotBox = await group.locator("svg.chart").boundingBox();
-      if (labelBox === null || inputBox === null || plotBox === null) {
+      if (
+        labelBox === null ||
+        inputBox === null ||
+        menuBox === null ||
+        plotBox === null
+      ) {
         throw new Error(`${title} not drawn`);
       }
       // One row: the box beside the label, whose words may wrap at 320
@@ -361,11 +369,15 @@ for (const width of [1280, 320]) {
       expect(inputBox.x).toBeGreaterThan(labelBox.x + labelBox.width - 1);
       // Nothing beyond the width of the page.
       expect(inputBox.x + inputBox.width).toBeLessThanOrEqual(width);
-      // The plot under the row, with no line of words between them: the
-      // gap of the group, 8 pixels.
-      const gap = plotBox.y - (inputBox.y + inputBox.height);
-      expect(gap).toBeGreaterThanOrEqual(0);
-      expect(gap).toBeLessThan(12);
+      // Under the row, the button "Download…" on a line of its own, and
+      // the plot under it, with no line of words between them: each gap
+      // that of the group, 8 pixels.
+      const menuGap = menuBox.y - (inputBox.y + inputBox.height);
+      expect(menuGap).toBeGreaterThanOrEqual(0);
+      expect(menuGap).toBeLessThan(12);
+      const plotGap = plotBox.y - (menuBox.y + menuBox.height);
+      expect(plotGap).toBeGreaterThanOrEqual(0);
+      expect(plotGap).toBeLessThan(12);
     }
     // The tops in the page and not in the window: at 320 pixels the box
     // typed in sits low enough on popgen2.html, under its two boxes, that
