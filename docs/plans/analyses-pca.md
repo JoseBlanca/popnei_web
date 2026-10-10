@@ -1573,3 +1573,12 @@ Asked again with these numbers, the owner chose on 10 October 2026 to
 keep the lock of the filters while a PCA runs: a change waits for the
 PCA to end or be stopped, and after it ends a change of a parameter
 the PCA reads starts it again by itself. So a change never stops a run.
+
+The design `docs/designs/no-undo.md` (c138b097), reviewed twice by the
+`architecture-reviewer` and once by the `first-reader`, was approved by
+the owner on 10 October 2026 with the recommendations of its three open
+points: Stop pauses the automatic runs until Run is pressed again; the
+download of the filtered variants waits for a running PCA, as built;
+the column of the populations stays open during a run, as built, which
+answers the question of 9 October. Its specs and plan come after the
+fixes of round 1.

@@ -1,6 +1,6 @@
 # No Undo on popgen2.html: the PCA calculated again after each change
 
-A design of 10 October 2026, a draft for the owner's approval. It
+A design of 10 October 2026, approved by the owner the same day with the recommendations of its three open points (Stop pauses the automatic runs until Run; the download waits for a running PCA; the column of the populations stays open during a run). It
 decides how `popgen2.html` loses its Undo and Redo and calculates the
 PCA again by itself after a parameter it reads changes. The owner asked
 for it on 10 October 2026 as "the marimo model": marimo, a notebook for
