@@ -12,7 +12,8 @@
  * the tab opens again.
  *
  * The PCA tab holds the PCA's panel, `PcaTab`, in a boundary of errors
- * of its own.
+ * of its own, which keeps the tab's heading, "PCA" or "PCoA" by the
+ * method chosen, after a defect.
  *
  * Its own component, so that the page draws it inside a boundary of
  * errors: a defect thrown by `analysisTabs` costs the row alone, and the
@@ -24,7 +25,9 @@ import type {
   PageTab,
   TabGreyed,
 } from "../../core/popgen2Tabs.ts";
+import { pcaOptions } from "../../core/analyses/pca.ts";
 import { PcaTab } from "../analyses/pca/PcaTab.tsx";
+import { pcaTabTitle } from "../analyses/pca/tabWords.ts";
 import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
@@ -36,7 +39,6 @@ import {
   ANALYSES_TABS_LABEL,
   DISTANCES_NOT_BUILT,
   PAGE_TAB_LABELS,
-  PCA_HEADING,
   POPULATIONS_NOT_BUILT,
 } from "./analysisTabsWords.ts";
 import { IndividualsTab } from "./IndividualsTab.tsx";
@@ -78,6 +80,9 @@ export function PageTabs({
   const tabReasons = useAppState((s) =>
     analysisTabs(s.project, s.individualsKept),
   );
+  // The heading the PCA tab keeps after a defect: its own, "PCA" or
+  // "PCoA" by the method chosen.
+  const pcaMethod = useAppState((s) => pcaOptions(s.project, "popgen2").method);
   return (
     <Tabs<PageTab>
       label={ANALYSES_TABS_LABEL}
@@ -126,7 +131,7 @@ export function PageTabs({
           // stays, until another variants file draws it again; a tab that
           // caught nothing keeps what it holds, a number half typed.
           <ErrorBoundary
-            heading={PCA_HEADING}
+            heading={pcaTabTitle(pcaMethod)}
             level={2}
             resetOn={fileId ?? "none"}
           >

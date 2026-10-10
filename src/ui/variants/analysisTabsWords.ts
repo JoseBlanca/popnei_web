@@ -33,9 +33,6 @@ export const PAGE_TAB_LABELS: Readonly<Record<PageTab, string>> = {
 /** The name of the row of tabs, for a screen reader. */
 export const ANALYSES_TABS_LABEL = "Files and analyses";
 
-/** The heading of the PCA tab. */
-export const PCA_HEADING = "PCA";
-
 /** What the Populations tab says once it is not greyed. */
 export const POPULATIONS_NOT_BUILT =
   "Not built yet: the diversity of each population, its site frequency spectrum and its LD decay come in a later version of the page.";

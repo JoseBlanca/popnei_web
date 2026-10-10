@@ -45,6 +45,10 @@ import type * as FileZoneModule from "../widgets/FileZone.tsx";
 import type { FileZoneProps } from "../widgets/FileZone.tsx";
 import type * as WordsModule from "./words.ts";
 import type * as Popgen2TabsModule from "../../core/popgen2Tabs.ts";
+import { pca } from "../../core/analyses/pca.ts";
+import { setAnalysisOptions } from "../../core/project.ts";
+import type * as PcaTabModule from "../analyses/pca/PcaTab.tsx";
+import type { PcaTabProps } from "../analyses/pca/PcaTab.tsx";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -56,7 +60,21 @@ const inject = vi.hoisted(() => ({
   throwAt: null as number | null,
   zoneThrows: false,
   tabsThrow: false,
+  pcaTabThrows: false,
 }));
+
+vi.mock("../analyses/pca/PcaTab.tsx", async (importOriginal) => {
+  const real = await importOriginal<typeof PcaTabModule>();
+  return {
+    ...real,
+    PcaTab: (props: PcaTabProps): React.JSX.Element => {
+      if (inject.pcaTabThrows) {
+        throw new Error("the PCA tab could not be drawn");
+      }
+      return real.PcaTab(props);
+    },
+  };
+});
 
 vi.mock("../../core/popgen2Tabs.ts", async (importOriginal) => {
   const real = await importOriginal<typeof Popgen2TabsModule>();
@@ -140,6 +158,7 @@ beforeEach(() => {
   inject.throwAt = null;
   inject.zoneThrows = false;
   inject.tabsThrow = false;
+  inject.pcaTabThrows = false;
   container = document.createElement("div");
   document.body.append(container);
   caught = [];
@@ -584,5 +603,36 @@ describe("AP1 the row of five tabs on the page", () => {
     expect(region("Individuals file")).not.toBeNull();
     expect(buttonOf("Open variants file…")).not.toBeNull();
     expect(container.querySelector('[role="tablist"]')).toBeNull();
+  });
+});
+
+describe("AP6 the boundary of the PCA tab", () => {
+  test("a throw while the tab is drawn under the PCoA leaves the heading of the tab, PCoA, in its place", async () => {
+    const { store } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+    await act(async () => {
+      store.apply("the method of the PCA changed", (p) =>
+        setAnalysisOptions(p, pca, {
+          method: "pcoa",
+          missingData: { follow: true, maxAllowedMissingRate: 0.1 },
+          maf: { follow: true, maxAllowedMaf: 0.95 },
+          ld: { follow: false, maxAllowedR2: 0.1, maxDist: null },
+          colourBy: null,
+          axes: [1, 2, 3],
+          view: "3d",
+        }),
+      );
+      await Promise.resolve();
+    });
+    inject.pcaTabThrows = true;
+    await act(async () => {
+      tabOf("PCA").click();
+      await Promise.resolve();
+    });
+    expect(caught).toContainEqual(new Error("the PCA tab could not be drawn"));
+    const panel = container.querySelector('[role="tabpanel"]:not([inert])');
+    expect(
+      [...(panel?.querySelectorAll("h2") ?? [])].map((h) => h.textContent),
+    ).toEqual(["PCoA"]);
   });
 });

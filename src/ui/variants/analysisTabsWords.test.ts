@@ -11,7 +11,6 @@ import {
   ANALYSES_TABS_LABEL,
   DISTANCES_NOT_BUILT,
   PAGE_TAB_LABELS,
-  PCA_HEADING,
   POPULATIONS_NOT_BUILT,
 } from "./analysisTabsWords.ts";
 
@@ -37,7 +36,6 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
       "Distances",
     ]);
     expect(ANALYSES_TABS_LABEL).toBe("Files and analyses");
-    expect(PCA_HEADING).toBe("PCA");
   });
 
   test("the lines of the tabs not built yet", () => {
