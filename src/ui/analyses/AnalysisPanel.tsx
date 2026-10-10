@@ -113,6 +113,10 @@ export type PanelLive =
       readonly resultLine: string;
     };
 
+/** The attribute of the heading of a panel, by which the band's link to
+    an error of the PCA on popgen2.html finds the PCA tab's. */
+export const PANEL_HEADING_ATTRIBUTE = "data-panel-heading";
+
 /** The words of the button that ends the automatic runs of a live
     analysis while none runs. */
 export const STOP_RECALCULATING = "Stop recalculating";
@@ -223,6 +227,7 @@ export function AnalysisPanel({
         id={headingId}
         ref={heading}
         tabIndex={-1}
+        {...{ [PANEL_HEADING_ATTRIBUTE]: "" }}
         className={classOf(styles, "heading")}
       >
         {ui.title}

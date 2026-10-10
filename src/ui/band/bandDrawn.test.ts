@@ -23,8 +23,10 @@ import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 import type { PageStore } from "../store.tsx";
 import { createAnnouncer } from "../shell/status.ts";
 import type { Announcer } from "../shell/status.ts";
+import { PANEL_HEADING_ATTRIBUTE } from "../analyses/AnalysisPanel.tsx";
+import { WARNINGS_HEADING_ATTRIBUTE } from "../analyses/Warnings.tsx";
 import { Band } from "./Band.tsx";
-import { flush, page, pcaDone } from "./testPage.ts";
+import { flush, page, pcaDone, pcaResult } from "./testPage.ts";
 import type { TestPage } from "./testPage.ts";
 
 declare global {
@@ -198,7 +200,7 @@ describe("NU5 D2 the band drawn", () => {
     content.id = PCA_TAB_CONTENT_ID;
     const warnings = document.createElement("h3");
     warnings.tabIndex = -1;
-    warnings.setAttribute("data-warnings-heading", "");
+    warnings.setAttribute(WARNINGS_HEADING_ATTRIBUTE, "");
     warnings.textContent = "1 warning";
     content.append(warnings);
     document.body.append(content);
@@ -216,6 +218,86 @@ describe("NU5 D2 the band drawn", () => {
     expect(document.activeElement).toBe(warnings);
     // The link goes while the PCA tab is shown.
     expect(container.textContent).not.toContain("PCA: 1 warning");
+  });
+
+  test("a control of the band with the focus that goes by itself gives the focus to the heading: the Stop of the one pass when it ends, the Stop of the PCA when its run ends", async () => {
+    const testPage = page(SUMMARY);
+    await drawBand(testPage);
+    await settled();
+    act(() => {
+      button("Stop the statistics of panel.nei").focus();
+    });
+    await act(async () => {
+      await testPage.endPass();
+    });
+    expect(container.querySelectorAll("button")).toHaveLength(0);
+    expect(document.activeElement).toBe(heading());
+
+    testPage.auto.run("pca");
+    await settled();
+    act(() => {
+      button("Stop the PCA").focus();
+    });
+    await act(async () => {
+      const last = testPage.lastPca();
+      last.end({ kind: "done", key: last.key, result: pcaResult("pca", 548) });
+      await flush();
+    });
+    expect(container.querySelectorAll("button")).toHaveLength(0);
+    expect(document.activeElement).toBe(heading());
+  });
+
+  test("the focus given away from the band stays where it went when the band's control goes", async () => {
+    const testPage = page(SUMMARY);
+    await drawBand(testPage);
+    await settled();
+    const elsewhere = document.createElement("button");
+    document.body.append(elsewhere);
+    act(() => {
+      button("Stop the statistics of panel.nei").focus();
+      elsewhere.focus();
+    });
+    await act(async () => {
+      await testPage.endPass();
+    });
+    expect(document.activeElement).toBe(elsewhere);
+    elsewhere.remove();
+  });
+
+  test("the link to an error of the PCA shows the PCA tab and gives the focus to its heading, or to Popnei when the tab has none", async () => {
+    for (const withHeading of [true, false]) {
+      const testPage = page(SUMMARY);
+      await testPage.endPass();
+      testPage.auto.run("pca");
+      await flush();
+      testPage.lastPca().end({
+        kind: "failed",
+        error: { kind: "popnei", message: "popnei refused it." },
+      });
+      await flush();
+      const { pageTab } = await drawBand(testPage);
+      const content = document.createElement("div");
+      content.id = PCA_TAB_CONTENT_ID;
+      const tabHeading = document.createElement("h2");
+      tabHeading.tabIndex = -1;
+      tabHeading.setAttribute(PANEL_HEADING_ATTRIBUTE, "");
+      tabHeading.textContent = "PCA";
+      if (withHeading) content.append(tabHeading);
+      document.body.append(content);
+      const link = [...container.querySelectorAll('[role="link"], a')].find(
+        (element) => element.textContent.includes("could not be calculated"),
+      );
+      expect(link).toBeInstanceOf(HTMLElement);
+
+      await press(link as HTMLElement);
+      await act(async () => {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      });
+
+      expect(pageTab.shown()).toBe("pca");
+      expect(document.activeElement).toBe(withHeading ? tabHeading : heading());
+      content.remove();
+    }
   });
 
   test("the line carries no live role, and the alert and the band's own status region are live announcers, from the first drawing", async () => {

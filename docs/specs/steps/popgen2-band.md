@@ -418,10 +418,13 @@ box of the variants file. A screen reader then says the heading's name
 and the status region's words of the Stop, "PCA stopped. Press Run in
 the PCA tab to calculate it again.", once; the band's own line is not
 read, since the focus is not on it, so the Stop is not said twice. The
-same when the link goes because the line now says something else. After "Close"
+same when a control goes by itself while it has the focus: the link
+when the line now says something else, the Stop of the one pass when
+the pass ends, the Stop of a PCA when its run ends. After "Close"
 the focus goes to the heading "Popnei", as the error bar's Close does.
 After the link, the focus is on the heading of the warnings or of the
-tab, as above.
+tab, as above; when the PCA tab has no such heading, as when an error
+has emptied the application's root, it goes to the heading "Popnei".
 
 Every button and the link are at least 24 by 24 px (2.5.8).
 

@@ -12,6 +12,10 @@ import { Warning } from "../widgets/Warning.tsx";
 import styles from "./AnalysisPanel.module.css";
 import { warningsHeading } from "./words.ts";
 
+/** The attribute of the heading of the warnings, by which the band's
+    link to the warnings of the PCA on popgen2.html finds it. */
+export const WARNINGS_HEADING_ATTRIBUTE = "data-warnings-heading";
+
 /** The warnings of a result, above it, with their count on their
     heading. */
 export function Warnings({
@@ -30,7 +34,7 @@ export function Warnings({
       <h3
         id={headingId}
         tabIndex={-1}
-        data-warnings-heading=""
+        {...{ [WARNINGS_HEADING_ATTRIBUTE]: "" }}
         className={classOf(styles, "warningsHeading")}
       >
         {warningsHeading(warnings.length)}

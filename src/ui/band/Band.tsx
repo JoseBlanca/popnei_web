@@ -46,6 +46,8 @@ import type { PcaMethod } from "../../worker/protocol.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
 import type { Defects } from "../defects.ts";
+import { PANEL_HEADING_ATTRIBUTE } from "../analyses/AnalysisPanel.tsx";
+import { WARNINGS_HEADING_ATTRIBUTE } from "../analyses/Warnings.tsx";
 import { PCA_TAB_CONTENT_ID } from "../pageTab.ts";
 import type { PageTabStore } from "../pageTab.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
@@ -141,6 +143,8 @@ export function Band({
 
   const headerRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const keepFocus = useFocusKept(headerRef, headingRef);
+  useLayoutEffect(keepFocus);
   useLayoutEffect(() => {
     const header = headerRef.current;
     if (header === null) return;
@@ -197,8 +201,9 @@ export function Band({
             <ErrorBoundary heading={null} resetOn={fileId ?? ""}>
               <Activity
                 page={page}
+                keepFocus={keepFocus}
                 onLink={(warnings) => {
-                  showPcaTab(page.pageTab, warnings);
+                  showPcaTab(page.pageTab, warnings, headingRef.current);
                 }}
               />
             </ErrorBoundary>
@@ -265,6 +270,9 @@ export function Band({
 /** What the line after "Popnei" works out its words from. */
 interface ActivityProps {
   readonly page: BandWith;
+  /** Gives the focus to the heading when a control of the band that had
+      it has gone by itself; called after each drawing of the line. */
+  readonly keepFocus: () => void;
   /** The link to the PCA tab was followed: to its warnings, or, `false`,
       to its error. */
   readonly onLink: (warnings: boolean) => void;
@@ -272,7 +280,12 @@ interface ActivityProps {
 
 /** The line after "Popnei", worked out from the store, the live state of
     the PCA, the tab shown and the time a Stop was first seen waiting. */
-function Activity({ page, onLink }: ActivityProps): React.JSX.Element | null {
+function Activity({
+  page,
+  keepFocus,
+  onLink,
+}: ActivityProps): React.JSX.Element | null {
+  useLayoutEffect(keepFocus);
   const state = useSyncExternalStore(page.store.subscribe, () =>
     page.store.getState(),
   );
@@ -413,16 +426,81 @@ function pressStop(stop: BandStop, page: BandWith): void {
 
 /** Shows the PCA tab, as a click on its label would, and gives the focus
     to the heading of its warnings, `warnings`, or to that of the tab,
-    once the application's root has drawn it. */
-function showPcaTab(pageTab: PageTabStore, warnings: boolean): void {
+    once the application's root has drawn it; to the band's heading,
+    `bandHeading`, when the tab has none, as when an error has emptied
+    the application's root. */
+function showPcaTab(
+  pageTab: PageTabStore,
+  warnings: boolean,
+  bandHeading: HTMLHeadingElement | null,
+): void {
   pageTab.show("pca");
   requestAnimationFrame(() => {
     const content = document.getElementById(PCA_TAB_CONTENT_ID);
     const heading = content?.querySelector(
-      warnings ? "[data-warnings-heading]" : "h2",
+      `[${warnings ? WARNINGS_HEADING_ATTRIBUTE : PANEL_HEADING_ATTRIBUTE}]`,
     );
     if (heading instanceof HTMLElement) heading.focus();
+    else bandHeading?.focus();
   });
+}
+
+/**
+ * Follows the focus inside the band `header`, and gives the function
+ * that gives it to the band's heading, `heading`, when the control of
+ * the band that had it has left the page by itself, the Stop of the one
+ * pass when the pass ends among them, and nothing else took it: the
+ * browser leaves it on nothing then, and the next press of the Tab key
+ * would start again from the top of the page. A focus the user gave
+ * elsewhere, or let go of, stays where it went.
+ */
+function useFocusKept(
+  header: React.RefObject<HTMLElement | null>,
+  heading: React.RefObject<HTMLHeadingElement | null>,
+): () => void {
+  // The element of the band that has the focus, or had it last when
+  // nothing took it from it.
+  const focused = useRef<Element | null>(null);
+  useEffect(() => {
+    const element = header.current;
+    if (element === null) return;
+    const onFocusIn = (event: FocusEvent): void => {
+      focused.current = event.target instanceof Element ? event.target : null;
+    };
+    const onFocusOut = (event: FocusEvent): void => {
+      const to = event.relatedTarget;
+      if (to instanceof Node && element.contains(to)) return;
+      if (to !== null) {
+        focused.current = null;
+        return;
+      }
+      // Nothing took it: the user let it go, or its element left the
+      // page, which a moment later tells apart.
+      const left = event.target;
+      queueMicrotask(() => {
+        if (
+          left instanceof Element &&
+          left.isConnected &&
+          focused.current === left
+        ) {
+          focused.current = null;
+        }
+      });
+    };
+    element.addEventListener("focusin", onFocusIn);
+    element.addEventListener("focusout", onFocusOut);
+    return () => {
+      element.removeEventListener("focusin", onFocusIn);
+      element.removeEventListener("focusout", onFocusOut);
+    };
+  }, [header]);
+  return () => {
+    const lost = focused.current;
+    if (lost === null || lost.isConnected) return;
+    focused.current = null;
+    const active = document.activeElement;
+    if (active === null || active === document.body) heading.current?.focus();
+  };
 }
 
 /** When the band first saw a Stop waiting for the calculation worker,
