@@ -558,7 +558,7 @@ give the principal components that go into the GWAS as covariates.
   (`docs/designs/analyses-pca.md`), the PCA's own filters narrow those
   of the Variants tab rather than replace them: the PCA reads what the
   Variants tab keeps, and its own missing data and MAF can only be
-  stricter, their fields bounded by the Variants tab's values; its LD
+  stricter, two sliders whose range ends at the Variants tab's values; its LD
   pruning, which the Variants tab does not have, is on at an r² of 0.1
   with no distance until the user types one or turns it off. The old
   page keeps the rule above. The coordinates are downloaded from the

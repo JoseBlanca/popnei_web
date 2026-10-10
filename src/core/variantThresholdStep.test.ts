@@ -1,8 +1,8 @@
 /**
  * The step of a threshold of the variants over the axis of its histogram,
  * made once for a result of the one pass of popgen2.html and read by the
- * histogram of the Variants tab and by the field of "Stricter for the
- * PCA" of the PCA tab, which takes its decimals
+ * histogram of the Variants tab and by the slider of that filter in the
+ * PCA tab, which takes its decimals
  * (docs/specs/steps/popgen2-pca.md, "Its filters"). The binning it runs
  * over popnei's fine bins is watched, so that a second call with the
  * same result and individuals is seen not to run it again.

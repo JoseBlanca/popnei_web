@@ -449,8 +449,9 @@ export function pcaFilters(
  * smaller of the PCA's value and the Variants tab's, the stricter, when
  * the Variants tab has that filter on, `dataset`, and the PCA's value
  * alone when it has it off, but `null` for a value of `THRESHOLD_OFF_AT`
- * then, which "Stricter for the PCA" starts at and which is off in the
- * Variants tab, so that the choice alone changes no key
+ * then, which is off in the Variants tab and which the slider's end of 1
+ * stands for, or which "Stricter for the PCA" left before the sliders of
+ * 10 October 2026, so that such a value changes no key
  * (docs/specs/steps/popgen2-pca.md, "Its filters"); the LD filter, the
  * FILTER column and the observed heterozygosity as `ownFilter` gives
  * them.

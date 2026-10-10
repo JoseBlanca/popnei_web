@@ -186,10 +186,10 @@ const VARIANT_STEPS = new WeakMap<
  * rounds out from the result of the one pass `result` over `individuals`:
  * 0.001 for the missing rate of `panel.nei`, whose axis goes from 0 to
  * 0.1. The histogram of the Variants tab draws its threshold with it,
- * and the field of "Stricter for the PCA" takes its decimals, so that the
+ * and the PCA tab's slider of that filter takes its decimals, so that the
  * two always agree (docs/specs/steps/popgen2-pca.md, "Its filters"). Made
  * once for a result, a statistic and individuals, and the same object
- * given after, since the field reads it at each change of the store. A
+ * given after, since the slider reads it at each change of the store. A
  * result with no edges is a defect, thrown.
  */
 export function variantThresholdStep(

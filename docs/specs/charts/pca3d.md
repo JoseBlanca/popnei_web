@@ -88,9 +88,14 @@ that no label is drawn over the controls around the plot or makes the
 page scroll sideways; decided on 29 September 2026, after the review of
 work package 8 found "PC3 (1.89%)" over a field of the panel after four
 presses of "Zoom in", and a page of 320 pixels scrolling to 364. The user turns
-the view by dragging it, zooms it, and turns it with the buttons of the
-bar; the pointer over a point shows the tooltip of the scatter, with
-three coordinates.
+the view by dragging it, zooms it, and, on the old page, turns it with
+the buttons of the bar; the pointer over a point shows the tooltip of
+the scatter, with three coordinates. popgen2.html has none of these buttons, the owner's decision of 10
+October 2026 (`docs/specs/steps/popgen2-pca.md`, "The result"): there
+a user of the keyboard alone (WCAG 2.2, 2.1.1), a user of a mouse who
+cannot drag (2.5.7) and a user of a touch screen who cannot pinch
+(2.5.1) cannot turn or zoom the 3D view, and have the 2D plot of any
+two components and the table of the coordinates in its place.
 
 ### The points and the scale
 
@@ -218,8 +223,10 @@ Two settings of the controls are decided here:
   cannot drag, which WCAG 2.2 asks of a movement made by dragging
   (success criterion 2.5.7). The zoom is about the centre.
 - **The zoom** by the wheel of the mouse and by two fingers pinching,
-  with buttons for a user who uses neither (2.5.1 asks a gesture of two
-  fingers to have one of a single pointer). The wheel zooms with the
+  with buttons on the old page for a user who uses neither (2.5.1 asks a
+  gesture of two fingers to have one of a single pointer); on
+  popgen2.html, which has no buttons, a user who uses neither cannot
+  zoom, and has the 2D plot and the table of the coordinates instead. The wheel zooms with the
   Ctrl key held, and alone scrolls the page, as the owner decided on 28
   September 2026 (**Open 1**, below). The plot does it with a listener
   of the wheel of its own, on the element that holds the canvas, added
@@ -257,8 +264,13 @@ scrolled by a finger on the rest of it.
 
 ### The buttons of the bar above the plot
 
-The screen draws the bar with React Aria's buttons and calls the
-handle; the plot draws no control. The bar holds the switch between 2D
+On the old page, `popgen.html`, the screen draws the bar with React
+Aria's buttons and calls the handle; the plot draws no control. popgen2.html has none of these buttons, the owner's decision of 10
+October 2026 (`docs/specs/steps/popgen2-pca.md`, "The result"): there
+a user of the keyboard alone (WCAG 2.2, 2.1.1), a user of a mouse who
+cannot drag (2.5.7) and a user of a touch screen who cannot pinch
+(2.5.1) cannot turn or zoom the 3D view, and have the 2D plot of any
+two components and the table of the coordinates in its place. The bar holds the switch between 2D
 and 3D (`pca.md`), and, in 3D, these buttons, whose words are
 `pca.md`'s, "What it shows", and may be refined in the running
 application. Each turn does what a drag of 15° in its direction does:

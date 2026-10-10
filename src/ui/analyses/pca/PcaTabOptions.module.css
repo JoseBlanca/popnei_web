@@ -33,8 +33,7 @@
   overflow-wrap: anywhere;
 }
 
-/* The fields of a filter set for the analysis, set in under its radio
-   buttons, as the fields of a filter are under its switch. */
+/* The fields of the LD pruning, set in under its switch. */
 .own {
   display: grid;
   gap: var(--space-2);

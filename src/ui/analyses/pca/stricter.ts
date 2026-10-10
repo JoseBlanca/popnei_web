@@ -99,11 +99,11 @@ export function stricterBound(
 }
 
 /**
- * The words of the value `value` of the slider `bound`, shown beside its
- * name and read by a screen reader: at the upper end, "0.1, as in the
- * Variants tab", or "Off, as in the Variants tab" while the Variants tab
- * has that threshold off; below it, the value rounded to the slider's
- * decimals, "0.05".
+ * The words of the value `value` of the slider `bound`, shown after its
+ * track, under it on a narrow column, and read by a screen reader: at the
+ * upper end, "0.1, as in the Variants tab", or "Off, as in the Variants
+ * tab" while the Variants tab has that threshold off; below it, the value
+ * rounded to the slider's decimals, "0.05".
  */
 export function stricterValueText(bound: StricterBound, value: number): string {
   if (value >= bound.max) {
@@ -266,7 +266,7 @@ function decimalsOf(value: number): number {
  * one pass `result` over individuals of ploidy `ploidy`: those of
  * `variantThresholdStep`, which the histogram draws with, 3 for the
  * missing rate of `panel.nei`, whose axis goes from 0 to 0.1. Made once
- * for a result, since the field reads it at each change of the store.
+ * for a result, since the slider reads it at each change of the store.
  * For `stricterBound`, once the one pass has read the file to the end.
  */
 export function stepDecimalsOf(

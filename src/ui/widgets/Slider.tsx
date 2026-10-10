@@ -54,8 +54,9 @@ export interface SliderProps {
   readonly step: number;
   /** Where it is. */
   readonly value: number;
-  /** The words of a value, shown beside the name and read by a screen
-      reader: "0.05", "0.1, as in the Variants tab". */
+  /** The words of a value, shown after the track, under it on a narrow
+      column, and read by a screen reader: "0.05", "0.1, as in the
+      Variants tab". */
   readonly valueText: (value: number) => string;
   /** The words of its two ends, drawn under them: "0" and "0.1". */
   readonly ends: { readonly min: string; readonly max: string };

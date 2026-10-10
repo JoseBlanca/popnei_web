@@ -213,8 +213,8 @@ export function variantPlot(
   );
   const bins = variantBinsRounded(result, statistic, individuals);
   const axisHigh = at(bins.edges, bins.edges.length - 1);
-  // The step the field of "Stricter for the PCA" takes its decimals
-  // from, made once for the result.
+  // The step the PCA tab's sliders of its own filters take their
+  // decimals from, made once for the result.
   const { step, decimals } = variantThresholdStep(
     result,
     statistic,

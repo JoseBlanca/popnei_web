@@ -347,7 +347,8 @@ Every "PCA" of this part is "PCoA" under the PCoA, as in the old panel.
 Then three, in this order:
 
 - **Missing data** and **MAF**, each a slider, React Aria's `Slider`,
-  with its name above it and its value at the end of the name's line:
+  with its name above it and its value after the track, under the
+  track when the column is too narrow for both:
   "Maximum proportion of missing genotypes for the PCA", from 0 to the
   Variants tab's value of that threshold; and "Maximum major allele
   frequency for the PCA", from 0.5 to the Variants tab's value, or from
@@ -562,9 +563,11 @@ column).
   which the old panel has: it is turned by dragging it and zoomed with
   Ctrl and the wheel of the mouse, or by pinching with two fingers, as
   on the old panel (`docs/specs/charts/pca3d.md`). So a user of the
-  keyboard alone turns nothing in 3D; they have the 2D plot, one button
-  away, of any two of the components, and the table of the individuals,
-  which gives every coordinate. The owner asked for the buttons to go
+  keyboard alone (WCAG 2.2, 2.1.1), a user of a mouse who cannot drag
+  (2.5.7) and a user of a touch screen who cannot pinch (2.5.1) cannot
+  turn or zoom the 3D view; they have the 2D plot, one button away, of
+  any two of the components, and the table of the individuals, which
+  gives every coordinate. The owner asked for the buttons to go
   on 10 October 2026, on trying the page, knowing that a user of the
   keyboard alone could no longer turn the view
   (`docs/plans/analyses-pca.md`, work package 10, round 1, item 3).
@@ -914,9 +917,11 @@ looking at, and is read when they reach the field.
 old panel (`docs/specs/analyses/pca.md`, "Accessibility"), with
 "Unclassified" in place of "No population" in the description and the
 legend, and without the buttons of the 3D view: a user of the keyboard
-alone turns nothing in 3D, and has the 2D plot of any two components
-and the table of the individuals (2.1.1; "The result", the bar of
-controls; the owner's decision of 10 October 2026).
+alone, a user of a mouse who cannot drag and a user of a touch screen
+who cannot pinch cannot turn or zoom the 3D view, and have the 2D plot
+of any two components and the table of the individuals (2.1.1, 2.5.7
+and 2.5.1; "The result", the bar of controls; the owner's decision of
+10 October 2026).
 
 **Not yet heard in VoiceOver**, which the session cannot run: the row
 read as "Files and analyses, tab list", a greyed tab read as dimmed with
