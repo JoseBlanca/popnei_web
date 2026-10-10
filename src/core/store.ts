@@ -2806,16 +2806,20 @@ export function createStore<J, R, F = never>(
         ended(request, outcome, leftBehind);
       } catch (error) {
         // A defect of our code, which the analysis shows until the next
-        // change, rather than ready with nothing said.
+        // change, rather than ready with nothing said; but not for a
+        // request left behind, a calculation the user abandoned, which
+        // the bar of the page reports all the same.
         keepWaited();
         forgetStoppedUnder(request.key);
-        failures.set(request.key, {
-          kind: "failed",
-          error: {
-            kind: "defect",
-            message: messageOf(error),
-          },
-        });
+        if (!leftBehind) {
+          failures.set(request.key, {
+            kind: "failed",
+            error: {
+              kind: "defect",
+              message: messageOf(error),
+            },
+          });
+        }
         return changedAfter(error);
       }
       let sent: Run<R | Written<F>>[] = [];

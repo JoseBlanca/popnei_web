@@ -514,6 +514,10 @@ its analysis has, or had when it was last not locked:
   try can succeed. A variants file that could not be read again,
   `reopenFailed`, is kept all the same, since it is of the load, which a
   change of a key does not leave: every analysis of that load shows it.
+  A defect met while the store takes in the outcome of such a request is
+  thrown, and the bar of the page reports it, but it is not kept as the
+  analysis's error, which would show a defect over a calculation the
+  user abandoned.
   The number of variants the result read,
   `numVarsRead` of its `countsOf`, is not recorded into the project,
   since the result it came with is dropped and the next calculation
@@ -2216,6 +2220,9 @@ by `createPopgen2Store` with the same fake `send`, from 10 October
 - A PCA in flight, the threshold moved and set back, then a failure of
   the worker, `workerFailed`: `ready`, not `error`. A PCA in flight, the
   threshold moved, then `reopenFailed`: the PCA `error` with it.
+- A PCA in flight, the threshold moved and set back, then its outcome
+  `done` under the key of the one pass, which the store takes as a
+  defect: the defect thrown, and the PCA `ready`, not `error`.
 - A PCA done, its LD distance emptied: `locked`; typed again with the
   same value: `done`, the same result object, no request; emptied
   again and typed with another value: `ready`, and the old result no

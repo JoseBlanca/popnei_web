@@ -8960,6 +8960,27 @@ describe("NU1 D2 dropLeftBehind on the store of popgen2.html", () => {
     });
   });
 
+  test("a PCA in flight, the threshold moved and set back, then a defect in taking its outcome: thrown, and the PCA ready, not error", () => {
+    const made = popgen2Store(true, true);
+    passDone(made);
+    made.store.startRun("pca");
+    moveMissing(made.store, 0.2);
+    moveMissing(made.store, 0.1);
+    const summaryKey = made.sent[0]?.key;
+    if (summaryKey === undefined) {
+      throw new Error("no summary sent");
+    }
+    // Under another request's key, which the store takes as a defect.
+    expect(() =>
+      made.store.runEnded(2, {
+        kind: "done",
+        key: summaryKey,
+        result: popgen2PcaResult(),
+      }),
+    ).toThrow(/^popnei_web defect:/);
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+  });
+
   test("a PCA done, its LD distance emptied: locked; typed again with the same value: done, the same result object, no request", () => {
     const made = popgen2Store(true, true);
     passDone(made);
