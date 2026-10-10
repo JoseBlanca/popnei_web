@@ -11,8 +11,9 @@
  * the box's number and the keys of redo leave the digits; on a line
  * whose run of the arrow keys waits, the keys leave the run to become a
  * change at its second; the browser's own undo of a
- * box held back; the PCA done, a threshold moved and moved back: Run,
- * and no result, with no request until Run. A file opened while the pass
+ * box held back; the PCA done, a threshold moved and moved back: no Run
+ * and no result between the change and the bar, and the PCA calculated
+ * again by itself, one request. A file opened while the pass
  * of the file before it runs starts its own pass, and is never said to
  * be stopped.
  *
@@ -27,6 +28,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
 import { holdSummary, release } from "./holdWorker.ts";
+import { pcaTabSeen, watchPcaTab } from "./pcaSeen.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -425,7 +427,7 @@ test("NU2 D3 a run of the arrow keys waiting on a line, each key of Undo and Red
   await expect(undoOrRedo(page)).toHaveCount(0);
 });
 
-test("NU2 D3 the PCA done, the missing rate of the variants moved and moved back: Run, and no result, with no request until Run", async ({
+test("NU2 D3 the PCA done, the missing rate of the variants moved and moved back: no Run and no result between the change and the bar, and the PCA calculated again by itself, one request", async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -434,20 +436,27 @@ test("NU2 D3 the PCA done, the missing rate of the variants moved and moved back
   await expectDone(page, "panel.nei");
   await runPca(page);
   const posted = await runsPosted(page);
+  // From here, every frame: a Run or a result in the PCA tab, which the
+  // live PCA must not show between the change and its bar
+  // (docs/specs/steps/popgen2-pca.md, "About to start"; task 4.2 (a) of
+  // docs/plans/no-undo.md).
+  await watchPcaTab(page);
 
   await tab(page, "Variants").click();
   await typeMissing(page, "0.05");
   await typeMissing(page, "0.1");
   await tab(page, "PCA").click();
 
-  await expect(run(page)).toBeEnabled();
-  await expect(tableCaptionOf(page)).toHaveCount(0);
-  expect(await runsPosted(page)).toBe(posted);
-  await run(page).click();
   await expect(tableCaptionOf(page)).toContainText("from 548 variants.", {
     timeout: RESULT_TIMEOUT,
   });
   expect(await runsPosted(page)).toBe(posted + 1);
+  expect(await pcaTabSeen(page)).toEqual({
+    run: 0,
+    gone: true,
+    bar: true,
+    resultBeforeBar: 0,
+  });
 });
 
 test("NU2 D3 0.9 typed in a box and committed, another file opened: Ctrl+Z and Meta+Z in the box and on the heading leave the box at 0.9", async ({

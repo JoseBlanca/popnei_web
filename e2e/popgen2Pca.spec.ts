@@ -1164,7 +1164,7 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     }
   });
 
-  test("AP10 D2 its filters: the slider of the missing data moved to 0.05, 532 variants and PC1 3.58%; the Variants tab at 0.03 and back; the MAF at 0.9, 510 variants and PC1 3.68%; the LD pruning off, 1,200 variants, PC1 7.61% and its warning", async ({
+  test("AP10 D2 its filters, the PCA calculated again by itself after each: the slider of the missing data moved to 0.05, 532 variants and PC1 3.58%; the Variants tab at 0.03 and back; the MAF at 0.9, 510 variants and PC1 3.68%; the LD pruning off, 1,200 variants, PC1 7.61% and its warning", async ({
     page,
     makeAxeBuilder,
   }) => {
@@ -1179,20 +1179,28 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
       "0.1, as in the Variants tab",
     );
     // A move there and back: the result goes, since no result is kept
-    // for a value the screen left, and Run is offered. One ArrowLeft moves
-    // it one step of the axis of panel.nei, 0.001.
+    // for a value the screen left, and the PCA, live since its Run,
+    // starts again by itself on the value set back, with no Run offered
+    // (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by
+    // itself"). One ArrowLeft moves it one step of the axis of panel.nei,
+    // 0.001.
     await missing.focus();
     await missing.press("ArrowLeft");
     await expect(missing).toHaveAttribute("aria-valuetext", "0.099");
     await missing.press("End");
     await expect(tableCaptionOf(page)).toHaveCount(0);
-    await expect(run(page)).toBeEnabled();
+    await expect(run(page)).toHaveCount(0);
+    await expect(tableCaptionOf(page)).toContainText("from 548 variants.", {
+      timeout: RESULT_TIMEOUT,
+    });
     await moveTo(missing, "ArrowLeft", "0.05");
-    await runToResult(page);
-    await expect(tableCaptionOf(page)).toContainText("from 532 variants.");
+    await expect(tableCaptionOf(page)).toContainText("from 532 variants.", {
+      timeout: RESULT_TIMEOUT,
+    });
     await expect(axisLabels(page).first()).toHaveText("PC1 (3.58%)");
     const posted = await runsPosted(page);
 
+    // The Variants tab stricter: the PCA reads 0.03, by itself again.
     await tab(page, "Variants").click();
     const rate = histogram(page, "Proportion of missing genotypes");
     await rate.box.fill("0.03");
@@ -1209,16 +1217,21 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
         { exact: true },
       ),
     ).toBeVisible();
+    await expect(tableCaptionOf(page)).toBeVisible({
+      timeout: RESULT_TIMEOUT,
+    });
+    expect(await runsPosted(page)).toBe(posted + 1);
     await tab(page, "Variants").click();
     await rate.box.fill("0.1");
     await rate.box.press("Enter");
     await tab(page, "PCA").click();
     await expect(missing).toHaveAttribute("aria-valuetext", "0.05");
-    // The key of 0.05 again, whose result was not kept: Run, and no
-    // request until it is pressed.
-    await expect(tableCaptionOf(page)).toHaveCount(0);
-    await expect(run(page)).toBeEnabled();
-    expect(await runsPosted(page)).toBe(posted);
+    // The key of 0.05 again, whose result was not kept: calculated again
+    // by itself.
+    await expect(tableCaptionOf(page)).toContainText("from 532 variants.", {
+      timeout: RESULT_TIMEOUT,
+    });
+    expect(await runsPosted(page)).toBe(posted + 2);
 
     await missing.focus();
     await missing.press("End");
@@ -1226,20 +1239,28 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
       "aria-valuetext",
       "0.1, as in the Variants tab",
     );
+    await expect(tableCaptionOf(page)).toContainText("from 548 variants.", {
+      timeout: RESULT_TIMEOUT,
+    });
     const maf = pcaSlider(page, "maf");
     await moveTo(maf, "ArrowLeft", "0.9");
-    await runToResult(page);
-    await expect(tableCaptionOf(page)).toContainText("from 510 variants.");
+    await expect(tableCaptionOf(page)).toContainText("from 510 variants.", {
+      timeout: RESULT_TIMEOUT,
+    });
     await expect(axisLabels(page).first()).toHaveText("PC1 (3.68%)");
 
     await maf.focus();
     await maf.press("End");
+    await expect(tableCaptionOf(page)).toContainText("from 548 variants.", {
+      timeout: RESULT_TIMEOUT,
+    });
     await shown(page)
       .locator("label")
       .filter({ hasText: "Prune the variants by linkage disequilibrium (LD)" })
       .click();
-    await runToResult(page);
-    await expect(tableCaptionOf(page)).toContainText("from 1,200 variants.");
+    await expect(tableCaptionOf(page)).toContainText("from 1,200 variants.", {
+      timeout: RESULT_TIMEOUT,
+    });
     await expect(axisLabels(page).first()).toHaveText("PC1 (7.61%)");
     await expect(
       shown(page).getByRole("heading", { level: 3, name: "1 warning" }),
