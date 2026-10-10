@@ -194,7 +194,7 @@ export function StatsHistogram({
   const boxRef = useRef<HTMLDivElement>(null);
   useEffect(
     () =>
-      gate.typing(() => {
+      gate.registerTyped(() => {
         if (boxRef.current?.contains(document.activeElement) === true) {
           commitRef.current?.();
         }

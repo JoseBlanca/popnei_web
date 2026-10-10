@@ -36,12 +36,16 @@ export const RUN_QUIET_MS = 1000;
 
 /** The gate of the page. */
 export interface RunGate {
-  /** Holds a run waiting of one threshold, which `end` makes a change.
-      Gives the function that lets it go once it ended. A listener that
+  /** Holds a run of the arrow keys waiting on one threshold, which `end`
+      makes a change. Gives the function that lets it go once it ended.
+      For the runs of the keys alone: any other command ends a run held,
+      through `endAll`, so a widget that held a drag or an open list here
+      would lose it in the middle; a widget takes `holdChange`. A
+      listener that
       throws when the run is held does not keep the run from being held
       and given: its error is thrown a moment later, to the page's
       handler of errors. */
-  readonly hold: (end: () => void) => HeldRun;
+  readonly holdKeyRun: (end: () => void) => HeldRun;
   /** Ends every run held, each made a change if it moved. Every run is let
       go and every end called also when one throws, and the listeners are
       told if the count of the changes under way fell to 0; then the
@@ -53,14 +57,16 @@ export interface RunGate {
       returns the function that stops it. A property made once, so React
       keeps it. */
   readonly subscribe: (listener: () => void) => () => void;
-  /** Holds the commit of the box of a threshold, which commits a number
-      typed in it as Enter would; gives the function that lets it go,
-      when the box goes. A box held here is not a change under way, and
+  /** Registers the commit of the box of a threshold, which commits a
+      number typed in it as Enter would, for `commitTyped`; gives the
+      function that takes it away, when the box goes. A box registered
+      here is not a change under way, and
       `underWay` does not count it: a box also takes `holdChange` while
       its text differs from the project's value (task 3.2 of
       docs/plans/no-undo.md). */
-  readonly typing: (commit: () => void) => () => void;
-  /** Commits what is typed in every box held, before an opening. */
+  readonly registerTyped: (commit: () => void) => () => void;
+  /** Commits what is typed in every box registered, before an
+      opening. */
   readonly commitTyped: () => void;
   /** Holds a change under way that is not a run of the keys, a slider
       held, a list open, digits typed and not confirmed, the dialog of the
@@ -91,7 +97,7 @@ export interface HeldRun {
       the count fell to 0, so that one told reads the new project. The
       run is let go before `made`, so that its change, which passes the
       gate, finds nothing of it to end. */
-  readonly release: (made?: () => void) => void;
+  readonly release: (made: () => void) => void;
 }
 
 /** Makes the gate of a page, with nothing held. */
@@ -131,7 +137,7 @@ export function createRunGate(): RunGate {
     }
   };
   return {
-    hold: (end) => {
+    holdKeyRun: (end) => {
       // A function of its own, so that the same `end` held twice is held
       // as two.
       const held = (): void => {
@@ -144,7 +150,7 @@ export function createRunGate(): RunGate {
         release: (made) => {
           const wasHeld = runs.delete(held);
           try {
-            made?.();
+            made();
           } finally {
             if (wasHeld && count() === 0) tell();
           }
@@ -179,7 +185,7 @@ export function createRunGate(): RunGate {
         listeners.delete(listener);
       };
     },
-    typing: (commit) => {
+    registerTyped: (commit) => {
       const held = (): void => {
         commit();
       };
@@ -305,7 +311,7 @@ export function createThresholdRun(deps: ThresholdRunDeps): ThresholdRun {
           timer: setTimeout(end, RUN_QUIET_MS),
           held: null,
         };
-        waiting.held = deps.gate.hold(end);
+        waiting.held = deps.gate.holdKeyRun(end);
         return;
       }
       clearTimeout(waiting.timer);

@@ -253,7 +253,7 @@ describe("the gate of the button", () => {
     const gate = createRunGate();
     draw(store, gate);
     let ended = 0;
-    gate.hold(() => {
+    gate.holdKeyRun(() => {
       ended += 1;
       tickFilter(store);
     });
@@ -275,7 +275,7 @@ describe("the gate of the button", () => {
     const gate = createRunGate();
     draw(store, gate);
     let ended = 0;
-    gate.hold(() => {
+    gate.holdKeyRun(() => {
       ended += 1;
     });
 

@@ -364,7 +364,7 @@ describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of pop
     openVariants(store);
     openIndividuals(store, loadId(1));
     let ended = 0;
-    gate.hold(() => {
+    gate.holdKeyRun(() => {
       ended += 1;
       store.apply("the threshold of the missing genotypes changed", (p) =>
         setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.03),
@@ -387,7 +387,7 @@ describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of pop
     openVariants(store);
     openIndividuals(store, loadId(1));
     let committed = 0;
-    gate.typing(() => {
+    gate.registerTyped(() => {
       committed += 1;
     });
     await recorded(store, loadId(1), readOf(PANEL_POPS));

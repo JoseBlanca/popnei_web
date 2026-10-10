@@ -399,10 +399,13 @@ arrow keys), so that `autoRuns`'s listener, and any screen, reads
 screen reads it with the subscription; it is for the tests. `Slider.tsx`,
 `ThresholdSlider.tsx`, `Select.tsx` and `NumberField.tsx` of
 `src/ui/widgets/`, and the dialog of the download, take and release a
-`holdChange` through `RunGateProvider`. `hold` is left to the runs of
-the arrow keys: any change by another control ends a `hold` through
+`holdChange` through `RunGateProvider`. `holdKeyRun` is left to the
+runs of the arrow keys, whose `HeldRun.release(made)` makes the run's
+change: any change by another control ends a run held through
 `endAll`, so a widget that took one would lose it in the middle of a
-drag. The state about to
+drag. The box of a threshold registers its commit with
+`registerTyped`, which `commitTyped` calls before an opening; that is
+no change under way. The state about to
 start is the PCA `ready` in the store, live, its key not started under,
 the one pass read to the end; `autoRuns` gives the page a function that
 says it, `aboutToStart`, and its `subscribe` tells the page when it

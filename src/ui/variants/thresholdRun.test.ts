@@ -168,7 +168,7 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
       },
       ended: () => undefined,
     });
-    const letGo = gate.typing(() => {
+    const letGo = gate.registerTyped(() => {
       opened.push("typed");
     });
     run.press(0.5, 0.4);
@@ -203,7 +203,7 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
       },
       ended: () => undefined,
     });
-    gate.typing(() => {
+    gate.registerTyped(() => {
       store.apply("the missing data filter changed", (p) =>
         setThreshold(p, missing, 0.25),
       );
@@ -298,7 +298,7 @@ describe("AP3 D2 the gate before applyAfresh", () => {
 
   test("a number typed in a box and not applied, then applyAfresh: the number applied first, then nothing to undo", () => {
     const { store, gate } = gated();
-    gate.typing(() => {
+    gate.registerTyped(() => {
       store.apply("the missing data filter changed", (p) =>
         setThreshold(p, missing, 0.25),
       );
@@ -335,7 +335,7 @@ describe("AP3 D2 the gate before applyAfresh", () => {
       },
       ended: () => undefined,
     });
-    gate.typing(() => {
+    gate.registerTyped(() => {
       order.push("typed");
     });
     run.press(0.5, 0.4);
@@ -598,11 +598,11 @@ describe("NU1 the gate when a listener or an end throws", () => {
     const gate = createRunGate();
     const failure = new Error("an end failed");
     const ended: string[] = [];
-    gate.hold(() => {
+    gate.holdKeyRun(() => {
       ended.push("first");
       throw failure;
     });
-    gate.hold(() => {
+    gate.holdKeyRun(() => {
       ended.push("second");
     });
     let told = 0;
