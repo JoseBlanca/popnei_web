@@ -371,7 +371,7 @@ function Words({
 }
 
 /** The band's Stop `stop`: of the one pass, as the box's, said in the
-    status region as it; of the PCA, running or live, as the PCA tab's,
+    status region as it; of the PCA, running or about to start, as the PCA tab's,
     `pause`, which the page says. The button then goes, and the focus
     goes to the heading "Popnei". */
 function pressStop(stop: BandStop, page: BandWith): void {

@@ -6,14 +6,16 @@
  * running or about to start, the PCA running, the filtered variants
  * being written, a Stop under way, the PCA about to start again by
  * itself, the link to the PCA's warnings or error while another tab is
- * shown, the PCA live with nothing running; and, under it, the line of
- * an error of the application, in the words of the error bar of
- * popgen.html.
+ * shown; and, under it, the line of an error of the application, in the
+ * words of the error bar of popgen.html.
  *
- * While the PCA is live and no PCA runs, the band offers "Stop
- * recalculating" as the PCA tab does, so that the automatic runs can be
- * ended from any tab before the next change (WCAG 2.2.1; the review of
- * work package 4 of docs/plans/no-undo.md, 10 October 2026).
+ * While the PCA is about to start, the band offers "Stop recalculating"
+ * as the PCA tab does, so that the automatic runs can be ended from any
+ * tab within the quiet second (WCAG 2.2.1; the review of work package 4
+ * of docs/plans/no-undo.md, 10 October 2026). While the PCA is live and
+ * nothing runs nor is about to start, the band shows "Popnei" alone, as
+ * the owner decided on 10 October 2026; the PCA tab keeps its own Stop
+ * recalculating then.
  *
  * A pure function of what the page holds, so that a test in node checks
  * it on the real store of the page.
@@ -94,20 +96,17 @@ export type BandLine =
     }
   /** A Stop waits for the calculation worker to start again. */
   | { readonly kind: "stopping"; readonly what: Stopping }
-  /** The PCA live is about to start again by itself. */
+  /** The PCA live is about to start again by itself: Stop
+      recalculating. */
   | { readonly kind: "aboutToStart"; readonly method: PcaMethod }
   /** The PCA's result has `warnings` warnings, or it could not be
       calculated, `warnings` then `null`, and another tab than the PCA's
-      is shown: the link to the PCA tab; `live`, whether the PCA is live
-      with nothing running, and Stop recalculating follows the link. */
+      is shown: the link to the PCA tab. */
   | {
       readonly kind: "result";
       readonly method: PcaMethod;
       readonly warnings: number | null;
-      readonly live: boolean;
-    }
-  /** The PCA is live and nothing runs: Stop recalculating. */
-  | { readonly kind: "live"; readonly method: PcaMethod };
+    };
 
 /** The line of an error of the application, under the line of the
     heading: the words of the error bar for the first error, and the count
@@ -196,7 +195,6 @@ function lineOf(page: BandPage): BandLine {
   }
 
   const live = page.pcaLive;
-  const liveIdle = live.kind === "live" && !live.running;
   if (live.kind === "live" && live.aboutToStart !== null && !live.running) {
     return { kind: "aboutToStart", method };
   }
@@ -207,15 +205,14 @@ function lineOf(page: BandPage): BandLine {
         kind: "result",
         method,
         warnings: pca.warnings.length,
-        live: liveIdle,
       };
     }
     if (pca.kind === "error") {
-      return { kind: "result", method, warnings: null, live: liveIdle };
+      return { kind: "result", method, warnings: null };
     }
   }
 
-  return liveIdle ? { kind: "live", method } : NOTHING;
+  return NOTHING;
 }
 
 /** The status of the PCA in `state`; a defect when the store has none. */

@@ -156,19 +156,12 @@ describe("NU5 D2 the band drawn", () => {
     expect(document.activeElement).toBe(heading());
   });
 
-  test("while the PCA is live and nothing runs, Stop recalculating calls autoRuns.pause, and the line then says nothing", async () => {
+  test("while the PCA is live and nothing runs nor is about to start, the band shows Popnei alone", async () => {
     const testPage = await pcaDone(SUMMARY, "pca", 548);
-    const pause = vi.spyOn(testPage.auto, "pause");
     await drawBand(testPage);
-    expect(container.textContent).toContain(
-      "The PCA is calculated again after each change",
-    );
 
-    await press(button("Stop recalculating the PCA"));
-
-    expect(pause).toHaveBeenCalledWith("pca");
     expect(container.textContent).toBe("Popnei");
-    expect(document.activeElement).toBe(heading());
+    expect(container.querySelectorAll("button")).toHaveLength(0);
   });
 
   test("the link to the PCA's warnings shows the PCA tab and gives the focus to the heading of its warnings", async () => {
@@ -251,10 +244,10 @@ describe("NU5 D2 the band drawn", () => {
     expect(document.activeElement).toBe(heading());
   });
 
-  test("a threshold changed with the PCA live: the line about to start with Stop recalculating, in the same place as before", async () => {
+  test("a threshold changed with the PCA live: the line about to start with Stop recalculating, which calls autoRuns.pause and gives the focus to the heading, the line then Popnei alone", async () => {
     const testPage = await pcaDone(SUMMARY, "pca", 548);
+    const pause = vi.spyOn(testPage.auto, "pause");
     await drawBand(testPage);
-    const before = button("Stop recalculating the PCA");
 
     await act(async () => {
       testPage.store.apply("the missing data filter changed", (p) =>
@@ -265,9 +258,12 @@ describe("NU5 D2 the band drawn", () => {
       );
       await flush();
     });
-
     expect(container.textContent).toContain("The PCA starts again in a moment");
-    // The same element, so that a focus on it stays.
-    expect(button("Stop recalculating the PCA")).toBe(before);
+
+    await press(button("Stop recalculating the PCA"));
+
+    expect(pause).toHaveBeenCalledWith("pca");
+    expect(container.textContent).toBe("Popnei");
+    expect(document.activeElement).toBe(heading());
   });
 });

@@ -32,13 +32,14 @@ export interface LineWords {
 
 /** The Stop that follows the words of a line. */
 export interface BandStop {
-  /** Its words: "Stop", or "Stop recalculating" for the PCA live. */
+  /** Its words: "Stop", or "Stop recalculating" for the PCA about to
+      start. */
   readonly label: string;
   /** Its name for a screen reader, by what it stops: "Stop the PCA". */
   readonly name: string;
   /** What it stops: the one pass, the box's Stop; the PCA running, the
-      PCA tab's Stop; or the PCA live with nothing running, the PCA tab's
-      Stop recalculating. Both of the PCA end its live state. */
+      PCA tab's Stop; or the PCA about to start, the PCA tab's Stop
+      recalculating. Both of the PCA end its live state. */
   readonly stops: "pass" | "pca" | "live";
 }
 
@@ -85,28 +86,22 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
     }
     case "result":
       return resultWords(line.method, line.warnings);
-    case "live": {
-      const name = methodName(line.method);
-      return {
-        full: `The ${name} is calculated again after each change`,
-        short: `${name} kept up to date`,
-      };
-    }
   }
 }
 
 /**
  * The Stop after the words of `line`, or `null` when it has none: the
  * Stop of the one pass, "Stop reading panel.vcf.gz"; of the PCA running,
- * "Stop the PCA"; while the PCA is live and no PCA runs, about to start,
- * its result linked or not, "Stop recalculating", named "Stop
- * recalculating the PCA". "PCoA" under the PCoA.
+ * "Stop the PCA"; while the PCA is about to start, "Stop
+ * recalculating", named "Stop recalculating the PCA". "PCoA" under the
+ * PCoA.
  */
 export function stopOf(line: BandLine): BandStop | null {
   switch (line.kind) {
     case "nothing":
     case "writing":
     case "stopping":
+    case "result":
       return null;
     case "reading":
       return {
@@ -120,10 +115,7 @@ export function stopOf(line: BandLine): BandStop | null {
         name: `Stop the ${methodName(line.method)}`,
         stops: "pca",
       };
-    case "result":
-      return line.live ? recalculating(line.method) : null;
     case "aboutToStart":
-    case "live":
       return recalculating(line.method);
   }
 }

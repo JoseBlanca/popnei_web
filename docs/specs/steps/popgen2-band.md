@@ -149,10 +149,19 @@ line of the band under it (below, "An error of the application").
 | the PCA is running, started by Run or by itself | "PCA running · 1:20", the time since it started, minutes and seconds, as the clock of the PCA tab; "PCoA running · 1:20" under the PCoA | Stop |
 | the filtered variants are being written | "Writing panel.filtered.vcf.gz · 45%", the name the dialog of the download shows | none: the dialog has the Stop, and keeps the band out of reach while it is open |
 | a Stop of the PCA or of the one pass is under way (below, "Stopping") | "Stopping the PCA…", "Stopping the PCoA…"; "Stopping the reading of panel.vcf.gz…" | none |
-| the PCA is about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment" | Stop |
+| the PCA is about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment" | Stop recalculating, the PCA tab's |
 | the PCA has a result with warnings, and the PCA tab is not the tab shown | "PCA: 1 warning, in the PCA tab"; "PCA: 2 warnings, in the PCA tab"; "PCoA: …" under the PCoA; the words are a link | none |
 | the PCA could not be calculated, and the PCA tab is not the tab shown | "PCA: could not be calculated, in the PCA tab"; "PCoA: …"; a link | none |
 | none of these | nothing after "Popnei" | none |
+
+While the PCA is live and nothing runs, nor is about to start, the band
+shows "Popnei" alone, as the owner decided on 10 October 2026: the line
+says what the page is doing, and a PCA kept up to date does nothing
+until the next change. The PCA tab keeps its own "Stop recalculating"
+then, live or not about to start, so that the automatic runs are ended
+there with no time limit (`popgen2-pca.md`, "Stop"); the band offers it
+only within the quiet second, when the PCA is about to start and the
+user may be in another tab.
 
 Only one calculation runs at a time in the calculation worker, so at
 most one of the first three holds. A running calculation wins over a
@@ -168,10 +177,12 @@ Stop stay whole; a screen reader is given the whole name.
 
 **Stop** in the band does what the Stop it stands for does elsewhere,
 and nothing more: for the one pass, the Stop of the box of the variants
-file, after which the box offers Start again; for the PCA running or
-about to start, the Stop of the PCA tab, which ends the run and the
+file, after which the box offers Start again; for the PCA running,
+the Stop of the PCA tab, which ends the run and the
 live state, so that nothing starts again by itself until Run is
-pressed in the PCA tab (`popgen2-pca.md`, "Stop"). It is said in the
+pressed in the PCA tab (`popgen2-pca.md`, "Stop"). **Stop recalculating**
+in the band, while the PCA is about to start, is the PCA tab's: it ends
+the live state, so that the PCA does not start. Each is said in the
 status region as that Stop is said, so that a user who pressed it in
 the band hears what happened in a tab they do not see: "PCA stopped.
 Press Run in the PCA tab to calculate it again."
@@ -273,10 +284,10 @@ screen that cannot happen says why.
 
 | state | what the user sees | what they can do |
 |---|---|---|
-| empty | "Popnei" alone: nothing runs, nothing to point to, no error | nothing in the band |
+| empty | "Popnei" alone: nothing runs, nothing to point to, no error; also while the PCA is live and not about to start | nothing in the band |
 | locked | cannot happen: the band has no action that can be refused; a Stop is shown only while there is something to stop | |
 | ready | as empty: nothing runs | |
-| running | "Reading panel.vcf.gz · 45%" or "PCA running · 1:20" with Stop; "Writing …" with nothing to press; "Stopping …"; "The PCA starts again in a moment" with Stop | Stop, where there is one |
+| running | "Reading panel.vcf.gz · 45%" or "PCA running · 1:20" with Stop; "Writing …" with nothing to press; "Stopping …"; "The PCA starts again in a moment" with Stop recalculating | Stop or Stop recalculating, where there is one |
 | done | the link to the warnings or the error of the PCA while another tab is shown; otherwise as empty | follow the link |
 | results removed | cannot happen: the band shows no result | |
 | error | the line of an error of the application under the line of the heading, whatever that line says, with Details and Close | Details, Copy the details, Close |
@@ -294,7 +305,8 @@ It sends:
 
 - the Stop of the one pass, `autoRuns.stop(POPGEN2_CHAIN)`, as the box
   does;
-- the Stop of the PCA, `autoRuns.pause("pca")`, as the PCA tab does
+- the Stop of the PCA, and its Stop recalculating while it is about to
+  start, `autoRuns.pause("pca")`, as the PCA tab does
   (`popgen2-pca.md`, "What it sends and reads");
 - a change of the tab shown, to the PCA tab, through the page's store of
   the tab shown, `src/ui/pageTab.ts`;
@@ -343,8 +355,8 @@ change; it is still the screen's, not the project's
 | the PCA about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment" |
 | the link to the warnings | "PCA: 1 warning, in the PCA tab"; "PCA: 2 warnings, in the PCA tab"; "PCoA: 1 warning, in the PCA tab" |
 | the link to an error | "PCA: could not be calculated, in the PCA tab"; "PCoA: could not be calculated, in the PCA tab" |
-| the buttons | "Stop"; "Details"; "Close"; "Copy the details" |
-| the name of the Stop for a screen reader | "Stop reading panel.vcf.gz"; "Stop the PCA"; "Stop the PCoA" |
+| the buttons | "Stop"; "Stop recalculating"; "Details"; "Close"; "Copy the details" |
+| the name of the Stop for a screen reader | "Stop reading panel.vcf.gz"; "Stop the PCA"; "Stop the PCoA"; "Stop recalculating the PCA"; "Stop recalculating the PCoA" |
 | an error of the application | the three sentences of `barText` on this page, "An error of the application", with the message in each |
 | its details | "1 more error followed it."; "3 more errors followed it." |
 | the band's own status region | "The details were copied."; "The details could not be copied. Select them in the box below and copy them." |
@@ -480,8 +492,10 @@ rounded down, so that 100% is said only at the end; the clock at 59 s
 and at 61 s, "0:59" and "1:01".
 
 **In jsdom**, the band drawn: the Stop of the one pass calls
-`autoRuns.stop` with the page's group, and the Stop of the PCA
-`autoRuns.pause("pca")`; the link changes the tab shown to the PCA;
+`autoRuns.stop` with the page's group, and the Stop of the PCA and
+its Stop recalculating while it is about to start
+`autoRuns.pause("pca")`; the PCA live with nothing running nor about
+to start, "Popnei" alone; the link changes the tab shown to the PCA;
 after a Stop the focus is on the heading "Popnei"; the line carries no
 live role, and the alert and the band's status region carry
 `data-live-announcer`; Details shows and hides the
@@ -501,8 +515,9 @@ pass held by `e2e/holdWorker.ts`:
   the status region says "PCA stopped. Press Run in the PCA tab to
   calculate it again.", and a threshold moved then starts nothing;
 - the PCA live, a threshold moved in the Variants tab: "The PCA starts
-  again in a moment", then "PCA running", read every animation frame,
-  never a line of nothing between the two;
+  again in a moment" with Stop recalculating, then "PCA running", read
+  at every change of the band, never a line of nothing between the two,
+  and "Popnei" alone once the result is shown;
 - the PCoA with the LD pruning off, done, the Variants tab shown: the
   link "PCoA: 2 warnings, in the PCA tab", of `pruningOff` and
   `lingoesCorrection`; pressed with Enter: the PCA tab shown, the focus

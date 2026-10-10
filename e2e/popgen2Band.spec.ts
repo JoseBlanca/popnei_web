@@ -362,7 +362,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     await workersListening(page);
   });
 
-  test("NU5 D3 the PCA live and a threshold moved in the Variants tab: The PCA starts again in a moment, then PCA running, with no line of nothing between, then the line of the PCA live", async ({
+  test("NU5 D3 the PCA live and a threshold moved in the Variants tab: The PCA starts again in a moment with Stop recalculating, then PCA running, with no line of nothing between, then Popnei alone", async ({
     page,
   }) => {
     test.setTimeout(90_000);
@@ -376,11 +376,8 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     await expect(caption(page)).toContainText("from 548 variants.", {
       timeout: RESULT_TIMEOUT,
     });
-    await expect
-      .poll(() => lineText(page))
-      .toBe(
-        "Popnei The PCA is calculated again after each change Stop recalculating",
-      );
+    // Live, and nothing runs nor is about to start: Popnei alone.
+    await expect.poll(() => lineText(page)).toBe("Popnei");
     await tab(page, "Variants").click();
     const before = (await bandStates(page)).length;
 
@@ -398,9 +395,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       .toBe(true);
     await expect
       .poll(() => lineText(page), { timeout: RESULT_TIMEOUT })
-      .toBe(
-        "Popnei The PCA is calculated again after each change Stop recalculating",
-      );
+      .toBe("Popnei");
     const texts = (await bandStates(page))
       .slice(before)
       .map((state) => state.text);
@@ -431,12 +426,8 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     await expect(
       shown(page).getByRole("heading", { level: 3, name: "2 warnings" }),
     ).toBeVisible({ timeout: RESULT_TIMEOUT });
-    // The PCA tab shown: no link.
-    await expect
-      .poll(() => lineText(page))
-      .toBe(
-        "Popnei The PCoA is calculated again after each change Stop recalculating",
-      );
+    // The PCA tab shown: no link, and the PCoA live, nothing more.
+    await expect.poll(() => lineText(page)).toBe("Popnei");
 
     await tab(page, "Variants").click();
     const link = band(page).getByRole("link", {
@@ -445,7 +436,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     await expect(link).toBeVisible();
     await expect
       .poll(() => lineText(page))
-      .toBe("Popnei PCoA: 2 warnings, in the PCA tab Stop recalculating");
+      .toBe("Popnei PCoA: 2 warnings, in the PCA tab");
     await expectAxeBothSchemes(page, makeAxeBuilder);
 
     await link.focus();
@@ -661,13 +652,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
         .toMatch(/^Popnei PCA( running)? · 0:\d\d Stop$/u);
       await release(page, "pca");
       await expect(caption(page)).toBeAttached({ timeout: RESULT_TIMEOUT });
-      await expect
-        .poll(() => lineText(page))
-        .toBe(
-          width === 320
-            ? "Popnei PCA kept up to date Stop"
-            : "Popnei The PCA is calculated again after each change Stop recalculating",
-        );
+      await expect.poll(() => lineText(page)).toBe("Popnei");
       // About to start, held by the thumb of the PCA's MAF pressed and
       // not moved, a change under way that shows nothing of its own.
       const missing = shown(page).getByRole("slider", {
@@ -696,9 +681,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       await page.mouse.up();
       await expect
         .poll(() => lineText(page), { timeout: RESULT_TIMEOUT })
-        .toMatch(/^Popnei (PCA kept up to date Stop|The PCA is calculated)/u);
-      await bandButton(page, "Stop recalculating the PCA").click();
-      await expect.poll(() => lineText(page)).toBe("Popnei");
+        .toBe("Popnei");
 
       const states = await bandStates(page);
       const heights = new Set(states.map((state) => state.height));

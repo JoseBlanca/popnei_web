@@ -209,21 +209,17 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     expect(lineWords(pcoa.band().line, 0)?.short).toBe("PCoA in a moment");
   });
 
-  test("the PCA live with its result and nothing running: Stop recalculating, as in the PCA tab, whatever tab is shown", async () => {
+  test("the PCA live with its result, nothing running nor about to start: Popnei alone, whatever tab is shown", async () => {
     const testPage = await pcaDone(SUMMARY, "pca", 548);
+    expect(testPage.auto.liveState("pca")).toEqual({
+      kind: "live",
+      aboutToStart: null,
+      running: false,
+    });
 
-    expect(testPage.band().line).toEqual({ kind: "live", method: "pca" });
-    expect(words(testPage.band())).toBe(
-      "The PCA is calculated again after each change",
-    );
-    expect(stopOf(testPage.band().line)?.name).toBe(
-      "Stop recalculating the PCA",
-    );
+    expect(testPage.band().line).toEqual({ kind: "nothing" });
+    expect(stopOf(testPage.band().line)).toBeNull();
     testPage.tab = "pca";
-    expect(testPage.band().line).toEqual({ kind: "live", method: "pca" });
-
-    // Its Stop ends the live state; nothing is said after it.
-    testPage.auto.pause("pca");
     expect(testPage.band().line).toEqual({ kind: "nothing" });
   });
 
@@ -234,11 +230,11 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
 
     const two = await pcaDone(SUMMARY, "pca", 1, true);
     expect(words(two.band())).toBe("PCA: 2 warnings, in the PCA tab");
-    // The link, and after it the PCA's Stop recalculating, since it is live.
-    expect(stopOf(two.band().line)?.name).toBe("Stop recalculating the PCA");
+    // The link alone, though the PCA is live.
+    expect(stopOf(two.band().line)).toBeNull();
 
     two.tab = "pca";
-    expect(two.band().line.kind).toBe("live");
+    expect(two.band().line.kind).toBe("nothing");
     two.tab = "individuals";
     expect(words(two.band())).toBe("PCA: 2 warnings, in the PCA tab");
   });
