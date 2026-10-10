@@ -2,8 +2,8 @@
 /**
  * The widgets that wait, drawn by React in jsdom
  * (docs/specs/steps/popgen2-pca.md, "While a PCA runs"): a radio group,
- * a switch, a check box, a number field and the line of a threshold
- * given a reason are marked `aria-disabled`, keep the Tab key, are
+ * a switch, a check box, a number field, the line of a threshold and a
+ * button given a reason are marked `aria-disabled`, keep the Tab key, are
  * described by the reason, and give no change when pressed; given none,
  * they carry no such mark, as on popgen.html.
  */
@@ -13,6 +13,7 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { Button } from "./Button.tsx";
 import { Checkbox } from "./Checkbox.tsx";
 import { NumberField } from "./NumberField.tsx";
 import { RadioGroup } from "./RadioGroup.tsx";
@@ -882,5 +883,83 @@ describe("AP6 D3 the label of a number field that waits", () => {
       if (label === null) throw new Error("no label");
       expect(label.closest("[data-waiting]") !== null).toBe(waiting !== null);
     }
+  });
+});
+
+describe("NU2 a button that waits", () => {
+  // No button of the applications waits since popgen2.html lost its Undo
+  // and Redo on 10 October 2026; the prop is kept for the PCA tab's Run
+  // and Stop and the band's Stop, which may use it.
+
+  /** Draws a button given the reason, and gives it and its presses. */
+  const drawWaiting = (): {
+    readonly button: HTMLButtonElement;
+    readonly presses: { count: number };
+  } => {
+    const presses = { count: 0 };
+    draw(
+      createElement(Button, {
+        label: "Run",
+        hint: "Run the PCA",
+        waiting: REASON,
+        onPress: () => {
+          presses.count += 1;
+        },
+      }),
+    );
+    const button = container.querySelector("button");
+    if (button === null) throw new Error("no button");
+    return { button, presses };
+  };
+
+  /** Presses `key` on `element`, down and up, as the keyboard does. */
+  const pressKey = (element: HTMLElement, key: string): void => {
+    for (const type of ["keydown", "keyup"]) {
+      act(() => {
+        element.dispatchEvent(
+          new KeyboardEvent(type, { key, bubbles: true, cancelable: true }),
+        );
+      });
+    }
+  };
+
+  test("aria-disabled, still a stop of the Tab key, and described by the reason in place of its hint", () => {
+    const { button } = drawWaiting();
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.disabled).toBe(false);
+    expect(button.tabIndex).toBe(0);
+    expect(describedWords(button)).toBe(REASON);
+  });
+
+  test("a click, Enter and Space call nothing", () => {
+    const { button, presses } = drawWaiting();
+    act(() => {
+      button.click();
+    });
+    act(() => {
+      button.focus();
+    });
+    pressKey(button, "Enter");
+    pressKey(button, " ");
+    expect(presses.count).toBe(0);
+  });
+
+  test("its tooltip, shown on the focus of the keyboard, stays on a click and on Enter", () => {
+    const { button } = drawWaiting();
+    // A key pressed first, so that React Aria takes the focus as the
+    // keyboard's and shows the tooltip.
+    act(() => {
+      document.body.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Tab", bubbles: true }),
+      );
+      button.focus();
+    });
+    expect(tooltipShown()).toBe(REASON);
+    act(() => {
+      button.click();
+    });
+    expect(tooltipShown()).toBe(REASON);
+    pressKey(button, "Enter");
+    expect(tooltipShown()).toBe(REASON);
   });
 });
