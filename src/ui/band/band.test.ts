@@ -14,7 +14,8 @@ import { startWriting } from "../runs.ts";
 import { STOPPING_MAX_MS, bandOf } from "./bandLine.ts";
 import type { Band } from "./bandLine.ts";
 import { lineWords, stopOf } from "./bandWords.ts";
-import { flush, page, pageOf, pcaDone } from "./testPage.ts";
+import { flush, page, pageOf, pcaDone, pcaResult } from "./testSupport.ts";
+import type { WriteRequest } from "./testSupport.ts";
 
 /** The result of the one pass over panel.nei: 1,200 variants on the
     chromosome 1, of s000 and s001. */
@@ -402,5 +403,21 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     expect(testPage.band()).toEqual({ line: { kind: "nothing" }, error: null });
     expect(lineWords(testPage.band().line, 0)).toBeNull();
     expect(stopOf(testPage.band().line)).toBeNull();
+  });
+
+  test("a write of the fake worker ends with a file, and the result of an analysis does not compile there", () => {
+    const endWrite: WriteRequest["end"] = () => undefined;
+    endWrite({
+      kind: "done",
+      key: "k",
+      result: {
+        format: "nei",
+        file: new Blob([]),
+        numBytes: 0,
+        passStats: { numVars: 0, filtering: {} },
+      },
+    });
+    // @ts-expect-error -- a write never ends with the result of a PCA
+    endWrite({ kind: "done", key: "k", result: pcaResult("pca", 1) });
   });
 });

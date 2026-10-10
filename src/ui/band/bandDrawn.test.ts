@@ -26,8 +26,8 @@ import type { Announcer } from "../shell/status.ts";
 import { PANEL_HEADING_ATTRIBUTE } from "../analyses/AnalysisPanel.tsx";
 import { WARNINGS_HEADING_ATTRIBUTE } from "../analyses/Warnings.tsx";
 import { Band } from "./Band.tsx";
-import { flush, page, pcaDone, pcaResult } from "./testPage.ts";
-import type { TestPage } from "./testPage.ts";
+import { flush, page, pcaDone, pcaResult } from "./testSupport.ts";
+import type { TestPage } from "./testSupport.ts";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;

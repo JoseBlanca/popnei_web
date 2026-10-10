@@ -3,7 +3,8 @@
  * band: the real store with a fake worker whose requests the test moves,
  * the gate, the analyses started by themselves, the log of the errors
  * and the tab shown (docs/specs/steps/popgen2-band.md, "How it is
- * checked"). Not part of the page.
+ * checked"). Not part of the page: the lint keeps a file named
+ * testSupport out of every module but the tests.
  */
 import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
 import type { PcaOptions } from "../../core/analyses/pca.ts";
@@ -18,6 +19,7 @@ import type {
   Progress,
   Run,
   WriteJob,
+  Written,
 } from "../../worker/protocol.ts";
 import { failureEndsLive } from "../analyses/pca/liveEnd.ts";
 import { LIVE_QUIET_MS, createAutoRuns } from "../autoRuns.ts";
@@ -39,12 +41,42 @@ import type { Band, BandPage } from "./bandLine.ts";
 
 export const FILE = "0123456789abcdef0123456789abcdef";
 
-/** A request the fake worker was given, and how the test moves it. */
-export interface Request {
+/** A request the fake worker was given, of the job `J` whose outcome
+    is `R`, and how the test moves it. */
+export interface FakeRequest<J, R> {
+  /** Its key, as the store sent it. */
   readonly key: string;
-  readonly job: Job | WriteJob;
+  /** What it asks. */
+  readonly job: J;
+  /** Gives the store a progress of it. */
   readonly progress: (p: Progress) => void;
-  readonly end: (outcome: Outcome<JobResult>) => void;
+  /** Ends it with `outcome`. */
+  readonly end: (outcome: Outcome<R>) => void;
+}
+
+/** A calculation the fake worker was given: it ends with a result of an
+    analysis. */
+export type Request = FakeRequest<Job, JobResult>;
+
+/** A write of the filtered variants the fake worker was given: it ends
+    with a file, never with the result of an analysis. */
+export type WriteRequest = FakeRequest<WriteJob, Written<Blob>>;
+
+/** The fake worker's side of a request: records it into `into`, and
+    gives its handle, number `id`, whose outcome the test settles. */
+function fakeRun<J, R>(
+  into: FakeRequest<J, R>[],
+  id: number,
+  key: string,
+  job: J,
+  onProgress: (p: Progress) => void,
+): Run<R> {
+  let end: (outcome: Outcome<R>) => void = () => undefined;
+  const outcome = new Promise<Outcome<R>>((resolve) => {
+    end = resolve;
+  });
+  into.push({ key, job, progress: onProgress, end });
+  return { id, outcome, cancel: () => undefined };
 }
 
 /** Lets the outcomes and the microtasks of the page's `sync` settle. */
@@ -54,10 +86,7 @@ export async function flush(): Promise<void> {
 
 /** A result of the PCA, or of the PCoA, of `s000` and `s001`, with
     `numVarsUsed` variants. */
-export function pcaResult(
-  method: "pca" | "pcoa",
-  numVarsUsed: number,
-): JobResult {
+export function pcaResult(method: PcaMethod, numVarsUsed: number): JobResult {
   return {
     analysis: "pca",
     method,
@@ -84,7 +113,7 @@ export interface TestPage {
   readonly gate: RunGate;
   readonly defects: Defects;
   readonly requests: Request[];
-  readonly writes: Request[];
+  readonly writes: WriteRequest[];
   tab: PageTab;
   now: number;
   stoppingSince: number | null;
@@ -97,29 +126,17 @@ export interface TestPage {
 
 export function page(summary: JobResult): TestPage {
   const requests: Request[] = [];
-  const writes: Request[] = [];
+  const writes: WriteRequest[] = [];
   let lastId = 0;
-  const sendOf =
-    (into: Request[]) =>
-    (
-      key: string,
-      job: Job | WriteJob,
-      onProgress: (p: Progress) => void,
-    ): Run<never> => {
-      lastId += 1;
-      const outcome = new Promise<Outcome<never>>((resolve) => {
-        into.push({
-          key,
-          job,
-          progress: onProgress,
-          end: resolve as (outcome: Outcome<JobResult>) => void,
-        });
-      });
-      return { id: lastId, outcome, cancel: () => undefined };
-    };
   const store = createPopgen2Store({
-    send: sendOf(requests),
-    sendWrite: sendOf(writes),
+    send: (key, job, onProgress) => {
+      lastId += 1;
+      return fakeRun(requests, lastId, key, job, onProgress);
+    },
+    sendWrite: (key, job, onProgress) => {
+      lastId += 1;
+      return fakeRun(writes, lastId, key, job, onProgress);
+    },
     appVersion: "0.1.0",
   });
   store.popneiReady("0.2.2");
@@ -180,9 +197,7 @@ export function page(summary: JobResult): TestPage {
     band: () => bandOf(pageOf(testPage), defects.getState()),
     endPass: async () => {
       await flush();
-      const pass = requests.find(
-        (r) => "analysis" in r.job && r.job.analysis === "variantsSummary",
-      );
+      const pass = requests.find((r) => r.job.analysis === "variantsSummary");
       if (pass === undefined) throw new Error("the one pass did not start");
       pass.end({
         kind: "done",
@@ -192,9 +207,7 @@ export function page(summary: JobResult): TestPage {
       await flush();
     },
     lastPca: () => {
-      const found = requests.filter(
-        (r) => "analysis" in r.job && r.job.analysis === "pca",
-      );
+      const found = requests.filter((r) => r.job.analysis === "pca");
       const last = found.at(-1);
       if (last === undefined) throw new Error("no PCA was sent");
       return last;
@@ -222,7 +235,7 @@ export function pageOf(testPage: TestPage): BandPage {
     a warning, with the LD pruning off for another when `pruningOff`. */
 export async function pcaDone(
   summary: JobResult,
-  method: "pca" | "pcoa",
+  method: PcaMethod,
   numVarsUsed: number,
   pruningOff = false,
 ): Promise<TestPage> {
