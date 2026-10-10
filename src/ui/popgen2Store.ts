@@ -39,7 +39,7 @@ import type {
 } from "../core/store.ts";
 import type { Job, JobResult } from "../worker/protocol.ts";
 
-/** The one group of the analyses the page starts by itself, which the
+/** The first group of the analyses the page starts by itself, which the
     one Stop of the box stops and its Start again starts again: the
     summary of the variants file alone, whose one pass gives the count of
     the variants and the statistics of the open file, so that the page

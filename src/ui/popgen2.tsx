@@ -7,8 +7,9 @@
  * worker client, the announcer of the status region, the reads
  * the project waits for, the analyses that start by themselves, the
  * one pass and the PCA once live, with the gate's changes under way
- * holding the PCA's quiet second, the keys of Undo and Redo taken from
- * the browser, and the column of the populations chosen at each read of
+ * holding the PCA's quiet second, the keys of Undo and Redo refused, so
+ * that they reach no action of the browser on a page with no Undo, and
+ * the column of the populations chosen at each read of
  * the individuals file, and draws the error bar and the page in two
  * roots, all in one run of this code.
  */

@@ -1581,7 +1581,7 @@ The page and each worker talk through typed messages
   were two analyses of their own started after the count
   (`docs/plans/live-stats.md`, "One pass for the count and the
   statistics"; `variantChecks` and `individualChecks` stay on
-  `popgen.html`). The summary is the whole of the page's one group,
+  `popgen.html`). The summary is the whole of the page's first group,
   `POPGEN2_CHAIN`, so that the page reads each file once: on 7 October
   2026 a count of the variants of a VCF that failed their FILTER
   followed it in the group, a second pass over the file under popnei's
@@ -1593,15 +1593,20 @@ The page and each worker talk through typed messages
   `keepsPassed`, and the result carries `filterColumn`, the variants
   that passed and failed, or `null` (`docs/plans/popnei-0.2.2.md`, "The
   FILTER failures"). The summary keeps every variant, whatever its
-  FILTER column. A member of a group can be `locked`, its project
+  FILTER column. From 10 October 2026 the PCA is the page's second
+  group, `POPGEN2_LIVE`, which starts by itself only once live (below).
+  A member of a group can be `locked`, its project
   lacking what it needs: a locked member neither starts nor holds back
-  the group, and the box offers no Start again for it; the group of
-  `popgen2.html` has none today. `autoRuns.ts` takes its analyses in groups and starts
+  the group, and the box offers no Start again for it; on
+  `popgen2.html` the one pass is never locked, and the PCA's group is
+  locked whenever the PCA is, its LD pruning with no distance or the
+  filters of the individuals keeping none among the reasons.
+  `autoRuns.ts` takes its analyses in groups and starts
   them one at a time, in their order: the one calculation worker runs one
   request at a time, and the store has no state for a request that waits
   in the client's queue, so two sent at once would both show as running,
   one of them with no progress. A group starts only once the one before
-  it is done; within a group, one that failed in a way that does not fail
+  it is done or locked; within a group, one that failed in a way that does not fail
   the next pass too, a crash or a defect of ours, does not hold back the
   next. popnei's refusal of the file, or a file the browser could not
   read again, holds back what follows, since its pass would fail the same

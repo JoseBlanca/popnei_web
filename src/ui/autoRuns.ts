@@ -7,8 +7,9 @@
  * (docs/plans/live-stats.md).
  *
  * They are given in groups, each the analyses a Stop of a group stops
- * together and its start again starts again; popgen2.html has one group,
- * which its one Stop and its Start again act on. They start one
+ * together and its start again starts again; popgen2.html has two: the
+ * one pass, which the Stop and the Start again of its box act on, and
+ * the PCA, which starts by itself only once live (below). They start one
  * at a time, in their order, since the one calculation worker runs one
  * request at a time and the store has no state for a request that waits
  * in the client's queue. An analysis starts once every one before it is
@@ -19,7 +20,7 @@
  * one should not hide the other. popnei's refusal, or a variants file the
  * browser could not read again, holds back those after it, since they
  * would fail the same way after a pass of minutes; and a group starts
- * only once every analysis of the group before it is done.
+ * only once every analysis of the group before it is done or locked.
  *
  * Each starts once for each key: not again after a failure, nor after a
  * Stop, which leaves it ready under a key it was started under and holds
@@ -262,10 +263,15 @@ function againKey(status: AnalysisStatus<unknown>): Key | null {
 /**
  * The analyses `groups` of the store, in the order they start, started
  * by `start`, which is `startAnalysis` of runs.ts on the page and gives
- * `null` when the store starts nothing. A promise it gives that rejects,
+ * `null` when the store starts nothing; and `live`, the analyses that
+ * start again by themselves once the user's Run made them live, each in
+ * one of the groups, with what their start reads, the gate's changes
+ * under way, the start through the gate at Run, the quiet second and
+ * the failures that end the live state, or `null` for none. A promise
+ * `start` gives that rejects,
  * a defect of ours, is left to the window's handler and the error bar, as
- * a Run button leaves it. A defect when a group is empty or an analysis
- * is in two places.
+ * a Run button leaves it. A defect when a group is empty, an analysis
+ * is in two places, or a live analysis is in no group.
  */
 export function createAutoRuns(deps: {
   readonly store: AutoRunStore;
