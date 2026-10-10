@@ -1984,17 +1984,19 @@ step", which the page does not have.
 
 - **The filters, which narrow those of the Variants tab** (the owner's
   answer 1 of the design). For the missing data and the MAF, a filter
-  that follows, "As in the Variants tab", is the Variants tab's, as on
-  the old page; a filter of the PCA's own is given with the smaller of
-  its value and the Variants tab's, the stricter, when the Variants tab
-  has that filter on, and alone when it has it off, but for a value of
-  1, `THRESHOLD_OFF_AT`, which is then no filter, as a threshold at 1
-  is off in the Variants tab (the owner's decision of 7 October 2026):
-  "Stricter for the PCA" starts at 1 while the Variants tab has that
-  filter off, and the choice alone must not change the key nor run the
-  same variants again (`docs/specs/steps/popgen2-pca.md`, "Its
-  filters"; since 9 October 2026, by task 6.1 of
-  `docs/plans/analyses-pca.md`). popnei takes one
+  that follows, its slider at the upper end, "as in the Variants tab",
+  is the Variants tab's, as on the old page; a filter of the PCA's own,
+  its slider below that end, is given with the smaller of its value and
+  the Variants tab's, the stricter, when the Variants tab has that
+  filter on, and alone when it has it off, but for a value of 1,
+  `THRESHOLD_OFF_AT`, which is then no filter, as a threshold at 1 is
+  off in the Variants tab (the owner's decision of 7 October 2026): until
+  10 October 2026 the radio button "Stricter for the PCA" set the value
+  1 while the Variants tab had that filter off, and the choice alone
+  was not to change the key (since 9 October 2026, by task 6.1 of
+  `docs/plans/analyses-pca.md`); the slider that replaced it sets
+  `follow` true at that end (`docs/specs/steps/popgen2-pca.md`, "Its
+  filters"). popnei takes one
   filter of each kind (`filterByMissingData` and `filterByMaf` of
   `node_modules/popnei/dist/variant.d.ts`), and the smaller value keeps
   exactly the variants the two filters one after the other would, since

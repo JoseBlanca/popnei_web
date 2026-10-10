@@ -1,12 +1,13 @@
 /**
- * The fields of "Stricter for the PCA" of the PCA tab of popgen2.html
- * (docs/specs/steps/popgen2-pca.md, "Its filters"): the upper end of the
- * missing data's and of the MAF's field, the Variants tab's value or 1
- * while it has that threshold off, the decimals the field takes, the
- * value it shows, never looser than the one the PCA uses, and the lines
- * under it, of a number refused and of the Variants tab stricter than the
- * value set here. Pure, so that a test in node checks them; task 6.3 of
- * docs/plans/analyses-pca.md draws them.
+ * The sliders of the PCA's own missing data and MAF on the PCA tab of
+ * popgen2.html (docs/specs/steps/popgen2-pca.md, "Its filters"): their
+ * ends, from 0, or 0.5 for the MAF, to the Variants tab's value or 1
+ * while it has that threshold off; their step, of the decimals of the
+ * Variants tab's box of that threshold; the value shown, the upper end
+ * while the PCA follows the Variants tab and never looser than the one
+ * the PCA uses; the words of that value; the command of a move; and the
+ * line under a slider while the Variants tab is stricter than the value
+ * set there. Pure, so that a test in node checks them.
  */
 
 import { pcaOptions } from "../../../core/analyses/pca.ts";
@@ -21,42 +22,51 @@ import type {
   VariantsSummaryResult,
 } from "../../../worker/protocol.ts";
 import { numberText } from "../../widgets/committedNumber.ts";
-import type { NumberRefusal } from "../../widgets/committedNumber.ts";
-import { thresholdRefusedText } from "../../steps/variants/words.ts";
+import type { OptionCommand } from "../optionCommand.ts";
+import { followCommand, ownValueCommand, stricterCommand } from "./commands.ts";
+import type { Popgen2CommandPage } from "./commands.ts";
 import { methodName } from "./words.ts";
 
 /** The two filters the PCA can make stricter than the Variants tab's. */
 export type StricterKind = "missing_data" | "maf";
 
-/** The fewest decimals a field of "Stricter for the PCA" takes, as the
-    fields of the old panel. */
+/** The fewest decimals a slider moves by, a step of 0.01 at the most. */
 const LEAST_DECIMALS = 2;
 
-/** The field of a filter made stricter for the PCA. */
+/** The lower end of the slider of the MAF: the major allele frequency of
+    a variant of two alleles is never below it. */
+const MAF_SLIDER_MIN = 0.5;
+
+/** The slider of a filter of the PCA's own. */
 export interface StricterBound {
   /** The Variants tab's value of that threshold, or `null` while it is
       off. */
   readonly tab: number | null;
-  /** The upper end of the field: the Variants tab's value, or 1 while it
-      has that threshold off. */
+  /** The lower end: 0 for the missing data; for the MAF 0.5, or the
+      upper end when that is lower, as a variant of more than two alleles
+      allows. */
+  readonly min: number;
+  /** The upper end: the Variants tab's value, or 1 while it has that
+      threshold off. At it, the PCA follows the Variants tab. */
   readonly max: number;
-  /** The most decimals a number typed may have: those of the step of the
-      Variants tab's box of that threshold, three at most as its box, those
-      of the Variants tab's value, and two at least. */
+  /** The decimals of a value: those of the step of the Variants tab's
+      box of that threshold, three at most as its box, those of the
+      Variants tab's value, and two at least. */
   readonly decimals: number;
-  /** The number the field shows: the PCA's own value, or the Variants
-      tab's when that is stricter, which the PCA then uses. */
+  /** What a key moves it by: 10 to the minus `decimals`. */
+  readonly step: number;
+  /** The value it shows: the upper end while the PCA follows the
+      Variants tab; otherwise the PCA's own value, or the Variants tab's
+      when that is stricter, which the PCA then uses. */
   readonly shown: number;
 }
 
 /**
- * The field of the filter `kind` made stricter for the PCA in `p`, with
- * `stepDecimals`, the decimals of the step of the Variants tab's box of
- * that threshold, which the axis of its histogram gives (`thresholdStep`
- * of src/core/thresholds.ts), or `null` before the one pass has drawn the
- * histogram. Read whether the PCA follows the Variants tab or not: while
- * it follows, `shown` is its own value kept in the project, bounded by the
- * Variants tab.
+ * The slider of the filter `kind` of the PCA in `p`, with `stepDecimals`,
+ * the decimals of the step of the Variants tab's box of that threshold,
+ * which the axis of its histogram gives (`thresholdStep` of
+ * src/core/thresholds.ts), or `null` before the one pass has drawn the
+ * histogram.
  */
 export function stricterBound(
   p: Project,
@@ -64,8 +74,9 @@ export function stricterBound(
   stepDecimals: number | null,
 ): StricterBound {
   const tab = tabValue(p, kind);
-  const own = ownValue(p, kind);
+  const { follow, value: own } = ownOf(p, kind);
   const max = tab ?? THRESHOLD_OFF_AT;
+  const min = kind === "maf" ? Math.min(MAF_SLIDER_MIN, max) : 0;
   const decimals = Math.max(
     LEAST_DECIMALS,
     stepDecimals === null
@@ -73,35 +84,83 @@ export function stricterBound(
       : Math.min(stepDecimals, VARIANT_THRESHOLD_DECIMALS),
     tab === null ? 0 : decimalsOf(tab),
   );
-  return { tab, max, decimals, shown: Math.min(own, max) };
-}
-
-/** The lines under a field of "Stricter for the PCA". */
-export interface StricterLines {
-  /** The line of a number the field refused, `refusal`, with the number
-      it keeps, `kept`, as `refusedText` of the number field takes it. */
-  readonly refusedText: (refusal: NumberRefusal, kept: number) => string;
-  /** The line of the Variants tab stricter than the PCA's own value,
-      which the PCA then uses; `null` otherwise. */
-  readonly tabStricter: string | null;
-  /** The line that the PCA's own value of 1, while the Variants tab has
-      that threshold off, keeps every variant, "1 keeps every variant:
-      type a lower value to filter."; `null` otherwise. */
-  readonly keepsAll: string | null;
+  return {
+    tab,
+    min,
+    max,
+    decimals,
+    step: Number(`1e-${String(decimals)}`),
+    shown: follow ? max : Math.min(own, max),
+  };
 }
 
 /**
- * The lines under the field of the filter `kind` made stricter for the PCA
- * in `p`, the method `method` naming the PCA or the PCoA: a number above
- * the Variants tab's value, "0.2 is more than the 0.1 of the Variants tab;
- * the maximum proportion of missing genotypes for the PCA stays 0.05.";
- * any other refusal, and a number above 1 while the Variants tab has that
- * threshold off, the old panel's line, "1.5 is more than 1; the threshold
- * stays 0.05."; and, while the Variants tab is stricter than the PCA's
- * own value, "The Variants tab keeps at most 0.03, stricter than the 0.05
- * set here, so the PCA uses 0.03."; and, while the Variants tab has the
- * threshold off and the PCA's own value is 1, which is then no filter,
- * "1 keeps every variant: type a lower value to filter.".
+ * The words of the value `value` of the slider `bound`, shown beside its
+ * name and read by a screen reader: at the upper end, "0.1, as in the
+ * Variants tab", or "Off, as in the Variants tab" while the Variants tab
+ * has that threshold off; below it, the value rounded to the slider's
+ * decimals, "0.05".
+ */
+export function stricterValueText(bound: StricterBound, value: number): string {
+  if (value >= bound.max) {
+    return bound.tab === null
+      ? `Off, ${AS_IN_THE_TAB}`
+      : `${numberText(bound.tab)}, ${AS_IN_THE_TAB}`;
+  }
+  return numberText(rounded(value, bound.decimals));
+}
+
+/** The words of a slider at its upper end, after its value. */
+const AS_IN_THE_TAB = "as in the Variants tab";
+
+/**
+ * The command of a move of the slider of the filter `kind` of the PCA in
+ * `p` to `value`, with `stepDecimals` as `stricterBound` takes it, on the
+ * page `page`: at the upper end, the filter set back to as in the
+ * Variants tab, `follow` true, which stays so whatever the Variants tab
+ * becomes; below it, from the upper end, `stricterCommand`, `follow`
+ * false and the value in one step; from a value of the PCA's own, the
+ * value alone. The value is rounded to the slider's decimals. A command
+ * that changes nothing gives the project it was given.
+ */
+export function stricterMoveCommand(
+  p: Project,
+  kind: StricterKind,
+  value: number,
+  stepDecimals: number | null,
+  page: Popgen2CommandPage,
+): OptionCommand {
+  const bound = stricterBound(p, kind, stepDecimals);
+  if (value >= bound.max) return followCommand(kind, true, page);
+  const given = rounded(value, bound.decimals);
+  if (ownOf(p, kind).follow) return stricterCommand(kind, given, page);
+  return ownValueCommand(
+    kind === "missing_data"
+      ? { kind, maxAllowedMissingRate: given }
+      : { kind, maxAllowedMaf: given },
+    page,
+  );
+}
+
+/** `value` rounded to `decimals` decimals, as a number a program reads
+    back the same: 0.073 for 0.07300000000000001. */
+function rounded(value: number, decimals: number): number {
+  const scale = 10 ** decimals;
+  return Math.round(value * scale) / scale;
+}
+
+/** The lines under a slider of the PCA's own. */
+export interface StricterLines {
+  /** The line of the Variants tab stricter than the PCA's own value,
+      which the PCA then uses; `null` otherwise. */
+  readonly tabStricter: string | null;
+}
+
+/**
+ * The lines under the slider of the filter `kind` of the PCA in `p`, the
+ * method `method` naming the PCA or the PCoA: while the Variants tab is
+ * stricter than the PCA's own value, "The Variants tab keeps at most
+ * 0.03, stricter than the 0.05 set here, so the PCA uses 0.03.".
  */
 export function stricterLines(
   p: Project,
@@ -109,31 +168,14 @@ export function stricterLines(
   method: PcaMethod,
 ): StricterLines {
   const tab = tabValue(p, kind);
-  const own = ownValue(p, kind);
+  const { follow, value: own } = ownOf(p, kind);
   const name = methodName(method);
-  const what = WHAT[kind];
-  const refusedText = (refusal: NumberRefusal, kept: number): string =>
-    refusal.kind === "aboveMax" && tab !== null
-      ? `${refusal.typed} is more than the ${numberText(tab)} of the Variants tab; ${what} for the ${name} stays ${numberText(kept)}.`
-      : thresholdRefusedText(refusal, kept);
   const tabStricter =
-    tab !== null && tab < own
+    !follow && tab !== null && tab < own
       ? `The Variants tab keeps at most ${numberText(tab)}, stricter than the ${numberText(own)} set here, so the ${name} uses ${numberText(tab)}.`
       : null;
-  const keepsAll = tab === null && own >= THRESHOLD_OFF_AT ? KEEPS_ALL : null;
-  return { refusedText, tabStricter, keepsAll };
+  return { tabStricter };
 }
-
-/** The line under a field at 1 while the Variants tab has that threshold
-    off, where 1 is no filter (docs/specs/steps/popgen2-pca.md, "Its
-    filters"). */
-const KEEPS_ALL = "1 keeps every variant: type a lower value to filter.";
-
-/** What each field sets, as its line of a refusal names it. */
-const WHAT: Readonly<Record<StricterKind, string>> = Object.freeze({
-  missing_data: "the maximum proportion of missing genotypes",
-  maf: "the maximum major allele frequency",
-});
 
 /** The Variants tab's value of the threshold `kind` in `p`, `null` while
     it is off. */
@@ -155,13 +197,19 @@ function tabValue(p: Project, kind: StricterKind): number | null {
   }
 }
 
-/** The PCA's own value of the filter `kind` in `p`, kept in the project
-    whether it follows the Variants tab or not. */
-function ownValue(p: Project, kind: StricterKind): number {
+/** Whether the PCA follows the Variants tab in the filter `kind` in `p`,
+    and its own value, kept in the project whether it follows or not. */
+function ownOf(
+  p: Project,
+  kind: StricterKind,
+): { readonly follow: boolean; readonly value: number } {
   const o = pcaOptions(p, "popgen2");
   return kind === "missing_data"
-    ? o.missingData.maxAllowedMissingRate
-    : o.maf.maxAllowedMaf;
+    ? {
+        follow: o.missingData.follow,
+        value: o.missingData.maxAllowedMissingRate,
+      }
+    : { follow: o.maf.follow, value: o.maf.maxAllowedMaf };
 }
 
 /** The decimals `value` is written with: 2 for 0.05, 4 for 0.0035. */

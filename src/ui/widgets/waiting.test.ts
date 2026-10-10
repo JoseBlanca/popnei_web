@@ -17,6 +17,7 @@ import { Checkbox } from "./Checkbox.tsx";
 import { NumberField } from "./NumberField.tsx";
 import { RadioGroup } from "./RadioGroup.tsx";
 import { Select } from "./Select.tsx";
+import { Slider } from "./Slider.tsx";
 import { Switch } from "./Switch.tsx";
 import { ThresholdSlider } from "./ThresholdSlider.tsx";
 
@@ -326,6 +327,21 @@ const CONTROLS: readonly {
       }),
   },
   {
+    name: "a slider",
+    words: "Maximum MAF",
+    draw: (waiting) =>
+      createElement(Slider, {
+        label: "Maximum MAF",
+        minValue: 0.5,
+        maxValue: 0.95,
+        step: 0.01,
+        value: 0.9,
+        valueText: String,
+        waiting,
+        onChange: () => undefined,
+      }),
+  },
+  {
     name: "a number field",
     words: "Distance",
     draw: (waiting) =>
@@ -497,6 +513,80 @@ describe("AP10 D1 the select of the method that waits while a PCA runs", () => {
       );
     });
     expect(document.querySelector('[role="listbox"]')).not.toBeNull();
+  });
+});
+
+/** Draws the slider of the PCA's own missing data, given the reason or
+    not, and keeps the values it gives at the end of a move. */
+function drawSlider(waiting: string | null, given: number[]): HTMLInputElement {
+  draw(
+    createElement(Slider, {
+      label: "Maximum proportion of missing genotypes for the PCA",
+      minValue: 0,
+      maxValue: 0.1,
+      step: 0.001,
+      value: 0.05,
+      valueText: (value) =>
+        value >= 0.1 ? "0.1, as in the Variants tab" : String(value),
+      waiting,
+      onChange: (value) => given.push(value),
+    }),
+  );
+  const [input] = inputs();
+  if (input === undefined) throw new Error("no input");
+  return input;
+}
+
+describe("AP10 D2 the slider of a filter of the PCA's own", () => {
+  test("its name and its value drawn, the value for a screen reader the same words; an arrow key gives the value a step away", () => {
+    const given: number[] = [];
+    const input = drawSlider(null, given);
+    expect(container.textContent).toContain(
+      "Maximum proportion of missing genotypes for the PCA",
+    );
+    expect(container.querySelector("output")?.textContent).toBe("0.05");
+    expect(input.getAttribute("aria-valuetext")).toBe("0.05");
+    expect(input.hasAttribute("aria-disabled")).toBe(false);
+    act(() => {
+      input.focus();
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+      );
+      input.dispatchEvent(
+        new KeyboardEvent("keyup", { key: "ArrowRight", bubbles: true }),
+      );
+    });
+    expect(given).toHaveLength(1);
+    expect(given[0]).toBeCloseTo(0.051, 10);
+  });
+
+  test("waiting: its input aria-disabled and in the order of the Tab key, described by the reason; no key gives a value", () => {
+    const given: number[] = [];
+    const input = drawSlider(REASON, given);
+    expect(input.getAttribute("aria-disabled")).toBe("true");
+    expect(input.disabled).toBe(false);
+    expect(describedWords(input)).toBe(REASON);
+    act(() => {
+      input.focus();
+    });
+    expect(tooltipShown()).toBe(REASON);
+    for (const key of [
+      "ArrowLeft",
+      "ArrowRight",
+      "PageUp",
+      "PageDown",
+      "Home",
+      "End",
+    ]) {
+      act(() => {
+        input.dispatchEvent(
+          new KeyboardEvent("keydown", { key, bubbles: true }),
+        );
+        input.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
+      });
+    }
+    expect(given).toEqual([]);
+    expect(container.querySelector("output")?.textContent).toBe("0.05");
   });
 });
 

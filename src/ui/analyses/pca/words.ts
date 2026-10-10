@@ -62,51 +62,19 @@ export function popgen2FiltersLine(method: PcaMethod): string {
   return `The ${methodName(method)} reads the variants the Variants tab keeps. Its own missing data and MAF filters can only be stricter.`;
 }
 
-/** The radio button of a missing data or a MAF filter of popgen2.html
-    that follows the Variants tab, with the Variants tab's value as its
-    box writes it, "As in the Variants tab: 0.1", or "As in the Variants
-    tab: off" while that threshold is off. */
-export function tabFollowLabel(
+/** The name of the slider of a missing data or a MAF filter of the
+    PCA's own on popgen2.html, by the method: "Maximum proportion of
+    missing genotypes for the PCA", "Maximum major allele frequency for
+    the PCoA". */
+export function stricterSliderLabel(
   kind: "missing_data" | "maf",
-  filters: readonly ProjectVariantFilter[],
-): string {
-  const start = "As in the Variants tab: ";
-  const filter = filters.find((one) => one.kind === kind);
-  switch (filter?.kind) {
-    case undefined:
-      return `${start}off`;
-    case "missing_data":
-      return `${start}${numberText(filter.maxAllowedMissingRate)}`;
-    case "maf":
-      return `${start}${numberText(filter.maxAllowedMaf)}`;
-    case "passed":
-    case "obs_het":
-    case "ld":
-      throw new Error(
-        `popnei_web defect: the filter of the kind ${kind} was found as ${filter.kind}.`,
-      );
-  }
-}
-
-/** The radio button of a filter made stricter on popgen2.html: "Stricter
-    for the PCA", "Stricter for the PCoA". */
-export function stricterLabel(method: PcaMethod): string {
-  return `Stricter for the ${methodName(method)}`;
-}
-
-/** The label of the field of a filter made stricter, with its upper end
-    `max`, the Variants tab's value or 1: "Maximum proportion of missing
-    genotypes, from 0 to 0.1", "Maximum major allele frequency, from 0 to
-    0.95". */
-export function stricterFieldLabel(
-  kind: "missing_data" | "maf",
-  max: number,
+  method: PcaMethod,
 ): string {
   const what =
     kind === "missing_data"
       ? "Maximum proportion of missing genotypes"
       : "Maximum major allele frequency";
-  return `${what}, from 0 to ${numberText(max)}`;
+  return `${what} for the ${methodName(method)}`;
 }
 
 /** The kinds of filter the analysis has of its own, in the order of the

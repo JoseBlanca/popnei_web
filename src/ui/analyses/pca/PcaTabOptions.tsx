@@ -1,35 +1,29 @@
 /**
  * The options of the PCA tab of popgen2.html, above its Run button in
  * every state (docs/specs/steps/popgen2-pca.md, "The PCA tab" and "Its
- * filters"): the method, a drop-down list; under the heading "Filters of the variants for
- * the PCA", the missing data and the MAF, each two radio buttons, "As in
- * the Variants tab: 0.1" and "Stricter for the PCA", the second with its
- * field under it, whose upper end is the Variants tab's value, or 1
- * while that threshold is off, and which never shows a value looser
- * than the one the PCA uses; and the LD pruning, a switch with its r²
- * and its distance under it while it is on. Every "PCA" is "PCoA" under
- * the PCoA. Each choice and each number committed is one command, a step
- * of Undo, with this page's description.
+ * filters"): the method, a drop-down list; under the heading "Filters of
+ * the variants for the PCA", the missing data and the MAF, each a
+ * slider from 0, or 0.5 for the MAF, to the Variants tab's value, or 1
+ * while that threshold is off, whose upper end is "as in the Variants
+ * tab" and which never shows a value looser than the one the PCA uses;
+ * and the LD pruning, a switch with its r² and its distance under it
+ * while it is on. Every "PCA" is "PCoA" under the PCoA. Each choice, each
+ * number committed and each move of a slider is one command, a step of
+ * Undo, with this page's description.
  *
- * Choosing "Stricter for the PCA" sends one command, `stricterCommand`,
- * at the upper end of the field, so that the choice alone changes no
- * variant the PCA reads; a number typed over the one the field shows is
- * sent though it is the same, so that the PCA keeps it as its own when
- * the Variants tab is loosened; a field at 1 while the Variants tab has
- * that threshold off says that 1 keeps every variant. Under the distance
- * a line says how to choose it. While the LD pruning has no distance, the
- * reason of the lock, in full, stands under that field as a line of what
- * is needed, describes it, and is announced when the switch turned on
- * makes it appear, since the focus is then on the switch; Run beside it
- * says only a short line.
+ * Under the distance a line says how to choose it. While the LD pruning
+ * has no distance, the reason of the lock, in full, stands under that
+ * field as a line of what is needed, describes it, and is announced when
+ * the switch turned on makes it appear, since the focus is then on the
+ * switch; Run beside it says only a short line.
  *
  * While a PCA runs every option waits, with "Stop the PCA to change the
  * filters." as its tooltip and its description (`useFiltersLock`), so
  * that no change leaves the PCA behind.
  *
- * The decimals of each field are those of the Variants tab's box of that
- * threshold, from the axis of its histogram once the one pass has read
- * the file to the end, and before that those of the Variants tab's
+ * The step of each slider is of the decimals of the Variants tab's box of
+ * that threshold, from the axis of its histogram once the one pass has
+ * read the file to the end, and before that those of the Variants tab's
  * value; two at least.
  */
 import { useId } from "react";
@@ -48,30 +42,29 @@ import {
   LD_LINE,
   LD_SWITCH,
   MAF_LINE,
-  MAF_SWITCH,
   MISSING_DATA_LINE,
-  MISSING_DATA_SWITCH,
   R2_LABEL,
   distanceRefusedText,
   r2RefusedText,
 } from "../../steps/variants/words.ts";
 import { useAppState, useStore } from "../../store.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
-import { RadioGroup } from "../../widgets/RadioGroup.tsx";
 import { Select } from "../../widgets/Select.tsx";
+import { Slider } from "../../widgets/Slider.tsx";
 import { Switch } from "../../widgets/Switch.tsx";
 import type { OptionCommand } from "../optionCommand.ts";
 import { useFiltersLock } from "../../variants/filtersLock.ts";
 import { summaryStatus } from "../../variants/words.ts";
-import {
-  followCommand,
-  methodCommand,
-  ownValueCommand,
-  stricterCommand,
-} from "./commands.ts";
+import { followCommand, methodCommand, ownValueCommand } from "./commands.ts";
 import type { Popgen2CommandPage } from "./commands.ts";
 import styles from "./PcaTabOptions.module.css";
-import { stepDecimalsOf, stricterBound, stricterLines } from "./stricter.ts";
+import {
+  stepDecimalsOf,
+  stricterBound,
+  stricterLines,
+  stricterMoveCommand,
+  stricterValueText,
+} from "./stricter.ts";
 import type { StricterKind } from "./stricter.ts";
 import {
   DISTANCE_HINT,
@@ -79,18 +72,13 @@ import {
   METHOD_LABEL,
   filtersHeading,
   popgen2FiltersLine,
-  stricterFieldLabel,
-  stricterLabel,
-  tabFollowLabel,
+  stricterSliderLabel,
 } from "./words.ts";
 
 /** The r² takes two decimals, and an arrow key moves it by 0.01, as on
     the old panel. */
 const R2_STEP = 0.01;
 const R2_DECIMALS = 2;
-
-/** The two choices of a missing data or a MAF filter. */
-type StricterChoice = "follow" | "stricter";
 
 /** The options of the PCA tab. */
 export function PcaTabOptions(): React.JSX.Element {
@@ -138,25 +126,19 @@ export function PcaTabOptions(): React.JSX.Element {
         </p>
         <StricterFilter
           kind="missing_data"
-          label={MISSING_DATA_SWITCH}
           line={MISSING_DATA_LINE}
-          stricter={!options.missingData.follow}
           page={page}
           describedBy={lineId}
           lock={lock}
           onCommand={apply}
-          onRefused={announce}
         />
         <StricterFilter
           kind="maf"
-          label={MAF_SWITCH}
           line={MAF_LINE}
-          stricter={!options.maf.follow}
           page={page}
           describedBy={lineId}
           lock={lock}
           onCommand={apply}
-          onRefused={announce}
         />
         <div className={classOf(styles, "filter")}>
           <Switch
@@ -243,115 +225,70 @@ export function PcaTabOptions(): React.JSX.Element {
 interface StricterFilterProps {
   /** The filter. */
   readonly kind: StricterKind;
-  /** The name of its two radio buttons, as on the old panel. */
-  readonly label: string;
-  /** The line of what popnei filters on, under the field. */
+  /** The line of what popnei filters on, under the slider. */
   readonly line: string;
-  /** Whether it is made stricter for the PCA, `follow` false. */
-  readonly stricter: boolean;
   /** The page of the commands, with the method of the project. */
   readonly page: Popgen2CommandPage;
-  /** The id of the line under the heading, which describes the group. */
+  /** The id of the line under the heading, which describes the slider
+      after its own lines. */
   readonly describedBy: string;
   /** The reason the filter waits, while a PCA runs, or `null`. */
   readonly lock: string | null;
   /** Applies a command of the user. */
   readonly onCommand: (step: OptionCommand) => void;
-  /** Announces the line of a number refused. */
-  readonly onRefused: (text: string) => void;
 }
 
-/** A missing data or a MAF filter: its two radio buttons, and its field
-    with its lines while it is made stricter. */
+/** A missing data or a MAF filter: its slider, and its lines under it. */
 function StricterFilter({
   kind,
-  label,
   line,
-  stricter,
   page,
   describedBy,
   lock,
   onCommand,
-  onRefused,
 }: StricterFilterProps): React.JSX.Element {
-  const filters = useAppState((s) => s.project.filters);
+  const store = useStore();
   const stepDecimals = useAppState((s) => stepDecimalsIn(s, kind));
   const project = useAppState((s) => s.project);
   const bound = stricterBound(project, kind, stepDecimals);
   const lines = stricterLines(project, kind, page.method);
   const lineId = useId();
   const tabStricterId = useId();
-  const keepsAllId = useId();
-  const items: readonly {
-    readonly id: StricterChoice;
-    readonly label: string;
-  }[] = [
-    { id: "follow", label: tabFollowLabel(kind, filters) },
-    { id: "stricter", label: stricterLabel(page.method) },
-  ];
-  const send = (value: number): void => {
-    onCommand(
-      ownValueCommand(
-        kind === "missing_data"
-          ? { kind, maxAllowedMissingRate: value }
-          : { kind, maxAllowedMaf: value },
-        page,
-      ),
-    );
-  };
   return (
     <div className={classOf(styles, "filter")}>
-      <RadioGroup
-        label={label}
-        items={items}
-        value={stricter ? "stricter" : "follow"}
-        describedBy={describedBy}
+      <Slider
+        label={stricterSliderLabel(kind, page.method)}
+        minValue={bound.min}
+        maxValue={bound.max}
+        step={bound.step}
+        value={bound.shown}
+        valueText={(value) => stricterValueText(bound, value)}
+        describedBy={[
+          ...(lines.tabStricter === null ? [] : [tabStricterId]),
+          lineId,
+          describedBy,
+        ].join(" ")}
         waiting={lock}
-        onChange={(choice) => {
+        onChange={(value) => {
           onCommand(
-            choice === "follow"
-              ? followCommand(kind, true, page)
-              : stricterCommand(kind, bound.max, page),
+            stricterMoveCommand(
+              store.getState().project,
+              kind,
+              value,
+              stepDecimals,
+              page,
+            ),
           );
         }}
       />
-      {stricter && (
-        <div className={classOf(styles, "own")}>
-          <NumberField
-            label={stricterFieldLabel(kind, bound.max)}
-            value={bound.shown}
-            minValue={0}
-            maxValue={bound.max}
-            step={Number(`1e-${String(bound.decimals)}`)}
-            decimals={bound.decimals}
-            waiting={lock}
-            describedBy={[
-              ...(lines.keepsAll === null ? [] : [keepsAllId]),
-              ...(lines.tabStricter === null ? [] : [tabStricterId]),
-              lineId,
-            ].join(" ")}
-            refusedText={lines.refusedText}
-            onRefused={onRefused}
-            onChange={send}
-            // The value the field shows typed again: the Variants tab's,
-            // stricter than the PCA's own, is then kept as the PCA's own.
-            onSameCommitted={send}
-          />
-          {lines.keepsAll !== null && (
-            <p id={keepsAllId} className={classOf(styles, "line")}>
-              {lines.keepsAll}
-            </p>
-          )}
-          {lines.tabStricter !== null && (
-            <p id={tabStricterId} className={classOf(styles, "line")}>
-              {lines.tabStricter}
-            </p>
-          )}
-          <p id={lineId} className={classOf(styles, "muted")}>
-            {line}
-          </p>
-        </div>
+      {lines.tabStricter !== null && (
+        <p id={tabStricterId} className={classOf(styles, "line")}>
+          {lines.tabStricter}
+        </p>
       )}
+      <p id={lineId} className={classOf(styles, "muted")}>
+        {line}
+      </p>
     </div>
   );
 }

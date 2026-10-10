@@ -1,0 +1,80 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* As wide as its column, and no wider than a field of a number would
+   be read across: 20 rem. */
+.slider {
+  display: grid;
+  gap: var(--space-1);
+  inline-size: min(100%, 20rem);
+}
+
+/* The name, and the value at the end of its line; the value goes under
+   the name when the line is too narrow for both. */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  justify-content: space-between;
+}
+
+.label {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.output {
+  font-variant-numeric: tabular-nums;
+}
+
+/* As high as a target, so that a press near the line reaches it; the
+   line itself drawn thin in its middle. React Aria makes it the box the
+   thumb is placed in. */
+.track {
+  position: relative;
+  inline-size: 100%;
+  block-size: var(--target-min);
+}
+
+.track::before {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline: 0;
+  block-size: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-border);
+  content: "";
+  transform: translateY(-50%);
+}
+
+/* React Aria places it at the value and centres it there. */
+.thumb {
+  inset-block-start: 50%;
+  inline-size: var(--target-min);
+  block-size: var(--target-min);
+  border: 2px solid var(--color-background);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  cursor: ew-resize;
+}
+
+.thumb[data-dragging] {
+  background: var(--color-text);
+}
+
+.thumb[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* A slider that waits: its words and its thumb in the colour of a
+   control that cannot be used, and no cursor of a drag, while it keeps
+   the focus and the tooltip of its reason. */
+.waiting .label,
+.waiting .output {
+  color: var(--color-text-disabled);
+}
+
+.waiting .thumb {
+  background: var(--color-text-disabled);
+  cursor: default;
+}

@@ -169,9 +169,9 @@ that names it in the tooltip and in the status region:
 | the FILTER box ticked or not | as `popgen2-filters.md` gives them |
 | a column chosen in "Column of the populations", or None | "the column of the populations changed" |
 | the method of the PCA | "the method of the PCA changed" |
-| "Stricter for the PCA" chosen for its missing data or its MAF, one command, `stricterCommand`, that sets `follow` false and the value together | "the missing data filter of the PCA was made stricter", "the MAF filter of the PCA was made stricter" |
-| "As in the Variants tab" chosen again | "the missing data filter of the PCA was set back to as in the Variants tab", "the MAF filter …" |
-| a value of a filter made stricter, typed | "the missing data filter of the PCA changed", "the MAF filter of the PCA changed" |
+| the slider of its missing data or its MAF moved below its upper end from that end, one command, `stricterCommand`, that sets `follow` false and the value together | "the missing data filter of the PCA was made stricter", "the MAF filter of the PCA was made stricter" |
+| the same moved to its upper end | "the missing data filter of the PCA was set back to as in the Variants tab", "the MAF filter …" |
+| the same moved from a value below its upper end to another | "the missing data filter of the PCA changed", "the MAF filter of the PCA changed" |
 | the LD pruning of the PCA turned on or off | "the LD pruning of the PCA was turned on", "… was turned off" |
 | its r² or its distance typed | "the LD pruning of the PCA changed" |
 | "Colour the points by" | "the colour of the points of the PCA changed" |
@@ -341,75 +341,69 @@ tab keeps. Its own missing data and MAF filters can only be stricter."
 Every "PCA" of this part is "PCoA" under the PCoA, as in the old panel.
 Then three, in this order:
 
-- **Missing data** and **MAF**, each a group of two radio buttons,
-  named as on the old panel, "Filter the variants by missing data" and
-  "Filter the variants by major allele frequency (MAF)":
-  - "As in the Variants tab: 0.1", chosen by default, the threshold of
-    the Variants tab as its box writes it, or "As in the Variants tab:
-    off" while that threshold is off;
-  - "Stricter for the PCA", which shows its number field under it:
-    "Maximum proportion of missing genotypes, from 0 to 0.1" and
-    "Maximum major allele frequency, from 0 to 0.95", the upper end the
-    Variants tab's value, or 1 while that threshold is off. The field
-    takes as many decimals as the box of that threshold in the Variants
-    tab, which rounds to the step of its axis (`popgen2-filters.md`, "A
-    number with many decimals"), and at least two: three on the missing
-    rate of `panel.nei`, whose axis steps by 0.001. Under the field, the
-    line of the Variants step that says what popnei filters on, as on
-    the old panel. While the Variants tab has the threshold off, and the
-    field shows 1, a line under it says that 1 is no filter: "1 keeps
-    every variant: type a lower value to filter." (since 10 October
-    2026, by the review of work package 6 of the plan, which found
-    nothing on the screen saying so).
+- **Missing data** and **MAF**, each a slider, React Aria's `Slider`,
+  with its name above it and its value at the end of the name's line:
+  "Maximum proportion of missing genotypes for the PCA", from 0 to the
+  Variants tab's value of that threshold; and "Maximum major allele
+  frequency for the PCA", from 0.5 to the Variants tab's value, or from
+  that value when it is below 0.5, as a variant of more than two alleles
+  allows. While the Variants tab has the threshold off, the slider ends
+  at 1. Sliders since 10 October 2026, as the owner asked on trying the
+  page (`docs/plans/analyses-pca.md`, work package 10, round 1); before,
+  each was two radio buttons, "As in the Variants tab: 0.1" and
+  "Stricter for the PCA", the second with a number field.
 
-  Choosing "Stricter for the PCA" sends one command, `stricterCommand`
-  of `src/ui/analyses/pca/commands.ts`, with `follow` false and the
-  upper end of the field as the value: the Variants tab's, or 1 while
-  that threshold is off. So the choice alone never changes the variants
-  the PCA reads, nor its key, and a result of the PCA stays on the
-  screen; the user then lowers the number. While the Variants tab has
-  the threshold off, the PCA's own value of 1 is no filter, as a
-  threshold at 1 is off in the Variants tab (`THRESHOLD_OFF_AT` of
-  `src/core/project.ts`, the owner's decision of 7 October 2026), so
-  the PCA reads as the Variants tab until the user types a number below
-  1 (`pcaFilters`, `docs/specs/analyses/pca.md`, "On popgen2.html").
-  Until 9 October 2026 that value was a filter at 1, a new key for the
-  same variants of the missing data and a second run of minutes; the
-  review of work package 2 of the plan found it, and task 6.1 settled
-  it so. A value typed before,
-  and set back by "As in the Variants tab", is not brought back: a value
-  kept looser than the Variants tab of now would be shown as the
-  Variants tab's anyway. Choosing "As in the Variants tab" sends
-  `follow` true alone; the field goes.
+  The slider starts at its upper end, the Variants tab's value, which
+  filters nothing more: the PCA reads the variants as the Variants tab
+  keeps them, `follow` true. Its value then reads "0.1, as in the
+  Variants tab", or "Off, as in the Variants tab" while that threshold
+  is off; below the end, the PCA's own value, "0.05". A screen reader
+  reads the same words as the slider's value. Under the slider, the line
+  of the Variants step that says what popnei filters on, as on the old
+  panel.
 
-  The upper end and the decimals of the field are `stricterBound` of
+  It moves by the step of the Variants tab's box of that threshold,
+  which rounds to the step of its axis (`popgen2-filters.md`, "A number
+  with many decimals"), and by 0.01 at the most: 0.001 on the missing
+  rate of `panel.nei`, whose axis steps by 0.001, and 0.01 on its MAF.
+  The arrow keys move it a step, Page Up and Page Down a tenth of its
+  range, Home and End to its ends, as React Aria's slider does.
+
+  A move becomes a command when it ends: when the pointer that dragged
+  the thumb is released, and at each press of a key. At the upper end
+  it sends `followCommand` with `follow` true, "set back to as in the
+  Variants tab"; below it, from the upper end, `stricterCommand` of
+  `src/ui/analyses/pca/commands.ts`, `follow` false and the value in
+  one step, "made stricter"; below it, from a value of the PCA's own,
+  the value alone, "changed". So the upper end is always "as in the
+  Variants tab", whatever the Variants tab later becomes, and a thumb
+  dragged there and back changes no key. While the Variants tab has the
+  threshold off, the end at 1 is no filter, as a threshold at 1 is off
+  in the Variants tab (`THRESHOLD_OFF_AT` of `src/core/project.ts`, the
+  owner's decision of 7 October 2026), and a PCA's own value of 1, left
+  by "Stricter for the PCA" before 10 October 2026, is no filter either
+  (`pcaFilters`, `docs/specs/analyses/pca.md`, "On popgen2.html").
+  Each key pressed is one step of Undo, where a threshold of the
+  Variants tab makes one change of a run of the keys; the owner has
+  asked for Undo to go (round 1, item 4), so the page does not gather
+  them.
+
+  The ends, the step and the value shown are `stricterBound` of
   `src/ui/analyses/pca/stricter.ts`, from the project and the decimals
   of the step of the Variants tab's box of that threshold, which the
   axis of its histogram gives once the one pass has drawn it; before
-  that, the decimals of the Variants tab's value, and at least two.
-
-  A number above the upper end is refused with the line under the field,
-  "0.2 is more than the 0.1 of the Variants tab; the maximum proportion
-  of missing genotypes for the PCA stays 0.05.", "0.97 is more than the
-  0.95 of the Variants tab; the maximum major allele frequency for the
-  PCA stays 0.9.", and sends nothing; below 0, or with more decimals
-  than the field takes, the lines of the old panel. While the Variants
-  tab has the threshold off, the upper end is 1, and a number above it
-  has the old panel's line, "1.5 is more than 1; …". These lines and the
-  line of the Variants tab stricter, below, are `stricterLines` of the
-  same module.
+  that, the decimals of the Variants tab's value, and at least two. The
+  words of the value are `stricterValueText`, and the command of a move
+  `stricterMoveCommand`, of the same module.
 
   **When the Variants tab becomes stricter** than the PCA's own value,
-  the PCA uses the Variants tab's: the field shows that value, and under
-  it the line "The Variants tab keeps at most 0.03, stricter than the
-  0.05 set here, so the PCA uses 0.03." The project keeps 0.05, and when
-  the Variants tab goes back above it, the PCA has its 0.05 again with
-  no command. The field never shows a value looser than the one used.
-  A number typed there is bounded by the Variants tab as above. Typed
-  over the 0.03 the field shows, 0.03 is still sent, though the field
-  already shows it, so that the project keeps 0.03 as the PCA's own and
-  the PCA does not go back to 0.05 when the Variants tab is loosened.
-
+  the slider's end follows it and the PCA uses the Variants tab's: the
+  thumb stands at the end, its value "0.03, as in the Variants tab", and
+  under it the line "The Variants tab keeps at most 0.03, stricter than
+  the 0.05 set here, so the PCA uses 0.03." The project keeps 0.05, and
+  when the Variants tab goes back above it, the thumb shows 0.05 again
+  with no command. The thumb never shows a value looser than the one
+  used. These lines are `stricterLines` of the same module.
 - **LD pruning**, a switch, "Prune the variants by linkage
   disequilibrium (LD)", on when the page opens, with two number fields
   under it while on: "Maximum r² with a variant kept before it, from 0
@@ -434,7 +428,7 @@ Then three, in this order:
   values for when it is turned on again.
 
 The number fields follow the rules of the fields of the old panel and
-of the Variants step: at most two decimals for the proportions and r²,
+of the Variants step: at most two decimals for r²,
 a whole number from 1 to 9007199254740991 for the distance, written
 with no comma between thousands; the empty distance field sends nothing
 on the arrow keys, Page Up, Page Down, Home and End.
@@ -492,8 +486,8 @@ package 6 of the plan read the code. The gate of the page, `gatedStore` of
 it behind (the owner's answer 2 to `docs/plans/analyses-pca.md`, 9
 October 2026): the five thresholds of the Variants tab, their lines and
 their boxes, the FILTER box, and the PCA's own options, the method, whose
-list does not open, the two groups of the missing data and the MAF
-with their fields, the LD switch and its two fields. Each is drawn greyed, carries
+list does not open, the sliders of the missing data and the MAF, the
+LD switch and its two fields. Each is drawn greyed, carries
 `aria-disabled`, and is still reached by the Tab key, so that a user of
 the keyboard learns why; its tooltip, on the mouse, the focus and a
 press, and its description for a screen reader, are "Stop the PCA to
@@ -506,7 +500,8 @@ the Tab key into view a frame after its tooltip shows, and React Aria
 closed the tooltip on that scroll, so that the line of a threshold
 reached by the Tab key lost its reason in 2 of 12 runs of its flow in
 Chromium (since 10 October 2026). A press, a key or a drag on it
-changes nothing, and leaves its tooltip shown. Undo and Redo wait with the same
+changes nothing, and leaves its tooltip shown; the thumb of a slider
+stays where it is. Undo and Redo wait with the same
 words (above, "Undo and Redo"), and so does the download of the
 filtered variants, with its own ("Its words"). When the PCA ends, fails
 or is stopped, each is as before.
@@ -741,11 +736,10 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | Undo, Redo | "Undo"; "Redo"; their tooltips "Undo: ‹the description›", "Redo: ‹the description›" |
 | the status region, an undo or a redo | "Undone: ‹the description›."; "Redone: ‹the description›." |
 | the heading of the tab | "PCA"; "PCoA" |
-| the filters | "Filters of the variants for the PCA"; "The PCA reads the variants the Variants tab keeps. Its own missing data and MAF filters can only be stricter."; "As in the Variants tab: 0.1"; "As in the Variants tab: off"; "Stricter for the PCA"; "Prune the variants by linkage disequilibrium (LD)" |
-| a number above the Variants tab's | "0.2 is more than the 0.1 of the Variants tab; the maximum proportion of missing genotypes for the PCA stays 0.05." |
+| the filters | "Filters of the variants for the PCA"; "The PCA reads the variants the Variants tab keeps. Its own missing data and MAF filters can only be stricter."; "Maximum proportion of missing genotypes for the PCA"; "Maximum major allele frequency for the PCA"; "Prune the variants by linkage disequilibrium (LD)" |
+| the value of a slider | "0.1, as in the Variants tab"; "Off, as in the Variants tab"; "0.05" |
 | the Variants tab stricter than the PCA's own | "The Variants tab keeps at most 0.03, stricter than the 0.05 set here, so the PCA uses 0.03." |
 | the lock and the help of the one pass | the table of "Run and Stop" |
-| under the field of a filter made stricter, while the Variants tab has that threshold off | "1 keeps every variant: type a lower value to filter." |
 | under the field of the distance | "Choose the distance beyond which the r² between two variants falls to its background level in your species, as studies of its LD decay report." |
 | under the field of the distance, while it is empty | "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off."; "PCoA" under the PCoA |
 | beside Run, while the distance is empty | "Type the LD distance above, or turn the LD pruning off." |
@@ -820,9 +814,8 @@ one stop, the tab shown, also after the arrow keys rested on a greyed
 tab before the focus left the row, whose Left and Right arrow keys move
 along the labels, greyed ones among them, and Home and End go to the
 first and the last; then
-the content of the tab shown. In the PCA tab: the method; the missing
-data, its field while stricter; the MAF, the same; the LD switch and
-its two fields; Run or Stop; the warnings; the plot's "Download…",
+the content of the tab shown. In the PCA tab: the method; the slider of
+the missing data; that of the MAF; the LD switch and its two fields; Run or Stop; the warnings; the plot's "Download…",
 beside the title of the plot; the bar of controls; the legend; the link
 to the table; the "Download…" of the explained variance; the
 "Download…" of the table of the individuals, then the table. Each
@@ -896,12 +889,13 @@ its reason; Undo read with its step; a menu of a download.
   method, from `src/ui/analyses/pca/commands.ts` given the page;
   `stricterCommand` sets `follow` and the value in one step.
 - `stricterBound(p, kind, stepDecimals)` of
-  `src/ui/analyses/pca/stricter.ts`, the upper end and the decimals of
-  each field, and `stricterLines`, the line of a refusal, the line of
-  the Variants tab stricter and the line "1 keeps every variant: type a
-  lower value to filter.": the Variants tab at 0.1, at 0.0035, off;
-  the decimals of the step of the Variants tab's box given and not
-  given. (`stepDecimals` since 9 October 2026, by task 6.1 of the plan:
+  `src/ui/analyses/pca/stricter.ts`, the ends, the step and the value
+  shown of each slider, `stricterValueText`, the words of its value,
+  `stricterMoveCommand`, the command of a move to the upper end, from
+  it and from a value of the PCA's own, and `stricterLines`, the line of
+  the Variants tab stricter: the Variants tab at 0.1, at 0.0035, off,
+  and a MAF below 0.5; the decimals of the step of the Variants tab's
+  box given and not given; following and not. (`stepDecimals` since 9 October 2026, by task 6.1 of the plan:
   the decimals of the box come from the axis of its histogram, which the
   project alone does not give.)
 - `pcaFilters` with page `"popgen2"`, an own value of 1 while the
@@ -946,12 +940,12 @@ engines that start on the owner's Mac, on `panel.nei`,
   no warning; the legend with "Unclassified (200)" alone, and, after
   `panel_pops.csv` is opened, p0 (48), p2 (84), p1 (68), with no
   request to the worker.
-- **Its filters**: the missing data made stricter at 0.05: 532
-  variants, PC1 3.58%; 0.2 typed: the line of refusal, nothing sent;
-  the Variants tab's missing rate moved to 0.03: the field shows 0.03,
-  with the line, and back to 0.1: the field shows 0.05 again. The MAF
-  made stricter at 0.9, the missing data as in the Variants tab: 510
-  variants, PC1 3.68%. The MAF set back to as in the Variants tab, then
+- **Its filters**: the slider of the missing data at 0.1, "as in the
+  Variants tab", moved with the keys to 0.05: 532 variants, PC1 3.58%;
+  the Variants tab's missing rate moved to 0.03: the slider ends at
+  0.03 and shows it, with the line, and back to 0.1: the slider shows
+  0.05 again. The MAF moved to 0.9, the missing data back at its upper
+  end: 510 variants, PC1 3.68%. The MAF back at its upper end, then
   the LD pruning turned off: 1,200 variants, PC1 7.61%, and the warning
   of no LD pruning (with the MAF of 0.9 left on, popnei 0.2.2 gives
   1,102 variants and PC1 7.98%).
@@ -1035,12 +1029,12 @@ page: the names of the tabs; a greyed tab that the keyboard reaches; a
 tab that stays shown when it becomes greyed; every tab kept drawn; the
 labels wrapping at the width of a phone; Run locked until the one pass
 ends; the unclassified as one group, "Unclassified"; the PCA's own value
-kept when the Variants tab goes below it; "Stricter for the PCA" always
-starting at the upper end of its field, the Variants tab's value or 1,
-where the design had it start there only the first time: the project
-always holds a value for the filter, 0.1 or 0.95 before the user types
-one, so the page cannot tell a first choice from a later one; the decimals of its field
-those of the Variants tab's box; the PCA's limit of 9,381 individuals
+kept when the Variants tab goes below it; the upper end of each slider
+read as "as in the Variants tab", `follow` true, so that it stays so
+when the Variants tab changes; the MAF slider from 0.5, or from the
+Variants tab's value below 0.5; the step of each slider that of the
+Variants tab's box, 0.01 at the most; a command, and a step of Undo, at
+each key pressed on a slider; the PCA's limit of 9,381 individuals
 before the lock of the one pass; the LD pruning a
 switch; one button "Download…" with a menu; the names of the files;
 Redo back with Undo, shown by the same rule; their places that stay
@@ -1049,7 +1043,7 @@ file and a change of its reader as no steps; the filters a running PCA
 reads locked, and Undo and Redo waiting while it runs (the owner's
 answer 2 of 9 October 2026), and the column of the populations left
 open meanwhile, pending the owner's answer to the session's question of
-the same day; "Stricter for the PCA" at 1 while the Variants tab has the
+the same day; the end of a slider at 1 while the Variants tab has the
 threshold off, read as no filter; a population with no point left out
 of the legend; and the words.
 

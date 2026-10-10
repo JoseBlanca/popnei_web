@@ -58,10 +58,6 @@ const NO_DISTANCE_FULL =
 const DISTANCE_HINT =
   "Choose the distance beyond which the r² between two variants falls to its background level in your species, as studies of its LD decay report.";
 
-/** The line under a field made stricter while the Variants tab has its
-    threshold off. */
-const ONE_KEEPS_ALL = "1 keeps every variant: type a lower value to filter.";
-
 /** The label of the field of the distance. */
 const DISTANCE =
   "Distance within which variants are compared, in base pairs, from 1";
@@ -139,9 +135,37 @@ function distance(page: Page): Locator {
   return shown(page).getByRole("textbox", { name: DISTANCE });
 }
 
-/** The group of radio buttons named `name` in the PCA tab. */
-function group(page: Page, name: string): Locator {
-  return shown(page).getByRole("radiogroup", { name, exact: true });
+/** The slider of the PCA's own missing data or MAF in the PCA tab, by
+    its name under the PCA or the PCoA. */
+function pcaSlider(page: Page, kind: "missing" | "maf"): Locator {
+  return shown(page).getByRole("slider", {
+    name:
+      kind === "missing"
+        ? /^Maximum proportion of missing genotypes for the PCo?A$/u
+        : /^Maximum major allele frequency for the PCo?A$/u,
+  });
+}
+
+/** The track of the slider whose input is `slider`, its visible part:
+    the input is in a hidden box in the thumb, in the track. */
+function trackOf(slider: Locator): Locator {
+  return slider.locator("xpath=../../..");
+}
+
+/** Presses `key` on `slider` until its value reads `text`, at most `most`
+    times, each press a change of the project. */
+async function moveTo(
+  slider: Locator,
+  key: "ArrowLeft" | "ArrowRight",
+  text: string,
+  most = 200,
+): Promise<void> {
+  await slider.focus();
+  for (let press = 0; press < most; press += 1) {
+    if ((await slider.getAttribute("aria-valuetext")) === text) return;
+    await slider.press(key);
+  }
+  await expect(slider).toHaveAttribute("aria-valuetext", text);
 }
 
 /** The drop-down list of the method in the PCA tab, its button, named
@@ -291,46 +315,40 @@ function labelOf(control: Locator): Locator {
   return control.locator("xpath=ancestor::label[1]");
 }
 
-/** The controls of the PCA tab that wait while a PCA runs, each with its
-    visible part, the tooltip's anchor: the drop-down list of the method
-    (anchored on its label and button), the radio buttons (anchored on
-    their group), the switch (on its label) and the number boxes (on
-    themselves). The missing data and the MAF made stricter, so that
-    their boxes are drawn. */
-async function pcaTabControls(
-  page: Page,
-): Promise<readonly { readonly control: Locator; readonly anchor: Locator }[]> {
-  const controls: { control: Locator; anchor: Locator }[] = [
-    { control: methodButton(page), anchor: methodButton(page).locator("..") },
+/** The controls of the PCA tab that wait while a PCA runs, in their
+    order on the page, each with its visible part, the tooltip's anchor,
+    and the part a pointer reaches: the drop-down list of the method
+    (anchored on its label and button), the two sliders (on their track),
+    the switch (on its label) and the number boxes (on themselves). */
+async function pcaTabControls(page: Page): Promise<
+  readonly {
+    readonly control: Locator;
+    readonly anchor: Locator;
+    readonly target: Locator;
+  }[]
+> {
+  const method = methodButton(page);
+  const controls: { control: Locator; anchor: Locator; target: Locator }[] = [
+    { control: method, anchor: method.locator(".."), target: method },
   ];
-  for (const radioGroup of await shown(page).getByRole("radiogroup").all()) {
-    for (const radio of await radioGroup.getByRole("radio").all()) {
-      controls.push({ control: radio, anchor: radioGroup });
-    }
+  for (const slider of await shown(page).getByRole("slider").all()) {
+    controls.push({
+      control: slider,
+      anchor: trackOf(slider),
+      target: trackOf(slider),
+    });
   }
   for (const toggle of await shown(page).getByRole("switch").all()) {
-    controls.push({ control: toggle, anchor: labelOf(toggle) });
+    controls.push({
+      control: toggle,
+      anchor: labelOf(toggle),
+      target: labelOf(toggle),
+    });
   }
   for (const box of await shown(page).getByRole("textbox").all()) {
-    controls.push({ control: box, anchor: box });
+    controls.push({ control: box, anchor: box, target: box });
   }
   return controls;
-}
-
-/** Makes the missing data and the MAF of the PCA stricter, at the upper
-    end of their fields, which changes no variant the PCA reads, so that
-    their boxes are drawn. */
-async function makeBothStricter(page: Page): Promise<void> {
-  for (const name of [
-    "Filter the variants by missing data",
-    "Filter the variants by major allele frequency (MAF)",
-  ]) {
-    await group(page, name)
-      .locator("label")
-      .filter({ hasText: "Stricter for the PCA" })
-      .click();
-  }
-  await expect(shown(page).getByRole("textbox")).toHaveCount(4);
 }
 
 test("AP6 D3 the PCA tab opened during the one pass, held: Run disabled with the reading under way; after it, with the reason of the LD pruning with no distance; a distance typed, Run; axe light and dark in each", async ({
@@ -375,35 +393,35 @@ test("AP6 D3 the PCA tab opened during the one pass, held: Run disabled with the
     shown(page).getByText(DISTANCE_HINT, { exact: true }),
   ).toBeVisible();
 
-  // The MAF made stricter while the Variants tab has its threshold off:
-  // its field at 1, and the line that 1 is no filter.
-  const maf = group(
-    page,
-    "Filter the variants by major allele frequency (MAF)",
+  // The sliders at their upper end, as in the Variants tab: the missing
+  // data at its 0.1; the MAF, whose threshold is off there, at 1, off.
+  const missingSlider = pcaSlider(page, "missing");
+  await expect(missingSlider).toHaveAttribute(
+    "aria-valuetext",
+    "0.1, as in the Variants tab",
   );
-  await maf
-    .locator("label")
-    .filter({ hasText: "Stricter for the PCA" })
-    .click();
-  const mafBox = shown(page).getByRole("textbox", {
-    name: /^Maximum major allele frequency/u,
-  });
-  await expect(mafBox).toHaveValue("1");
+  await expect(missingSlider).toHaveAttribute("aria-valuemax", "0.1");
+  await expect(missingSlider).toHaveAttribute("aria-valuemin", "0");
   await expect(
-    shown(page).getByText(ONE_KEEPS_ALL, { exact: true }),
+    shown(page).getByText("0.1, as in the Variants tab", { exact: true }),
   ).toBeVisible();
-  await expect(mafBox).toHaveAccessibleDescription(
-    new RegExp(`^${ONE_KEEPS_ALL.replace(/[.]/gu, "\\$&")}`, "u"),
+  const mafSlider = pcaSlider(page, "maf");
+  await expect(mafSlider).toHaveAttribute(
+    "aria-valuetext",
+    "Off, as in the Variants tab",
   );
-  await mafBox.fill("0.9");
-  await mafBox.press("Enter");
-  await expect(
-    shown(page).getByText(ONE_KEEPS_ALL, { exact: true }),
-  ).toHaveCount(0);
-  await maf
-    .locator("label")
-    .filter({ hasText: "As in the Variants tab" })
-    .click();
+  await expect(mafSlider).toHaveAttribute("aria-valuemin", "0.5");
+  await expect(mafSlider).toHaveAttribute("aria-valuemax", "1");
+  await mafSlider.focus();
+  await mafSlider.press("Home");
+  await expect(mafSlider).toHaveAttribute("aria-valuetext", "0.5");
+  await mafSlider.press("ArrowRight");
+  await expect(mafSlider).toHaveAttribute("aria-valuetext", /^0\.50?1$/u);
+  await mafSlider.press("End");
+  await expect(mafSlider).toHaveAttribute(
+    "aria-valuetext",
+    "Off, as in the Variants tab",
+  );
 
   await typeDistance(page, "50000");
   await expect(run(page)).toHaveAccessibleDescription("");
@@ -423,38 +441,23 @@ test.describe("AP6 D3 the locks while a PCA runs", () => {
     test.setTimeout(120_000);
     await openHeld(page, "panel.vcf.gz");
     await typeDistance(page, "50000");
-    await makeBothStricter(page);
     await runHeld(page);
     await expectAxeBothSchemes(page, makeAxeBuilder);
 
-    // Every option of the PCA tab: the method's drop-down list, 4 radio
-    // buttons, the switch and 4 boxes.
+    // Every option of the PCA tab: the method's drop-down list, the two
+    // sliders, the switch and the 2 boxes.
     const controls = await pcaTabControls(page);
-    expect(controls).toHaveLength(10);
-    for (const radioGroup of await shown(page).getByRole("radiogroup").all()) {
-      await expect(radioGroup).toHaveAccessibleDescription(
-        new RegExp(`${LOCKED.replace(/[.]/gu, "\\.")}$`, "u"),
-      );
-    }
+    expect(controls).toHaveLength(6);
     for (const { control, anchor } of controls) {
-      const role = await control.getAttribute("type");
-      if (role !== "radio") {
-        await expect(control).toHaveAccessibleDescription(
-          new RegExp(LOCKED, "u"),
-        );
-      }
-      // A radio button not chosen is no stop of the Tab key, which
-      // reaches its group at the one chosen.
-      if (role === "radio" && !(await control.isChecked())) {
-        await expect(control).toHaveAttribute("aria-disabled", "true");
-      } else {
-        await expectWaiting(page, control, anchor);
-      }
+      await expect(control).toHaveAccessibleDescription(
+        new RegExp(LOCKED, "u"),
+      );
+      await expectWaiting(page, control, anchor);
     }
 
     // Pressed though they say they wait, as a user may: Playwright would
     // not press a control marked aria-disabled.
-    const missing = group(page, "Filter the variants by missing data");
+    const missing = pcaSlider(page, "missing");
     const ld = shown(page).getByRole("switch", {
       name: "Prune the variants by linkage disequilibrium (LD)",
     });
@@ -465,13 +468,25 @@ test.describe("AP6 D3 the locks while a PCA runs", () => {
     await expect(methodButton(page)).toHaveAccessibleName(
       "PCA of the genotypes Method",
     );
-    await missing
-      .locator("label")
-      .filter({ hasText: "As in the Variants tab" })
-      .click({ force: true });
-    await expect(
-      missing.getByRole("radio", { name: "Stricter for the PCA" }),
-    ).toBeChecked();
+    await missing.focus();
+    for (const key of ["ArrowLeft", "PageDown", "Home"]) {
+      await page.keyboard.press(key);
+    }
+    const track = await trackOf(missing).boundingBox();
+    if (track === null) throw new Error("no track");
+    await page.mouse.move(
+      track.x + track.width - 2,
+      track.y + track.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(track.x + 2, track.y + track.height / 2, {
+      steps: 8,
+    });
+    await page.mouse.up();
+    await expect(missing).toHaveAttribute(
+      "aria-valuetext",
+      "0.1, as in the Variants tab",
+    );
     await labelOf(ld).click({ force: true });
     await expect(ld).toBeChecked();
     await distance(page).focus();
@@ -559,30 +574,11 @@ test.describe("AP6 D3 the locks while a PCA runs", () => {
     test.setTimeout(90_000);
     await openHeld(page, "panel.nei");
     await typeDistance(page, "50000");
-    await makeBothStricter(page);
     await runHeld(page);
-    // The stops of the Tab key in their order: the radio button chosen of
-    // each group, the box of each filter made stricter, the switch, r²
-    // and the distance.
-    const stops: { control: Locator; anchor: Locator }[] = [];
-    for (const { control, anchor } of await pcaTabControls(page)) {
-      const isRadio = (await control.getAttribute("type")) === "radio";
-      if (!isRadio || (await control.isChecked())) {
-        stops.push({ control, anchor });
-      }
-    }
-    const order = await Promise.all(
-      stops.map(({ control }) =>
-        control.evaluate((element) => {
-          const all = [...document.querySelectorAll("input")];
-          return all.indexOf(element as HTMLInputElement);
-        }),
-      ),
-    );
-    const inOrder = stops
-      .map((one, i) => ({ ...one, at: order[i] ?? 0 }))
-      .toSorted((a, b) => a.at - b.at);
-    expect(inOrder).toHaveLength(8);
+    // The stops of the Tab key in their order: the method, the two
+    // sliders, the switch, r² and the distance.
+    const inOrder = await pcaTabControls(page);
+    expect(inOrder).toHaveLength(6);
     const first = inOrder[0];
     if (first === undefined) throw new Error("no stop");
     await first.control.focus();
@@ -608,15 +604,8 @@ test.describe("AP6 D3 the locks while a PCA runs", () => {
     test.setTimeout(120_000);
     await openHeld(page, "panel.vcf.gz");
     await typeDistance(page, "50000");
-    await makeBothStricter(page);
     await runHeld(page);
-    const targets: { target: Locator; anchor: Locator }[] = [];
-    for (const { control, anchor } of await pcaTabControls(page)) {
-      const kind = await control.getAttribute("role");
-      const isBox =
-        (await control.getAttribute("type")) !== "radio" && kind !== "switch";
-      targets.push({ target: isBox ? control : labelOf(control), anchor });
-    }
+    const targets = await pcaTabControls(page);
     const check = async (
       targetsHere: readonly { target: Locator; anchor: Locator }[],
     ): Promise<void> => {
@@ -658,15 +647,8 @@ test.describe("AP6 D3 the locks on a touch screen", () => {
     test.setTimeout(120_000);
     await openHeld(page, "panel.vcf.gz");
     await typeDistance(page, "50000");
-    await makeBothStricter(page);
     await runHeld(page);
-    const targets: { target: Locator; anchor: Locator }[] = [];
-    for (const { control, anchor } of await pcaTabControls(page)) {
-      const kind = await control.getAttribute("role");
-      const isBox =
-        (await control.getAttribute("type")) !== "radio" && kind !== "switch";
-      targets.push({ target: isBox ? control : labelOf(control), anchor });
-    }
+    const targets = await pcaTabControls(page);
     const check = async (
       targetsHere: readonly { target: Locator; anchor: Locator }[],
     ): Promise<void> => {
@@ -707,11 +689,10 @@ test("AP6 D3 Run pressed within the second of an arrow key on a threshold: the P
   await tab(page, "PCA").dispatchEvent("click");
   await run(page).dispatchEvent("click");
   await expect(stop(page)).toBeVisible();
-  await expect(
-    group(page, "Filter the variants by missing data").getByRole("radio", {
-      name: "As in the Variants tab: 0.099",
-    }),
-  ).toBeChecked();
+  await expect(pcaSlider(page, "missing")).toHaveAttribute(
+    "aria-valuetext",
+    "0.099, as in the Variants tab",
+  );
   // Past the quiet second after the key, a timer of the page, when a run
   // of the keys left waiting would have changed the threshold: the
   // page's clock moved on by 1.5 s, its timers run.
@@ -1178,7 +1159,7 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     }
   });
 
-  test("AP6 D3 its filters: the missing data stricter at 0.05, 532 variants and PC1 3.58%; 0.2 refused, nothing sent; the Variants tab at 0.03 and back; the MAF at 0.9, 510 variants and PC1 3.68%; the LD pruning off, 1,200 variants, PC1 7.61% and its warning", async ({
+  test("AP10 D2 its filters: the slider of the missing data moved to 0.05, 532 variants and PC1 3.58%; the Variants tab at 0.03 and back; the MAF at 0.9, 510 variants and PC1 3.68%; the LD pruning off, 1,200 variants, PC1 7.61% and its warning", async ({
     page,
     makeAxeBuilder,
   }) => {
@@ -1187,46 +1168,32 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     await runToResult(page);
     await to2d(page);
 
-    const missing = group(page, "Filter the variants by missing data");
-    await missing
-      .locator("label")
-      .filter({ hasText: "Stricter for the PCA" })
-      .click();
-    const missingField = shown(page).getByRole("textbox", {
-      name: /^Maximum proportion of missing genotypes, from 0 to /u,
-    });
-    await expect(missingField).toHaveValue("0.1");
-    // The choice alone changes no key: the result stays.
+    const missing = pcaSlider(page, "missing");
+    await expect(missing).toHaveAttribute(
+      "aria-valuetext",
+      "0.1, as in the Variants tab",
+    );
+    // A move there and back changes no key: the result stays.
+    await missing.focus();
+    await missing.press("ArrowLeft");
+    await missing.press("End");
     await expect(tableCaptionOf(page)).toBeVisible();
-    await missingField.fill("0.05");
-    await missingField.press("Enter");
+    await moveTo(missing, "ArrowLeft", "0.05");
     await runToResult(page);
     await expect(tableCaptionOf(page)).toContainText("from 532 variants.");
     await expect(axisLabels(page).first()).toHaveText("PC1 (3.58%)");
     const posted = await runsPosted(page);
-
-    await missingField.fill("0.2");
-    await missingField.press("Enter");
-    await expect(
-      shown(page).getByText(
-        "0.2 is more than the 0.1 of the Variants tab; the maximum proportion of missing genotypes for the PCA stays 0.05.",
-        { exact: true },
-      ),
-    ).toBeVisible();
-    await expect(tableCaptionOf(page)).toContainText("from 532 variants.");
-    expect(await runsPosted(page)).toBe(posted);
-    await missingField.fill("0.05");
-    await missingField.press("Enter");
 
     await tab(page, "Variants").click();
     const rate = histogram(page, "Proportion of missing genotypes");
     await rate.box.fill("0.03");
     await rate.box.press("Enter");
     await tab(page, "PCA").click();
-    await expect(missingField).toHaveValue("0.03");
-    await expect(missingField).toHaveAccessibleName(
-      "Maximum proportion of missing genotypes, from 0 to 0.03",
+    await expect(missing).toHaveAttribute(
+      "aria-valuetext",
+      "0.03, as in the Variants tab",
     );
+    await expect(missing).toHaveAttribute("aria-valuemax", "0.03");
     await expect(
       shown(page).getByText(
         "The Variants tab keeps at most 0.03, stricter than the 0.05 set here, so the PCA uses 0.03.",
@@ -1237,36 +1204,25 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     await rate.box.fill("0.1");
     await rate.box.press("Enter");
     await tab(page, "PCA").click();
-    await expect(missingField).toHaveValue("0.05");
+    await expect(missing).toHaveAttribute("aria-valuetext", "0.05");
     // The key of 0.05 again, its result from the cache.
     await expect(tableCaptionOf(page)).toContainText("from 532 variants.");
     expect(await runsPosted(page)).toBe(posted);
 
-    await missing
-      .locator("label")
-      .filter({ hasText: "As in the Variants tab: 0.1" })
-      .click();
-    const maf = group(
-      page,
-      "Filter the variants by major allele frequency (MAF)",
+    await missing.focus();
+    await missing.press("End");
+    await expect(missing).toHaveAttribute(
+      "aria-valuetext",
+      "0.1, as in the Variants tab",
     );
-    await maf
-      .locator("label")
-      .filter({ hasText: "Stricter for the PCA" })
-      .click();
-    const mafField = shown(page).getByRole("textbox", {
-      name: /^Maximum major allele frequency, from 0 to /u,
-    });
-    await mafField.fill("0.9");
-    await mafField.press("Enter");
+    const maf = pcaSlider(page, "maf");
+    await moveTo(maf, "ArrowLeft", "0.9");
     await runToResult(page);
     await expect(tableCaptionOf(page)).toContainText("from 510 variants.");
     await expect(axisLabels(page).first()).toHaveText("PC1 (3.68%)");
 
-    await maf
-      .locator("label")
-      .filter({ hasText: /^As in the Variants tab/u })
-      .click();
+    await maf.focus();
+    await maf.press("End");
     await shown(page)
       .locator("label")
       .filter({ hasText: "Prune the variants by linkage disequilibrium (LD)" })
