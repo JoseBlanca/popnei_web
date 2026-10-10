@@ -117,6 +117,7 @@ to a screen reader:
 | "Writing panel.filtered.vcf.gz · 45%" | "Writing · 45%" |
 | "Stopping the PCA…" | "Stopping…" |
 | "The PCA starts again in a moment" | "PCA in a moment" |
+| "The PCA starts again when the download is written or closed" | "PCA later" |
 | "PCA: 2 warnings, in the PCA tab" | "PCA: 2 warnings" |
 | "PCA: could not be calculated, in the PCA tab" | "PCA: failed" |
 
@@ -149,7 +150,7 @@ line of the band under it (below, "An error of the application").
 | the PCA is running, started by Run or by itself | "PCA running · 1:20", the time since it started, minutes and seconds, as the clock of the PCA tab; "PCoA running · 1:20" under the PCoA | Stop |
 | the filtered variants are being written | "Writing panel.filtered.vcf.gz · 45%", the name the dialog of the download shows | none: the dialog has the Stop, and keeps the band out of reach while it is open |
 | a Stop of the PCA or of the one pass is under way (below, "Stopping") | "Stopping the PCA…", "Stopping the PCoA…"; "Stopping the reading of panel.vcf.gz…" | none |
-| the PCA is about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment" | Stop recalculating, the PCA tab's |
+| the PCA is about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment"; while the dialog of the download holds it, the dialog's words, "The PCA starts again when the download is written or closed" (`popgen2-pca.md`, "Its words") | Stop recalculating, the PCA tab's |
 | the PCA has a result with warnings, and the PCA tab is not the tab shown | "PCA: 1 warning, in the PCA tab"; "PCA: 2 warnings, in the PCA tab"; "PCoA: …" under the PCoA; the words are a link | none |
 | the PCA could not be calculated, and the PCA tab is not the tab shown | "PCA: could not be calculated, in the PCA tab"; "PCoA: …"; a link | none |
 | none of these | nothing after "Popnei" | none |
@@ -359,7 +360,7 @@ change; it is still the screen's, not the project's
 | the PCA running | "PCA running · 1:20"; "PCoA running · 1:20"; under a minute, "PCA running · 0:12" |
 | the write | "Writing panel.filtered.vcf.gz · 45%"; "Writing panel.filtered.nei · 45%" |
 | a Stop under way | "Stopping the PCA…"; "Stopping the PCoA…"; "Stopping the reading of panel.vcf.gz…" |
-| the PCA about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment" |
+| the PCA about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment"; while the dialog of the download is open, "The PCA starts again when the download is written or closed"; "The PCoA starts again when the download is written or closed" |
 | the link to the warnings | "PCA: 1 warning, in the PCA tab"; "PCA: 2 warnings, in the PCA tab"; "PCoA: 1 warning, in the PCA tab" |
 | the link to an error | "PCA: could not be calculated, in the PCA tab"; "PCoA: could not be calculated, in the PCA tab" |
 | the buttons | "Stop"; "Stop recalculating"; "Details"; "Close"; "Copy the details" |
@@ -486,7 +487,9 @@ always; its error, the colour of danger of each theme.
 
 **In Vitest, in node**, at `bandOf` of `src/ui/band/band.ts`, from
 states of the real store of the page made with a fake worker: each row
-of the table of "The line", with its words under the PCA and the PCoA;
+of the table of "The line", with its words under the PCA and the PCoA,
+the PCA about to start in the quiet second and while the dialog of the
+download holds it;
 each of the three sentences of an error, the one with no store among
 them;
 the order when two hold, the PCA running over a Stop under way, a Stop

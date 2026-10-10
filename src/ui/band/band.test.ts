@@ -218,6 +218,30 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     expect(lineWords(pcoa.band().line, 0)?.short).toBe("PCoA in a moment");
   });
 
+  test("the PCA about to start while the dialog of the download holds it: the dialog's words, with Stop recalculating; the PCoA so named", async () => {
+    for (const method of ["pca", "pcoa"] as const) {
+      const testPage = await pcaDone(SUMMARY, method, 548);
+      testPage.store.apply("the missing data filter changed", (p) =>
+        setVariantFilter(p, {
+          kind: "missing_data",
+          maxAllowedMissingRate: 0.05,
+        }),
+      );
+      const release = testPage.gate.holdChange("download");
+      await flush();
+
+      const name = method === "pca" ? "PCA" : "PCoA";
+      expect(words(testPage.band())).toBe(
+        `The ${name} starts again when the download is written or closed`,
+      );
+      expect(lineWords(testPage.band().line, 0)?.short).toBe(`${name} later`);
+      expect(stopOf(testPage.band().line)?.name).toBe(
+        `Stop recalculating the ${name}`,
+      );
+      release();
+    }
+  });
+
   test("the PCA live with its result, nothing running nor about to start: Popnei alone, whatever tab is shown", async () => {
     const testPage = await pcaDone(SUMMARY, "pca", 548);
     expect(testPage.auto.liveState("pca")).toEqual({

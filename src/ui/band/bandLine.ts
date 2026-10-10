@@ -27,7 +27,7 @@ import type { PageTab } from "../../core/popgen2Tabs.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult, PcaMethod } from "../../worker/protocol.ts";
 import { progressShare } from "../analyses/words.ts";
-import type { LiveState } from "../autoRuns.ts";
+import type { AboutToStart, LiveState } from "../autoRuns.ts";
 import type { DefectsState } from "../defects.ts";
 import { barText } from "../shell/barSave.ts";
 import { chainButton, chainStatuses } from "../variants/chain.ts";
@@ -98,12 +98,14 @@ export type BandLine =
     }
   /** A Stop waits for the calculation worker to start again. */
   | { readonly kind: "stopping"; readonly what: Stopping }
-  /** The PCA live is about to start again by itself: Stop
-      recalculating, the PCA tab's, offered while another tab is shown,
-      `withStop`. */
+  /** The PCA live is about to start again by itself, once what it
+      waits for, `waitsFor`, the quiet second or the dialog of the
+      download, is over: Stop recalculating, the PCA tab's, offered while
+      another tab is shown, `withStop`. */
   | {
       readonly kind: "aboutToStart";
       readonly method: PcaMethod;
+      readonly waitsFor: AboutToStart;
       readonly withStop: boolean;
     }
   /** The PCA's result has `warnings` warnings, or it could not be
@@ -206,7 +208,12 @@ function lineOf(page: BandPage): BandLine {
 
   const live = page.pcaLive;
   if (live.kind === "live" && live.aboutToStart !== null && !live.running) {
-    return { kind: "aboutToStart", method, withStop };
+    return {
+      kind: "aboutToStart",
+      method,
+      waitsFor: live.aboutToStart,
+      withStop,
+    };
   }
 
   if (page.tab !== "pca") {

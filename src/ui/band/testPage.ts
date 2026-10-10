@@ -32,6 +32,7 @@ import {
 import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
 import { createRunGate, gatedStore } from "../variants/thresholdRun.ts";
+import type { RunGate } from "../variants/thresholdRun.ts";
 import { bandOf } from "./bandLine.ts";
 import type { Band, BandPage } from "./bandLine.ts";
 
@@ -78,6 +79,8 @@ export function pcaResult(
 export interface TestPage {
   readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly auto: AutoRuns;
+  /** The gate the screens pass, whose holds the test takes. */
+  readonly gate: RunGate;
   readonly defects: Defects;
   readonly requests: Request[];
   readonly writes: Request[];
@@ -164,6 +167,7 @@ export function page(summary: JobResult): TestPage {
   const testPage: TestPage = {
     store,
     auto,
+    gate,
     defects,
     requests,
     writes,

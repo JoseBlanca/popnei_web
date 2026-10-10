@@ -79,10 +79,17 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
       };
     case "aboutToStart": {
       const name = methodName(line.method);
-      return {
-        full: `The ${name} starts again in a moment`,
-        short: `${name} in a moment`,
-      };
+      // The words of the PCA tab's line of the quiet second, and, while
+      // the dialog of the download holds the start, of that dialog's.
+      return line.waitsFor === "download"
+        ? {
+            full: `The ${name} starts again when the download is written or closed`,
+            short: `${name} later`,
+          }
+        : {
+            full: `The ${name} starts again in a moment`,
+            short: `${name} in a moment`,
+          };
     }
     case "result":
       return resultWords(line.method, line.warnings);
