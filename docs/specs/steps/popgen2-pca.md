@@ -387,11 +387,19 @@ under once the store leaves that key behind; it starts nothing while
 `anyRunning` of its groups, a write of the store, or a change under way
 holds; and it reads the PCA's key from the store when the second runs
 out. The changes under way are counted by the gate of the page,
-`createRunGate` of `src/ui/variants/thresholdRun.ts`, whose `hold`
-gains a count and a `subscribe` that tells `autoRuns` when it falls to
-zero; `Slider.tsx`, `ThresholdSlider.tsx`, `Select.tsx` and
-`NumberField.tsx` of `src/ui/widgets/`, and the dialog of the download,
-take and release a hold through `RunGateProvider`. The state about to
+`createRunGate` of `src/ui/variants/thresholdRun.ts`: `holdChange()`
+holds a change under way of a widget and gives the function that lets
+it go; `underWay()` is the count, the holds of `holdChange` and the
+runs of the arrow keys held; and `subscribe` tells its listeners when
+the count rises from 0 or falls to 0 (after task 2.2 of the plan only
+then; until then also at each move of a run of the arrow keys), so
+that `autoRuns`'s listener reads `underWay() === 0`. `Slider.tsx`,
+`ThresholdSlider.tsx`, `Select.tsx` and `NumberField.tsx` of
+`src/ui/widgets/`, and the dialog of the download, take and release a
+`holdChange` through `RunGateProvider`. `hold` is left to the runs of
+the arrow keys: any change by another control ends a `hold` through
+`endAll`, so a widget that took one would lose it in the middle of a
+drag. The state about to
 start is the PCA `ready` in the store, live, its key not started under,
 the one pass read to the end; `autoRuns` gives the page a function that
 says it, `aboutToStart`, and its `subscribe` tells the page when it

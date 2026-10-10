@@ -525,9 +525,12 @@ its analysis has, or had when it was last not locked:
   request leaves `runs`.
 - **The one pass** of the page, the summary of the variants file, reads
   no filter, so no change of a filter gives it another key, and its
-  result, its histograms and the statistics of each individual stay;
-  another variants file, a new load, removes it, as it removes every
-  result of the old load. `stopped`, the last result so far of a pass
+  result, its histograms and the statistics of each individual stay.
+  Another variants file, a new load, removes it, as it removes every
+  result of the old load, when the new load is read and not at the
+  opening: until the new file is read the one pass is locked, and a
+  lock is not a change of its key (above), so its key changes, and the
+  old load's result is removed, at the read that gives it one. `stopped`, the last result so far of a pass
   the user stopped, is kept beside `ready` as before, since it is never
   cached.
 - The bound of the cache, `cacheMaxBytes`, stays, and drops the result
@@ -928,7 +931,9 @@ From 10 October 2026, for the band of `popgen2.html`
 (`docs/specs/steps/popgen2-band.md`, "Stopping"), on both pages, since
 it costs a field. A Stop ends the calculation worker, and a Run after
 it waits until the new worker has loaded popnei and opened the variants
-file again; the page shows "Stopping the PCA…" meanwhile. The client
+file again; the page shows "Stopping the PCA…" meanwhile, until a Run
+pressed then, which clears the field, and the band shows the PCA's own
+state from then on. The client
 settles a cancel at once, and the request leaves `runs` before the page
 is drawn again, so `runs` cannot tell it, whose `stopping`, of each
 request, says only that a request was cancelled and its outcome has not
@@ -2203,8 +2208,11 @@ then on `createPopgen2Store`, which now also gives `dropLeftBehind`):
   the present project does not hold: the state the same object.
 
 **`dropLeftBehind`**, with Vitest, on the store of `popgen2.html` made
-by `createPopgen2Store` with the same fake `send`, from 10 October
-2026:
+with `createStore` as `createPopgen2Store` makes it, with
+`stopLeftBehind` and `dropLeftBehind` and the same fake `send`
+(`popgen2Store(true, true)` of the tests), as the plan says, from 10
+October 2026; the page's own store, made by `createPopgen2Store`, is
+tested in work package 2 of the plan:
 
 - A PCA done under a threshold, the threshold moved: the PCA `ready`
   under the new key; the threshold set back by a command: the PCA
@@ -2234,7 +2242,8 @@ by `createPopgen2Store` with the same fake `send`, from 10 October
   result object.
 - The one pass done, a threshold and the FILTER box changed: the one
   pass `done`, the same result object; another variants file opened
-  with `open`: the result of the old load no longer in the cache.
+  with `open` and read: the result of the old load no longer in the
+  cache.
 - The store of `popgen2.html` has no `undo` nor `redo` in its type
   (`@ts-expect-error`). Its bound of one past project, read through the
   `Store` type, which has them: after three commands, `undo()` once,
