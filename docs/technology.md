@@ -236,6 +236,17 @@ page, about 5 KB gzipped that the old page never uses; not taken out,
 since the old page is to be deleted and the menu belongs to the tables
 both pages draw.
 
+By the same count, the sum of Vite's gzip sizes of the 9 files the page
+loads, the first load of `popgen2.html` is 320.23 KB at commit
+1110b46e of the branch `pca-tab`, built on 10 October 2026, against
+281.69 KB on `main` the same day. Of the 12.41 KB it gained over the
+307.82 KB of commit fdddbbf3, 4.07 KB are the band at the top of the
+page (`docs/plans/no-undo.md`, work package 5), 320.23 KB against
+316.16 KB just before it; the rest came with the rounds of the PCA tab
+and the PCA calculated again by itself, although Undo and Redo left
+the page (work packages 1 to 4 of that plan). The `bundle` review of
+the band found nothing to take out.
+
 Not taken: component libraries with their own look, MUI, Chakra,
 Mantine, which bring a style we would fight and, for Chakra, a history of
 large rewrites; and Radix Primitives, whose maintenance slowed.
@@ -319,7 +330,8 @@ file open, and not with the page (`docs/specs/steps/popgen2-pca.md`,
 of the Variants tab, which come when a file is opened, as `vite build`
 reported them with Vite 8.3.0 on the site built at commit fdddbbf3 on
 10 October 2026. With it in the first script the first load of
-`popgen2.html`, 307.82 KB without it by the same count, would grow by
+`popgen2.html`, 307.82 KB without it by the same count at that commit
+(320.23 KB at commit 1110b46e, with the band, above), would grow by
 about 35 KB, under 50 KB, the most the design of the PCA tab
 (`docs/designs/analyses-pca.md`, "The costs of the web") let that tab
 add to the first load before its code had to be loaded apart: about a

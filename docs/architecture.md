@@ -65,7 +65,15 @@ October 2026, for the design no-undo" at its end. The specs of that
 piece are `docs/specs/steps/popgen2-band.md`, new, and the revisions of
 the same day of `docs/specs/core/store.md`, `history.md`,
 `docs/specs/steps/popgen2-pca.md`, `popgen2-filters.md` and
-`popgen2-download.md`; its plan is `docs/plans/no-undo.md`.
+`popgen2-download.md`; its plan is `docs/plans/no-undo.md`. That
+piece is built on the branch `pca-tab` on 10 October 2026, work
+packages 1 to 5 of its plan, and not yet tried by the owner; the
+sections it touches were checked against the code then, and revised
+where the code differs, in section 7, the keys of Undo and Redo, which
+the page takes from the browser, and the band while an error is shown,
+and in the row of `shell/` of section 9; and section 11 gains the
+memory of a PCA started by itself after a finished one, measured, and
+the time of a Stop said in the band.
 What was
 revised each time until 30 September 2026 is at the end
 of section 1. The document gives the parts of the web applications of
@@ -1687,12 +1695,18 @@ The page and each worker talk through typed messages
   things, the quiet second, and for the values on the screen when the
   second runs out. The second starts again at each change, and waits
   while the user is in the middle of a change that has not reached the
-  project: the mouse button held on a slider, the list of the method
-  open, digits typed in a number box and not confirmed, a run of the
-  arrow keys on a threshold. Without that, the lock of the filters would
+  project: the mouse button held on a slider or on the line of a
+  threshold, moved or still, the list of the method or a menu
+  "Download…" open, digits typed in a number box and not confirmed, a
+  run of the arrow keys on a threshold, and the dialog of the download
+  of the filtered variants open. Without that, the lock of the filters would
   fall on a control the user is still using. A Stop of the PCA ends the
   live state until Run is pressed again, the owner's choice of 10
-  October 2026 (open point 1 of the design); another variants file ends
+  October 2026 (open point 1 of the design); so does "Stop
+  recalculating", which the PCA tab offers whenever the PCA is live and
+  none runs, and the band while the PCA is about to start, so that the
+  automatic runs can be ended before the next change, from the keyboard
+  too (WCAG 2.2.1, the review of work package 4); another variants file ends
   it too, and so does a reload, and, as a Stop does, a crash of the
   worker whose words speak of the memory and a failure only a reload
   mends, which a retry at each change would only repeat (from the
@@ -1947,7 +1961,12 @@ that starts by itself and reads a filter, a stop and a start at every
 step of a threshold, is settled for the PCA by the lock and the quiet
 second together: no change stops it, and a change after it ends starts
 it once. A result that ends after a change is no longer kept on that
-page for an undo.
+page for an undo. Checked against the code built on the branch
+`pca-tab` the same day (`docs/plans/no-undo.md`, work packages 3 to
+5): the bullet on the PCA started by itself now names every change
+under way the second waits for, the menus "Download…" and a line of a
+threshold held still among them, and "Stop recalculating", which ends
+the live state as Stop does.
 
 ## 6. The files of the user
 
@@ -2747,7 +2766,11 @@ for the smallest part of it.
   an axis that ends at 1, turns a threshold off (`setThreshold` of
   `docs/specs/core/project.md`). The page has no notice, as the owner
   decided on 8 October 2026, and from 10 October 2026 no Undo and no
-  Redo, and catches none of their keys (section 3; `docs/designs/no-undo.md`);
+  Redo: its window takes their keys from the browser and does nothing
+  with them, but in a field of free text, which keeps its own undo, and
+  in a number box with something typed, which puts back its number
+  (section 3; `docs/designs/no-undo.md`, choice 6;
+  `docs/specs/steps/popgen2-filters.md`, "Undo, Redo and their keys");
   its
   first project has the filter of the FILTER column on and the missing
   rate of the variants at 0.1, the rest off. The download of the
@@ -2784,10 +2807,19 @@ for the smallest part of it.
   the application's own code, in the place of the error bar of
   `popgen.html`. It is drawn in the page's second root, `#defects`,
   where the error bar was, so that it stays when an error has emptied
-  the application's root. It reads the store, the code that starts the
+  the application's root. While nothing runs it holds "Popnei" alone.
+  It is 51 px high in every state but an error, at 1280 and 320 px in
+  Chromium and WebKit, and the page keeps that room at its top, so that
+  nothing under it moves when it starts or stops saying something; while
+  an error of the application is shown, it stands in the flow of the
+  page at its top instead, and scrolls with it, so that at 200 to 400%
+  zoom it does not cover the window (as built on the branch `pca-tab`,
+  `docs/plans/no-undo.md`, work package 5). It reads the store, the code that starts the
   analyses by themselves (`src/ui/autoRuns.ts`), the log of the errors
   (`src/ui/defects.ts`) and the tab shown, and sends the Stops the boxes and the tab already
-  send. The tab shown, the screen's own state, moves from the page's
+  send, and "Stop recalculating" while the PCA is about to start; it
+  shows no control of the PCA while the PCA tab is shown, which has its
+  own. The tab shown, the screen's own state, moves from the page's
   component into a small store of the page made by the entry, so that
   the two roots read and change the same one. The band is not a status
   region: what starts and ends is said by the page's status region, as
@@ -2867,7 +2899,16 @@ which would move a slider from under the pointer a second after the
 user let it go, when the PCA starts by itself; the band in the
 application's root, which an error that empties that root would take
 with it; and the band as the status region itself, whose percentage and
-clock would be read aloud at every change.
+clock would be read aloud at every change. Checked against the code
+built on the branch `pca-tab` the same day (`docs/plans/no-undo.md`,
+work packages 2 and 5): this section had said that the page catches
+none of the keys of Undo and Redo, as the design's choice 6 first
+said; as built, its window takes them from the browser and does
+nothing with them, since with no listener Ctrl+Y in Chromium on macOS
+emptied a number box reached by Tab and a screen reader said "Empty".
+The bullet of the band gains its height, the room the page keeps for
+it, its place while an error is shown, "Popnei" alone while nothing
+runs, and its "Stop recalculating".
 
 ## 8. The project file, the report and the script
 
@@ -3262,7 +3303,12 @@ src/ui/
                     drawn only while it has a step, its place kept, and
                     waits, under which both wait while a PCA runs; from
                     10 October 2026 drawn by popgen.html alone, with
-                    undoRedo.ts and shortcuts.ts; from 10 October 2026
+                    undoRedo.ts, and onlyWithStep and waits gone;
+                    shortcuts.ts gives popgen.html its keys of Undo and
+                    Redo and, from 10 October 2026, popgen2.html
+                    refuseUndoKeys, which takes those keys from the
+                    browser and does nothing with them (section 7);
+                    from 10 October 2026
                     said.ts, the status region that the error bar and
                     the band of popgen2.html share
   runs.ts           awaits the outcome of each run core starts, at a Run
@@ -3415,7 +3461,11 @@ which its link gives the focus to; and the widgets, as `variants/`
 does; nothing of core imports it. The
 removal of Undo from `popgen2.html` removes no module, since
 `popgen.html` keeps `UndoRedoButtons.tsx`, `undoRedo.ts` and
-`shortcuts.ts`.
+`shortcuts.ts`. Checked against the code built on the branch `pca-tab`
+the same day (`docs/plans/no-undo.md`, work packages 1 to 5): the row
+of `shell/` had said that `shortcuts.ts` is drawn by `popgen.html`
+alone; `popgen2.html` takes from it `refuseUndoKeys`, which keeps the
+keys of Undo and Redo from the browser (section 7).
 
 ## 10. The walking skeleton
 
@@ -3667,6 +3717,42 @@ tests of the application are the same with it.
   PCA"), which is why Stop ends the automatic runs until Run is pressed
   again, so that no PCA starts by itself on top of that memory a second
   after the user's next change.
+- **A PCA started by itself after a finished one** does not grow on the
+  memory of the first: a worker ended after its result gives its memory
+  back before the next PCA starts, unlike one stopped in the middle of a
+  calculation. Measured on 10 October 2026 (`docs/plans/no-undo.md`,
+  "What was done", work package 4, the measurement `NU4 D6` of
+  `e2e/measure.spec.ts`), once in each engine, on the owner's Apple M5
+  Pro with 64 GB, macOS 27.0.1, under Playwright 1.63.0, at load
+  averages of 3.1 to 4.2 from another project's sessions; on a VCF of
+  300 variants and 9,381 individuals, 1,793,306 bytes gzipped, with the
+  LD pruning off: Run pressed, the PCA's missing-data slider moved by
+  one press of a key 2 s after the first result, and the PCA started
+  again by itself, sent to the worker 1.03 s after the press. The
+  memory is that of the engine's processes summed, read every 250 ms,
+  in GB; the times are those of each run.
+
+  | | WebKit 26.6 | Chromium 153 |
+  |---|---|---|
+  | before Run | 0.325 | 0.172 |
+  | peak of the first run | 3.371 | 3.186 |
+  | at the change | 0.606 | 0.454 |
+  | peak of the second run | 3.391 | 3.249 |
+  | second peak less the first | 0.019 | 0.063 |
+  | 3 s after the second run | 0.262 | 0.436 |
+  | first run | 128.3 s | 215.1 s |
+  | second run | 129.3 s | 214.7 s |
+
+  The plan's bound, the second peak at most 0.25 GB above the first,
+  held in both engines; a second run on top of the first's memory would
+  have been about 3 GB more.
+- **A Stop, said in the band of `popgen2.html`.** A Stop ends the
+  calculation worker at once, and the band says "Stopping the PCA…"
+  until the worker started again has loaded popnei and opened the
+  variants file again; a Run waits meanwhile, and the band shows the
+  line for 10 s at most (`docs/specs/steps/popgen2-band.md`,
+  "Stopping"). From a Stop of a PCA of 9,381 individuals, on the same
+  VCF and Mac, the line lasted [STOPPING TIME, task 5.4].
 - **The page frozen.** The key of every analysis is made on the page after
   every command, from the canonical form of its inputs, and the
   individuals table of 10,000 rows is among them. Since the project is
@@ -3788,7 +3874,11 @@ What was revised on 10 October 2026, for the design no-undo
 (`docs/designs/no-undo.md`, approved by the owner that day): the bullet
 "The memory of the history and of the results on `popgen2.html`" is
 new, with the time a PCA calculated again by itself costs and the
-memory a stopped worker leaves in WebKit.
+memory a stopped worker leaves in WebKit. Revised again that day with
+what the branch `pca-tab` built and measured (`docs/plans/no-undo.md`,
+work packages 4 and 5): the bullets "A PCA started by itself after a
+finished one", with its memory in Chromium and WebKit, and "A Stop,
+said in the band of `popgen2.html`", with the time of its line.
 
 ## 12. What is hard to undo
 

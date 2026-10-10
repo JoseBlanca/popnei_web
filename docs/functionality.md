@@ -139,17 +139,25 @@ Each threshold is a filter of the project, as the owner decided on 7
 October 2026 (docs/designs/stats-filters.md): a change of it, by a drag,
 the arrow keys or the box, is a change of the project, and a run of
 presses of the arrow keys is one change. No change of a filter gives a
-notice, and opening a file, the first or another, starts the page's
-history afresh (the owner, 8 October 2026). The page has no Undo and
+notice (the owner, 8 October 2026). The page has no Undo and
 no Redo, as the owner decided on 10 October 2026 (docs/designs/no-undo.md),
 after marimo, a Python notebook that runs again every cell that
 depends on a value the user changed and has no undo: what it shows is always
 the result of the values on the screen, calculated again when they
-change, and nothing is undone; Ctrl+Z and Cmd+Z only put back the
-number of a box with something typed in it. Undo and Redo stood at the
+change, and nothing is undone. Ctrl+Z and Cmd+Z put back the
+number of a box with something typed in it and undo the typing in a
+field of text; elsewhere on the page they and the keys of Redo do
+nothing. Nothing on the page gives the thresholds their starting
+values back, and no line on it says that it has no Undo, as the owner
+decided on 10 October 2026, asked how a user gets a threshold back
+to its starting value.
+Undo and Redo stood at the
 right end of the line of the heading from 9 to 10 October 2026, and
 `popgen.html` keeps its own. While a PCA runs, the thresholds and the
-FILTER box are greyed, so that nothing the PCA reads changes under it. A
+FILTER box are greyed, with "Stop the PCA in the PCA tab to change the
+filters; then press Run there to calculate it again.", so that nothing
+the PCA reads changes under it; once the PCA has been run for the
+file, a change of them calculates it again by itself (section 5). A
 threshold is on or off. It is
 turned off by emptying its box, or by giving it 1, the value at which a
 maximum keeps everything, however 1 is reached, typed or by the line
@@ -199,7 +207,16 @@ a dialog with the choice of the format, and while the file is written
 the dialog shows a bar and Stop, and no filter can change. While a PCA
 runs the button waits too, greyed, with "Waits for the PCA to end; or
 stop it in the PCA tab." beside it ("the PCoA" for a PCoA), from 9
-October 2026. When the
+October 2026. From 10 October 2026, once the PCA has been run for the
+file, a change of a filter starts it again a second later, and the
+button then waits for it, up to 4 minutes on a file of 9,381
+individuals, as the owner chose that day rather than a download that
+stops the PCA; a user who wants the file first presses Stop, or "Stop
+recalculating" in the PCA tab, which keeps the PCA from starting again
+until Run. A press of the button during that second goes first: the
+PCA does not start while the dialog is open or the file is written,
+and starts a second after the dialog closes. While the file is written
+the band at the top of the page says so (section 5). When the
 write ends the browser's download starts by itself, and the button
 gives way to a text that says the file, its size, how many variants of
 how many individuals it holds, and how many variants and individuals
@@ -576,13 +593,30 @@ give the principal components that go into the GWAS as covariates.
   later change of what the PCA reads takes its result off the screen
   and calculates it again by itself a second after the user stops
   changing things, a second that waits while a slider is held, a list
-  is open or a number is being typed, during which the PCA tab says it
-  starts again in a moment; a value set back is calculated again too, since the
-  page keeps no result for values it no longer shows. Stop ends the
+  or a menu is open, a number is being typed or the dialog of the
+  download is open, during which the PCA tab says "The PCA starts
+  again in a moment, once the filters and its options stop changing.";
+  a value set back is calculated again too, since the
+  page keeps no result for values it no longer shows. A screen reader
+  hears, as it starts, "Calculating the PCA again. To change the
+  filters, stop it in the PCA tab." Stop ends the
   run and keeps the PCA from starting again until Run is pressed, and
-  another variants file waits for its own Run. A band at the top of the
-  window says what is running, with its Stop, while the user is in any
-  tab (docs/specs/steps/popgen2-band.md).
+  so does "Stop recalculating", which the tab offers in Run's place
+  whenever the PCA is calculated again by itself and none runs; after either, a line in the tab says
+  that the PCA no longer starts by itself and that Run starts it again.
+  A crash for lack of memory, or a failure that only a reload mends,
+  ends the automatic runs too, since each new run would fail the same
+  way; another variants file waits for its own Run. A band at the top of the
+  window, from 10 October 2026, holds the page's heading, "Popnei",
+  and says what the page is doing whichever tab the user is in: the
+  reading of the variants file or the PCA running, each with its Stop,
+  the PCA about to start again with "Stop recalculating", "Stopping
+  the PCA…" after a Stop, the writing of the filtered variants, a link
+  to the warnings or the error of the PCA while another tab is shown,
+  and the errors of the application itself
+  (docs/specs/steps/popgen2-band.md). Built on the branch `pca-tab` on
+  10 October 2026 (docs/plans/no-undo.md), and not yet tried by the
+  owner.
 
 ## 6. Each population
 
