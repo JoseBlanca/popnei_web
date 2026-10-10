@@ -197,7 +197,11 @@ browser on macOS, is left to the browser.
 | a line of a threshold, with a run of the arrow keys waiting | nothing; the run becomes a change at its second, or when the focus leaves |
 | anywhere else on the page | nothing |
 
-Ctrl+Shift+Z, Cmd+Shift+Z and Ctrl+Y likewise. Safari is said to
+Ctrl+Shift+Z, Cmd+Shift+Z and Ctrl+Y do the same, but in a number box
+with something typed and not yet given to the project, where they do
+nothing: the digits stay until Enter, Tab or a click elsewhere gives
+them to the project, or Escape, Ctrl+Z or Cmd+Z puts back the box's
+number. Safari is said to
 reopen the last closed tab at Cmd+Z when the page does not take the
 key; the page takes it.
 
@@ -456,9 +460,12 @@ How the box is used, on this page:
 - **Escape** puts back the box's number, the project's value, and so
   does **Ctrl+Z** while something typed is not yet committed. With
   nothing typed, Ctrl+Z changes nothing on this page, which has no
-  Undo since 10 October 2026. The box keeps the browser's
-  own undo and redo off its text. Ctrl+Z on Windows and Linux and Cmd+Z
-  on macOS offer them before the text changes, and the box refuses them.
+  Undo since 10 October 2026. Ctrl+Shift+Z, Cmd+Shift+Z and Ctrl+Y do
+  nothing, and leave what is typed until it is committed. The box keeps
+  the browser's own undo and redo off its text: the keys do not reach
+  the browser, since the page's window takes them ("Undo, Redo and
+  their keys"), and an undo offered otherwise, before the text changes,
+  the box refuses.
   The command of an undo given by the page, `document.execCommand`,
   stands in for the menu Edit, which no flow can click: WebKit offers it
   the same way, and Chromium carries it out unoffered, so the box puts
@@ -745,6 +752,8 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
   FILTER box, and leave the focus on the heading;
 - Ctrl+Y and Cmd+Y pressed in a box reached by Tab, its text selected,
   leave its number in the box, and the live regions say no "Empty";
+- Ctrl+Shift+Z, Cmd+Shift+Z and Ctrl+Y pressed in a box with 0.9 typed
+  over its 1 leave 0.9 in the box, and Escape then puts back the 1;
 - the browser's undo key, Ctrl+Z or Cmd+Z, and its redo, in a box whose
   number was typed and committed, leave the number in the box, the line
   and the threshold, also once the focus leaves the box;

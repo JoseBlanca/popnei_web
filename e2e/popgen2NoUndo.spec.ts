@@ -8,7 +8,7 @@
  * and in a box with nothing typed change no threshold, no option and no
  * result; Ctrl+Y and Meta+Y in a box reached by Tab, its text selected,
  * leave its number; in a box with digits not confirmed, Ctrl+Z puts back
- * the box's number; on a line
+ * the box's number and the keys of redo leave the digits; on a line
  * whose run of the arrow keys waits, the keys leave the run to become a
  * change at its second; the browser's own undo of a
  * box held back; the PCA done, a threshold moved and moved back: Run,
@@ -289,13 +289,23 @@ test("NU2 D3 Ctrl+Z, Meta+Z, Ctrl+Shift+Z, Meta+Shift+Z and Ctrl+Y on the headin
   await expect(notice(page)).toHaveCount(0);
 });
 
-test("NU2 D3 0.9 typed in the box of the MAF and not confirmed, Ctrl+Z: the box back to its number, the threshold off as it was; Meta+Z the same", async ({
+test("NU2 D3 0.9 typed in the box of the MAF and not confirmed: Ctrl+Shift+Z, Meta+Shift+Z and Ctrl+Y leave it typed; Ctrl+Z and Meta+Z put the box back to its number, the threshold off as it was", async ({
   page,
 }) => {
   await openPage(page);
   await pick(page, "panel.vcf.gz");
   await expectDone(page, "panel.vcf.gz");
   const maf = threshold(page, "Major allele frequency");
+  // The keys of redo leave the digits typed, not committed: Escape then
+  // puts back the box's number.
+  for (const keys of ["Control+Shift+z", "Meta+Shift+z", "Control+y"]) {
+    await maf.box.fill("0.9");
+    await maf.box.press(keys);
+    await expect(maf.box).toHaveValue("0.9");
+    await maf.box.press("Escape");
+    await expect(maf.box).toHaveValue("1");
+    await expect(maf.slider).toHaveValue("1");
+  }
   for (const keys of ["Control+z", "Meta+z"]) {
     await maf.box.fill("0.9");
     await maf.box.press(keys);
