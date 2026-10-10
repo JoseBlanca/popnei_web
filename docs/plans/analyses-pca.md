@@ -1404,8 +1404,15 @@ The decision by the rule set before the run: every run `IP6 D6`
 completed completed here too, in both engines, so nothing changes. No
 stop. The WebKit PCoA of 9,381 individuals grew 4.33 GB, above the old
 page's 4.10 GB, and completed: it goes into the report and into the
-PCA spec's "How it runs" (task 9.3). Each run started the calculation
-worker again, which is why the memory at the end of the pass stays
-near that before the file. The times of 9,381 individuals are 10 to 38%
+PCA spec's "How it runs" (task 9.3). The PCA runs in the worker that
+made the one pass: no restart comes between the pass and Run (the
+review read it in the code; a check of it is added below). The worker
+is started again after the PCA, as after every PCA of more than 700
+individuals (`src/worker/client.ts`), as in `IP6 D6`. The memory at the
+end of the pass stays near that before the file because a pass over
+300 variants keeps little: 0.04 to 0.07 GB more in Chromium, 0.19 to
+0.23 GB in WebKit. So the decision holds for a pass over 300 variants;
+what a pass over a file of many more variants leaves in the worker
+before a PCA is not measured here. The times of 9,381 individuals are 10 to 38%
 longer than on 29 September, under a load the old measurement did not
 have.
