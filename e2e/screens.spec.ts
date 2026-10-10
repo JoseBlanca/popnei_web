@@ -4837,8 +4837,12 @@ for (const theme of ["light", "dark"] as const) {
 
       test("a file popnei could not read", async ({ page }) => {
         await pickOnNewPage(page, "bad.vcf");
+        // In the box of the file: the Run of the PCA, drawn and hidden
+        // under its greyed tab, is described by the store's reason too.
         await expect(
-          page.getByText(/^popnei could not read bad\.vcf/u),
+          page
+            .getByRole("region", { name: "Variants file" })
+            .getByText(/^popnei could not read bad\.vcf/u),
         ).toBeVisible();
         await save(page, `popgen2-not-read${at}-${theme}`);
       });
