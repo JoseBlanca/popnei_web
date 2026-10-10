@@ -59,7 +59,7 @@ export type ButtonProps = ButtonBaseProps & DescriptionFocus;
 /** What every button is drawn with. */
 interface ButtonBaseProps {
   /** The words on the button, which are also its name for a screen
-      reader. */
+      reader unless `ariaLabel` gives another. */
   readonly label: string;
   /** What pressing it does, with the mouse, the keyboard or a touch;
       absent only inside a widget that gives the press itself, the
@@ -96,7 +96,7 @@ interface ButtonBaseProps {
       it acts on, "Stop the PCA" for "Stop"; it begins with its words, so
       that a user of speech names it by what they see (WCAG 2.5.3). Its
       words when absent. */
-  readonly name?: string;
+  readonly ariaLabel?: string;
   /** Its words in a window under 30 rem wide, "Stop" for "Stop
       recalculating", so that it fits a line; its words when absent. */
   readonly shortLabel?: string;
@@ -120,7 +120,7 @@ export function Button({
   isSubmit = false,
   autoFocus = false,
   look = "button",
-  name,
+  ariaLabel,
   shortLabel,
   expanded,
 }: ButtonProps): React.JSX.Element {
@@ -145,7 +145,7 @@ export function Button({
             {...(describedBy.length > 0 && {
               "aria-describedby": describedBy.join(" "),
             })}
-            {...(name !== undefined && { "aria-label": name })}
+            {...(ariaLabel !== undefined && { "aria-label": ariaLabel })}
             {...(expanded !== undefined && { "aria-expanded": expanded })}
           >
             {shortLabel === undefined ? (

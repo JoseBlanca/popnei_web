@@ -345,7 +345,7 @@ function Line({ line, page, onLink }: LineProps): React.JSX.Element | null {
       <span className={classOf(styles, "control")}>
         <Button
           label={stop.label}
-          name={stop.name}
+          ariaLabel={stop.name}
           onPress={() => {
             pressStop(stop, page);
           }}
