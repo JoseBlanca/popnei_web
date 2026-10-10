@@ -6096,3 +6096,205 @@ test("NU4 D6 the memory of a PCA of 9,381 individuals started by itself after a 
   // The bound is the plan's in WebKit; Chromium's is reported.
   if (browserName === "webkit") expect(held).toBe(true);
 });
+
+// ---------------------------------------------------------------------
+// NU5 D6, the time of "Stopping the PCA…" after the band's Stop.
+
+/** How long the PCA of NU5 D6 runs before the band's Stop, in ms. */
+const STOP_AFTER_MS = 10_000;
+
+/** Put in the page before its scripts: the time of every press of a
+    button, and of every change of the text of the band's line, in
+    `performance.now()` of the page. Run in the page. */
+function recordBandTimes(): void {
+  const presses: number[] = [];
+  const lines: { t: number; text: string }[] = [];
+  Object.assign(globalThis, { measurePresses: presses, measureLines: lines });
+  document.addEventListener(
+    "click",
+    () => {
+      presses.push(performance.now());
+    },
+    { capture: true },
+  );
+  const record = (): void => {
+    const line = document.querySelector(
+      'header[aria-label="What the page is doing"] h1',
+    )?.parentElement;
+    const text = line?.textContent ?? "";
+    if (lines.at(-1)?.text !== text) lines.push({ t: performance.now(), text });
+  };
+  new MutationObserver(record).observe(document, {
+    subtree: true,
+    childList: true,
+    characterData: true,
+  });
+}
+
+/** What NU5 D6 took, each from the press of the band's Stop. */
+interface StopTimes {
+  /** The PCA's run posted to the calculation worker to the press. */
+  readonly ranMs: number;
+  /** To "Stopping the PCA…" shown in the band. */
+  readonly shownMs: number;
+  /** To that line gone, and what the line said then. */
+  readonly goneMs: number;
+  readonly next: string;
+  /** To the start of the calculation worker made after the Stop. */
+  readonly startMs: number;
+  /** To that worker's "ready", popnei loaded. */
+  readonly readyMs: number;
+  /** Whether the PCA tab's Run was enabled once the line was gone. */
+  readonly runEnabled: boolean;
+}
+
+/** Opens popgen2.html, opens the VCF at `vcf`, waits for the end of the
+    one pass, turns the PCA's LD pruning off and presses Run; once the
+    PCA has run `STOP_AFTER_MS`, shows the Variants tab and presses the
+    band's Stop, and times the band and the new worker. */
+async function stopPca(browser: Browser, vcf: string): Promise<StopTimes> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const shown = page.getByRole("tabpanel");
+  const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+  const band = page.getByRole("banner", { name: "What the page is doing" });
+  try {
+    await page.addInitScript(instrument);
+    await page.addInitScript(recordBandTimes);
+    await page.goto("popgen2.html");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const chooser = page.waitForEvent("filechooser");
+    await page
+      .getByRole("button", { name: /^Open (another )?variants file…$/u })
+      .click();
+    await (await chooser).setFiles(vcf);
+    let pass: Logged | undefined;
+    await expect
+      .poll(
+        async () => {
+          pass = (await logOf(page)).find(
+            (l) => isCalc(l) && l.event === "in" && AFTER_PASS_ENDS.has(l.kind),
+          );
+          return pass !== undefined;
+        },
+        { timeout: 300_000, intervals: [200] },
+      )
+      .toBe(true);
+    if (pass?.kind !== "result") {
+      throw new Error(`the one pass ended with ${pass?.kind ?? "nothing"}`);
+    }
+    await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+    await shown
+      .locator("label")
+      .filter({ hasText: "Prune the variants by linkage disequilibrium (LD)" })
+      .click();
+    const run = shown.getByRole("button", { name: "Run", exact: true });
+    await expect(run).toBeEnabled();
+    const logged = (await logOf(page)).length;
+    await run.click();
+    let posted: Logged | undefined;
+    await expect
+      .poll(
+        async () => {
+          posted = (await logOf(page))
+            .slice(logged)
+            .find((l) => isCalc(l) && l.event === "out" && l.kind === "run");
+          return posted !== undefined;
+        },
+        { timeout: 30_000, intervals: [100] },
+      )
+      .toBe(true);
+    if (posted === undefined) throw new Error("no run posted");
+    const postedAt = posted.wall;
+    await page.waitForTimeout(postedAt + STOP_AFTER_MS - Date.now());
+    await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
+    const stop = band.getByRole("button", { name: "Stop the PCA" });
+    await expect(stop).toBeVisible();
+    const before = (await logOf(page)).length;
+    await stop.click();
+    const stopping = "Stopping the PCA…";
+    await expect(band).toContainText(stopping);
+    await expect(band).not.toContainText(stopping, { timeout: 60_000 });
+    const pressed = await page.evaluate(
+      () =>
+        (globalThis as unknown as { measurePresses: number[] }).measurePresses,
+    );
+    const lines = await page.evaluate(
+      () =>
+        (
+          globalThis as unknown as {
+            measureLines: { t: number; text: string }[];
+          }
+        ).measureLines,
+    );
+    const press = pressed.at(-1);
+    if (press === undefined) throw new Error("no press recorded");
+    const at = lines.findIndex(
+      (l) => l.t >= press && l.text.includes(stopping),
+    );
+    const gone = lines.slice(at + 1).find((l) => !l.text.includes(stopping));
+    const shownLine = lines[at];
+    if (shownLine === undefined || gone === undefined) {
+      throw new Error("the line of the Stop was not recorded");
+    }
+    await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+    const runEnabled = await run.isEnabled();
+    const after = (await logOf(page)).slice(before).filter(isCalc);
+    const start = after.find((l) => l.event === "start");
+    const ready = after.find(
+      (l) =>
+        l.event === "in" && l.kind === "ready" && l.worker === start?.worker,
+    );
+    if (start === undefined || ready === undefined) {
+      throw new Error("no new calculation worker, or no ready from it");
+    }
+    return {
+      ranMs: press - posted.t,
+      shownMs: shownLine.t - press,
+      goneMs: gone.t - press,
+      next: gone.text,
+      startMs: start.t - press,
+      readyMs: ready.t - press,
+      runEnabled,
+    };
+  } finally {
+    await context.close().catch(() => undefined);
+  }
+}
+
+test("NU5 D6 the time of Stopping the PCA in the band of popgen2.html: from the band's Stop of a PCA of 9,381 individuals, run 10 s, to the line shown, to the line gone, and to the new worker's popnei ready", async ({
+  browser,
+  browserName,
+}) => {
+  // Under the 550,000 ms of a command of the measurement run.
+  test.setTimeout(540_000);
+  const loadBefore = execFileSync("sysctl", ["-n", "vm.loadavg"], {
+    encoding: "utf8",
+  }).trim();
+  const vcf = await pcaVcf(LIVE_INDIVIDUALS);
+  const got = await stopPca(browser, vcf);
+  const s = (ms: number): string => `${(ms / 1000).toFixed(3)} s`;
+  report(
+    `NU5 D6 the time of Stopping the PCA after the band's Stop of a PCA of ${LIVE_INDIVIDUALS.toLocaleString("en-US")} individuals`,
+    `${machine(browser, browserName)}, macOS ${macOs()}, 10 October 2026; load average ${loadBefore} before; the gzipped VCF of ${String(PCA_VARIANTS)} variants of e2e/bigVcf.ts of NU4 D6, the thresholds of a new page, the PCA's LD pruning off; the band's Stop pressed in the Variants tab once the PCA had run ${s(got.ranMs)} in the calculation worker; each time from the press, with performance.now() of the page`,
+    [
+      "to the line shown",
+      "to the line gone",
+      "the band then",
+      "to the new worker's start",
+      "to its popnei ready",
+      "Run of the PCA tab enabled after",
+    ],
+    [
+      [
+        s(got.shownMs),
+        s(got.goneMs),
+        got.next,
+        s(got.startMs),
+        s(got.readyMs),
+        got.runEnabled ? "yes" : "no",
+      ],
+    ],
+  );
+  expect(got.goneMs).toBeGreaterThan(0);
+});
