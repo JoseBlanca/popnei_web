@@ -694,3 +694,8 @@ the gate kept only for Undo.
 
 Checks at bff843b1: typecheck, lint, format clean; Vitest 152 files,
 5,030 tests. No browser in this package.
+
+The owner answered on 10 October 2026, after the `ux` review of work
+package 2: nothing on the page gives the starting values of the
+thresholds back (no reset, no starting value shown), and no line says
+the page has no Undo.
