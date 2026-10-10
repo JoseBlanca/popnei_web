@@ -1582,3 +1582,17 @@ download of the filtered variants waits for a running PCA, as built;
 the column of the populations stays open during a run, as built, which
 answers the question of 9 October. Its specs and plan come after the
 fixes of round 1.
+
+The owner proposed on 10 October 2026 a band at the top of the page
+that says what the application is doing and shows warnings and errors.
+The session recommended, and the owner agreed the same day, to build it
+in the same piece as the removal of Undo, since the PCA started by
+itself is what makes it needed: the band shows what is running, with its
+progress and its Stop ("Reading panel.vcf.gz · 45%", "PCA running ·
+1:20", "Stopping the PCA…", "The PCA starts again in a moment"), takes
+over the bar of the application's errors, and points to a warning of
+the data in its tab ("PCA: 1 warning, in the PCA tab") rather than
+moving its text away from the result it qualifies; it is the visible
+form of the status region. It adds a part to the screen and changes no
+invariant of the architecture, so the approved design stands; its
+states and words go into the specs of that piece.
