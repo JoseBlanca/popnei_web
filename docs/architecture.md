@@ -1062,7 +1062,8 @@ one pass's result and with it every histogram and the download.
 
 While a PCA runs there, the screen locks the filters it reads, the
 thresholds and the FILTER box of the Variants tab and the PCA's own
-options, greyed with "Stop the PCA to change the filters." ("the PCoA"
+options, greyed with "Stop the PCA in the PCA tab to change the
+filters; then press Run there to calculate it again." ("the PCoA"
 under the PCoA), and the download of the filtered variants waits, as
 the owner answered on 9 October 2026 to the question of
 `docs/plans/analyses-pca.md` on a change made while a PCA runs, and

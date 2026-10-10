@@ -56,10 +56,11 @@ const ABOUT_DIALOG =
 
 /** The line beside Run after a Stop. */
 const STOPPED =
-  "Stopped: the PCA no longer starts by itself after a change. Press Run to calculate it.";
+  "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change.";
 
 /** What the status region says at a start by itself, and at a Stop. */
-const STARTED = "Calculating the PCA again. Stop it to change the filters.";
+const STARTED =
+  "Calculating the PCA again. To change the filters, stop it in the PCA tab.";
 const STOPPED_SAID =
   "PCA stopped. Press Run in the PCA tab to calculate it again.";
 

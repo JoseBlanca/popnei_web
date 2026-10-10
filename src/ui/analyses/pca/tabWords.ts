@@ -197,11 +197,12 @@ export function aboutToStartLine(
   }
 }
 
-/** What the status region says when the PCA starts again by itself:
-    "Calculating the PCA again. Stop it to change the filters."; "the
-    PCoA" under the PCoA. */
+/** What the status region says when the PCA starts again by itself,
+    with the tab where it is stopped: "Calculating the PCA again. To
+    change the filters, stop it in the PCA tab."; "the PCoA" under the
+    PCoA. */
 export function startedByItselfText(method: PcaMethod): string {
-  return `Calculating the ${methodName(method)} again. Stop it to change the filters.`;
+  return `Calculating the ${methodName(method)} again. To change the filters, stop it in the PCA tab.`;
 }
 
 /** What the status region says at a Stop of the PCA, in its tab or in
@@ -211,9 +212,10 @@ export function liveStoppedText(method: PcaMethod): string {
   return `${methodName(method)} stopped. Press Run in the PCA tab to calculate it again.`;
 }
 
-/** The line beside Run after a Stop, until Run or another variants
-    file: "Stopped: the PCA no longer starts by itself after a change.
-    Press Run to calculate it."; "the PCoA" under the PCoA. */
+/** The line after a Stop, until Run or another variants file, which
+    says what Run does again: "Stopped: the PCA no longer starts by
+    itself after a change. Run calculates it and starts it again after
+    each change."; "the PCoA" under the PCoA. */
 export function stoppedLine(method: PcaMethod): string {
-  return `Stopped: the ${methodName(method)} no longer starts by itself after a change. Press Run to calculate it.`;
+  return `Stopped: the ${methodName(method)} no longer starts by itself after a change. Run calculates it and starts it again after each change.`;
 }

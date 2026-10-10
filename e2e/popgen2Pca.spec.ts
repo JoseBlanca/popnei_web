@@ -39,7 +39,8 @@ import { holdSummary, release } from "./holdWorker.ts";
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
 /** The reason every control a running PCA reads waits with. */
-const LOCKED = "Stop the PCA to change the filters.";
+const LOCKED =
+  "Stop the PCA in the PCA tab to change the filters; then press Run there to calculate it again.";
 
 /** The words of Run locked by the one pass while it runs. */
 const READING =

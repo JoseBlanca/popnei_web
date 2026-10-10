@@ -55,7 +55,7 @@ const ABOUT =
 const ABOUT_DIALOG =
   "The PCA starts again when the download is written or closed.";
 const STOPPED =
-  "Stopped: the PCA no longer starts by itself after a change. Press Run to calculate it.";
+  "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change.";
 const NO_DISTANCE = "Type the LD distance above, or turn the LD pruning off.";
 
 let container: HTMLDivElement;

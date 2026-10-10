@@ -100,8 +100,8 @@ function fileIdOf(s: AppState<JobResult, Blob>): string | null {
 /**
  * Says with `announcer` what `live`, the analyses started by themselves,
  * tells of the PCA beyond the store (docs/specs/steps/popgen2-pca.md,
- * "Running" and "Stop"): "Calculating the PCA again. Stop it to change
- * the filters." once at each start by itself, and does not move the
+ * "Running" and "Stop"): "Calculating the PCA again. To change the
+ * filters, stop it in the PCA tab." once at each start by itself, and does not move the
  * focus, so that a user who changed a threshold and then finds it greyed
  * learns why; and "PCA stopped. Press Run in the PCA tab to calculate it
  * again." at a Stop, in the tab or in the band, which leaves the tab out

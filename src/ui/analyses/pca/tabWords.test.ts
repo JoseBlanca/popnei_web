@@ -363,10 +363,10 @@ describe("NU4 D2 the words of the PCA started again by itself, by the method", (
 
   test("the status region at a start by itself", () => {
     expect(startedByItselfText("pca")).toBe(
-      "Calculating the PCA again. Stop it to change the filters.",
+      "Calculating the PCA again. To change the filters, stop it in the PCA tab.",
     );
     expect(startedByItselfText("pcoa")).toBe(
-      "Calculating the PCoA again. Stop it to change the filters.",
+      "Calculating the PCoA again. To change the filters, stop it in the PCA tab.",
     );
   });
 
@@ -381,10 +381,10 @@ describe("NU4 D2 the words of the PCA started again by itself, by the method", (
 
   test("the line beside Run after a Stop", () => {
     expect(stoppedLine("pca")).toBe(
-      "Stopped: the PCA no longer starts by itself after a change. Press Run to calculate it.",
+      "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change.",
     );
     expect(stoppedLine("pcoa")).toBe(
-      "Stopped: the PCoA no longer starts by itself after a change. Press Run to calculate it.",
+      "Stopped: the PCoA no longer starts by itself after a change. Run calculates it and starts it again after each change.",
     );
   });
 });

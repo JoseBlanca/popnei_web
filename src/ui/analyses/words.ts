@@ -28,6 +28,7 @@ import type { Project } from "../../core/project.ts";
 import type { AnalysisError, Notice } from "../../core/store.ts";
 import type { Pops, Progress, RunError } from "../../worker/protocol.ts";
 import { capitalized, undoneOrRedone } from "../sentences.ts";
+import type { RunningAnalysis } from "./status.ts";
 import { numberText } from "../widgets/committedNumber.ts";
 import type { NumberRefusal } from "../widgets/committedNumber.ts";
 
@@ -540,10 +541,12 @@ export function minimumRefusedText(
   return `${refusedWhy(refusal, MINIMUM_NOT_TAKEN, grouped)}; the minimum stays ${grouped(kept)}.`;
 }
 
-/** The reason the filters a running analysis reads are locked, and Undo
-    and Redo wait, as tooltip and description, `name` being the analysis
-    in a sentence: "Stop the PCA to change the filters."
-    (docs/specs/steps/popgen2-pca.md, "While a PCA runs"). */
-export function filtersLockedText(name: string): string {
-  return `Stop ${name} to change the filters.`;
+/** The reason the filters the running analysis `running` reads are
+    locked, as tooltip and description, with the tab where it is stopped
+    and what follows the Stop, which also ends its automatic runs: "Stop
+    the PCA in the PCA tab to change the filters; then press Run there to
+    calculate it again." (docs/specs/steps/popgen2-pca.md, "While a PCA
+    runs"). */
+export function filtersLockedText(running: RunningAnalysis): string {
+  return `Stop ${running.name} in the ${running.tab} tab to change the filters; then press Run there to calculate it again.`;
 }

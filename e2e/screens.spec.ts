@@ -6066,7 +6066,7 @@ for (const theme of ["light", "dark"] as const) {
         });
         await missing.hover();
         await expect(page.getByRole("tooltip")).toHaveText(
-          "Stop the PCA to change the filters.",
+          "Stop the PCA in the PCA tab to change the filters; then press Run there to calculate it again.",
         );
         await save(page, `popgen2-pca-live-locked${at}-${theme}`);
       });

@@ -706,8 +706,8 @@ the new look are said once (above, "Its words"). Nothing at each press
 of an arrow key: the line's value is read as it moves, as of any
 slider; a run that changes the look is said once it is made a change. A PCA
 that a change starts by itself is said by the PCA tab's words,
-"Calculating the PCA again. Stop it to change the filters."
-(`docs/specs/steps/popgen2-pca.md`), so a
+"Calculating the PCA again. To change the filters, stop it in the PCA
+tab." (`docs/specs/steps/popgen2-pca.md`), so a
 user who moved a threshold of the Variants tab learns of it there.
 
 **The grey in words** (1.4.1, "Use of color"). A threshold that keeps

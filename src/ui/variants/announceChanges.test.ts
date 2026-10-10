@@ -95,12 +95,12 @@ describe("NU4 D2 the status region says the PCA started by itself and its Stop",
     const { said, tell, toPcoa } = setUp();
     tell({ kind: "startedByItself", id: "pca" });
     expect(said).toEqual([
-      "Calculating the PCA again. Stop it to change the filters.",
+      "Calculating the PCA again. To change the filters, stop it in the PCA tab.",
     ]);
     toPcoa();
     tell({ kind: "startedByItself", id: "pca" });
     expect(said.at(-1)).toBe(
-      "Calculating the PCoA again. Stop it to change the filters.",
+      "Calculating the PCoA again. To change the filters, stop it in the PCA tab.",
     );
     expect(said).toHaveLength(2);
   });

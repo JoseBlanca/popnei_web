@@ -12,7 +12,8 @@
  * nothing to the worker for it, since the key of the one pass holds no
  * filter.
  *
- * While a PCA runs it waits, with "Stop the PCA to change the filters."
+ * While a PCA runs it waits, with "Stop the PCA in the PCA tab to change
+ * the filters; …"
  * as its tooltip and its description (`useFiltersLock`).
  *
  * Drawn by FileStats.tsx from the read of the file, whether the code of

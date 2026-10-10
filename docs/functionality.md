@@ -567,8 +567,8 @@ give the principal components that go into the GWAS as covariates.
   read the variants file to the end for its plots. While it
   runs, the thresholds and the FILTER box of the Variants tab, the PCA's
   own options and the download of the filtered variants
-  wait, greyed with the reason, "Stop the PCA to change the filters.",
-  so that no change of what it reads is made under it, as the owner
+  wait, greyed with the reason, "Stop the PCA in the PCA tab to change
+  the filters; then press Run there to calculate it again.", so that no change of what it reads is made under it, as the owner
   decided on 9 October 2026 and again on 10 October 2026; the
   individuals file and the column that colours the points stay open,
   since they only colour the points. From 10 October 2026
