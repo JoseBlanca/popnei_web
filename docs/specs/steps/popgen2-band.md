@@ -19,6 +19,14 @@ the same day, with its open point answered otherwise than recommended:
 the band is always at the top of the window and carries the page's
 name, "Popnei", the heading of the page, with what is running after it
 (below, "Open points"). Its plan is `docs/plans/no-undo.md`.
+Built on the branch `pca-tab` on 10 October 2026 (work package 5 of
+that plan), and not yet tried by the owner. Its reviews changed it:
+"Popnei" alone while nothing runs, as the owner had decided; "Stop
+recalculating" only while the PCA is about to start, and no control of
+the PCA while the PCA tab is shown; the one pass named as its box
+names it; an error band that scrolls with the page, brought into view
+when it comes, with the focus given to the heading when the jump
+leaves it out of the window, and held while a dialog is open.
 
 It reads what the other specs of the page give, and repeats none of
 it:
