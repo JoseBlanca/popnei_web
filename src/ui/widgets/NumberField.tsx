@@ -1,17 +1,17 @@
 /**
  * A number field: React Aria's `NumberField`, with our look and no
  * buttons (react.md, "Widgets: React Aria, wrapped once"). It parses what
- * is typed in the language of the browser, and gives it when it is
- * committed, on Enter, when the field loses the focus, or at each press
- * of an arrow key. A number outside the bounds, or off the step, is not
- * given: the field shows again the value it had, and a line under it says
- * why and what is kept, which the screen is handed to announce
- * (committedNumber.ts; docs/specs/steps/variants.md, "A number the two
- * fields do not take"). The line goes at the next commit, whatever it
- * holds. A field left empty gives nothing and shows again the value it
- * had, with no line. It takes no separator of thousands, so that a number
- * written with the decimal mark of another language, 0,05 in English or
- * 0.05 in Spanish, is no number, and not 5.
+ * is typed in the language of the page, en-US (LOCALE of pageStart.tsx),
+ * whatever the browser's, and gives it when it is committed, on Enter,
+ * when the field loses the focus, or at each press of an arrow key. A
+ * number outside the bounds, or off the step, is not given: the field
+ * shows again the value it had, and a line under it says why and what is
+ * kept, which the screen is handed to announce (committedNumber.ts;
+ * docs/specs/steps/variants.md, "A number the two fields do not take").
+ * The line goes at the next commit, whatever it holds. A field left empty
+ * gives nothing and shows again the value it had, with no line. It takes
+ * no separator of thousands, so that a number written with the decimal
+ * comma of another language, 0,05, is no number, and not 5.
  *
  * In an empty field, one given `NaN` with nothing typed or one whose
  * text the user deleted, the keys that step a number, the arrow keys,
