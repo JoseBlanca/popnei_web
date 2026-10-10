@@ -365,7 +365,10 @@ Then three, in this order:
   It moves by the step of the Variants tab's box of that threshold,
   which rounds to the step of its axis (`popgen2-filters.md`, "A number
   with many decimals"), and by 0.01 at the most: 0.001 on the missing
-  rate of `panel.nei`, whose axis steps by 0.001.
+  rate of `panel.nei`, whose axis steps by 0.001. While the PCA has a
+  value of its own, the slider takes the decimals of that value too, so
+  that it never reads it rounded: a PCA's own 0.045, set on a step of
+  0.001, reads 0.045 when the axis steps by 0.01.
   The arrow keys move it a step, Page Up and Page Down a tenth of its
   range, Home and End to its ends, as React Aria's slider does.
 

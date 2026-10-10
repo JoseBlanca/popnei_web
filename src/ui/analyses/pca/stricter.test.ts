@@ -160,6 +160,30 @@ describe("AP10 D2 stricterBound, the ends, the step and the value shown of each 
   });
 });
 
+describe("AP10 D2 stricterBound keeps the decimals of the PCA's own value", () => {
+  test("the PCA's own 0.045, set on a step of 0.001: read 0.045 on a step of 0.001, before the axis is drawn, and on a step of 0.01; its own 0.0021, 0.0021", () => {
+    const p = project([missing(0.1)], ownMissing(0.045));
+    for (const stepDecimals of [3, null, 2]) {
+      const bound = stricterBound(p, "missing_data", stepDecimals);
+      expect(bound.shown).toBe(0.045);
+      expect(stricterValueText(bound, bound.shown)).toBe("0.045");
+    }
+    const finer = stricterBound(
+      project([missing(0.1)], ownMissing(0.0021)),
+      "missing_data",
+      3,
+    );
+    expect(stricterValueText(finer, finer.shown)).toBe("0.0021");
+  });
+
+  test("following the Variants tab, the PCA's own value kept does not change the decimals", () => {
+    const p = project([missing(0.1)], {
+      missingData: { follow: true, maxAllowedMissingRate: 0.045 },
+    });
+    expect(stricterBound(p, "missing_data", 2).decimals).toBe(2);
+  });
+});
+
 describe("AP10 D2 stricterValueText, the words of the value of a slider", () => {
   test("at the upper end, the Variants tab's value or Off, as in the Variants tab; below it, the value", () => {
     const on = stricterBound(project([missing(0.1)]), "missing_data", 3);

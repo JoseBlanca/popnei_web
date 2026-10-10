@@ -51,7 +51,8 @@ export interface StricterBound {
   readonly max: number;
   /** The decimals of a value: those of the step of the Variants tab's
       box of that threshold, three at most as its box, those of the
-      Variants tab's value, and two at least. */
+      Variants tab's value, those of the PCA's own value while it does
+      not follow the Variants tab, and two at least. */
   readonly decimals: number;
   /** What a key moves it by: 10 to the minus `decimals`. */
   readonly step: number;
@@ -83,6 +84,9 @@ export function stricterBound(
       ? 0
       : Math.min(stepDecimals, VARIANT_THRESHOLD_DECIMALS),
     tab === null ? 0 : decimalsOf(tab),
+    // The PCA's own value, which the slider shows and the PCA uses, so
+    // that it is never read rounded: 0.045 on a step of 0.01.
+    follow ? 0 : decimalsOf(own),
   );
   return {
     tab,
