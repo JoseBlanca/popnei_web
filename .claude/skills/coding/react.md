@@ -380,7 +380,8 @@ What each one is for here:
 | need | React Aria | notes |
 |---|---|---|
 | choose one of a few, the column of the populations, Hudson or Jost | `Select` with `Label`, `Button`, `SelectValue`, `Popover`, `ListBox` | items with `id`; `selectedKey` and `onSelectionChange` |
-| on or off, a setting that takes effect at once | `Switch` | not for an option of an analysis, which takes effect at the next Run: each filter of the PCA's own, "As in the Variants step" or "For the PCA alone", is a `RadioGroup` (`docs/specs/analyses/pca.md`) |
+| on or off, a setting that takes effect at once | `Switch` | not for an option of an analysis, which takes effect at the next Run: on `popgen.html` each filter of the PCA's own, "As in the Variants step" or "For the PCA alone", is a `RadioGroup` (`docs/specs/analyses/pca.md`); on `popgen2.html` it is a slider, below |
+| a number within a range the user moves through, the PCA's own filters on `popgen2.html` | `Slider` of `src/ui/widgets/Slider.tsx`, on React Aria's `Slider` | its upper end is the Variants tab's value, "as in the Variants tab"; one change of the project at the end of a drag or at each key, not at each pixel, owner's request of 10 October 2026 (`docs/specs/steps/popgen2-pca.md`) |
 | a number with bounds, a threshold | `NumberField` | `minValue`, `maxValue`, `step`, `formatOptions`; it parses the number in the user's locale, so `0,95` works in Spanish |
 | a yes or no inside a list, the columns kept | `Checkbox`, `CheckboxGroup` | |
 | the results of one analysis, table and plot | `Tabs`, `TabList`, `Tab`, `TabPanel` | the selected tab is screen state |
