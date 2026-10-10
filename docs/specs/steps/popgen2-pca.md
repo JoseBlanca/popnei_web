@@ -509,8 +509,8 @@ or is stopped, each is as before.
 Not locked, since the PCA's key holds none of them: the box of the
 individuals file, its Open, its Remove, its reader's options and its
 "Column of the populations", which only colour the points and the
-counts; "Colour the points by", the axes, 3D or 2D and the buttons of
-the 3D view; the row of tabs; and the opening of another variants file,
+counts; "Colour the points by", the axes, 3D or 2D and the turn and
+zoom of the 3D view; the row of tabs; and the opening of another variants file,
 which stops the PCA, as an opening stops every calculation. The owner's
 answer named the column of the populations among the filters to lock;
 the session asked on 9 October 2026 whether it should be, since the PCA
@@ -528,9 +528,18 @@ column).
   PC1, PC2 and PC3" under the PCoA, where the old panel says "Principal
   components" under both.
 - **The bar of controls**: "3D" and "2D", the components on the axes,
-  "Colour the points by" with "Population" and every column of the
-  individuals file but the names, the buttons that turn, tilt, zoom and
-  look along an axis of the 3D view; as the old panel.
+  and "Colour the points by" with "Population" and every column of the
+  individuals file but the names, as the old panel. The 3D view has no
+  buttons to turn it, tilt it, look along an axis, zoom or reset it,
+  which the old panel has: it is turned by dragging it and zoomed with
+  Ctrl and the wheel of the mouse, or by pinching with two fingers, as
+  on the old panel (`docs/specs/charts/pca3d.md`). So a user of the
+  keyboard alone turns nothing in 3D; they have the 2D plot, one button
+  away, of any two of the components, and the table of the individuals,
+  which gives every coordinate. The owner asked for the buttons to go
+  on 10 October 2026, on trying the page, knowing that a user of the
+  keyboard alone could no longer turn the view
+  (`docs/plans/analyses-pca.md`, work package 10, round 1, item 3).
 - **The plot**, in 3D first; in 2D one button away, or in the place of
   the 3D view where the browser cannot draw it, with the old panel's
   words of why.
@@ -873,7 +882,10 @@ looking at, and is read when they reach the field.
 **The PCA's plot, its legend, its table and its 3D view** are as on the
 old panel (`docs/specs/analyses/pca.md`, "Accessibility"), with
 "Unclassified" in place of "No population" in the description and the
-legend.
+legend, and without the buttons of the 3D view: a user of the keyboard
+alone turns nothing in 3D, and has the 2D plot of any two components
+and the table of the individuals (2.1.1; "The result", the bar of
+controls; the owner's decision of 10 October 2026).
 
 **Not yet heard in VoiceOver**, which the session cannot run: the row
 read as "Files and analyses, tab list", a greyed tab read as dimmed with
@@ -980,7 +992,7 @@ engines that start on the owner's Mac, on `panel.nei`,
   table of the PCA, sorted by PC1, saved, its rows in that order; the
   SVG of a histogram, with its threshold's line; a PNG of the 3D view;
   a histogram's menu disabled while the pass is held, with its tooltip.
-- **Kept drawn**: the PCA in 3D, turned with its buttons, the Variants
+- **Kept drawn**: the PCA in 3D, turned by a drag, the Variants
   tab shown and back: the same view, in Chromium and in WebKit, whose
   WebGL context must survive the hidden tab.
 - axe, the checker of accessibility, in each state of the PCA tab, the

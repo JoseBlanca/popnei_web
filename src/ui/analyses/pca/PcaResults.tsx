@@ -12,9 +12,10 @@
  * the comparison with the check numbers, drawn under the table.
  *
  * On popgen2.html (docs/specs/steps/popgen2-pca.md, "The result" and
- * "The downloads") the plot has a title, "Principal components of
- * panel.nei", with the menu "Download…" of the plot at the end of its
- * line, before the bar of controls: its images from the handle of the
+ * "The downloads") the 3D view has no buttons, and is turned by a drag
+ * and zoomed with Ctrl and the wheel alone; the plot has a title,
+ * "Principal components of panel.nei", with the menu "Download…" of the
+ * plot at the end of its line, before the bar of controls: its images from the handle of the
  * plot drawn, 2D or 3D, and its data the coordinates vavilov-explorer
  * imports, `pcaCoordinatesCsv`; the menu waits while three.js downloads.
  * Each table has its menu in the place of the old buttons, and the 3D
@@ -483,7 +484,11 @@ function PcaResultOf({
             );
           }}
         />
-        {drawn === "3d" && handle !== null && (
+        {/* The buttons of the view, on the old page alone: popgen2.html
+            turns its view by a drag and zooms it with Ctrl and the wheel
+            (docs/specs/steps/popgen2-pca.md, "The result", the bar of
+            controls). */}
+        {!onPopgen2 && drawn === "3d" && handle !== null && (
           <div className={classOf(styles, "viewButtons")}>
             <Button
               label={TURN_LEFT}

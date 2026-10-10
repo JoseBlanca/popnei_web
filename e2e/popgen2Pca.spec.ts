@@ -1091,6 +1091,13 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
       await expect(shown(page).getByRole("img", { name: PCA_3D })).toBeVisible({
         timeout: RESULT_TIMEOUT,
       });
+      // No buttons to turn, tilt, look along, zoom or reset the 3D view
+      // on this page: a drag turns it, Ctrl and the wheel zoom it.
+      await expect(
+        shown(page).getByRole("button", {
+          name: /^(Turn|Tilt|View along|Zoom|Reset view)/u,
+        }),
+      ).toHaveCount(0);
     }
     await expect(shown(page).getByText(/^Warning:/u)).toHaveCount(0);
     await expect(
@@ -1418,7 +1425,7 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     );
   });
 
-  test("AP6 D3 kept drawn: the 3D view turned, the Variants tab shown and back, the same view; a run that ends while the tab is hidden draws its view when the tab is shown, its loading not said meanwhile", async ({
+  test("AP6 D3 kept drawn: the 3D view turned by a drag, the Variants tab shown and back, the same view; a run that ends while the tab is hidden draws its view when the tab is shown, its loading not said meanwhile", async ({
     page,
   }) => {
     test.setTimeout(90_000);
@@ -1459,10 +1466,17 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     const labels = shown(page).locator(".chart-pca3d-label");
     await expect(labels).toHaveCount(3);
 
-    for (const name of ["Turn left", "Turn left", "Tilt up"]) {
-      await shown(page).getByRole("button", { name, exact: true }).click();
-    }
+    // Turned by a drag across the view, the only way on this page; the
+    // pointer then taken off it, so that no point under it is named.
     await canvas.scrollIntoViewIfNeeded();
+    const box = await canvas.boundingBox();
+    if (box === null) throw new Error("no box of the 3D view");
+    const middle = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    await page.mouse.move(middle.x, middle.y);
+    await page.mouse.down();
+    await page.mouse.move(middle.x + 120, middle.y + 40, { steps: 10 });
+    await page.mouse.up();
+    await page.mouse.move(0, 0);
     const before = await canvas.screenshot();
     const placesBefore = await labels.evaluateAll((all) =>
       all.map((label) => {
