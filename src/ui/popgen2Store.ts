@@ -18,6 +18,7 @@
  * Apart from the entry, so that a test in node makes the store with what
  * the page gives it.
  */
+import { pcaOnPopgen2 } from "../core/analyses/pca.ts";
 import { variantsSummary } from "../core/analyses/variantsSummary.ts";
 import {
   POPGEN2_ANALYSES,
@@ -48,10 +49,20 @@ export const POPGEN2_CHAIN: readonly AnalysisId[] = Object.freeze([
   variantsSummary.id,
 ]);
 
+/** The analyses the page starts again by itself once the user's Run made
+    them live, and only then: the PCA
+    (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by
+    itself"). A group of its own, after `POPGEN2_CHAIN`, so that it waits
+    for the one pass as its Run does. */
+export const POPGEN2_LIVE: readonly AnalysisId[] = Object.freeze([
+  pcaOnPopgen2.id,
+]);
+
 /** The analyses the page starts by itself, in the groups `createAutoRuns`
-    of autoRuns.ts takes: the one group, `POPGEN2_CHAIN`. */
+    of autoRuns.ts takes: the one pass, `POPGEN2_CHAIN`, and then the
+    PCA, `POPGEN2_LIVE`, once live. */
 export const POPGEN2_AUTO_GROUPS: readonly (readonly AnalysisId[])[] =
-  Object.freeze([POPGEN2_CHAIN]);
+  Object.freeze([POPGEN2_CHAIN, POPGEN2_LIVE]);
 
 /** The store of popgen2.html as its screens see it: no undo, no redo,
     so that a screen of that page that calls them does not compile, and

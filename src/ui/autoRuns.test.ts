@@ -1,10 +1,18 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { individualChecks } from "../core/analyses/individualChecks.ts";
 import { variantChecks } from "../core/analyses/variantChecks.ts";
 import { variantsSummary } from "../core/analyses/variantsSummary.ts";
+import { pcaOnPopgen2, pcaOptions } from "../core/analyses/pca.ts";
 import { countsOf, firstProject } from "../core/apps.ts";
-import { loadVariants } from "../core/project.ts";
+import { keyFromWire } from "../core/keys.ts";
+import {
+  loadIndividuals,
+  loadVariants,
+  setAnalysisOptions,
+  setVariantFilter,
+} from "../core/project.ts";
+import type { VariantLoad } from "../core/project.ts";
 import { createStore } from "../core/store.ts";
 import type { AnalysisDef, AnalysisStatus, Store } from "../core/store.ts";
 import { summaryResult } from "../core/testSupport.ts";
@@ -15,10 +23,25 @@ import type {
   Run,
   RunError,
   VariantDistrib,
+  WriteJob,
 } from "../worker/protocol.ts";
-import { createAutoRuns } from "./autoRuns.ts";
-import { POPGEN2_AUTO_GROUPS, POPGEN2_CHAIN } from "./popgen2Store.ts";
-import { startAnalysis } from "./runs.ts";
+import { LIVE_QUIET_MS, createAutoRuns } from "./autoRuns.ts";
+import type { AutoRuns } from "./autoRuns.ts";
+import {
+  POPGEN2_AUTO_GROUPS,
+  POPGEN2_CHAIN,
+  POPGEN2_LIVE,
+  createPopgen2Store,
+  openVariantsFile,
+} from "./popgen2Store.ts";
+import type { Popgen2PageStore } from "./popgen2Store.ts";
+import { startAnalysis, startWriting } from "./runs.ts";
+import {
+  createRunGate,
+  createThresholdRun,
+  gatedStore,
+} from "./variants/thresholdRun.ts";
+import type { RunGate } from "./variants/thresholdRun.ts";
 import { SUMMARY_ID } from "./variants/words.ts";
 
 const ID = SUMMARY_ID;
@@ -56,8 +79,9 @@ const DEFS: ReadonlyMap<string, AnalysisDef<Job, JobResult>> = new Map([
 
 /** A store as that of the new page, with the analyses of `groups` and a
     fake `send` whose requests the test ends by hand, and the analyses it
-    starts by itself, `groups`, the page's unless given. */
-function setUp(groups: readonly (readonly string[])[] = POPGEN2_AUTO_GROUPS): {
+    starts by itself, `groups`, the page's one pass unless given, with no
+    live analysis. */
+function setUp(groups: readonly (readonly string[])[] = [POPGEN2_CHAIN]): {
   readonly store: Store<JobResult, Blob>;
   readonly sent: ((outcome: Outcome<JobResult>) => void)[];
   readonly requests: Request[];
@@ -103,6 +127,7 @@ function setUp(groups: readonly (readonly string[])[] = POPGEN2_AUTO_GROUPS): {
     store,
     groups,
     start: (id) => startAnalysis(store, id),
+    live: null,
   });
   const status = (id: string = ID): AnalysisStatus<JobResult> => {
     const view = store.getState().analyses.find((a) => a.id === id);
@@ -791,9 +816,10 @@ describe("one group of two, the summary and an analysis after it", () => {
 });
 
 describe("one-pass the chain of popgen2.html: the summary alone", () => {
-  test("the page's one group is the summary alone", () => {
+  test("the page's group of the one pass is the summary alone, and the PCA, live, comes after it", () => {
     expect(POPGEN2_CHAIN).toEqual([ID]);
-    expect(POPGEN2_AUTO_GROUPS).toEqual([POPGEN2_CHAIN]);
+    expect(POPGEN2_AUTO_GROUPS).toEqual([POPGEN2_CHAIN, POPGEN2_LIVE]);
+    expect(POPGEN2_LIVE).toEqual(["pca"]);
   });
 
   test("on a VCF the summary done ends the chain: nothing more is sent, and Start again is not offered", async () => {
@@ -865,3 +891,580 @@ describe("live-stats 3 a locked member of a group starts nothing and holds back 
     expect(auto.resume(GROUP)).toBe(false);
   });
 });
+
+/** A request of the page's store with the PCA live: its key, its job,
+    whether it was cancelled, and how the test ends it. */
+interface LiveRequest {
+  readonly key: string;
+  readonly job: Job | WriteJob;
+  cancelled: boolean;
+  readonly end: (outcome: Outcome<JobResult>) => void;
+}
+
+/** A result of the PCA of `s000` and `s001`. */
+function pcaResult(): JobResult {
+  return {
+    analysis: "pca",
+    method: "pca",
+    individuals: ["s000", "s001"],
+    numComps: 1,
+    numCompsFound: 1,
+    projections: Float64Array.from([1, -1]),
+    explainedVariancePercent: Float64Array.from([100]),
+    numVarsUsed: 548,
+    lingoesConstant: null,
+    negativeEigenvaluesPercent: null,
+    passStats: { numVars: 548, filtering: {} },
+  };
+}
+
+/** Lets every promise the fake worker's outcomes settle, through
+    `startAnalysis`, and the microtasks of the page's `sync`, with the
+    clock stopped. */
+async function flush(): Promise<void> {
+  for (let turn = 0; turn < 30; turn += 1) await Promise.resolve();
+}
+
+/** The load of `panel.nei` under `fileId`. */
+function panelLoad(fileId: string): VariantLoad {
+  return {
+    fileId,
+    name: "panel.nei",
+    size: 261_490,
+    format: "nei",
+    readOptions: null,
+  };
+}
+
+/**
+ * The store of popgen2.html as its entry makes it, with a fake worker
+ * whose requests the test ends, the gate of the page, its screens'
+ * store passing the gate, and the analyses started by themselves with
+ * the PCA live once Run is pressed; `panel.nei` open, read with `s000`
+ * and `s001`, the one pass done, and the LD distance typed, 50,000, so
+ * that the PCA is ready. The page's `sync` after every change of the
+ * store, in a microtask, as the entry calls it.
+ */
+async function livePage(): Promise<{
+  readonly raw: Popgen2PageStore<JobResult, Blob>;
+  readonly store: Popgen2PageStore<JobResult, Blob>;
+  readonly gate: RunGate;
+  readonly auto: AutoRuns;
+  readonly requests: LiveRequest[];
+  readonly writes: LiveRequest[];
+  readonly pcaRequests: () => readonly LiveRequest[];
+  readonly pca: () => AnalysisStatus<JobResult>;
+  readonly endPca: (outcome?: Outcome<JobResult>) => Promise<void>;
+  readonly setMissing: (value: number) => void;
+  readonly setDistance: (value: number | null) => void;
+  readonly events: string[];
+}> {
+  const requests: LiveRequest[] = [];
+  const writes: LiveRequest[] = [];
+  let lastId = 0;
+  const sendOf =
+    (into: LiveRequest[]) =>
+    (key: string, job: Job | WriteJob): Run<never> => {
+      lastId += 1;
+      let request: LiveRequest | null = null;
+      const outcome = new Promise<Outcome<never>>((resolve) => {
+        request = {
+          key,
+          job,
+          cancelled: false,
+          end: resolve as (outcome: Outcome<JobResult>) => void,
+        };
+        into.push(request);
+      });
+      return {
+        id: lastId,
+        outcome,
+        cancel: () => {
+          if (request !== null) request.cancelled = true;
+        },
+      };
+    };
+  const raw = createPopgen2Store({
+    send: sendOf(requests),
+    sendWrite: sendOf(writes),
+    appVersion: "0.1.0",
+  });
+  raw.popneiReady("0.2.2");
+  const gate = createRunGate();
+  const store = gatedStore(raw, gate);
+  const auto = createAutoRuns({
+    store: raw,
+    groups: POPGEN2_AUTO_GROUPS,
+    start: (id) => startAnalysis(raw, id),
+    live: {
+      analyses: POPGEN2_LIVE,
+      changes: gate,
+      runStart: (id) => startAnalysis(store, id),
+      quietMs: LIVE_QUIET_MS,
+    },
+  });
+  const events: string[] = [];
+  auto.onLive((event) => {
+    events.push(`${event.kind} ${event.id}`);
+  });
+  raw.subscribe(() => {
+    queueMicrotask(() => {
+      auto.sync();
+    });
+  });
+  openVariantsFile(store, panelLoad(FIRST));
+  raw.variantsRead(FIRST, {
+    kind: "read",
+    individuals: ["s000", "s001"],
+    ploidy: 2,
+    numVars: null,
+    keepsPassed: false,
+  });
+  const setDistance = (value: number | null): void => {
+    store.apply("the LD distance of the PCA changed", (p) =>
+      setAnalysisOptions(p, pcaOnPopgen2, {
+        ...pcaOptions(p, "popgen2"),
+        ld: { follow: false, maxAllowedR2: 0.1, maxDist: value },
+      }),
+    );
+  };
+  setDistance(50_000);
+  await flush();
+  const pass = requests[0];
+  if (
+    pass === undefined ||
+    !("analysis" in pass.job) ||
+    pass.job.analysis !== "variantsSummary"
+  ) {
+    throw new Error("the one pass did not start");
+  }
+  pass.end({
+    kind: "done",
+    key: pass.key,
+    result: summaryResult(["1"], [1200]),
+  });
+  await flush();
+  const pcaRequests = (): readonly LiveRequest[] =>
+    requests.filter((r) => "analysis" in r.job && r.job.analysis === "pca");
+  const pca = (): AnalysisStatus<JobResult> => {
+    const view = raw.getState().analyses.find((a) => a.id === "pca");
+    if (view === undefined) throw new Error("no PCA in the store");
+    return view.status;
+  };
+  return {
+    raw,
+    store,
+    gate,
+    auto,
+    requests,
+    writes,
+    pcaRequests,
+    pca,
+    endPca: async (outcome) => {
+      const last = pcaRequests().at(-1);
+      if (last === undefined) throw new Error("no PCA was sent");
+      last.end(outcome ?? { kind: "done", key: last.key, result: pcaResult() });
+      await flush();
+    },
+    setMissing: (value) => {
+      store.apply("the missing data filter changed", (p) =>
+        setVariantFilter(p, {
+          kind: "missing_data",
+          maxAllowedMissingRate: value,
+        }),
+      );
+    },
+    setDistance,
+    events,
+  };
+}
+
+/** Moves the clock of the test by `ms`, and lets what it starts settle. */
+async function wait(ms: number): Promise<void> {
+  await vi.advanceTimersByTimeAsync(ms);
+  await flush();
+}
+
+/** The page with the PCA run by Run and ended with its result. */
+async function liveDone(): Promise<Awaited<ReturnType<typeof livePage>>> {
+  const page = await livePage();
+  expect(page.auto.run("pca")).toBe(true);
+  await page.endPca();
+  expect(page.pca().kind).toBe("done");
+  return page;
+}
+
+describe("NU4 D1 the PCA calculated again by itself", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("the PCA ready does not start before Run, however long the page waits", async () => {
+    const page = await livePage();
+    expect(page.pca().kind).toBe("ready");
+    page.setMissing(0.05);
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(0);
+    expect(page.auto.isLive("pca")).toBe(false);
+    expect(page.auto.aboutToStart("pca")).toBe(false);
+  });
+
+  test("Run makes the PCA live and starts it at once, through the gate", async () => {
+    const page = await livePage();
+    expect(page.auto.run("pca")).toBe(true);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(page.pca().kind).toBe("running");
+    expect(page.auto.isLive("pca")).toBe(true);
+    expect(page.events).toEqual([]);
+  });
+
+  test("after Run and its end, a threshold changed starts the PCA one second later, and not before", async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    await wait(999);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(page.pca().kind).toBe("ready");
+    await wait(1);
+    expect(page.pcaRequests()).toHaveLength(2);
+    expect(page.pca().kind).toBe("running");
+    expect(page.events).toEqual(["startedByItself pca"]);
+  });
+
+  test("a second change within that second puts the start off, and the PCA is calculated for the values when it runs out", async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    await wait(600);
+    page.setMissing(0.04);
+    await wait(600);
+    expect(page.pcaRequests()).toHaveLength(1);
+    await wait(400);
+    expect(page.pcaRequests()).toHaveLength(2);
+    const sent = page.pcaRequests()[1];
+    expect(sent?.key).toBe(
+      page.pca().kind === "running" ? keyOf(page.pca()) : "",
+    );
+    expect(JSON.stringify(sent?.job)).toContain("0.04");
+  });
+
+  test("ten changes 300 ms apart start one PCA, a second after the last", async () => {
+    const page = await liveDone();
+    for (let step = 1; step <= 10; step += 1) {
+      page.setMissing(0.1 - step * 0.001);
+      await wait(300);
+    }
+    expect(page.pcaRequests()).toHaveLength(1);
+    await wait(700);
+    expect(page.pcaRequests()).toHaveLength(2);
+    expect(JSON.stringify(page.pcaRequests()[1]?.job)).toContain("0.09");
+  });
+
+  test("a change under way, a slider held, a list open, digits not confirmed or the dialog of the download open, keeps the PCA from starting for 3 s, and its release starts the second", async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    const release = page.gate.holdChange();
+    await wait(3000);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(page.auto.aboutToStart("pca")).toBe(true);
+    release();
+    await wait(999);
+    expect(page.pcaRequests()).toHaveLength(1);
+    await wait(1);
+    expect(page.pcaRequests()).toHaveLength(2);
+  });
+
+  test("a hold taken before the change and released after it starts the second at the release", async () => {
+    const page = await liveDone();
+    const release = page.gate.holdChange();
+    await wait(2000);
+    page.setMissing(0.05);
+    await wait(3000);
+    expect(page.pcaRequests()).toHaveLength(1);
+    release();
+    // A second release changes nothing.
+    release();
+    await wait(1000);
+    expect(page.pcaRequests()).toHaveLength(2);
+  });
+
+  test("a run of the arrow keys holds the second until its change, which the PCA then reads", async () => {
+    const page = await liveDone();
+    const run = createThresholdRun({
+      gate: page.gate,
+      change: (to) => {
+        page.setMissing(to);
+      },
+      ended: () => undefined,
+    });
+    run.press(0.1, 0.099);
+    await wait(500);
+    run.press(0.099, 0.098);
+    await wait(999);
+    expect(page.pcaRequests()).toHaveLength(1);
+    // The run became its change a second after its last press, and the
+    // PCA starts a second after that.
+    await wait(1);
+    expect(page.gate.underWay()).toBe(0);
+    await wait(999);
+    expect(page.pcaRequests()).toHaveLength(1);
+    await wait(1);
+    expect(page.pcaRequests()).toHaveLength(2);
+    expect(JSON.stringify(page.pcaRequests()[1]?.job)).toContain("0.098");
+  });
+
+  test("nothing starts while a write of the filtered variants runs; the PCA starts once it ends", async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    void startWriting(page.store, "vcf");
+    expect(page.writes).toHaveLength(1);
+    await wait(3000);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(page.auto.aboutToStart("pca")).toBe(true);
+    const write = page.writes[0];
+    write?.end({ kind: "cancelled" });
+    page.raw.cancelWrite();
+    await flush();
+    expect(page.pcaRequests()).toHaveLength(2);
+  });
+
+  test("nothing starts while the PCA runs, and the clock passing during its run starts no second one", async () => {
+    const page = await livePage();
+    page.auto.run("pca");
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(1);
+    await page.endPca();
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(page.pca().kind).toBe("done");
+  });
+
+  test("a value set back is calculated again, once for each change that reaches the project", async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    await wait(1000);
+    await page.endPca();
+    page.setMissing(0.1);
+    await wait(1000);
+    expect(page.pcaRequests()).toHaveLength(3);
+    expect(page.pcaRequests()[2]?.key).toBe(page.pcaRequests()[0]?.key);
+  });
+
+  test("a value moved and set back within the second is calculated again once, its result not kept", async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    await wait(500);
+    page.setMissing(0.1);
+    await wait(2000);
+    // The store keeps no result for values left behind, so the key of
+    // 0.1 again is calculated again.
+    expect(page.pcaRequests()).toHaveLength(2);
+    expect(page.pcaRequests()[1]?.key).toBe(page.pcaRequests()[0]?.key);
+  });
+
+  test("the colour of the points, the view, the individuals file and its column start nothing", async () => {
+    const page = await liveDone();
+    page.store.apply("the colour of the points changed", (p) =>
+      setAnalysisOptions(p, pcaOnPopgen2, {
+        ...pcaOptions(p, "popgen2"),
+        colourBy: "height",
+        view: "2d",
+      }),
+    );
+    page.store.applyAfresh((p) =>
+      loadIndividuals(p, {
+        fileId: SECOND,
+        name: "panel_pops.csv",
+        csv: null,
+      }),
+    );
+    await wait(3000);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(page.pca().kind).toBe("done");
+    expect(page.auto.aboutToStart("pca")).toBe(false);
+  });
+
+  test("a Stop during a run ends the live state: the PCA ready, and a change then starts nothing until Run", async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    await wait(1000);
+    expect(page.pca().kind).toBe("running");
+    page.auto.pause("pca");
+    expect(page.pcaRequests()[1]?.cancelled).toBe(true);
+    page.pcaRequests()[1]?.end({ kind: "cancelled" });
+    await flush();
+    expect(page.pca().kind).toBe("ready");
+    expect(page.auto.isLive("pca")).toBe(false);
+    expect(page.auto.stoppedByUser("pca")).toBe(true);
+    page.setMissing(0.04);
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(2);
+    expect(page.events).toEqual(["startedByItself pca", "paused pca"]);
+
+    expect(page.auto.run("pca")).toBe(true);
+    expect(page.pcaRequests()).toHaveLength(3);
+    expect(page.auto.stoppedByUser("pca")).toBe(false);
+  });
+
+  test("a Stop during the second ends the live state before the PCA starts", async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    await wait(500);
+    expect(page.auto.aboutToStart("pca")).toBe(true);
+    page.auto.pause("pca");
+    expect(page.auto.aboutToStart("pca")).toBe(false);
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(page.pca().kind).toBe("ready");
+    expect(page.events).toEqual(["paused pca"]);
+  });
+
+  test("another variants file ends the live state: for it, the PCA waits for Run", async () => {
+    const page = await liveDone();
+    openVariantsFile(page.store, panelLoad(SECOND));
+    page.raw.variantsRead(SECOND, {
+      kind: "read",
+      individuals: ["s000", "s001"],
+      ploidy: 2,
+      numVars: null,
+      keepsPassed: false,
+    });
+    await flush();
+    const pass = page.requests.at(-1);
+    pass?.end({
+      kind: "done",
+      key: pass.key,
+      result: summaryResult(["1"], [1200]),
+    });
+    await flush();
+    expect(page.pca().kind).toBe("ready");
+    expect(page.auto.isLive("pca")).toBe(false);
+    expect(page.auto.stoppedByUser("pca")).toBe(false);
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(1);
+  });
+
+  test("the LD distance emptied and typed again with the same value shows the result kept, with no request", async () => {
+    const page = await liveDone();
+    page.setDistance(null);
+    expect(page.pca().kind).toBe("locked");
+    expect(page.auto.isLive("pca")).toBe(true);
+    expect(page.auto.aboutToStart("pca")).toBe(false);
+    await wait(2000);
+    page.setDistance(50_000);
+    expect(page.pca().kind).toBe("done");
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(1);
+  });
+
+  test("the LD distance emptied and another typed starts the PCA a second after", async () => {
+    const page = await liveDone();
+    page.setDistance(null);
+    await wait(2000);
+    page.setDistance(40_000);
+    expect(page.auto.aboutToStart("pca")).toBe(true);
+    await wait(1000);
+    expect(page.pcaRequests()).toHaveLength(2);
+  });
+
+  test("a PCA refused by popnei under a key does not start again under it; a change to another key starts it, the PCA still live", async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    await wait(1000);
+    await page.endPca({
+      kind: "failed",
+      error: { kind: "popnei", message: "no variant left" },
+    });
+    expect(page.pca().kind).toBe("error");
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(2);
+    expect(page.auto.isLive("pca")).toBe(true);
+    page.setMissing(0.06);
+    await wait(1000);
+    expect(page.pcaRequests()).toHaveLength(3);
+  });
+
+  test("a crash of the worker under a key: Run again tries again under the same key, and the PCA stays live", async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    await wait(1000);
+    await page.endPca({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    expect(page.pca().kind).toBe("error");
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(2);
+    expect(page.auto.isLive("pca")).toBe(true);
+    expect(page.auto.run("pca")).toBe(true);
+    expect(page.pcaRequests()).toHaveLength(3);
+    expect(page.pcaRequests()[2]?.key).toBe(page.pcaRequests()[1]?.key);
+  });
+
+  test("aboutToStart: false before Run, while running and done; true during the quiet second and while a hold holds it; false after a Stop", async () => {
+    const page = await livePage();
+    expect(page.auto.aboutToStart("pca")).toBe(false);
+    page.auto.run("pca");
+    expect(page.auto.aboutToStart("pca")).toBe(false);
+    await page.endPca();
+    expect(page.auto.aboutToStart("pca")).toBe(false);
+    const release = page.gate.holdChange();
+    page.setMissing(0.05);
+    expect(page.auto.aboutToStart("pca")).toBe(true);
+    await wait(3000);
+    expect(page.auto.aboutToStart("pca")).toBe(true);
+    release();
+    await wait(500);
+    expect(page.auto.aboutToStart("pca")).toBe(true);
+    await wait(500);
+    expect(page.auto.aboutToStart("pca")).toBe(false);
+    expect(page.pca().kind).toBe("running");
+  });
+
+  test("the page is told when the live state changes, at Run and at a Stop, which no change of the store tells", async () => {
+    const page = await liveDone();
+    const before = page.auto.getVersion();
+    let told = 0;
+    page.auto.subscribe(() => {
+      told += 1;
+    });
+    page.setMissing(0.05);
+    page.auto.pause("pca");
+    expect(told).toBeGreaterThan(0);
+    expect(page.auto.getVersion()).not.toBe(before);
+  });
+
+  test("Stop while the PCA is live and locked ends the live state, and the lock lifted starts nothing", async () => {
+    const page = await liveDone();
+    page.setDistance(null);
+    page.auto.pause("pca");
+    expect(page.auto.isLive("pca")).toBe(false);
+    page.setDistance(40_000);
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(1);
+  });
+
+  test("the PCA started by itself is said once at its start, and not for a start by Run", async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    await wait(1000);
+    await page.endPca();
+    page.setMissing(0.04);
+    await wait(1000);
+    expect(page.events).toEqual(["startedByItself pca", "startedByItself pca"]);
+  });
+
+  test("the one pass of the file is not taken for a key the PCA was started under", async () => {
+    const page = await liveDone();
+    const passKey = page.requests[0]?.key ?? "";
+    expect(page.auto.startedUnder(keyFromWire(passKey))).toBe(true);
+    const pcaKey = page.pcaRequests()[0]?.key ?? "";
+    expect(page.auto.startedUnder(keyFromWire(pcaKey))).toBe(false);
+  });
+});
+
+/** The key of a status that has one. */
+function keyOf(status: AnalysisStatus<JobResult>): string {
+  return "key" in status ? status.key : "";
+}

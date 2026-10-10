@@ -33,11 +33,12 @@ import type {
   VariantDistrib,
   VariantsSummaryResult,
 } from "../../worker/protocol.ts";
-import { createAutoRuns } from "../autoRuns.ts";
+import { LIVE_QUIET_MS, createAutoRuns } from "../autoRuns.ts";
 import { downloadText } from "../download.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import {
   POPGEN2_AUTO_GROUPS,
+  POPGEN2_LIVE,
   POPGEN2_CHAIN,
   createPopgen2Store,
 } from "../popgen2Store.ts";
@@ -164,6 +165,13 @@ async function drawPage(announced = true): Promise<Page> {
     store,
     groups: POPGEN2_AUTO_GROUPS,
     start: (id) => startAnalysis(store, id),
+    // The PCA is never made live here, so its gate holds nothing.
+    live: {
+      analyses: POPGEN2_LIVE,
+      changes: createRunGate(),
+      runStart: (id) => startAnalysis(store, id),
+      quietMs: LIVE_QUIET_MS,
+    },
   });
   store.subscribe(() => {
     queueMicrotask(() => {

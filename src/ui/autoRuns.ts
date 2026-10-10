@@ -33,17 +33,69 @@
  * page reads what changes here, which no change of the store tells,
  * through `subscribe` and `getVersion`. Plain TypeScript, so that a test
  * in node drives it on the real store.
+ *
+ * A live analysis, the PCA of popgen2.html, is a group of its own that
+ * starts by itself only once the user's Run made it live for the load of
+ * the variants file open, and then again after each change of what its
+ * key holds, a quiet second after the user stops changing things
+ * (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by
+ * itself"; docs/designs/no-undo.md, choices 1 to 3). The second runs
+ * from the latest of the last change of the project and the end of the
+ * last change under way that the gate of the page counts; the analysis
+ * starts when it runs out, under the key the store gives then, while
+ * nothing runs, no write of the filtered variants runs and no change is
+ * under way. It starts once for each key the project gives: a key the
+ * store leaves behind is forgotten, so a value set back is calculated
+ * again. A Stop, `pause`, ends the live state, and another load ends it
+ * too; a failure does not.
  */
 
 import type { Key } from "../core/keys.ts";
 import type { AnalysisId } from "../core/project.ts";
 import type { AnalysisStatus, Store } from "../core/store.ts";
+import type { RunGate } from "./variants/thresholdRun.ts";
 
 /** What the analyses started by themselves need of the store. */
 export type AutoRunStore = Pick<
   Store<unknown, unknown>,
-  "getState" | "cancelRun"
+  "getState" | "cancelRun" | "subscribe"
 >;
+
+/** The quiet second: how long after the last change of the project, or
+    the end of the last change under way, a live analysis starts again
+    by itself, in milliseconds (docs/specs/steps/popgen2-pca.md, "The
+    PCA calculated again by itself"). */
+export const LIVE_QUIET_MS = 1000;
+
+/** What the analyses that start again by themselves read of the changes
+    the user has under way: the gate of the page, `createRunGate` of
+    variants/thresholdRun.ts, whose listeners are told when the count
+    rises from 0 or falls to 0. */
+export type ChangesUnderWay = Pick<RunGate, "underWay" | "subscribe">;
+
+/** The analyses a page starts again by itself once the user's Run made
+    them live, and what their start reads. */
+export interface LiveDeps {
+  /** The live analyses, the PCA on popgen2.html, each in one of the
+      groups; they start by themselves only while live. */
+  readonly analyses: readonly AnalysisId[];
+  /** The changes under way, which hold the quiet second. */
+  readonly changes: ChangesUnderWay;
+  /** Starts the analysis at the user's Run, through the gate of the
+      page, so that a run of the arrow keys waiting is made a change
+      first: `startAnalysis` of runs.ts on the screens' store. */
+  readonly runStart: (id: AnalysisId) => Promise<void> | null;
+  /** The quiet second, `LIVE_QUIET_MS` on the page. */
+  readonly quietMs: number;
+}
+
+/** What the page is told of the live analyses beyond the store: one
+    started again by itself, which the status region says, and a Stop of
+    one, `pause`, wherever the user pressed it. */
+export interface LiveEvent {
+  readonly kind: "startedByItself" | "paused";
+  readonly id: AnalysisId;
+}
 
 /** The analyses a page starts by itself. */
 export interface AutoRuns {
@@ -84,6 +136,28 @@ export interface AutoRuns {
       `useSyncExternalStore`, with `subscribe`. A property made once, as
       `subscribe` is. */
   readonly getVersion: () => number;
+  /** The user's Run of the live analysis `id`: makes it live for the
+      load of the variants file open and starts it at once, through the
+      gate. Returns whether it started it. A defect for an analysis that
+      is not live. */
+  run(id: AnalysisId): boolean;
+  /** The user's Stop of the live analysis `id`, in its tab or in the
+      band: cancels its run, if one is in flight, and ends its live
+      state, so that nothing starts it again until Run. */
+  pause(id: AnalysisId): void;
+  /** Whether `id` is live for the load of the variants file open. */
+  isLive(id: AnalysisId): boolean;
+  /** Whether `id` is about to start by itself: live, ready under a key
+      it was not started under, every analysis before it done; during the
+      quiet second and for as long as a change under way, or a write,
+      holds it. */
+  aboutToStart(id: AnalysisId): boolean;
+  /** Whether the user's Stop ended the live state of `id` for the load
+      open, and no Run since. */
+  stoppedByUser(id: AnalysisId): boolean;
+  /** Calls `listener` at each start by itself of a live analysis, and at
+      each Stop of one; returns the function that stops it. */
+  readonly onLive: (listener: (event: LiveEvent) => void) => () => void;
 }
 
 /** The key of a status that can be started: ready, or removed by the
@@ -147,8 +221,11 @@ export function createAutoRuns(deps: {
   readonly store: AutoRunStore;
   readonly groups: readonly (readonly AnalysisId[])[];
   readonly start: (id: AnalysisId) => Promise<void> | null;
+  /** The analyses that start again by themselves once live, the PCA of
+      popgen2.html; `null` for none. */
+  readonly live: LiveDeps | null;
 }): AutoRuns {
-  const { store, groups, start } = deps;
+  const { store, groups, start, live } = deps;
   const ids = groups.flat();
   if (groups.some((group) => group.length === 0)) {
     throw new Error(
@@ -266,31 +343,155 @@ export function createAutoRuns(deps: {
     changed();
   }
 
-  return {
-    sync: () => {
-      // The calculation worker runs one request at a time, and the
-      // store has no state for one that waits in the client's queue.
-      if (anyRunning()) return;
-      for (const [index, id] of ids.entries()) {
+  /** The live analyses, by id, and their state of their own. */
+  const liveIds = new Set<AnalysisId>(live?.analyses ?? []);
+  for (const id of liveIds) {
+    if (!groupOf.has(id)) {
+      throw new Error(
+        `popnei_web defect: the live analysis ${id} is in no group of the analyses started by themselves.`,
+      );
+    }
+  }
+  /** The load of the variants file each live analysis is live for. */
+  const liveFor = new Map<AnalysisId, string>();
+  /** The load for which the user's Stop ended each one's live state. */
+  const pausedFor = new Map<AnalysisId, string>();
+  /** The key each live analysis was last started under, kept while the
+      store gives it that key. */
+  const liveStarted = new Map<AnalysisId, Key>();
+  const liveListeners = new Set<(event: LiveEvent) => void>();
+  /** Whether the quiet second has run out since the last change of the
+      project and the end of the last change under way. */
+  let quiet = true;
+  let quietTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastProject = store.getState().project;
+
+  function tellLive(event: LiveEvent): void {
+    for (const listener of [...liveListeners]) listener(event);
+  }
+
+  function liveDefect(id: AnalysisId): void {
+    if (!liveIds.has(id)) {
+      throw new Error(
+        `popnei_web defect: ${id} is not an analysis that starts again by itself.`,
+      );
+    }
+  }
+
+  function fileIdNow(): string | null {
+    return store.getState().project.variants?.fileId ?? null;
+  }
+
+  function isLive(id: AnalysisId): boolean {
+    const fileId = fileIdNow();
+    return fileId !== null && liveFor.get(id) === fileId;
+  }
+
+  /** Starts the quiet second again, when no change is under way; with
+      one under way, the second waits for its end. */
+  function quietAgain(): void {
+    if (quietTimer !== null) clearTimeout(quietTimer);
+    quietTimer = null;
+    quiet = false;
+    if (live === null || live.changes.underWay() > 0) return;
+    quietTimer = setTimeout(() => {
+      quietTimer = null;
+      quiet = true;
+      sync();
+    }, live.quietMs);
+  }
+
+  function writeRunning(): boolean {
+    return store.getState().write?.kind === "running";
+  }
+
+  /** The key the live analysis `id` would start under now, its status
+      being `status`: ready under a key it was not started under, every
+      analysis before it done; `null` otherwise. */
+  function liveKey(
+    id: AnalysisId,
+    index: number,
+    status: AnalysisStatus<unknown>,
+  ): Key | null {
+    if (!isLive(id)) return null;
+    const key = startableKey(status);
+    if (key === null || liveStarted.get(id) === key) return null;
+    return holderOf(id, index) === null ? key : null;
+  }
+
+  if (live !== null) {
+    store.subscribe(() => {
+      const state = store.getState();
+      for (const id of liveIds) {
         const status = statusOf(id);
-        const back = resumed.get(id);
-        if (back !== undefined && back !== againKey(status)) {
-          resumed.delete(id);
-          changed();
-        }
-        if (holderOf(id, index) !== null) return;
-        const fresh = startableKey(status);
-        if (fresh !== null && !started.has(fresh)) {
-          startOne(id, fresh);
-          return;
-        }
-        const key = againKey(status);
-        if (key !== null && resumed.get(id) === key) {
-          startOne(id, key);
-          return;
+        const key = "key" in status ? status.key : null;
+        if (liveStarted.has(id) && liveStarted.get(id) !== key) {
+          liveStarted.delete(id);
         }
       }
-    },
+      if (state.project !== lastProject) {
+        lastProject = state.project;
+        quietAgain();
+      }
+    });
+    live.changes.subscribe(() => {
+      // Read on each call: the gate tells when its count rises from 0 or
+      // falls to 0.
+      if (live.changes.underWay() === 0) {
+        quietAgain();
+      } else {
+        if (quietTimer !== null) clearTimeout(quietTimer);
+        quietTimer = null;
+        quiet = false;
+      }
+    });
+  }
+
+  function sync(): void {
+    // The calculation worker runs one request at a time, and the
+    // store has no state for one that waits in the client's queue.
+    if (anyRunning()) return;
+    for (const [index, id] of ids.entries()) {
+      const status = statusOf(id);
+      if (liveIds.has(id)) {
+        const key = liveKey(id, index, status);
+        if (
+          key !== null &&
+          quiet &&
+          live !== null &&
+          live.changes.underWay() === 0 &&
+          !writeRunning()
+        ) {
+          liveStarted.set(id, key);
+          changed();
+          if (start(id) !== null) {
+            tellLive({ kind: "startedByItself", id });
+          }
+          return;
+        }
+        continue;
+      }
+      const back = resumed.get(id);
+      if (back !== undefined && back !== againKey(status)) {
+        resumed.delete(id);
+        changed();
+      }
+      if (holderOf(id, index) !== null) return;
+      const fresh = startableKey(status);
+      if (fresh !== null && !started.has(fresh)) {
+        startOne(id, fresh);
+        return;
+      }
+      const key = againKey(status);
+      if (key !== null && resumed.get(id) === key) {
+        startOne(id, key);
+        return;
+      }
+    }
+  }
+
+  return {
+    sync,
     startedUnder: (key) =>
       started.has(key) && ![...resumed.values()].includes(key),
     stop,
@@ -313,5 +514,45 @@ export function createAutoRuns(deps: {
       };
     },
     getVersion: () => version,
+    run: (id) => {
+      liveDefect(id);
+      const fileId = fileIdNow();
+      if (live === null || fileId === null) return false;
+      liveFor.set(id, fileId);
+      pausedFor.delete(id);
+      const sent = live.runStart(id);
+      const status = statusOf(id);
+      if (status.kind === "running") liveStarted.set(id, status.key);
+      changed();
+      return sent !== null;
+    },
+    pause: (id) => {
+      liveDefect(id);
+      liveFor.delete(id);
+      const fileId = fileIdNow();
+      if (fileId !== null) pausedFor.set(id, fileId);
+      if (statusOf(id).kind === "running") store.cancelRun(id);
+      changed();
+      tellLive({ kind: "paused", id });
+    },
+    isLive: (id) => {
+      liveDefect(id);
+      return isLive(id);
+    },
+    aboutToStart: (id) => {
+      liveDefect(id);
+      return liveKey(id, ids.indexOf(id), statusOf(id)) !== null;
+    },
+    stoppedByUser: (id) => {
+      liveDefect(id);
+      const fileId = fileIdNow();
+      return fileId !== null && pausedFor.get(id) === fileId && !isLive(id);
+    },
+    onLive: (listener) => {
+      liveListeners.add(listener);
+      return () => {
+        liveListeners.delete(listener);
+      };
+    },
   };
 }

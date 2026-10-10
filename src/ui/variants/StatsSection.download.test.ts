@@ -151,8 +151,8 @@ const REGION_PAUSE_MS = 150;
     the status region as the entry of the page wires it. */
 async function drawPage(): Promise<Page> {
   const { loadVariants } = await import("../../core/project.ts");
-  const { createAutoRuns } = await import("../autoRuns.ts");
-  const { POPGEN2_AUTO_GROUPS, createPopgen2Store } =
+  const { LIVE_QUIET_MS, createAutoRuns } = await import("../autoRuns.ts");
+  const { POPGEN2_AUTO_GROUPS, POPGEN2_LIVE, createPopgen2Store } =
     await import("../popgen2Store.ts");
   const { startAnalysis } = await import("../runs.ts");
   const { AnnouncerProvider } = await import("../shell/announcer.tsx");
@@ -185,6 +185,13 @@ async function drawPage(): Promise<Page> {
     store,
     groups: POPGEN2_AUTO_GROUPS,
     start: (id) => startAnalysis(store, id),
+    // The PCA is never made live here, so its gate holds nothing.
+    live: {
+      analyses: POPGEN2_LIVE,
+      changes: createRunGate(),
+      runStart: (id) => startAnalysis(store, id),
+      quietMs: LIVE_QUIET_MS,
+    },
   });
   store.subscribe(() => {
     queueMicrotask(() => {

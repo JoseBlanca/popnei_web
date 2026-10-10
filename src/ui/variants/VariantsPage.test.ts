@@ -30,9 +30,13 @@ import {
 } from "../../core/project.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
-import { createAutoRuns } from "../autoRuns.ts";
+import { LIVE_QUIET_MS, createAutoRuns } from "../autoRuns.ts";
 import { FilesProvider } from "../files.tsx";
-import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "../popgen2Store.ts";
+import {
+  POPGEN2_AUTO_GROUPS,
+  POPGEN2_LIVE,
+  createPopgen2Store,
+} from "../popgen2Store.ts";
 import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { statusOf } from "../analyses/status.ts";
 import { startAnalysis } from "../runs.ts";
@@ -230,6 +234,13 @@ async function drawPage(pickedId?: string): Promise<{
     store,
     groups: POPGEN2_AUTO_GROUPS,
     start: (id) => startAnalysis(store, id),
+    // The PCA is never made live here, so its gate holds nothing.
+    live: {
+      analyses: POPGEN2_LIVE,
+      changes: createRunGate(),
+      runStart: (id) => startAnalysis(store, id),
+      quietMs: LIVE_QUIET_MS,
+    },
   });
   store.subscribe(() => {
     queueMicrotask(() => {
