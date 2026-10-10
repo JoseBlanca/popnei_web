@@ -1429,7 +1429,7 @@ in worker 0. The runs of 4,000 and 9,381 individuals were not run again.
 ### Work package 9, 10 October 2026
 
 Task 9.1, the session's look. Every screenshot of `popgen2.html` was
-taken again at 30fcd51a, since 62 of the 106 under `screens/` dated from
+taken again at 30fcd51a, since 58 of the 106 under `screens/` dated from
 before the fixes of 10 October: 308 states, light and dark, 1280 and
 320 px, all passed once two states of `e2e/screens.spec.ts` were
 brought up to date (4939d98c, the error of an unreadable file found in
