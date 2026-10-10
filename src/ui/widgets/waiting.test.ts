@@ -500,6 +500,41 @@ describe("AP10 D1 the select of the method that waits while a PCA runs", () => {
     expect(tooltipShown()).toBe(REASON);
   });
 
+  test("given the reason after it was drawn without one, as when a PCA starts, ArrowRight, ArrowLeft and the letters p, c and o typed choose nothing", () => {
+    for (const value of ["pca", "pcoa"] as const) {
+      const chosen: string[] = [];
+      for (const waiting of [null, REASON]) {
+        draw(
+          createElement(Select<"pca" | "pcoa">, {
+            label: "Method",
+            items: [
+              { id: "pca", label: "PCA of the genotypes" },
+              { id: "pcoa", label: "PCoA of the Kosman distances" },
+            ],
+            value,
+            waiting,
+            onChange: (id) => chosen.push(id),
+          }),
+        );
+      }
+      const button = selectButton();
+      act(() => {
+        button.focus();
+      });
+      for (const key of ["ArrowRight", "ArrowLeft", "p", "c", "o"]) {
+        act(() => {
+          button.dispatchEvent(
+            new KeyboardEvent("keydown", { key, bubbles: true }),
+          );
+          button.dispatchEvent(
+            new KeyboardEvent("keyup", { key, bubbles: true }),
+          );
+        });
+      }
+      expect(chosen).toEqual([]);
+    }
+  });
+
   test("with no reason, its button is not marked, and Enter opens its list", () => {
     const chosen: string[] = [];
     drawMethodSelect(null, chosen);

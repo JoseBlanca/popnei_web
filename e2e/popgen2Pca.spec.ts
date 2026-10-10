@@ -461,6 +461,16 @@ test.describe("AP6 D3 the locks while a PCA runs", () => {
     const ld = shown(page).getByRole("switch", {
       name: "Prune the variants by linkage disequilibrium (LD)",
     });
+    // The arrows to the side, which choose the next item of a closed
+    // list, and the letters typed, which choose the item they start.
+    await methodButton(page).focus();
+    for (const key of ["ArrowRight", "ArrowLeft", "c", "o"]) {
+      await methodButton(page).press(key);
+      await expect(methodButton(page)).toHaveAccessibleName(
+        "PCA of the genotypes Method",
+      );
+      await expect(stop(page)).toBeVisible();
+    }
     await methodButton(page).click({ force: true });
     await methodButton(page).press("ArrowDown");
     await methodButton(page).press("Enter");
@@ -500,6 +510,8 @@ test.describe("AP6 D3 the locks while a PCA runs", () => {
     // The five thresholds of the Variants tab, each its box and its line,
     // and the FILTER box.
     await tab(page, "Variants").click();
+    // The lines are drawn over the plots once they are laid out.
+    await expect(stats(page).getByRole("slider")).toHaveCount(5);
     const boxes = await stats(page).getByRole("textbox").all();
     const lines = await stats(page).getByRole("slider").all();
     expect(boxes).toHaveLength(5);

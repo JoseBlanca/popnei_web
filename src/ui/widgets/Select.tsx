@@ -29,7 +29,7 @@ import {
 } from "react-aria-components";
 import type { Key } from "react-aria-components";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { classOf } from "../classOf.ts";
 import { ProblemIcon } from "./Problem.tsx";
@@ -108,8 +108,15 @@ export function Select<T extends string>({
   const [open, setOpen] = useState(false);
   // The field, label and button, which the tooltip is placed under.
   const anchorRef = useRef<HTMLDivElement>(null);
+  // Whether it waits, read when React Aria calls `chosen`, which may be
+  // the handler of an earlier drawing: seen in Chromium and WebKit, where
+  // ArrowRight on a select that waited chose the next item.
+  const waitsRef = useRef(waits);
+  useLayoutEffect(() => {
+    waitsRef.current = waits;
+  });
   const chosen = (key: Key | null): void => {
-    if (waits) return;
+    if (waitsRef.current) return;
     const item = items.find((one) => one.id === key);
     if (item !== undefined) onChange(item.id);
   };
@@ -117,108 +124,123 @@ export function Select<T extends string>({
   return (
     <WaitingTooltip text={waiting} anchor={anchorRef}>
       {(hintId) => (
-        <AriaSelect
-          ref={(node) => {
-            anchorRef.current = node;
-            markWaiting(node?.querySelector("button") ?? null, waits);
+        // The keys that choose an item of a closed list, the arrows to the
+        // side and a letter typed, stopped before React Aria's handler
+        // while it waits. The element is no widget.
+        <div
+          onKeyDownCapture={(event) => {
+            if (waits && choosesWhenClosed(event)) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
           }}
-          className={classOf(styles, "field")}
-          value={value}
-          onChange={chosen}
-          isOpen={open && !waits}
-          onOpenChange={(isOpen) => {
-            setOpen(isOpen && !waits);
-          }}
-          isInvalid={problem !== undefined}
-          // The problem is said, and the value is not refused by the browser's
-          // own validation of a form.
-          validationBehavior="aria"
-          {...(placeholder !== undefined && { placeholder })}
         >
-          {start !== null && (
-            // The words the eye sees, hidden from a screen reader, which reads
-            // the name. A click on them focuses the select, as a click on the
-            // label of another select does; the keyboard reaches the select
-            // by the Tab key.
-            <span
-              aria-hidden="true"
-              className={classOf(styles, "label")}
-              onClick={(event) => {
-                // The button of the select, beside these words in its field.
-                event.currentTarget.parentElement
-                  ?.querySelector("button")
-                  ?.focus();
-              }}
-            >
-              {start}
-            </span>
-          )}
-          {/* The name as one text, and not the words shown with the rest
+          <AriaSelect
+            ref={(node) => {
+              anchorRef.current = node;
+              markWaiting(node?.querySelector("button") ?? null, waits);
+            }}
+            className={classOf(styles, "field")}
+            value={value}
+            onChange={chosen}
+            isOpen={open && !waits}
+            onOpenChange={(isOpen) => {
+              setOpen(isOpen && !waits);
+            }}
+            isInvalid={problem !== undefined}
+            // The problem is said, and the value is not refused by the browser's
+            // own validation of a form.
+            validationBehavior="aria"
+            {...(placeholder !== undefined && { placeholder })}
+          >
+            {start !== null && (
+              // The words the eye sees, hidden from a screen reader, which reads
+              // the name. A click on them focuses the select, as a click on the
+              // label of another select does; the keyboard reaches the select
+              // by the Tab key.
+              <span
+                aria-hidden="true"
+                className={classOf(styles, "label")}
+                onClick={(event) => {
+                  // The button of the select, beside these words in its field.
+                  event.currentTarget.parentElement
+                    ?.querySelector("button")
+                    ?.focus();
+                }}
+              >
+                {start}
+              </span>
+            )}
+            {/* The name as one text, and not the words shown with the rest
           hidden beside them, since a browser may put a space before a
           part hidden from the eye as it makes the name. */}
-          <Label
-            className={
-              labelShown === "whole"
-                ? classOf(styles, "label")
-                : classOf(styles, "visuallyHidden")
-            }
-          >
-            {start === null ? label : `${start}${label}`}
-          </Label>
-          <Button
-            className={
-              waits
-                ? `${classOf(styles, "button")} ${classOf(styles, "waiting")}`
-                : classOf(styles, "button")
-            }
-            // Waiting, the reason alone describes the button: React Aria
-            // sets the ids of its description and of its problem on the
-            // button, and takes away those it does not draw after drawing
-            // it, which would take away a reason added to them on the
-            // element. No select that waits has a description or a problem.
-            {...(hintId !== undefined && { "aria-describedby": hintId })}
-            {...(buttonRef !== undefined && { ref: buttonRef })}
-          >
-            <SelectValue className={classOf(styles, "value")} />
-            <svg
-              className={classOf(styles, "chevron")}
-              viewBox="0 0 16 16"
-              aria-hidden="true"
+            <Label
+              className={
+                labelShown === "whole"
+                  ? classOf(styles, "label")
+                  : classOf(styles, "visuallyHidden")
+              }
             >
-              <polyline points="4 6 8 10 12 6" />
-            </svg>
-          </Button>
-          {description !== undefined && (
-            <Text slot="description" className={classOf(styles, "description")}>
-              {description}
-            </Text>
-          )}
-          <FieldError className={classOf(styles, "problem")}>
-            <ProblemIcon />
-            <span>{problem}</span>
-          </FieldError>
-          <Popover className={classOf(styles, "popover")}>
-            <ListBox className={classOf(styles, "list")}>
-              {items.map((item) => (
-                <ListBoxItem
-                  key={item.id}
-                  id={item.id}
-                  textValue={item.label}
-                  className={classOf(styles, "item")}
-                >
-                  <svg
-                    className={classOf(styles, "mark")}
-                    viewBox="0 0 16 16"
-                    aria-hidden="true"
+              {start === null ? label : `${start}${label}`}
+            </Label>
+            <Button
+              className={
+                waits
+                  ? `${classOf(styles, "button")} ${classOf(styles, "waiting")}`
+                  : classOf(styles, "button")
+              }
+              // Waiting, the reason alone describes the button: React Aria
+              // sets the ids of its description and of its problem on the
+              // button, and takes away those it does not draw after drawing
+              // it, which would take away a reason added to them on the
+              // element. No select that waits has a description or a problem.
+              {...(hintId !== undefined && { "aria-describedby": hintId })}
+              {...(buttonRef !== undefined && { ref: buttonRef })}
+            >
+              <SelectValue className={classOf(styles, "value")} />
+              <svg
+                className={classOf(styles, "chevron")}
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+              >
+                <polyline points="4 6 8 10 12 6" />
+              </svg>
+            </Button>
+            {description !== undefined && (
+              <Text
+                slot="description"
+                className={classOf(styles, "description")}
+              >
+                {description}
+              </Text>
+            )}
+            <FieldError className={classOf(styles, "problem")}>
+              <ProblemIcon />
+              <span>{problem}</span>
+            </FieldError>
+            <Popover className={classOf(styles, "popover")}>
+              <ListBox className={classOf(styles, "list")}>
+                {items.map((item) => (
+                  <ListBoxItem
+                    key={item.id}
+                    id={item.id}
+                    textValue={item.label}
+                    className={classOf(styles, "item")}
                   >
-                    <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
-                  </svg>
-                  {item.label}
-                </ListBoxItem>
-              ))}
-            </ListBox>
-          </Popover>
-        </AriaSelect>
+                    <svg
+                      className={classOf(styles, "mark")}
+                      viewBox="0 0 16 16"
+                      aria-hidden="true"
+                    >
+                      <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
+                    </svg>
+                    {item.label}
+                  </ListBoxItem>
+                ))}
+              </ListBox>
+            </Popover>
+          </AriaSelect>
+        </div>
       )}
     </WaitingTooltip>
   );
@@ -231,4 +253,19 @@ function markWaiting(node: HTMLButtonElement | null, waits: boolean): void {
   if (node === null) return;
   if (waits) node.setAttribute("aria-disabled", "true");
   else node.removeAttribute("aria-disabled");
+}
+
+/** Whether the key of `event` chooses an item of a closed select in
+    React Aria: ArrowLeft and ArrowRight, the item before and after, and
+    a letter or a digit typed, the item it starts. Space opens the list,
+    which a select that waits keeps closed. */
+function choosesWhenClosed(event: React.KeyboardEvent): boolean {
+  if (event.key === "ArrowLeft" || event.key === "ArrowRight") return true;
+  return (
+    event.key.length === 1 &&
+    event.key !== " " &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey
+  );
 }
