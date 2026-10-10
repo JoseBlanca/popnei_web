@@ -58,6 +58,19 @@ function bytesOf(name: string): Uint8Array<ArrayBuffer> {
 let folder = "";
 /** The big VCF, 3,000 variants of 1,000 individuals, gzipped. */
 let bigVcf: Uint8Array<ArrayBuffer> = new Uint8Array(0);
+/**
+ * A VCF of 6,000 variants of 1,000 individuals, plain, with a line of a
+ * position that is not a number after them. popnei reads it in blocks of
+ * about 10 MB of genotypes, some 5,000 variants: it writes the first
+ * block, giving pieces, before it reaches the line. 4,500 variants fit in
+ * one block and give no piece before the line, and 12,000, the number
+ * until 10 October 2026, wrote two blocks and took the VCF write 1.5 s
+ * alone and over 5 s once in the whole suite under load; this file is
+ * made once, for the two tests that read it.
+ */
+let brokenVcf: Uint8Array<ArrayBuffer> = new Uint8Array(0);
+/** The line of `brokenVcf` that popnei refuses. */
+const BROKEN_LINE = 6005;
 
 beforeAll(async () => {
   expect(await loadPopnei()).toEqual({
@@ -68,6 +81,16 @@ beforeAll(async () => {
   const path = join(folder, "big.vcf.gz");
   await writeBigVcf(path, 3000);
   bigVcf = new Uint8Array(readFileSync(path));
+  const plain = join(folder, "broken.vcf");
+  await writeBigVcf(plain, 6000);
+  brokenVcf = new Uint8Array(
+    Buffer.concat([
+      readFileSync(plain),
+      Buffer.from(
+        `chr1\tnotAPosition\tbad\tA\tT\t.\t.\t.\tGT\t${Array.from({ length: 1000 }, () => "0/0").join("\t")}\n`,
+      ),
+    ]),
+  );
 });
 
 afterAll(() => {
@@ -390,23 +413,8 @@ describe("DL2 D1 the written file, by pieces: what goes wrong", () => {
 
   test.each(["nei", "vcf"] as const)(
     "a %s write whose pass popnei refuses after it gave pieces is answered refused, with popnei's message and no file",
-    async (format) => {
-      // A VCF of 12,000 variants, plain, with a line of a position that is
-      // not a number after them: popnei's blocks hold about 10 MB of
-      // genotypes, some 5,000 variants of 1,000 individuals, and it has
-      // written the first two when it reaches the line.
-      const plain = join(folder, "broken.vcf");
-      await writeBigVcf(plain, 12_000);
-      const good = readFileSync(plain);
-      const broken = new Uint8Array(
-        Buffer.concat([
-          good,
-          Buffer.from(
-            `chr1\tnotAPosition\tbad\tA\tT\t.\t.\t.\tGT\t${Array.from({ length: 1000 }, () => "0/0").join("\t")}\n`,
-          ),
-        ]),
-      );
-      const runner = opened(VCF, broken, { writePartBytes: ONE_PIECE });
+    (format) => {
+      const runner = opened(VCF, brokenVcf, { writePartBytes: ONE_PIECE });
       // The parts the runner made, one of each piece, which shows that
       // popnei gave pieces before it refused.
       let numParts = 0;
@@ -429,8 +437,7 @@ describe("DL2 D1 the written file, by pieces: what goes wrong", () => {
       expect(numParts).toBeGreaterThan(0);
       expect(answer).toEqual({
         kind: "refused",
-        message:
-          "line 12005 of the VCF, the column POS: `notAPosition` is not a position",
+        message: `line ${String(BROKEN_LINE)} of the VCF, the column POS: \`notAPosition\` is not a position`,
       });
     },
   );
