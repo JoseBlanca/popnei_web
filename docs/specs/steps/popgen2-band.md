@@ -68,7 +68,7 @@ it:
   calls `onPopneiReady` each time the calculation worker has started,
   loaded popnei and opened the variants file again. **`runs`** is the
   list of the calculations under way that the store gives the screens.
-  **`stopping`** of the store's state, new, names the analysis whose
+  **`stoppedAwaitingWorker`** of the store's state, new, names the analysis whose
   Stop waits for the calculation worker to start again (below,
   "Stopping").
 - **The tab shown** is the one of the five tabs under the boxes,
@@ -180,7 +180,7 @@ again (`docs/specs/worker/client.md`); until then a Run waits. The band
 cannot read it from `runs`: the client settles a cancel at once, and
 the request leaves `runs` a moment later, before the page is drawn
 again. So the store holds it, as the source of both events: its state
-gains `stopping`, the id of the analysis whose calculation in flight
+gains `stoppedAwaitingWorker`, the id of the analysis whose calculation in flight
 `cancelRun` stopped, set at that `cancelRun`, and `null` again at the
 next `popneiReady`, at a `startRun`, at an `open` and at a change of the
 load (`docs/specs/core/store.md`, "Stopping"). `popneiReady` with the
@@ -188,11 +188,11 @@ same version, which changed nothing until now, then gives a new state
 and calls the listeners. Whichever Stop the user pressed, the box's,
 the tab's or the band's, the store sets it. A request that waited in
 the client's queue restarts no worker, and no `popneiReady` follows its
-cancel: the band keeps of its own the time it first saw `stopping`, and
+cancel: the band keeps of its own the time it first saw `stoppedAwaitingWorker`, and
 shows the line for 10 s at most, so that a worker that does not start
 again, or did not need to, leaves no line that never ends; a worker that
 cannot start is said at the next request, as today. Another calculation
-that starts replaces the line, and the store clears `stopping` then.
+that starts replaces the line, and the store clears `stoppedAwaitingWorker` then.
 How long the line stays has not been measured; the plan measures it in
 Chromium and WebKit after a Stop of a PCA of 9,381 individuals.
 
@@ -309,11 +309,11 @@ It reads:
   `aboutToStart`, and its `subscribe`;
 - the log of the errors, `src/ui/defects.ts`;
 - the tab shown, from `src/ui/pageTab.ts`;
-- `stopping` of the store's state, for "Stopping".
+- `stoppedAwaitingWorker` of the store's state, for "Stopping".
 
 What the line says is a pure function of these, `bandOf` of
 `src/ui/band/band.ts`, tested in node, given beside them the time now
-and the time the band first saw `stopping`, for the 10 s of
+and the time the band first saw `stoppedAwaitingWorker`, for the 10 s of
 "Stopping". The band holds of its own two things: whether its details
 are shown, and that time.
 
@@ -465,7 +465,7 @@ them;
 the order when two hold, the PCA running over a Stop under way, a Stop
 under way over about to start, about to start over the link; the link
 absent while the PCA tab is shown, and present with "2 warnings" while
-the Variants tab is; the line "Stopping the PCA…" while the store's `stopping` is
+the Variants tab is; the line "Stopping the PCA…" while the store's `stoppedAwaitingWorker` is
 `pca`, gone when it is `null` and after 10 s from the time first seen; the line of an error above each of the
 others; the percentage of a progress of 1,234 of 10,000 bytes, "12%",
 rounded down, so that 100% is said only at the end; the clock at 59 s

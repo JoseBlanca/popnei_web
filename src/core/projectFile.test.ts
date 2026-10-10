@@ -91,7 +91,7 @@ function stateOf(
     undo: null,
     redo: null,
     historyMoves: 0,
-    stopping: null,
+    stoppedAwaitingWorker: null,
     popneiVersion,
     analyses: POPGEN_DEFS.map((def) => ({
       id: def.id,
@@ -1373,7 +1373,7 @@ describe("WS6 D2 the opening", () => {
       undo: null,
       redo: null,
       historyMoves: 0,
-      stopping: null,
+      stoppedAwaitingWorker: null,
       popneiVersion: "0.1.0",
       analyses: POPGEN_ANALYSES.map((def) => ({
         id: def.id,
@@ -2262,7 +2262,7 @@ const savedState: fc.Arbitrary<AppState<TestDefResult>> = fc
       undo: null,
       redo: null,
       historyMoves: 0,
-      stopping: null,
+      stoppedAwaitingWorker: null,
       popneiVersion:
         anyDone && popneiVersion === null ? "0.1.0" : popneiVersion,
       analyses: views,
@@ -2988,7 +2988,7 @@ function popgenState(
     undo: null,
     redo: null,
     historyMoves: 0,
-    stopping: null,
+    stoppedAwaitingWorker: null,
     popneiVersion: "0.1.0",
     analyses: POPGEN_ANALYSES.map((def) => ({
       id: def.id,
@@ -3860,7 +3860,7 @@ describe("SF2 D3 an opened project and the variants file given again give the sa
       undo: null,
       redo: null,
       historyMoves: 0,
-      stopping: null,
+      stoppedAwaitingWorker: null,
       popneiVersion: "0.2.2",
       analyses: DEFS.map((def) => ({
         id: def.id,

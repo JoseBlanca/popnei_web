@@ -9095,23 +9095,25 @@ describe("NU1 D3 a store made with stopLeftBehind alone keeps a result left behi
   });
 });
 
-describe("NU1 D4 stopping, from a Stop until the calculation worker is ready again", () => {
-  test("cancelRun of the PCA in flight: stopping is the PCA; of the one pass in flight: the one pass", () => {
+describe("NU1 D4 stoppedAwaitingWorker, from a Stop until the calculation worker is ready again", () => {
+  test("cancelRun of the PCA in flight: stoppedAwaitingWorker is the PCA; of the one pass in flight: the one pass", () => {
     const made = popgen2Store(true, true);
-    expect(made.store.getState().stopping).toBeNull();
+    expect(made.store.getState().stoppedAwaitingWorker).toBeNull();
     passDone(made);
     made.store.startRun("pca");
     made.store.cancelRun("pca");
     expect(made.sent[1]?.cancels()).toBe(1);
-    expect(made.store.getState().stopping).toBe("pca");
+    expect(made.store.getState().stoppedAwaitingWorker).toBe("pca");
 
     const other = popgen2Store(true, true);
     other.store.startRun("variantsSummary");
     other.store.cancelRun("variantsSummary");
-    expect(other.store.getState().stopping).toBe("variantsSummary");
+    expect(other.store.getState().stoppedAwaitingWorker).toBe(
+      "variantsSummary",
+    );
   });
 
-  test("popneiReady of the same version after a Stop: stopping null, and each listener called once", () => {
+  test("popneiReady of the same version after a Stop: stoppedAwaitingWorker null, and each listener called once", () => {
     const made = popgen2Store(true, true);
     passDone(made);
     made.store.startRun("pca");
@@ -9123,12 +9125,12 @@ describe("NU1 D4 stopping, from a Stop until the calculation worker is ready aga
     });
     made.store.popneiReady("0.2.2");
     const after = made.store.getState();
-    expect(after.stopping).toBeNull();
+    expect(after.stoppedAwaitingWorker).toBeNull();
     expect(after).not.toBe(before);
     expect(calls).toBe(1);
   });
 
-  test("popneiReady of the same version with nothing stopping: the same state object, no listener called", () => {
+  test("popneiReady of the same version with nothing stopped: the same state object, no listener called", () => {
     const made = popgen2Store(true, true);
     passDone(made);
     const before = made.store.getState();
@@ -9141,37 +9143,37 @@ describe("NU1 D4 stopping, from a Stop until the calculation worker is ready aga
     expect(calls).toBe(0);
   });
 
-  test("a startRun, an open, a change of the load and another version each clear stopping", () => {
+  test("a startRun, an open, a change of the load and another version each clear stoppedAwaitingWorker", () => {
     const stopped = (): ReturnType<typeof popgen2Store> => {
       const made = popgen2Store(true, true);
       passDone(made);
       made.store.startRun("pca");
       made.store.cancelRun("pca");
-      expect(made.store.getState().stopping).toBe("pca");
+      expect(made.store.getState().stoppedAwaitingWorker).toBe("pca");
       return made;
     };
     const started = stopped();
     started.store.startRun("pca");
-    expect(started.store.getState().stopping).toBeNull();
+    expect(started.store.getState().stoppedAwaitingWorker).toBeNull();
 
     const opened = stopped();
     opened.store.open((p) =>
       loadVariants(p, { ...POPGEN2_LOAD, fileId: OTHER_VARIANTS_ID }),
     );
-    expect(opened.store.getState().stopping).toBeNull();
+    expect(opened.store.getState().stoppedAwaitingWorker).toBeNull();
 
     const loaded = stopped();
     loaded.store.apply("another variants file", (p) =>
       loadVariants(p, { ...POPGEN2_LOAD, fileId: OTHER_VARIANTS_ID }),
     );
-    expect(loaded.store.getState().stopping).toBeNull();
+    expect(loaded.store.getState().stoppedAwaitingWorker).toBeNull();
 
     const newer = stopped();
     newer.store.popneiReady("0.2.3");
-    expect(newer.store.getState().stopping).toBeNull();
+    expect(newer.store.getState().stoppedAwaitingWorker).toBeNull();
   });
 
-  test("a change of a threshold keeps stopping; a cancelRun with nothing in flight leaves the state as it was", () => {
+  test("a change of a threshold keeps stoppedAwaitingWorker; a cancelRun with nothing in flight leaves the state as it was", () => {
     const made = popgen2Store(true, true);
     passDone(made);
     const idle = made.store.getState();
@@ -9180,6 +9182,6 @@ describe("NU1 D4 stopping, from a Stop until the calculation worker is ready aga
     made.store.startRun("pca");
     made.store.cancelRun("pca");
     moveMissing(made.store, 0.2);
-    expect(made.store.getState().stopping).toBe("pca");
+    expect(made.store.getState().stoppedAwaitingWorker).toBe("pca");
   });
 });

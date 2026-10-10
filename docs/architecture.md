@@ -2995,8 +2995,9 @@ src/core/
                     subscription the screens read; from 10 October 2026
                     the setting dropLeftBehind of popgen2.html, under
                     which a result is thrown away once its key is left
-                    behind (section 3), and stopping, the analysis whose
-                    Stop waits for the calculation worker to start again
+                    behind (section 3), and stoppedAwaitingWorker, the
+                    analysis whose Stop waits for the calculation worker
+                    to start again
   analyses/         one module per analysis, with the shape of section 4,
                     the checks of the Variants step among them from stage 3:
                     individualChecks, variantChecks, filterCounts; from

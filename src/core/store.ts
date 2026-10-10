@@ -182,15 +182,18 @@ export interface AppState<R, F = never> {
   readonly analyses: readonly AnalysisView<R>[];
   /** The calculations in flight. */
   readonly runs: readonly RunView[];
-  /** The analysis whose calculation in flight `cancelRun` stopped, until
-      the calculation worker started again says it is ready
-      (`popneiReady`), a `startRun`, an `open` or a change of the load of
-      the variants file; `null` otherwise. A Stop ends the worker, and a
-      Run after it waits for the new one, which `runs` cannot tell, since
-      the request leaves it at once (docs/specs/core/store.md,
-      "Stopping"); the band of popgen2.html says "Stopping the PCA…"
-      meanwhile. */
-  readonly stopping: AnalysisId | null;
+  /** The analysis whose calculation `cancelRun` stopped, while the
+      calculation worker the Stop ended is not ready again: until the
+      new worker says it is ready (`popneiReady`), a `startRun`, an
+      `open` or a change of the load of the variants file; `null`
+      otherwise. `runs` cannot tell it: it keeps the request, `stopping`
+      true, only until the client settles the cancel, which the real
+      client does at once. A Stop of a request still queued restarts no
+      worker, so no `popneiReady` follows, and the field stays until a
+      `startRun` or an `open`; the band of popgen2.html says "Stopping
+      the PCA…" meanwhile, and ends that line after 10 s
+      (docs/specs/core/store.md, "Stopping"). */
+  readonly stoppedAwaitingWorker: AnalysisId | null;
   /** What the last change removed or will stop, or `null`. */
   readonly notice: Notice | null;
   /** The individuals the filters keep, and how many each filter of
@@ -890,8 +893,8 @@ export function createStore<J, R, F = never>(
   let notice: NoticeKept | null = null;
   /** The analysis whose calculation in flight the user stopped, until
       the calculation worker is ready again, a `startRun`, an `open` or a
-      change of the load; the state's `stopping`. */
-  let stopping: AnalysisId | null = null;
+      change of the load; the state's `stoppedAwaitingWorker`. */
+  let stoppedAwaitingWorker: AnalysisId | null = null;
   /** Whether a calculation was stopped since the calculation worker was
       last ready and nothing ended done or failed since: the next request
       may wait for the worker to start again. */
@@ -1674,7 +1677,7 @@ export function createStore<J, R, F = never>(
       previous.redo === redoText &&
       previous.historyMoves === historyMoves &&
       previous.popneiVersion === popneiVersion &&
-      previous.stopping === stopping &&
+      previous.stoppedAwaitingWorker === stoppedAwaitingWorker &&
       previous.analyses === analyses &&
       previous.runs === runs &&
       previous.notice === shownNotice &&
@@ -1691,7 +1694,7 @@ export function createStore<J, R, F = never>(
       popneiVersion,
       analyses,
       runs,
-      stopping,
+      stoppedAwaitingWorker,
       notice: shownNotice,
       individualsKept: keptNow,
       write,
@@ -1803,7 +1806,7 @@ export function createStore<J, R, F = never>(
       stoppedSoFar.clear();
       // The wait for the worker stopped is moot: it starts again for the
       // new load.
-      stopping = null;
+      stoppedAwaitingWorker = null;
       // The calculation worker is started again for the new load, so no
       // calculation of the old one can wait for an undo.
       const inFlight = [...requests.values()].filter((r) => !r.stopping);
@@ -2542,7 +2545,7 @@ export function createStore<J, R, F = never>(
         }
         stop(request);
         if (index !== null) {
-          stopping = defs[index]?.id ?? null;
+          stoppedAwaitingWorker = defs[index]?.id ?? null;
         }
         changed();
         return;
@@ -2597,7 +2600,7 @@ export function createStore<J, R, F = never>(
       unreadable = null;
       written = null;
       dropped = false;
-      stopping = null;
+      stoppedAwaitingWorker = null;
       history = opened;
       historyMoves += 1;
       changed();
@@ -2635,7 +2638,7 @@ export function createStore<J, R, F = never>(
         () => {
           runAgain(id);
           stoppedSoFar.delete(index);
-          stopping = null;
+          stoppedAwaitingWorker = null;
         },
       );
     },
@@ -2716,15 +2719,15 @@ export function createStore<J, R, F = never>(
       if (version === popneiVersion) {
         // The worker started again, after a stop or a crash.
         stopIssued = false;
-        if (stopping !== null) {
-          stopping = null;
+        if (stoppedAwaitingWorker !== null) {
+          stoppedAwaitingWorker = null;
           changed();
         }
         return;
       }
       keysFor(history.present.project, version);
       stopIssued = false;
-      stopping = null;
+      stoppedAwaitingWorker = null;
       // Another version changes every key, and no undo gives the old one
       // back.
       if (popneiVersion !== null) {

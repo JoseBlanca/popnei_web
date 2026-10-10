@@ -155,7 +155,7 @@ function stateOf(project: Project): AppState<JobResult> {
     undo: null,
     redo: null,
     historyMoves: 0,
-    stopping: null,
+    stoppedAwaitingWorker: null,
     popneiVersion: "0.1.0",
     analyses: [
       {
