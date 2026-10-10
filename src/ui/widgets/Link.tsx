@@ -13,6 +13,7 @@ import { Link as AriaLink } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
 import styles from "./Link.module.css";
+import { WideShort } from "./WideShort.tsx";
 
 /** Where a link goes: a page, or a place of this page that the screen
     moves the focus to. */
@@ -66,12 +67,7 @@ export function Link({
       {shortLabel === undefined ? (
         words
       ) : (
-        <>
-          <span className={classOf(styles, "wideLabel")}>{words}</span>
-          <span className={classOf(styles, "shortLabel")} aria-hidden>
-            {shortLabel}
-          </span>
-        </>
+        <WideShort full={words} short={shortLabel} />
       )}
     </AriaLink>
   );

@@ -82,12 +82,6 @@
   white-space: nowrap;
 }
 
-/* The short form, shown under 30 rem, where the whole words are read by
-   a screen reader alone. */
-.short {
-  display: none;
-}
-
 /* Under 30 rem, the heading smaller and the parts closer, so that the
    short form of the words fits beside the whole "Stop recalculating":
    73 px are left for the words at 320 px (docs/specs/steps/
@@ -100,19 +94,6 @@
 
   .heading {
     font-size: var(--text-lg);
-  }
-
-  .full {
-    position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .short {
-    display: inline;
   }
 }
 

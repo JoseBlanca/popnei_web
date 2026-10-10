@@ -8,6 +8,7 @@
  */
 import { escaped } from "../../core/project.ts";
 import type { PcaMethod } from "../../worker/protocol.ts";
+import { STOP_RECALCULATING } from "../analyses/AnalysisPanel.tsx";
 import { methodName } from "../analyses/pca/words.ts";
 import { clockText } from "../analyses/words.ts";
 import type { BandLine, Stopping } from "./bandLine.ts";
@@ -128,7 +129,7 @@ export function stopOf(line: BandLine): BandStop | null {
 /** Stop recalculating, named by the method `method`. */
 function recalculating(method: PcaMethod): BandStop {
   return {
-    label: "Stop recalculating",
+    label: STOP_RECALCULATING,
     name: `Stop recalculating the ${methodName(method)}`,
     stops: "live",
   };

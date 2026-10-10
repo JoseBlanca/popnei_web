@@ -69,6 +69,7 @@ import type { PageStore } from "../store.tsx";
 import { stoppedText } from "../variants/words.ts";
 import { Button } from "../widgets/Button.tsx";
 import { Link } from "../widgets/Link.tsx";
+import { WideShort } from "../widgets/WideShort.tsx";
 import { errorOf, lineOf } from "./bandLine.ts";
 import type { BandLine } from "./bandLine.ts";
 import styles from "./Band.module.css";
@@ -407,10 +408,7 @@ function Words({
   if (words === null) return null;
   return (
     <span className={classOf(styles, "words")}>
-      <span className={classOf(styles, "full")}>{words.full}</span>
-      <span className={classOf(styles, "short")} aria-hidden="true">
-        {words.short}
-      </span>
+      <WideShort full={words.full} short={words.short} />
     </span>
   );
 }

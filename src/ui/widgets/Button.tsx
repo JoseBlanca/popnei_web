@@ -97,9 +97,6 @@ interface ButtonBaseProps {
       that a user of speech names it by what they see (WCAG 2.5.3). Its
       words when absent. */
   readonly ariaLabel?: string;
-  /** Its words in a window under 30 rem wide, "Stop" for "Stop
-      recalculating", so that it fits a line; its words when absent. */
-  readonly shortLabel?: string;
   /** Whether what it shows and hides is shown, told to a screen reader
       as expanded or collapsed; nothing told when absent. */
   readonly expanded?: boolean;
@@ -121,7 +118,6 @@ export function Button({
   autoFocus = false,
   look = "button",
   ariaLabel,
-  shortLabel,
   expanded,
 }: ButtonProps): React.JSX.Element {
   const ownId = useId();
@@ -148,16 +144,7 @@ export function Button({
             {...(ariaLabel !== undefined && { "aria-label": ariaLabel })}
             {...(expanded !== undefined && { "aria-expanded": expanded })}
           >
-            {shortLabel === undefined ? (
-              label
-            ) : (
-              <>
-                <span className={classOf(styles, "wideLabel")}>{label}</span>
-                <span className={classOf(styles, "shortLabel")} aria-hidden>
-                  {shortLabel}
-                </span>
-              </>
-            )}
+            {label}
           </AriaButton>
         );
       }}
