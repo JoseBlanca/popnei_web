@@ -42,10 +42,17 @@ afterEach(() => {
 type Method = "pca" | "pcoa" | "mds";
 
 /** Draws the select of the method at PCA, under `gate` when one is given,
-    as popgen2.html does, and with the holder of popgen.html, which holds nothing; each choice is
-    kept in `chosen` and given back. */
-function draw(gate: RunGate | null, chosen: Method[]): void {
-  const render = (value: Method): void => {
+    as popgen2.html does, and under the holder of popgen.html, which holds
+    nothing; each choice is kept in `chosen` and given back. Gives the
+    function that draws it waiting for `reason`, at the value last
+    chosen. */
+function draw(
+  gate: RunGate | null,
+  chosen: Method[],
+): { readonly wait: (reason: string) => void } {
+  let shown: Method = "pca";
+  const render = (value: Method, waiting: string | null = null): void => {
+    shown = value;
     const select = createElement(Select<Method>, {
       label: "Method",
       items: [
@@ -54,6 +61,7 @@ function draw(gate: RunGate | null, chosen: Method[]): void {
         { id: "mds", label: "MDS" },
       ],
       value,
+      waiting,
       onChange: (id) => {
         chosen.push(id);
         render(id);
@@ -74,6 +82,13 @@ function draw(gate: RunGate | null, chosen: Method[]): void {
   act(() => {
     render("pca");
   });
+  return {
+    wait: (reason) => {
+      act(() => {
+        render(shown, reason);
+      });
+    },
+  };
 }
 
 function buttonOf(): HTMLButtonElement {
@@ -154,6 +169,26 @@ describe("NU3 D2 the select holds while its list is open", () => {
     expect(chosen).toEqual(["pcoa"]);
     expect(listOpen()).toBe(false);
     expect(told).toBe(0);
+  });
+
+  test("held through a change by another control, which ends the runs of the keys held", () => {
+    const gate = createRunGate();
+    draw(gate, []);
+    open();
+    expect(gate.underWay()).toBe(1);
+    gate.endAll();
+    expect(listOpen()).toBe(true);
+    expect(gate.underWay()).toBe(1);
+  });
+
+  test("a list open when the select begins to wait lets its hold go as it closes", () => {
+    const gate = createRunGate();
+    const { wait } = draw(gate, []);
+    open();
+    expect(gate.underWay()).toBe(1);
+    wait("Change it once the PCA ends or is stopped.");
+    expect(listOpen()).toBe(false);
+    expect(gate.underWay()).toBe(0);
   });
 
   test("a select removed while its list is open lets its hold go", () => {

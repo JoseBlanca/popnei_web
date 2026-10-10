@@ -372,6 +372,21 @@ describe("NU3 D2 the line holds a drag under way", () => {
     },
   );
 
+  test("held through a change by another control, which ends the runs of the keys held", () => {
+    const gate = createRunGate();
+    draw({ moves: [], dragEnds: [] }, 0.5, false, gate);
+    act(() => {
+      thumbOf().dispatchEvent(pointer("pointerdown", 50));
+    });
+    expect(gate.underWay()).toBe(1);
+    gate.endAll();
+    expect(gate.underWay()).toBe(1);
+    act(() => {
+      window.dispatchEvent(pointer("pointerup", 50));
+    });
+    expect(gate.underWay()).toBe(0);
+  });
+
   test("a press of a key takes no hold", () => {
     const gate = createRunGate();
     const calls: Calls = { moves: [], dragEnds: [] };

@@ -11,7 +11,7 @@
 import { StrictMode, act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
   setThreshold,
@@ -19,7 +19,13 @@ import {
   turnOffVariantFilter,
 } from "../../core/project.ts";
 import { summaryResult } from "../../core/testSupport.ts";
-import type { JobResult, Run, Written } from "../../worker/protocol.ts";
+import type {
+  JobResult,
+  Outcome,
+  Run,
+  Written,
+} from "../../worker/protocol.ts";
+import { downloadFile } from "../download.ts";
 import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
 import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
@@ -30,6 +36,11 @@ import { RunGateProvider } from "./runGate.tsx";
 import { createRunGate, gatedStore } from "./thresholdRun.ts";
 import { ChangeHoldsProvider } from "../widgets/changeHold.ts";
 import type { RunGate } from "./thresholdRun.ts";
+
+vi.mock("../download.ts", () => ({
+  downloadText: vi.fn(),
+  downloadFile: vi.fn(),
+}));
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -67,14 +78,20 @@ function runOf(id: number): Run<never> {
     off, and its one pass finished with 100 variants none of which passed
     their FILTER: the button enabled, and the box ticked would make it
     certain that nothing passes. The writes sent are ended with
-    `written`. */
+    `written`, which starts one; the last write sent, by the dialog, ends
+    with `finishWrite`, through its outcome, as the worker ends it. */
 function storeOfPanel(): {
   readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly endWrite: (written: Written<Blob>) => void;
+  readonly finishWrite: (written: Written<Blob>) => void;
 } {
   let lastId = 0;
   const passes: { id: number; key: string }[] = [];
-  const writes: { id: number; key: string }[] = [];
+  const writes: {
+    id: number;
+    key: string;
+    end: (outcome: Outcome<Written<Blob>>) => void;
+  }[] = [];
   const store = createPopgen2Store({
     send: (key) => {
       lastId += 1;
@@ -83,8 +100,12 @@ function storeOfPanel(): {
     },
     sendWrite: (key) => {
       lastId += 1;
-      writes.push({ id: lastId, key });
-      return runOf(lastId);
+      let end: (outcome: Outcome<Written<Blob>>) => void = () => undefined;
+      const outcome = new Promise<Outcome<Written<Blob>>>((resolve) => {
+        end = resolve;
+      });
+      writes.push({ id: lastId, key, end });
+      return { id: lastId, outcome, cancel: () => undefined };
     },
     appVersion: "0.1.0",
   });
@@ -124,7 +145,12 @@ function storeOfPanel(): {
     if (write === undefined) throw new Error("no write sent");
     store.runEnded(write.id, { kind: "done", key: write.key, result: written });
   };
-  return { store, endWrite };
+  const finishWrite = (written: Written<Blob>): void => {
+    const write = writes.at(-1);
+    if (write === undefined) throw new Error("no write sent");
+    write.end({ kind: "done", key: write.key, result: written });
+  };
+  return { store, endWrite, finishWrite };
 }
 
 /** A VCF written of 100 variants. */
@@ -318,6 +344,27 @@ describe("NU3 D2 the dialog of the download holds while it is open", () => {
     act(() => {
       dialogButton("Cancel").click();
     });
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("held while the file is written, after Download in the dialog, and let go once it is downloaded", async () => {
+    const { store, finishWrite } = storeOfPanel();
+    const gate = createRunGate();
+    draw(store, gate);
+    act(() => {
+      downloadButton().click();
+    });
+    act(() => {
+      dialogButton("Download").click();
+    });
+    expect(store.getState().write?.kind).toBe("running");
+    expect(gate.underWay()).toBe(1);
+    await act(async () => {
+      finishWrite(WRITTEN);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(vi.mocked(downloadFile)).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
     expect(gate.underWay()).toBe(0);
   });
 
