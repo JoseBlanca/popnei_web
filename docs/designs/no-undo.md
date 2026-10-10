@@ -457,8 +457,10 @@ the store, whichever is later. The holds, all in `src/ui`, through
   `react-aria` 3.52.1, `ArrowLeft`, `ArrowRight`, `allowRepeats: true`),
   and at each letter that begins an option;
 - a box with text not yet given, `NumberField`, the Variants tab's and
-  the PCA tab's: held while its text differs from the project's value,
-  which it already knows for Ctrl+Z. Without it, the box is read-only
+  the PCA tab's: held from the first key typed until the number is
+  given, put back (Escape, Ctrl+Z) or the box leaves the page (as
+  built on 10 October 2026; a hold that followed whether the text
+  differed from the value dropped partway through typing). Without it, the box is read-only
   while it waits. The gate's `typing` and `commitTyped` register the
   boxes of the thresholds today; the hold adds whether one has text
   waiting.
