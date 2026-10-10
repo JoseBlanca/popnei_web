@@ -445,8 +445,8 @@ Deliverables:
    `popgen2-pca-live-locked`, at 1280 and 320 px, light and dark.
 6. The memory of a PCA started by itself after a finished one, in
    WebKit, by the measurement run, alone on the machine, on a VCF of 300 variants and 9,381 diploid individuals, written by
-   `e2e/bigVcf.ts` as the PCA tab's plan measured it, about 11 MB (4
-   bytes of genotypes per individual and variant), on the owner's Apple
+   `e2e/bigVcf.ts` as the PCA tab's plan measured it, 1,793,306 bytes gzipped
+   (measured on 10 October 2026), on the owner's Apple
    M5 Pro with 64 GB, in WebKit 26.6 under Playwright:
    a PCA ended, a threshold moved, the PCA again by itself. The bound:
    the peak of the second run, the memory of the engine's processes
