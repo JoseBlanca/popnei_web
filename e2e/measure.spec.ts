@@ -122,6 +122,15 @@
  * the engine before the file was opened, at the end of the pass, at the
  * peak of the run and 3 s after its answer.
  *
+ * And the memory of a PCA started by itself after a finished one (NU4 D6,
+ * the plan of the live PCA, docs/plans/no-undo.md, work package 4): on
+ * popgen2.html, the VCF of 9,381 individuals of AP7 D1, a PCA of Run and,
+ * once it ended, the slider of the missing data of the PCA moved one
+ * step, which starts the PCA again by itself; the memory of the engine
+ * before Run, at the peak of each PCA, at the change and 3 s after the
+ * second, and the time of each. The bound of the plan, the peak of the
+ * second at most that of the first plus 0.25 GB, is checked in WebKit.
+ *
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
  *
@@ -5863,4 +5872,227 @@ test("IN2 D2 the memory of table_io: CSVs of 1, 5 and 20 MB in two shapes read o
       return [key, mb(ak), mb(ae), mb(ak - ae), mb(gk), mb(ge), mb(gk - ge)];
     }),
   );
+});
+
+// ---------------------------------------------------------------------
+// NU4 D6, the memory of a PCA started by itself after a finished one.
+
+/** The individuals of the VCF of NU4 D6, popnei's limit. */
+const LIVE_INDIVIDUALS = 9_381;
+
+/** The pause between two samples of the memory of NU4 D6, in ms. */
+const LIVE_PAUSE_MS = 250;
+
+/** The bound of NU4 D6: what the peak of the PCA started by itself may
+    rise above that of the PCA of Run, in bytes. */
+const LIVE_BOUND = 0.25e9;
+
+/** One PCA of NU4 D6, from its run posted to the calculation worker to
+    its answer. */
+interface LiveRun {
+  readonly answer: string;
+  readonly runMs: number;
+  readonly worker: number;
+  readonly numVarsUsed: number | null;
+}
+
+/** What NU4 D6 took: the two PCAs, and the engine's memory, the
+    footprints of its processes summed, on the page before Run, at the
+    peak of the first PCA, at the change, at the peak of the second and
+    3 s after its answer. */
+interface LiveTwice {
+  readonly first: LiveRun;
+  readonly second: LiveRun;
+  /** From the change to the second PCA's run posted: the quiet second. */
+  readonly changeToPostMs: number;
+  readonly beforeRun: number;
+  readonly peakFirst: number;
+  readonly atChange: number;
+  readonly peakSecond: number;
+  readonly after: number;
+}
+
+/** The first request of the calculation worker posted in `log` from
+    `from` on whose kind is "run", and its answer. */
+async function nextRun(
+  page: Page,
+  from: number,
+  timeout: number,
+): Promise<{ posted: Logged; answer: Logged }> {
+  let found: { posted: Logged; answer: Logged } | undefined;
+  await expect
+    .poll(
+      async () => {
+        const log = (await logOf(page)).slice(from).filter(isCalc);
+        const at = log.findIndex((l) => l.event === "out" && l.kind === "run");
+        const posted = log[at];
+        if (posted === undefined) return false;
+        const answer = log
+          .slice(at + 1)
+          .find((l) => l.event === "in" && AFTER_PASS_ENDS.has(l.kind));
+        if (answer === undefined) return false;
+        found = { posted, answer };
+        return true;
+      },
+      { timeout, intervals: [200] },
+    )
+    .toBe(true);
+  if (found === undefined) throw new Error("no run, or no answer to it");
+  return found;
+}
+
+/** Opens popgen2.html on a new page, opens the VCF at `vcf`, waits for
+    the end of the one pass, turns the PCA's LD pruning off and presses
+    Run; once its result is shown and the PCA is live, waits 2 s, moves
+    the slider of the missing data of the PCA one step with the left
+    arrow and waits for the PCA started by itself; with the memory of the
+    engine sampled throughout. */
+async function pcaTwice(
+  browser: Browser,
+  browserName: string,
+  vcf: string,
+  timeout: number,
+): Promise<LiveTwice> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const sampler = sampleMemory(browser, browserName, LIVE_PAUSE_MS);
+  const shown = page.getByRole("tabpanel");
+  try {
+    await page.addInitScript(instrument);
+    await page.goto("popgen2.html");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const chooser = page.waitForEvent("filechooser");
+    await page
+      .getByRole("button", { name: /^Open (another )?variants file…$/u })
+      .click();
+    await (await chooser).setFiles(vcf);
+    let pass: Logged | undefined;
+    await expect
+      .poll(
+        async () => {
+          pass = (await logOf(page)).find(
+            (l) => isCalc(l) && l.event === "in" && AFTER_PASS_ENDS.has(l.kind),
+          );
+          return pass !== undefined;
+        },
+        { timeout: 300_000, intervals: [200] },
+      )
+      .toBe(true);
+    if (pass?.kind !== "result") {
+      throw new Error(`the one pass ended with ${pass?.kind ?? "nothing"}`);
+    }
+    await page
+      .getByRole("tablist", { name: "Files and analyses" })
+      .getByRole("tab", { name: "PCA", exact: true })
+      .click();
+    await shown
+      .locator("label")
+      .filter({ hasText: "Prune the variants by linkage disequilibrium (LD)" })
+      .click();
+    const run = shown.getByRole("button", { name: "Run", exact: true });
+    await expect(run).toBeEnabled();
+    // The memory of the end of the pass settles before it is taken.
+    const settleUntil = pass.wall + 2000;
+    if (Date.now() < settleUntil) {
+      await page.waitForTimeout(settleUntil - Date.now());
+    }
+    let logged = (await logOf(page)).length;
+    const clickedAt = Date.now();
+    await run.click();
+    const first = await nextRun(page, logged, timeout);
+    if (first.answer.kind !== "result") {
+      throw new Error(`the PCA of Run ended with ${first.answer.kind}`);
+    }
+    await expect(
+      shown.getByRole("button", { name: "Stop recalculating", exact: true }),
+    ).toBeVisible();
+    // The memory after the first PCA settles before the change.
+    await page.waitForTimeout(2000);
+    const missing = shown.getByRole("slider", {
+      name: "Maximum proportion of missing genotypes for the PCA",
+    });
+    const value = await missing.getAttribute("aria-valuetext");
+    logged = (await logOf(page)).length;
+    const changedAt = Date.now();
+    await missing.focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect(missing).not.toHaveAttribute("aria-valuetext", value ?? "");
+    const second = await nextRun(page, logged, timeout);
+    await page.waitForTimeout(3000);
+    await sampler.stop();
+    const totals = (from: number, to: number): number[] =>
+      sampler.samples
+        .filter((s) => s.t >= from && s.t <= to)
+        .map((s) => s.total);
+    const last = (to: number): number => totals(0, to).at(-1) ?? 0;
+    const peak = (from: number, to: number): number =>
+      Math.max(0, ...totals(from, to));
+    const runOf = (r: { posted: Logged; answer: Logged }): LiveRun => ({
+      answer: r.answer.kind,
+      runMs: r.answer.t - r.posted.t,
+      worker: r.posted.worker,
+      numVarsUsed: r.answer.numVarsUsed ?? null,
+    });
+    return {
+      first: runOf(first),
+      second: runOf(second),
+      changeToPostMs: second.posted.wall - changedAt,
+      beforeRun: last(clickedAt),
+      peakFirst: peak(clickedAt, first.answer.wall),
+      atChange: last(changedAt),
+      peakSecond: peak(changedAt, second.answer.wall),
+      after: sampler.samples.at(-1)?.total ?? 0,
+    };
+  } finally {
+    await sampler.stop();
+    await context.close().catch(() => undefined);
+  }
+}
+
+test("NU4 D6 the memory of a PCA of 9,381 individuals started by itself after a finished one, on popgen2.html: the peak of the second at most that of the first plus 0.25 GB", async ({
+  browser,
+  browserName,
+}) => {
+  // Under the 550,000 ms of a command of the measurement run.
+  test.setTimeout(540_000);
+  const loadBefore = machineLoad();
+  const vcf = await pcaVcf(LIVE_INDIVIDUALS);
+  const ran = await pcaTwice(browser, browserName, vcf, 240_000);
+  const gb = (x: number): string => `${(x / 1e9).toFixed(3)} GB`;
+  const held = ran.peakSecond <= ran.peakFirst + LIVE_BOUND;
+  report(
+    `NU4 D6 the memory of a PCA of ${LIVE_INDIVIDUALS.toLocaleString("en-US")} individuals started by itself after a finished one`,
+    `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; the gzipped VCF of ${String(PCA_VARIANTS)} variants of e2e/bigVcf.ts of IP6 D6, the thresholds of a new page, the PCA's LD pruning off; Run pressed 2 s after the one pass answered, and 2 s after its result the slider of the missing data of the PCA moved one step with the left arrow; each time from the run posted to the calculation worker to its answer; the memory is the footprints of the engine's processes summed, taken every ${String(LIVE_PAUSE_MS)} ms and the time of a sample`,
+    [
+      "before Run",
+      "peak of the first",
+      "at the change",
+      "peak of the second",
+      "second above first",
+      "3 s after",
+      "first: answer, time, worker",
+      "second: answer, time, worker",
+      "change to second posted",
+      "bound held",
+    ],
+    [
+      [
+        gb(ran.beforeRun),
+        gb(ran.peakFirst),
+        gb(ran.atChange),
+        gb(ran.peakSecond),
+        gb(ran.peakSecond - ran.peakFirst),
+        gb(ran.after),
+        `${ran.first.answer}, ${(ran.first.runMs / 1000).toFixed(2)} s, ${String(ran.first.worker)}`,
+        `${ran.second.answer}, ${(ran.second.runMs / 1000).toFixed(2)} s, ${String(ran.second.worker)}`,
+        `${(ran.changeToPostMs / 1000).toFixed(2)} s`,
+        held ? "yes" : "no",
+      ],
+    ],
+  );
+  expect(ran.second.answer).toBe("result");
+  expect(ran.peakFirst).toBeGreaterThan(0);
+  expect(ran.peakSecond).toBeGreaterThan(0);
+  // The bound is the plan's in WebKit; Chromium's is reported.
+  if (browserName === "webkit") expect(held).toBe(true);
 });
