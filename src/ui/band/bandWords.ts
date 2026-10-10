@@ -10,7 +10,7 @@ import { escaped } from "../../core/project.ts";
 import type { PcaMethod } from "../../worker/protocol.ts";
 import { methodName } from "../analyses/pca/words.ts";
 import { clockText } from "../analyses/words.ts";
-import type { BandLine } from "./bandLine.ts";
+import type { BandLine, Stopping } from "./bandLine.ts";
 
 /** The page's heading, at the band's left. */
 export const PAGE_HEADING = "Popnei";
@@ -72,13 +72,7 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
         short: withShare("Writing", line.share),
       };
     case "stopping":
-      return {
-        full:
-          line.what.kind === "pca"
-            ? `Stopping the ${methodName(line.what.method)}…`
-            : `Stopping the statistics of ${escaped(line.what.name)}…`,
-        short: "Stopping…",
-      };
+      return { full: stoppingWords(line.what), short: "Stopping…" };
     case "aboutToStart": {
       const name = methodName(line.method);
       // The words of the PCA tab's line of the quiet second, and, while
@@ -152,6 +146,18 @@ function resultWords(method: PcaMethod, warnings: number | null): LineWords {
     full: `${name}: ${what}, in the PCA tab`,
     short: warnings === null ? `${name}: failed` : `${name}: ${what}`,
   };
+}
+
+/** The whole words of a Stop under way of `what`. */
+function stoppingWords(what: Stopping): string {
+  switch (what.kind) {
+    case "pca":
+      return `Stopping the ${methodName(what.method)}…`;
+    case "reading":
+      return `Stopping the statistics of ${escaped(what.name)}…`;
+    case "analysis":
+      return `Stopping the calculation of ${what.title}…`;
+  }
 }
 
 /** `words` followed by the share, "· 45%", when there is one. */

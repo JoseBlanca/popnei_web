@@ -26,6 +26,7 @@ import type { Key } from "../../core/keys.ts";
 import type { PageTab } from "../../core/popgen2Tabs.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult, PcaMethod } from "../../worker/protocol.ts";
+import { titleOf } from "../analyses/titles.ts";
 import { progressShare } from "../analyses/words.ts";
 import type { AboutToStart, LiveState } from "../autoRuns.ts";
 import type { DefectsState } from "../defects.ts";
@@ -61,11 +62,13 @@ export interface BandPage {
   readonly stoppingSince: number | null;
 }
 
-/** What a Stop under way stops: the PCA, by its method, or the reading
-    of the variants file `name`, the one pass. */
+/** What a Stop under way stops: the PCA, by its method; the one pass
+    over the variants file `name`; or another analysis of the page, by
+    its title, `title`. */
 export type Stopping =
   | { readonly kind: "pca"; readonly method: PcaMethod }
-  | { readonly kind: "reading"; readonly name: string };
+  | { readonly kind: "reading"; readonly name: string }
+  | { readonly kind: "analysis"; readonly title: string };
 
 /** The line after "Popnei", the first of these that holds. */
 export type BandLine =
@@ -258,7 +261,8 @@ function pcaStatus(
 }
 
 /** What the Stop of the analysis `id` stops, waiting for the worker: the
-    PCA by `method`, or the reading of the file `variantsName`. */
+    PCA by `method`, the one pass over the file `variantsName`, or
+    another analysis by its title; a defect for one with no title. */
 function stoppingOf(
   id: string,
   method: PcaMethod,
@@ -273,7 +277,5 @@ function stoppingOf(
     }
     return { kind: "reading", name: variantsName };
   }
-  throw new Error(
-    `popnei_web defect: a Stop of ${id} waits, which popgen2.html does not run.`,
-  );
+  return { kind: "analysis", title: titleOf(id) };
 }

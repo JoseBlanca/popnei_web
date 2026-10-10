@@ -5,6 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { POPGEN2_ANALYSES } from "../../core/apps.ts";
 import { setVariantFilter } from "../../core/project.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import { createDefects } from "../defects.ts";
@@ -164,6 +165,31 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     testPage.now = 1000;
     testPage.store.popneiReady("0.2.2");
     expect(testPage.band().line).toEqual({ kind: "nothing" });
+  });
+
+  test("a Stop waiting for each analysis of the page says Stopping and what it stops; another analysis by its title", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    const shown = pageOf(testPage);
+    const stoppingWords = (id: string): string | null =>
+      lineWords(
+        bandOf(
+          {
+            ...shown,
+            state: { ...shown.state, stoppedAwaitingWorker: id },
+            stoppingSince: 0,
+          },
+          testPage.defects.getState(),
+        ).line,
+        0,
+      )?.full ?? null;
+
+    expect(
+      POPGEN2_ANALYSES.map((analysis) => stoppingWords(analysis.id)),
+    ).toEqual(["Stopping the statistics of panel.nei…", "Stopping the PCA…"]);
+    expect(stoppingWords("diversity")).toBe(
+      "Stopping the calculation of Diversity…",
+    );
   });
 
   test("the write of the filtered variants: its file's name and its share, with no Stop", async () => {

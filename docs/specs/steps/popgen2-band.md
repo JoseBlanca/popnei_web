@@ -379,7 +379,7 @@ change; it is still the screen's, not the project's
 | the one pass running | "Statistics of panel.vcf.gz · 45%"; before its first progress, "Statistics of panel.vcf.gz" |
 | the PCA running | "PCA running · 1:20"; "PCoA running · 1:20"; under a minute, "PCA running · 0:12" |
 | the write | "Writing panel.filtered.vcf.gz · 45%"; "Writing panel.filtered.nei · 45%" |
-| a Stop under way | "Stopping the PCA…"; "Stopping the PCoA…"; "Stopping the statistics of panel.vcf.gz…" |
+| a Stop under way | "Stopping the PCA…"; "Stopping the PCoA…"; "Stopping the statistics of panel.vcf.gz…"; for an analysis the page will run beside them, by its title, "Stopping the calculation of Diversity…" |
 | the PCA about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment"; while the dialog of the download is open, "The PCA starts again when the download is written or closed"; "The PCoA starts again when the download is written or closed" |
 | the link to the warnings | "PCA: 1 warning, in the PCA tab"; "PCA: 2 warnings, in the PCA tab"; "PCoA: 1 warning, in the PCA tab" |
 | the link to an error | "PCA: could not be calculated, in the PCA tab"; "PCoA: could not be calculated, in the PCA tab" |
