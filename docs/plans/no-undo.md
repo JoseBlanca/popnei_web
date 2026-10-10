@@ -473,7 +473,20 @@ Tasks:
   the line of the quiet second, the status region, and `popgen2.tsx`
   giving the gate to `createAutoRuns` (the screen spec, "Run and Stop",
   "The states", "Its words", "Accessibility"). Deliverables 2 to 5.
-  Stands on 4.1.
+  Stands on 4.1. Added on 10 October 2026 by the review of work
+  package 2: (a) the flow of `e2e/popgen2NoUndo.spec.ts` (~327-350)
+  that expects Run after a threshold moved and set back pins a state
+  the screen spec forbids once the PCA is live; rewrite it to expect
+  no Run between the change and the bar; (b) the screenshots of "about
+  to start" and of "ready after a Stop", light, dark and 320 px; (c)
+  the line of the quiet second shows after a change of the method, the
+  r² or the LD distance too, so its words name the options as well as
+  the filters ("once the options and filters stop changing", or the
+  spec's own words to that effect, spec first); (d) after a Stop, a
+  short line beside Run says why nothing starts by itself any more
+  ("Stopped; press Run to calculate the PCA again", spec first); (e)
+  the gate's listener reads `underWay() === 0` on each call, and any
+  screen that shows the count reads it the same way.
 - [ ] 4.3 The measurement of deliverable 6, alone on the machine.
   Stands on 4.2.
 
