@@ -29,6 +29,9 @@
  * region, until the next choice of the menu or the start of a wait; any other failure of an item, a rejection or a
  * throw, is a defect, thrown again in a promise that nothing handles,
  * which the bar of the errors of the page shows (react.md, "Errors").
+ *
+ * On popgen2.html the menu open is a change under way (changeHold.ts),
+ * from its opening to its closing, or until it leaves the page.
  */
 import { useEffect, useRef, useState } from "react";
 import {
@@ -44,6 +47,7 @@ import { PngError } from "../../charts/export.ts";
 import type { PngErrorKind } from "../../charts/export.ts";
 import { classOf } from "../classOf.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
+import { useHoldWhile } from "./changeHold.ts";
 import styles from "./DownloadMenu.module.css";
 import type { DownloadItem } from "./downloadItems.ts";
 import { Problem } from "./Problem.tsx";
@@ -103,6 +107,7 @@ export function DownloadMenu({
   // that ends after another choice, or after the wait began, says
   // nothing, so that the words are always those of the last choice.
   const lastChoice = useRef(0);
+  useHoldWhile(isOpen);
 
   // A menu that begins to wait closes, and drops the words of a failure:
   // the open menu would come back by itself when the wait ends, and the

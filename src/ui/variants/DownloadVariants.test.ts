@@ -287,3 +287,60 @@ describe("the gate of the button", () => {
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
   });
 });
+
+describe("NU3 D2 the dialog of the download holds while it is open", () => {
+  /** The button of the dialog named `label`, or a defect. */
+  const dialogButton = (label: string): HTMLButtonElement => {
+    const found = [...document.querySelectorAll('[role="dialog"] button')].find(
+      (b) => b.textContent === label,
+    );
+    if (!(found instanceof HTMLButtonElement)) {
+      throw new Error(`no button ${label} in the dialog`);
+    }
+    return found;
+  };
+
+  test("held from its opening to Cancel", () => {
+    const { store } = storeOfPanel();
+    const gate = createRunGate();
+    draw(store, gate);
+    expect(gate.underWay()).toBe(0);
+    act(() => {
+      downloadButton().click();
+    });
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(gate.underWay()).toBe(1);
+    act(() => {
+      dialogButton("Cancel").click();
+    });
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("a dialog removed while open lets its hold go", () => {
+    const { store } = storeOfPanel();
+    const gate = createRunGate();
+    draw(store, gate);
+    act(() => {
+      downloadButton().click();
+    });
+    expect(gate.underWay()).toBe(1);
+    act(() => {
+      root.render(null);
+    });
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("a press that opens no dialog, nothing left to download, takes no hold", () => {
+    const { store } = storeOfPanel();
+    const gate = createRunGate();
+    draw(store, gate);
+    gate.holdKeyRun(() => {
+      tickFilter(store);
+    });
+    act(() => {
+      downloadButton().click();
+    });
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(gate.underWay()).toBe(0);
+  });
+});

@@ -26,6 +26,11 @@
  * thumb are drawn greyed; and a key or a drag moves it nowhere. React
  * Aria's slider has no state of its own for that, so it is the value
  * given back unchanged that holds the thumb where it is.
+ *
+ * On popgen2.html a drag is a change under way (changeHold.ts), held
+ * from the first move of the pointer to the end of the drag, or until
+ * the slider leaves the page; a key is a change at once, and holds
+ * nothing.
  */
 import { useLayoutEffect, useRef, useState } from "react";
 import {
@@ -37,6 +42,7 @@ import {
 } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
+import { useHoldWhile } from "./changeHold.ts";
 import styles from "./Slider.module.css";
 import { WaitingTooltip } from "./WaitingTooltip.tsx";
 import { ariaDisabledRef, describedByOf } from "./waiting.ts";
@@ -93,6 +99,8 @@ export function Slider({
   // input's own change, which a screen reader of a phone makes and which
   // React Aria ends with no `onChangeEnd`, is given at once.
   const dragging = useRef(false);
+  // A drag under way, from its first move to its end.
+  useHoldWhile(moving !== null);
   const shown = waits ? value : (moving ?? value);
   const text = valueText(shown);
   const trackRef = useRef<HTMLDivElement>(null);

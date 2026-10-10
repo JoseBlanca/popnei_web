@@ -15,6 +15,9 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
+import { RunGateProvider } from "../variants/runGate.tsx";
+import { createRunGate } from "../variants/thresholdRun.ts";
+import type { RunGate } from "../variants/thresholdRun.ts";
 import { NumberField } from "./NumberField.tsx";
 import type { NumberFieldProps } from "./NumberField.tsx";
 
@@ -570,5 +573,144 @@ describe("SF6 the browser's own undo of the box's text, done with no beforeinput
     blur(input);
 
     expect(calls.changes).toEqual([]);
+  });
+});
+
+describe("NU3 D2 the number box holds while its text differs from its number", () => {
+  /** Draws a threshold at 0.5 under `gate`, as popgen2.html does, or with
+      no gate, as popgen.html; each number committed is kept in `calls`
+      and given back, as the store gives it. */
+  const drawUnder = (gate: RunGate | null, calls: Calls): HTMLInputElement => {
+    const render = (value: number): void => {
+      const box = createElement(
+        NumberField,
+        thresholdProps(value, calls, {
+          onChange: (changed) => {
+            calls.changes.push(changed);
+            render(changed);
+          },
+        }),
+      );
+      root.render(
+        createElement(
+          StrictMode,
+          null,
+          gate === null
+            ? box
+            : createElement(RunGateProvider, { value: gate }, box),
+        ),
+      );
+    };
+    act(() => {
+      render(0.5);
+    });
+    const input = container.querySelector("input");
+    if (input === null) throw new Error("no input drawn");
+    return input;
+  };
+
+  /** Puts the focus in the box and types `text` over all it holds. */
+  const typeOver = (input: HTMLInputElement, text: string): void => {
+    focus(input);
+    act(() => {
+      input.setSelectionRange(0, input.value.length);
+    });
+    typeKeys(input, text);
+  };
+
+  test("held from the first digit typed to Enter, which commits the number before letting go", () => {
+    const gate = createRunGate();
+    const calls = newCalls();
+    const input = drawUnder(gate, calls);
+    expect(gate.underWay()).toBe(0);
+    const seen: number[][] = [];
+    gate.subscribe(() => {
+      if (!gate.busy()) seen.push([...calls.changes]);
+    });
+    typeOver(input, "0");
+    expect(gate.underWay()).toBe(1);
+    typeKeys(input, ".2");
+    expect(gate.underWay()).toBe(1);
+    press(input, "Enter");
+    expect(calls.changes).toEqual([0.2]);
+    expect(gate.underWay()).toBe(0);
+    expect(seen).toEqual([[0.2]]);
+  });
+
+  test("let go at Escape, which puts the number back", () => {
+    const gate = createRunGate();
+    const input = drawUnder(gate, newCalls());
+    typeOver(input, "0.2");
+    expect(gate.underWay()).toBe(1);
+    press(input, "Escape");
+    expect(input.value).toBe("0.5");
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("let go at the loss of the focus, which commits the number", () => {
+    const gate = createRunGate();
+    const calls = newCalls();
+    const input = drawUnder(gate, calls);
+    typeOver(input, "0.2");
+    expect(gate.underWay()).toBe(1);
+    blur(input);
+    expect(calls.changes).toEqual([0.2]);
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("let go at the Tab key, which commits the number", () => {
+    const gate = createRunGate();
+    const calls = newCalls();
+    const input = drawUnder(gate, calls);
+    typeOver(input, "0.2");
+    expect(gate.underWay()).toBe(1);
+    press(input, "Tab");
+    expect(calls.changes).toEqual([0.2]);
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("a number refused at Enter lets go, the box showing its number again", () => {
+    const gate = createRunGate();
+    const calls = newCalls();
+    const input = drawUnder(gate, calls);
+    typeOver(input, "7");
+    expect(gate.underWay()).toBe(1);
+    press(input, "Enter");
+    expect(calls.changes).toEqual([]);
+    expect(input.value).toBe("0.5");
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("an arrow key on a box with nothing typed takes no hold", () => {
+    const gate = createRunGate();
+    const calls = newCalls();
+    const input = drawUnder(gate, calls);
+    let told = 0;
+    gate.subscribe(() => {
+      told += 1;
+    });
+    focus(input);
+    press(input, "ArrowUp");
+    expect(calls.changes).toEqual([0.501]);
+    expect(told).toBe(0);
+  });
+
+  test("a box removed with digits typed lets its hold go", () => {
+    const gate = createRunGate();
+    const input = drawUnder(gate, newCalls());
+    typeOver(input, "0.2");
+    expect(gate.underWay()).toBe(1);
+    act(() => {
+      root.render(null);
+    });
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("with no gate, as on popgen.html, a number typed is committed at Enter as before", () => {
+    const calls = newCalls();
+    const input = drawUnder(null, calls);
+    typeOver(input, "0.2");
+    press(input, "Enter");
+    expect(calls.changes).toEqual([0.2]);
   });
 });

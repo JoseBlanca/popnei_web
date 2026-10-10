@@ -15,6 +15,11 @@
  * marked `aria-disabled`, with the reason as its tooltip, on the mouse, a
  * press and the focus (WaitingTooltip.tsx), and as its description,
  * after the select's own description and problem.
+ *
+ * On popgen2.html its list open is a change under way (changeHold.ts),
+ * from its opening to its closing, or until the select leaves the page:
+ * a user with the list open is still choosing. A key that chooses on the
+ * closed list is a change at once, and holds nothing.
  */
 import {
   Select as AriaSelect,
@@ -32,6 +37,7 @@ import type { Key } from "react-aria-components";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { classOf } from "../classOf.ts";
+import { useHoldWhile } from "./changeHold.ts";
 import { ProblemIcon } from "./Problem.tsx";
 import styles from "./Select.module.css";
 import { WaitingTooltip } from "./WaitingTooltip.tsx";
@@ -111,6 +117,7 @@ export function Select<T extends string>({
   // wait ends: set during the drawing, as React has a state that follows
   // a prop set.
   if (waits && open) setOpen(false);
+  useHoldWhile(open && !waits);
   // The field, label and button, which the tooltip is placed under.
   const anchorRef = useRef<HTMLDivElement>(null);
   // Whether it waits, read when React Aria calls `chosen`, which may be

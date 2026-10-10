@@ -12,6 +12,9 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
+import { RunGateProvider } from "../variants/runGate.tsx";
+import { createRunGate } from "../variants/thresholdRun.ts";
+import type { RunGate } from "../variants/thresholdRun.ts";
 import { ThresholdSlider } from "./ThresholdSlider.tsx";
 import type { MovedBy } from "./ThresholdSlider.tsx";
 
@@ -43,29 +46,38 @@ interface Calls {
 }
 
 /** Draws a line over 0 to 1 by 0.01 at `value`, as the screen does: the
-    value given back on each move. */
-function draw(calls: Calls, value = 0.5, muted = false): void {
+    value given back on each move; under `gate` when one is given, as
+    popgen2.html draws it. */
+function draw(
+  calls: Calls,
+  value = 0.5,
+  muted = false,
+  gate: RunGate | null = null,
+): void {
   const render = (shown: number): void => {
+    const line = createElement(ThresholdSlider, {
+      label: "MAF max: maximum major allele frequency",
+      minValue: 0,
+      maxValue: 1,
+      step: 0.01,
+      value: shown,
+      valueText: String(shown),
+      muted,
+      onChange: (moved, by) => {
+        calls.moves.push([moved, by]);
+        render(moved);
+      },
+      onDragEnd: (ended) => {
+        calls.dragEnds.push(ended);
+      },
+    });
     root.render(
       createElement(
         StrictMode,
         null,
-        createElement(ThresholdSlider, {
-          label: "MAF max: maximum major allele frequency",
-          minValue: 0,
-          maxValue: 1,
-          step: 0.01,
-          value: shown,
-          valueText: String(shown),
-          muted,
-          onChange: (moved, by) => {
-            calls.moves.push([moved, by]);
-            render(moved);
-          },
-          onDragEnd: (ended) => {
-            calls.dragEnds.push(ended);
-          },
-        }),
+        gate === null
+          ? line
+          : createElement(RunGateProvider, { value: gate }, line),
       ),
     );
   };
@@ -261,5 +273,117 @@ describe("AP6 D3 the reason of a line that waits", () => {
       reason,
     );
     expect(moves).toEqual([]);
+  });
+});
+
+describe("NU3 D2 the line holds a drag under way", () => {
+  /** Runs `body` with the track given a width, which React Aria turns a
+      move of the pointer into a value by: jsdom lays nothing out. */
+  const withWidth = (body: () => void): void => {
+    const width = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      "offsetWidth",
+    );
+    Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
+      configurable: true,
+      get: () => 100,
+    });
+    try {
+      body();
+    } finally {
+      if (width !== undefined) {
+        Object.defineProperty(HTMLElement.prototype, "offsetWidth", width);
+      }
+    }
+  };
+
+  test("held from the first move of the pointer to its release, which ends the drag before letting go", () => {
+    withWidth(() => {
+      const gate = createRunGate();
+      const calls: Calls = { moves: [], dragEnds: [] };
+      draw(calls, 0.5, false, gate);
+      act(() => {
+        thumbOf().dispatchEvent(pointer("pointerdown", 50));
+      });
+      expect(gate.underWay()).toBe(0);
+      act(() => {
+        window.dispatchEvent(pointer("pointermove", 40));
+      });
+      expect(gate.underWay()).toBe(1);
+      act(() => {
+        window.dispatchEvent(pointer("pointermove", 30));
+      });
+      expect(gate.underWay()).toBe(1);
+      // The ends of the drag already given when the gate tells it ended.
+      const seen: number[] = [];
+      gate.subscribe(() => {
+        if (!gate.busy()) seen.push(calls.dragEnds.length);
+      });
+      act(() => {
+        window.dispatchEvent(pointer("pointerup", 30));
+      });
+      expect(gate.underWay()).toBe(0);
+      expect(calls.dragEnds).toHaveLength(1);
+      expect(seen).toEqual([1]);
+
+      // A press that moves nothing holds nothing.
+      act(() => {
+        thumbOf().dispatchEvent(pointer("pointerdown", 30));
+      });
+      act(() => {
+        window.dispatchEvent(pointer("pointerup", 30));
+      });
+      expect(gate.underWay()).toBe(0);
+    });
+  });
+
+  test("a press of a key takes no hold", () => {
+    const gate = createRunGate();
+    const calls: Calls = { moves: [], dragEnds: [] };
+    draw(calls, 0.5, false, gate);
+    let told = 0;
+    gate.subscribe(() => {
+      told += 1;
+    });
+    act(() => {
+      inputOf().focus();
+    });
+    for (const key of ["ArrowRight", "PageDown", "Home"]) {
+      act(() => {
+        inputOf().dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      });
+      expect(gate.underWay()).toBe(0);
+      act(() => {
+        inputOf().dispatchEvent(
+          new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true }),
+        );
+      });
+    }
+    expect(calls.moves).toHaveLength(3);
+    expect(told).toBe(0);
+  });
+
+  test("a line removed while dragged lets its hold go", () => {
+    withWidth(() => {
+      const gate = createRunGate();
+      draw({ moves: [], dragEnds: [] }, 0.5, false, gate);
+      act(() => {
+        thumbOf().dispatchEvent(pointer("pointerdown", 50));
+      });
+      act(() => {
+        window.dispatchEvent(pointer("pointermove", 40));
+      });
+      expect(gate.underWay()).toBe(1);
+      act(() => {
+        root.render(null);
+      });
+      expect(gate.underWay()).toBe(0);
+    });
   });
 });

@@ -3,7 +3,8 @@
  * the entry makes it once with the page's store, which it wraps so that
  * every command of a screen passes it, and gives it through
  * `RunGateProvider`; each threshold holds its run there while it waits,
- * and the commit of its box.
+ * and the commit of its box, and each widget its change under way
+ * (src/ui/widgets/changeHold.ts). popgen.html gives no gate.
  */
 import { createContext, useContext } from "react";
 
@@ -21,4 +22,11 @@ export function useRunGate(): RunGate {
     throw new Error("popnei_web defect: useRunGate outside a RunGateProvider");
   }
   return gate;
+}
+
+/** The gate of the page, or `null` on a page that gives none,
+    popgen.html: for the widgets both pages draw, which hold a change
+    under way where there is a gate and nothing where there is none. */
+export function useRunGateIfAny(): RunGate | null {
+  return useContext(RunGateContext);
 }

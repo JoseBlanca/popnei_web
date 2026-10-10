@@ -66,6 +66,11 @@
  * is the page's through `onSteps`, above. Without these options the
  * field is as on the old page: an emptied field gives nothing and shows
  * its number again.
+ *
+ * On popgen2.html a text that holds another number than the field's, or
+ * none, is a change under way (changeHold.ts), from the first key that
+ * makes it so to Enter, Tab, the loss of the focus or Escape, or until
+ * the field leaves the page.
  */
 import {
   useContext,
@@ -85,6 +90,7 @@ import {
 
 import { classOf } from "../classOf.ts";
 import { shortcutOf } from "../shell/shortcuts.ts";
+import { useHoldWhile } from "./changeHold.ts";
 import {
   NUMBER_FIELD_ATTRIBUTE,
   checkCommitted,
@@ -638,6 +644,12 @@ function FieldInput({
 }: FieldInputProps): React.JSX.Element {
   const state = useContext(NumberFieldStateContext);
   const inputRef = useRef<HTMLInputElement>(null);
+  // A text that holds another number than the field's, or no number in
+  // a field that holds one, is a change under way. React Aria's
+  // `numberValue` is the number of the text, read in the language of the
+  // browser, so 0,05 in Spanish is the field's 0.05; and the empty text
+  // of an empty field, NaN, is the field's NaN.
+  useHoldWhile(state !== null && !Object.is(state.numberValue, value));
 
   // React Aria throws a character away in the browser's `beforeinput`,
   // before the text changes, so no change of the input follows: the same

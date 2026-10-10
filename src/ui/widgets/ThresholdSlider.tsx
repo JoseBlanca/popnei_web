@@ -39,11 +39,17 @@
  * reason as its tooltip and its description. React Aria's slider has no
  * state of its own for that, so it is the value given back unchanged
  * that holds the thumb where it is.
+ *
+ * On popgen2.html a drag is a change under way (changeHold.ts), held
+ * from the first move of the pointer to its release, after the end of
+ * the drag is given, or until the line leaves the page; a key holds
+ * nothing here, since the threshold holds its run of the keys itself.
  */
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { Slider, SliderThumb, SliderTrack } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
+import { useChangeHold } from "./changeHold.ts";
 import styles from "./ThresholdSlider.module.css";
 import { WithTooltip } from "./Tooltip.tsx";
 
@@ -124,6 +130,8 @@ export function ThresholdSlider({
   // The latest onDragEnd, for the listener of the release, made at the
   // press.
   const dragEndRef = useRef(onDragEnd);
+  // The drag under way, held from its first move.
+  const hold = useChangeHold();
   useLayoutEffect(() => {
     dragEndRef.current = onDragEnd;
   });
@@ -172,8 +180,12 @@ export function ThresholdSlider({
       const ended = drag.current;
       drag.current = null;
       stop();
-      if (ended?.moved !== null && ended?.moved !== undefined) {
-        dragEndRef.current(ended.moved);
+      try {
+        if (ended?.moved !== null && ended?.moved !== undefined) {
+          dragEndRef.current(ended.moved);
+        }
+      } finally {
+        hold.release();
       }
     };
     const stop = (): void => {
@@ -213,6 +225,7 @@ export function ThresholdSlider({
                 return;
               }
               dragged.moved = moved;
+              hold.take();
               onChange(moved, "pointer");
             }}
           >

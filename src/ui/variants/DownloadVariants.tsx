@@ -25,6 +25,9 @@
  * click on the button within the quiet second of a threshold makes the
  * threshold's change as the threshold loses the focus, and that change
  * can leave nothing to download.
+ *
+ * The dialog open is a change under way (src/ui/widgets/changeHold.ts),
+ * so that the PCA does not start by itself while the user chooses.
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -41,6 +44,7 @@ import { useRunSeconds } from "../runSeconds.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
 import { useAppState, useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
+import { useHoldWhile } from "../widgets/changeHold.ts";
 import { Dialog } from "../widgets/Dialog.tsx";
 import { whenNoDialog } from "../widgets/dialogMark.ts";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
@@ -100,6 +104,7 @@ export function DownloadVariants(): React.JSX.Element {
   const project = useAppState((s) => s.project);
   const kept = useAppState((s) => s.individualsKept);
   const [phase, setPhase] = useState<DialogPhase | null>(null);
+  useHoldWhile(phase !== null);
   // The text or the sentence that takes the place of the button, which
   // takes the focus after a write.
   const placeRef = useRef<HTMLParagraphElement>(null);

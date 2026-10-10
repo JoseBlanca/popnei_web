@@ -21,6 +21,8 @@ import { downloadText } from "../download.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { ANNOUNCE_DELAY_MS, createAnnouncer } from "../shell/status.ts";
 import type { Announcer } from "../shell/status.ts";
+import { RunGateProvider } from "../variants/runGate.tsx";
+import { createRunGate } from "../variants/thresholdRun.ts";
 import {
   DownloadMenu,
   PNG_NOT_MADE_TEXT,
@@ -821,5 +823,82 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
     focusByKeyboard(button);
     press("Enter");
     expect(menuItems()).toEqual(["Image as SVG"]);
+  });
+});
+
+describe("NU3 D2 the menu Download… holds while it is open", () => {
+  /** The menu of the plot of the MAF, with one item that saves at once,
+      under `gate`, as popgen2.html draws it. */
+  const menuUnder = (
+    gate: ReturnType<typeof createRunGate>,
+  ): React.ReactElement =>
+    createElement(
+      RunGateProvider,
+      { value: gate },
+      createElement(DownloadMenu, {
+        what: "the plot of the MAF",
+        items: [
+          { label: "Image as SVG", save: () => Promise.resolve("x.svg") },
+        ],
+        waiting: null,
+      }),
+    );
+
+  test("held from its opening to Escape", () => {
+    const gate = createRunGate();
+    draw(menuUnder(gate));
+    expect(gate.underWay()).toBe(0);
+    focusByKeyboard(trigger("the plot of the MAF"));
+    press("Enter");
+    expect(menuItems()).toEqual(["Image as SVG"]);
+    expect(gate.underWay()).toBe(1);
+    press("Escape");
+    expect(menuItems()).toBeNull();
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("held from its opening to a choice, which closes it", async () => {
+    const gate = createRunGate();
+    draw(menuUnder(gate));
+    focusByKeyboard(trigger("the plot of the MAF"));
+    press("Enter");
+    expect(gate.underWay()).toBe(1);
+    press("Enter");
+    await settle();
+    expect(menuItems()).toBeNull();
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("a menu removed while open lets its hold go", () => {
+    const gate = createRunGate();
+    draw(menuUnder(gate));
+    focusByKeyboard(trigger("the plot of the MAF"));
+    press("Enter");
+    expect(gate.underWay()).toBe(1);
+    draw(createElement("p", null, "gone"));
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("a menu open when it begins to wait lets its hold go as it closes", () => {
+    const gate = createRunGate();
+    const element = (waiting: string | null): React.ReactElement =>
+      createElement(
+        RunGateProvider,
+        { value: gate },
+        createElement(DownloadMenu, {
+          what: "the plot of the MAF",
+          items: [
+            { label: "Image as SVG", save: () => Promise.resolve("x.svg") },
+          ],
+          waiting,
+        }),
+      );
+    draw(element(null));
+    focusByKeyboard(trigger("the plot of the MAF"));
+    press("Enter");
+    expect(gate.underWay()).toBe(1);
+    draw(element("Download once panel.nei is read to the end."));
+    expect(menuItems()).toBeNull();
+    expect(gate.underWay()).toBe(0);
   });
 });
