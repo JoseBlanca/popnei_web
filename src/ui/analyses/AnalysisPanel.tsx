@@ -72,6 +72,22 @@ export interface PagePanel {
       locks a Run the store offers and takes the place of the store's
       reason; `null` when the page locks nothing. */
   readonly lock: string | null;
+  /** Whether the analysis is live, started again by itself after each
+      change: a Run locked, by the store or by the page, is then Stop,
+      enabled, beside the lock, so that the user can end the live state
+      before the lock lifts (docs/specs/steps/popgen2-pca.md, "Run and
+      Stop"). */
+  readonly live: boolean;
+  /** The line of the quiet second while the analysis is about to start
+      by itself, beside Stop in the place of Run; `null` otherwise. */
+  readonly aboutToStart: string | null;
+  /** The line beside Run after the user's Stop ended the live state;
+      `null` otherwise. */
+  readonly stoppedLine: string | null;
+  /** The user's Run: makes the analysis live and starts it. */
+  readonly onRun: () => void;
+  /** The user's Stop: stops its run and ends its live state. */
+  readonly onStop: () => void;
 }
 
 /** What the panel of an analysis is drawn with. */
@@ -101,7 +117,11 @@ export function AnalysisPanel({
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
 
-  const button = lockedBy(buttonOf(status), page?.lock ?? null);
+  const { button, line } = pageButton(
+    lockedBy(buttonOf(status), page?.lock ?? null),
+    status,
+    page,
+  );
   const stoppedBy = stoppedNotice(status, notice, id);
   // On popgen2.html the line of the individuals stands before the button,
   // also while it is locked.
@@ -135,11 +155,14 @@ export function AnalysisPanel({
         <RunButton
           button={button}
           runLabel="Run"
+          line={line}
           onRun={() => {
-            void startAnalysis(store, id);
+            if (page === undefined) void startAnalysis(store, id);
+            else page.onRun();
           }}
           onStop={() => {
-            store.cancelRun(id);
+            if (page === undefined) store.cancelRun(id);
+            else page.onStop();
           }}
           onGone={() => {
             heading.current?.focus();
@@ -158,6 +181,32 @@ function lockedBy(button: ButtonOf, lock: string | null): ButtonOf {
   return lock !== null && button?.kind === "run"
     ? { kind: "run", reason: lock }
     : button;
+}
+
+/** The button of the panel, and the line beside it, given what
+    popgen2.html adds, `page`: Stop in the place of a locked Run while the
+    analysis is live, beside the lock; Stop in the place of Run while it
+    is about to start, beside the line of the quiet second; Run beside the
+    line of a Stop after one. popgen.html, with no `page`, has the
+    button as it is and no line. */
+function pageButton(
+  button: ButtonOf,
+  status: AnalysisStatus<JobResult>,
+  page: PagePanel | undefined,
+): { readonly button: ButtonOf; readonly line: string | null } {
+  if (page === undefined || button?.kind !== "run") {
+    return { button, line: null };
+  }
+  if (button.reason !== null) {
+    return page.live
+      ? { button: { kind: "stop" }, line: button.reason }
+      : { button, line: null };
+  }
+  const ready = status.kind === "ready" || status.kind === "removed";
+  if (ready && page.aboutToStart !== null) {
+    return { button: { kind: "stop" }, line: page.aboutToStart };
+  }
+  return { button, line: ready ? page.stoppedLine : null };
 }
 
 /** What the parts above and below the button are drawn with. */

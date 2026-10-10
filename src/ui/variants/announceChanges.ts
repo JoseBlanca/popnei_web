@@ -8,8 +8,14 @@
  * store of the page and the section alone.
  */
 import type { AppState } from "../../core/store.ts";
+import type { AutoRuns } from "../autoRuns.ts";
 import type { JobResult } from "../../worker/protocol.ts";
-import { pcaEndAnnouncement } from "../analyses/pca/tabWords.ts";
+import { pcaOptions } from "../../core/analyses/pca.ts";
+import {
+  liveStoppedText,
+  pcaEndAnnouncement,
+  startedByItselfText,
+} from "../analyses/pca/tabWords.ts";
 import type { Announcer } from "../shell/status.ts";
 import { noVariantAnnouncement } from "./downloadState.ts";
 import { statsAnnouncementsOf } from "./statsWords.ts";
@@ -89,4 +95,33 @@ export function announceChanges(
 /** The id of the load of the variants file in `s`, or `null`. */
 function fileIdOf(s: AppState<JobResult, Blob>): string | null {
   return s.project.variants?.fileId ?? null;
+}
+
+/**
+ * Says with `announcer` what `live`, the analyses started by themselves,
+ * tells of the PCA beyond the store (docs/specs/steps/popgen2-pca.md,
+ * "Running" and "Stop"): "Calculating the PCA again. Stop it to change
+ * the filters." once at each start by itself, and does not move the
+ * focus, so that a user who changed a threshold and then finds it greyed
+ * learns why; and "PCA stopped. Press Run in the PCA tab to calculate it
+ * again." at a Stop, in the tab or in the band, which leaves the tab out
+ * of sight. "PCoA" under the PCoA, the method read from `store` then.
+ * It listens for as long as the page lives.
+ */
+export function announceLive(
+  store: Pick<PageStore, "getState">,
+  live: Pick<AutoRuns, "onLive">,
+  announcer: Announcer,
+): void {
+  live.onLive((event) => {
+    const method = pcaOptions(store.getState().project, "popgen2").method;
+    switch (event.kind) {
+      case "startedByItself":
+        announcer.announce(startedByItselfText(method));
+        return;
+      case "paused":
+        announcer.announce(liveStoppedText(method));
+        return;
+    }
+  });
 }

@@ -176,3 +176,40 @@ export function pcaTabResultFailed(
   const name = methodName(method);
   return `The result of the ${name} could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page, open ${escaped(variantsName)} again and run the ${name} again.`;
 }
+
+/** The line in the place of the bar while the PCA is about to start by
+    itself (docs/specs/steps/popgen2-pca.md, "About to start"): "The PCA
+    starts again in a moment, once the filters and its options stop
+    changing."; while the dialog of the download of the filtered
+    variants is open, `dialogOpen`, "The PCA starts again when the
+    download is written or closed."; "The PCoA …" under the PCoA. */
+export function aboutToStartLine(
+  method: PcaMethod,
+  dialogOpen: boolean,
+): string {
+  const name = methodName(method);
+  return dialogOpen
+    ? `The ${name} starts again when the download is written or closed.`
+    : `The ${name} starts again in a moment, once the filters and its options stop changing.`;
+}
+
+/** What the status region says when the PCA starts again by itself:
+    "Calculating the PCA again. Stop it to change the filters."; "the
+    PCoA" under the PCoA. */
+export function startedByItselfText(method: PcaMethod): string {
+  return `Calculating the ${methodName(method)} again. Stop it to change the filters.`;
+}
+
+/** What the status region says at a Stop of the PCA, in its tab or in
+    the band, which leaves the tab out of sight: "PCA stopped. Press Run
+    in the PCA tab to calculate it again."; "PCoA stopped. …". */
+export function liveStoppedText(method: PcaMethod): string {
+  return `${methodName(method)} stopped. Press Run in the PCA tab to calculate it again.`;
+}
+
+/** The line beside Run after a Stop, until Run or another variants
+    file: "Stopped: the PCA no longer starts by itself after a change.
+    Press Run to calculate it."; "the PCoA" under the PCoA. */
+export function stoppedLine(method: PcaMethod): string {
+  return `Stopped: the ${methodName(method)} no longer starts by itself after a change. Press Run to calculate it.`;
+}

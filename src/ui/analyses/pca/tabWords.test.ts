@@ -25,7 +25,11 @@ import { createPopgen2Store, openVariantsFile } from "../../popgen2Store.ts";
 import type { Popgen2PageStore } from "../../popgen2Store.ts";
 import { WAITS_FOR_STATISTICS_TEXT } from "../words.ts";
 import {
+  aboutToStartLine,
+  liveStoppedText,
   pcaEndAnnouncement,
+  startedByItselfText,
+  stoppedLine,
   LOADING_RESULT,
   pcaTabResultFailed,
   pcaTabLock,
@@ -335,5 +339,52 @@ describe("AP6 D2 the status region at the end of a run of the PCA, over the stor
     const running = store.getState();
     store.cancelRun("pca");
     expect(pcaEndAnnouncement(running, store.getState())).toBeNull();
+  });
+});
+
+describe("NU4 D2 the words of the PCA started again by itself, by the method", () => {
+  test("the line of the quiet second names the filters and the options", () => {
+    expect(aboutToStartLine("pca", false)).toBe(
+      "The PCA starts again in a moment, once the filters and its options stop changing.",
+    );
+    expect(aboutToStartLine("pcoa", false)).toBe(
+      "The PCoA starts again in a moment, once the filters and its options stop changing.",
+    );
+  });
+
+  test("while the dialog of the download holds it, the line says the download goes first", () => {
+    expect(aboutToStartLine("pca", true)).toBe(
+      "The PCA starts again when the download is written or closed.",
+    );
+    expect(aboutToStartLine("pcoa", true)).toBe(
+      "The PCoA starts again when the download is written or closed.",
+    );
+  });
+
+  test("the status region at a start by itself", () => {
+    expect(startedByItselfText("pca")).toBe(
+      "Calculating the PCA again. Stop it to change the filters.",
+    );
+    expect(startedByItselfText("pcoa")).toBe(
+      "Calculating the PCoA again. Stop it to change the filters.",
+    );
+  });
+
+  test("the status region at a Stop, in the tab or in the band", () => {
+    expect(liveStoppedText("pca")).toBe(
+      "PCA stopped. Press Run in the PCA tab to calculate it again.",
+    );
+    expect(liveStoppedText("pcoa")).toBe(
+      "PCoA stopped. Press Run in the PCA tab to calculate it again.",
+    );
+  });
+
+  test("the line beside Run after a Stop", () => {
+    expect(stoppedLine("pca")).toBe(
+      "Stopped: the PCA no longer starts by itself after a change. Press Run to calculate it.",
+    );
+    expect(stoppedLine("pcoa")).toBe(
+      "Stopped: the PCoA no longer starts by itself after a change. Press Run to calculate it.",
+    );
   });
 });

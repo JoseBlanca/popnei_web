@@ -11,18 +11,33 @@
  * The lock reads what the code that starts the pass knows beyond the
  * store, whether the pass was started under its key, so the tab is drawn
  * again at each change of it as well as of the store.
+ *
+ * Its Run makes the PCA live, `autoRuns.run`, and its Stop ends the live
+ * state, `autoRuns.pause` (docs/specs/steps/popgen2-pca.md, "The PCA
+ * calculated again by itself"): while the PCA is about to start by
+ * itself, Stop stands in the place of Run beside the line of the quiet
+ * second, which names the download when its dialog is open; while it is
+ * live and locked, Stop stands beside the lock; after a Stop, Run stands
+ * beside the line that says why nothing starts by itself.
  */
 import { useEffect, useSyncExternalStore } from "react";
 
-import { pcaOptions } from "../../../core/analyses/pca.ts";
+import { pcaOnPopgen2, pcaOptions } from "../../../core/analyses/pca.ts";
 import type { AutoRuns } from "../../autoRuns.ts";
 import { useAppState } from "../../store.tsx";
+import {
+  isDownloadOpen,
+  subscribeDownloadOpen,
+} from "../../variants/downloadOpen.ts";
 import { summaryStatus } from "../../variants/words.ts";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
 import { passLock } from "./passLock.ts";
 import { pcaTabPanel } from "./pcaTabPanel.ts";
 import { prefetchPcaResults } from "./PcaTabResults.tsx";
-import { pcaTabLock } from "./tabWords.ts";
+import { aboutToStartLine, pcaTabLock, stoppedLine } from "./tabWords.ts";
+
+/** The id of the PCA among the analyses started by themselves. */
+const PCA = pcaOnPopgen2.id;
 
 /** What the PCA tab is drawn with. */
 export interface PcaTabProps {
@@ -54,5 +69,31 @@ export function PcaTab({ autoRuns, shown }: PcaTabProps): React.JSX.Element {
       passLock(summaryStatus(s), (key) => autoRuns.startedUnder(key)),
     ),
   );
-  return <AnalysisPanel id="pca" ui={pcaTabPanel(method)} page={{ lock }} />;
+  // Read for each state of the store, and drawn again at each change of
+  // the live state, which `subscribe` above tells.
+  const live = useAppState(() => autoRuns.isLive(PCA));
+  const about = useAppState(() => autoRuns.aboutToStart(PCA));
+  const stopped = useAppState(() => autoRuns.stoppedByUser(PCA));
+  const dialogOpen = useSyncExternalStore(
+    subscribeDownloadOpen,
+    isDownloadOpen,
+  );
+  return (
+    <AnalysisPanel
+      id={PCA}
+      ui={pcaTabPanel(method)}
+      page={{
+        lock,
+        live,
+        aboutToStart: about ? aboutToStartLine(method, dialogOpen) : null,
+        stoppedLine: stopped ? stoppedLine(method) : null,
+        onRun: () => {
+          autoRuns.run(PCA);
+        },
+        onStop: () => {
+          autoRuns.pause(PCA);
+        },
+      }}
+    />
+  );
 }

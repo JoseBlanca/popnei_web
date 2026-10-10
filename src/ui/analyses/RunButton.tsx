@@ -42,6 +42,12 @@ export interface RunButtonProps {
   /** Given the element of the reason of a disabled Run, which then takes
       the focus from a script. */
   readonly reasonRef?: React.RefObject<HTMLSpanElement | null>;
+  /** Words beside a Stop or an enabled Run, which describe it, as a
+      reason describes a disabled Run: on popgen2.html, the line of the
+      quiet second beside Stop, the lock beside a Stop that takes the
+      place of a locked Run, the line beside Run after a Stop; none when
+      absent or `null`. */
+  readonly line?: string | null;
 }
 
 /** Run or Stop, one button in one place. */
@@ -62,6 +68,7 @@ function OneButton({
   onGone,
   onButton,
   reasonRef,
+  line = null,
 }: RunButtonProps): React.JSX.Element {
   const element = useRef<HTMLButtonElement>(null);
   const setElement = (node: HTMLButtonElement | null): void => {
@@ -91,8 +98,13 @@ function OneButton({
     // drawing, so the effect runs once, at the mount of this button.
   }, [reasonRef]);
 
+  // The same element with its line and without, so that the focus stays
+  // on it when the line comes or goes.
+  const described = line === null ? {} : { description: line };
   if (button.kind === "stop") {
-    return <Button label="Stop" onPress={onStop} ref={setElement} />;
+    return (
+      <Button label="Stop" onPress={onStop} ref={setElement} {...described} />
+    );
   }
   // The reason of a disabled Run takes the focus when the part gives its
   // element, named for this button.
@@ -109,7 +121,7 @@ function OneButton({
       onPress={onRun}
       ref={setElement}
       isDisabled={button.reason !== null}
-      {...(button.reason !== null && { description: button.reason })}
+      {...(button.reason === null ? described : { description: button.reason })}
       {...focus}
     />
   );

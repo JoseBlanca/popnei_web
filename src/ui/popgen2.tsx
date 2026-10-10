@@ -6,9 +6,11 @@
  * wrapped for the screens by the gate of the thresholds' runs, and the
  * worker client, the announcer of the status region, the reads
  * the project waits for, the analyses that start by themselves, the
- * keys of Undo and Redo taken from the browser, and the column of the
- * populations chosen at each read of the individuals file, and draws the error bar and the page in two roots, all in one run of
- * this code.
+ * one pass and the PCA once live, with the gate's changes under way
+ * holding the PCA's quiet second, the keys of Undo and Redo taken from
+ * the browser, and the column of the populations chosen at each read of
+ * the individuals file, and draws the error bar and the page in two
+ * roots, all in one run of this code.
  */
 import "./tokens.css";
 import "./base.css";
@@ -37,7 +39,7 @@ import { createAnnouncer } from "./shell/status.ts";
 import { StoreProvider } from "./store.tsx";
 import type { PageStore } from "./store.tsx";
 import { VariantsPage } from "./variants/VariantsPage.tsx";
-import { announceChanges } from "./variants/announceChanges.ts";
+import { announceChanges, announceLive } from "./variants/announceChanges.ts";
 import { RunGateProvider } from "./variants/runGate.tsx";
 import { createRunGate, gatedStore } from "./variants/thresholdRun.ts";
 import type { RunGate } from "./variants/thresholdRun.ts";
@@ -69,6 +71,9 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
   const gate = createRunGate();
   const gated = gatedStore(store, gate);
   const autoRuns = startByThemselves(store, gated, gate);
+  // The PCA started again by itself, and its Stop, said in the status
+  // region wherever the focus is.
+  announceLive(store, autoRuns, announcer);
   // The column of the populations at each read of the individuals file,
   // recorded as the read is, with no step: sent to the store itself, so
   // that it ends no run of the keys and applies nothing typed. It
