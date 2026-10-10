@@ -93,6 +93,14 @@ export interface WithTooltipProps {
       Absent, this widget holds it, and React Aria opens and closes it on
       the pointer, the focus, a press and Escape. */
   readonly held?: HeldTooltip;
+  /** Whether a press of the trigger, a click, a tap or a key, Enter, Space
+      or an arrow among them, leaves the tooltip shown, as it does for a
+      control that waits, whose tooltip is the reason a press does
+      nothing (docs/specs/steps/popgen2-pca.md, "While a PCA runs").
+      False when absent: a press closes the tooltip of a hint, which says
+      what the press is about to do. A held tooltip is never closed by a
+      press. */
+  readonly keepOnPress?: boolean;
 }
 
 /** A button, a link or a tab of React Aria, with a tooltip and the same
@@ -103,6 +111,7 @@ export function WithTooltip({
   children,
   drawnElsewhereId,
   held,
+  keepOnPress = false,
 }: WithTooltipProps): React.JSX.Element {
   const ownId = useId();
   const id = drawnElsewhereId ?? ownId;
@@ -120,7 +129,7 @@ export function WithTooltip({
         isDisabled={text === null}
         isOpen={isOpen}
         onOpenChange={held === undefined ? setOwnOpen : held.onOpenChange}
-        shouldCloseOnPress={held === undefined}
+        shouldCloseOnPress={held === undefined && !keepOnPress}
       >
         {children(text === null ? undefined : id)}
         {held === undefined ? (

@@ -202,3 +202,64 @@ describe("SF9 D4 the grey of the line", () => {
     expect(inputOf().closest("[data-muted]")).toBeNull();
   });
 });
+
+describe("AP6 D3 the reason of a line that waits", () => {
+  test("reached by the Tab key, its reason stays shown through an arrow key, which moves nothing", () => {
+    const reason = "Stop the PCA to change the filters.";
+    const moves: number[] = [];
+    act(() => {
+      root.render(
+        createElement(
+          StrictMode,
+          null,
+          createElement("input", { "aria-label": "Before" }),
+          createElement(ThresholdSlider, {
+            label: "MAF max: maximum major allele frequency",
+            minValue: 0,
+            maxValue: 1,
+            step: 0.01,
+            value: 0.5,
+            valueText: "0.5",
+            muted: false,
+            onChange: (moved) => {
+              moves.push(moved);
+            },
+            onDragEnd: () => undefined,
+            waiting: reason,
+          }),
+        ),
+      );
+    });
+    const [before, thumb] = [...container.querySelectorAll("input")];
+    if (before === undefined || thumb === undefined) {
+      throw new Error("no field before the line, or no line");
+    }
+    act(() => {
+      before.focus();
+    });
+    act(() => {
+      before.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Tab", bubbles: true }),
+      );
+    });
+    act(() => {
+      thumb.focus();
+    });
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(
+      reason,
+    );
+    act(() => {
+      thumb.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowRight",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(
+      reason,
+    );
+    expect(moves).toEqual([]);
+  });
+});

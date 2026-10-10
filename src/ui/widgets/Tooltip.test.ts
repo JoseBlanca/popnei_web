@@ -38,9 +38,10 @@ afterEach(() => {
   container.remove();
 });
 
-/** Draws the button Undo with the hint `hint`, and a field before it
-    from which the Tab key reaches it. */
-function draw(hint: string | null): void {
+/** Draws the button Undo with the hint `hint`, waiting with the reason
+    `waiting` when one is given, and a field before it from which the Tab
+    key reaches it. */
+function draw(hint: string | null, waiting: string | null = null): void {
   act(() => {
     root.render(
       createElement(
@@ -51,6 +52,7 @@ function draw(hint: string | null): void {
           label: "Undo",
           onPress: () => undefined,
           hint,
+          waiting,
         }),
       ),
     );
@@ -147,5 +149,89 @@ describe("task 9.2 a tooltip shown by the focus through a scroll", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("AP6 D3 the reason of a button that waits through a press", () => {
+  const reason = "Stop the PCA to change the filters.";
+
+  /** Sends the keydown and the keyup of `key` to the button. */
+  function pressKey(key: string): void {
+    act(() => {
+      button().dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }),
+      );
+      button().dispatchEvent(
+        new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true }),
+      );
+    });
+  }
+
+  test("reached by the Tab key, its reason stays shown through Enter and an arrow key", () => {
+    draw("Undo: the MAF filter changed", reason);
+    tabToButton();
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(
+      reason,
+    );
+    pressKey("Enter");
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(
+      reason,
+    );
+    pressKey("ArrowRight");
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(
+      reason,
+    );
+  });
+
+  test("shown by the mouse resting on it, its reason stays shown through a click", () => {
+    draw("Undo: the MAF filter changed", reason);
+    vi.useFakeTimers();
+    try {
+      const mouse = (type: string): PointerEvent =>
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerType: "mouse",
+          pointerId: 1,
+          isPrimary: true,
+          button: 0,
+        });
+      act(() => {
+        document.dispatchEvent(mouse("pointermove"));
+      });
+      act(() => {
+        button().dispatchEvent(mouse("pointerover"));
+      });
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(
+        reason,
+      );
+      act(() => {
+        button().dispatchEvent(mouse("pointerdown"));
+        button().dispatchEvent(mouse("pointerup"));
+        button().dispatchEvent(
+          new MouseEvent("click", { bubbles: true, cancelable: true }),
+        );
+      });
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(
+        reason,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a button that does not wait still loses its hint on Enter", () => {
+    const hint = "Undo: the MAF filter changed";
+    draw(hint);
+    tabToButton();
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(hint);
+    pressKey("Enter");
+    expect(document.querySelector('[role="tooltip"]')).toBeNull();
   });
 });

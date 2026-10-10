@@ -113,7 +113,7 @@ export function Button({
   const ownId = useId();
   const descriptionId = givenId ?? ownId;
   const button = (
-    <WithTooltip text={waiting ?? hint}>
+    <WithTooltip text={waiting ?? hint} keepOnPress={waiting !== null}>
       {(hintId) => {
         const describedBy = [
           description === undefined ? undefined : descriptionId,

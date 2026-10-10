@@ -195,7 +195,7 @@ export function ThresholdSlider({
       onKeyDownCapture={onKeyDownCapture}
       onPointerDownCapture={onPointerDownCapture}
     >
-      <WithTooltip text={waiting}>
+      <WithTooltip text={waiting} keepOnPress={waits}>
         {(hintId) => (
           <Slider
             aria-label={label}
