@@ -62,10 +62,12 @@ it:
   it that the error bar of `popgen.html` is drawn in, so that it stays
   when an error empties the first. **The worker client** is the code of
   the page that talks to the two workers (`src/worker/client.ts`); it
-  calls `onPopneiReady` each time the calculation worker has started and
-  loaded popnei. **`runs`** is the list of the calculations under way
-  that the store gives the screens, each marked `stopping` from a Stop
-  until it has ended.
+  calls `onPopneiReady` each time the calculation worker has started,
+  loaded popnei and opened the variants file again. **`runs`** is the
+  list of the calculations under way that the store gives the screens.
+  **`stopping`** of the store's state, new, names the analysis whose
+  Stop waits for the calculation worker to start again (below,
+  "Stopping").
 - **The tab shown** is the one of the five tabs under the boxes,
   Variants, Individuals, PCA, Populations or Distances, whose content
   is on the screen.
@@ -76,25 +78,32 @@ it:
 
 The band is the first thing of the page, above the line of the heading
 "Popnei", the width of the window, its words in the column of the page,
-48 rem at most and aligned with it. It holds one line, of the height of
-a button with its margins, from the first drawing of the page, whether
-or not it has anything to say, so that nothing under it moves when it
-starts or stops saying something: a PCA that starts by itself a second
-after the user let go of a slider would otherwise push the slider from
-under the pointer. While it has nothing to say its line is empty and
-has no background and no border, so it reads as the margin above the
-heading. It stays at the top of the window while the page scrolls, with
-the page's background and a border under it while it has words, so
-that what scrolls under it does not show through them.
+48 rem at most and aligned with it. Its room, one line of the height of
+a button with its margins, is kept in the page at the top from the
+first drawing, whether or not the band has anything to say, so that
+nothing under it moves when it starts or stops saying something: a PCA
+that starts by itself a second after the user let go of a slider would
+otherwise push the slider from under the pointer. While it has nothing
+to say its line is empty, has no background and no border, takes no
+click, and scrolls away with the page, so it reads as the margin above
+the heading and covers nothing. While it has words it stays at the top
+of the window while the page scrolls, with the page's background and a
+border under it, so that what scrolls under it does not show through
+them. This is the third option of the open point below, recommended
+and followed meanwhile.
+
+It stands below the page's popovers, tooltips and dialogs in the order
+in which they cover one another, so that a menu or a tooltip near the
+top of the window is drawn over the band and not under it.
 
 It is drawn in the page's second root, `#defects`, where the error bar
 was, so that it stays, and says what happened, when an error has
 emptied the application's root.
 
-The band is fixed at the top of the window in every state but one:
-while the details of an error are shown it scrolls with the page, so
-that at 320 px it never covers more than a few lines ("An error of the
-application", below).
+It stays at the top of the window while it has words, but for one
+state: while the details of an error are shown it scrolls with the
+page, so that at 320 px it never covers more than a few lines ("An
+error of the application", below).
 
 ### The line
 
@@ -105,6 +114,7 @@ the application, when there is one, stands above it as a second line
 | what holds | the words | the control after them |
 |---|---|---|
 | the one pass is running | "Reading panel.vcf.gz · 45%", the share of the bytes of the file read so far, from the progress of the pass; "Reading panel.vcf.gz" until its first progress | Stop |
+| the one pass is about to start by itself, after the file is opened or at Start again, the moment the box shows its Stop for it (`docs/architecture.md`, section 5) | "Reading panel.vcf.gz" | Stop, which keeps it from starting, as the box's does |
 | the PCA is running, started by Run or by itself | "PCA running · 1:20", the time since it started, minutes and seconds, as the clock of the PCA tab; "PCoA running · 1:20" under the PCoA | Stop |
 | the filtered variants are being written | "Writing panel.filtered.vcf.gz · 45%", the name the dialog of the download shows | none: the dialog has the Stop, and keeps the band out of reach while it is open |
 | a Stop of the PCA or of the one pass is under way (below, "Stopping") | "Stopping the PCA…", "Stopping the PCoA…"; "Stopping the reading of panel.vcf.gz…" | none |
@@ -140,17 +150,24 @@ Press Run in the PCA tab to calculate it again."
 started again has loaded popnei and opened the variants file again,
 which the worker client tells the page by calling its `onPopneiReady`
 again (`docs/specs/worker/client.md`); until then a Run waits. The band
-learns of a Stop from the store: a request of the PCA or of the one pass
-that was running and is in `runs` with `stopping` true, whichever Stop
-the user pressed; it notes then the time and the count of the worker's
-starts, a number the entry raises by one at each `onPopneiReady`. The
-line goes when that count is higher than the one noted, the worker
-started again, when another
-calculation starts, whose line replaces it, or after 10 s, so that a
-worker that cannot start leaves no line that never ends; such a worker
-is said at the next request, as today. How long the line stays has not
-been measured; the plan measures it in Chromium and WebKit after a Stop
-of a PCA of 9,381 individuals.
+cannot read it from `runs`: the client settles a cancel at once, and
+the request leaves `runs` a moment later, before the page is drawn
+again. So the store holds it, as the source of both events: its state
+gains `stopping`, the id of the analysis whose calculation in flight
+`cancelRun` stopped, set at that `cancelRun`, and `null` again at the
+next `popneiReady`, at a `startRun`, at an `open` and at a change of the
+load (`docs/specs/core/store.md`, "Stopping"). `popneiReady` with the
+same version, which changed nothing until now, then gives a new state
+and calls the listeners. Whichever Stop the user pressed, the box's,
+the tab's or the band's, the store sets it. A request that waited in
+the client's queue restarts no worker, and no `popneiReady` follows its
+cancel: the band keeps of its own the time it first saw `stopping`, and
+shows the line for 10 s at most, so that a worker that does not start
+again, or did not need to, leaves no line that never ends; a worker that
+cannot start is said at the next request, as today. Another calculation
+that starts replaces the line, and the store clears `stopping` then.
+How long the line stays has not been measured; the plan measures it in
+Chromium and WebKit after a Stop of a PCA of 9,381 individuals.
 
 **The link** to the PCA tab shows that tab, as a click on its label
 would, and moves the focus to the heading of the warnings of the
@@ -166,20 +183,32 @@ repeat their words.
 ### An error of the application
 
 An error of the application takes the place of the error bar of
-`popgen.html`, with its words for a page that saves no project
-(`docs/specs/shell.md`, "The error bar"), in a line of its own above
-the line of the table, in the colour of danger and with the word
-"error" in its words, so that it is not told by colour alone:
+`popgen.html`, in a line of its own above the line of the table, in
+the colour of danger and with the word "error" or "stopped" in its
+words, so that it is not told by colour alone. Its words are the error
+bar's on a page that saves no project, `barText` of
+`src/ui/shell/barSave.ts`, reused and not copied, with the message of
+the first error in them (`docs/specs/shell.md`, "The error bar"):
 
-"The application met an error of its own. Reload the page, and open
-your files again." followed by two buttons, "Details" and "Close".
+- before the store exists, when the page met the error as it started
+  and the band is drawn with no store, as `drawBar(null, null)` of
+  `src/ui/pageStart.tsx` draws the bar: "The application met an error
+  of its own as it started: ‹message›. Reload the page.", and nothing
+  else of the band, which has nothing to read;
+- the calculation worker stopped during the one pass, `countStopped`:
+  "The application stopped as it counted the variants and calculated
+  the statistics: ‹message›. Start again, and if it stops again, reload
+  the page and open your files again.";
+- any other: "The application met an error of its own: ‹message›.
+  Reload the page, and open your files again."
 
+The words are followed by two buttons, "Details" and "Close".
 "Details" shows, under the line and inside the band, what the error bar
-shows besides: the message of the first error, the count of those after
-it, "1 more error followed it.", and "Copy the details", which copies
-them as the error bar does and says in the band's own status region
-"The details were copied.", or shows them in a box of text when the
-page has no clipboard. Pressed again, it hides them; its state is told
+shows besides: the count of the errors after the first, "1 more error
+followed it.", and "Copy the details", which copies them as the error
+bar does and says in the band's own status region "The details were
+copied.", or shows them in a box of text when the page has no
+clipboard. Pressed again, it hides them; its state is told
 to a screen reader as expanded or collapsed. "Close" empties the line
 and its details, as the error bar's Close does; a later error brings it
 back. The error bar has no Save on this page, which saves no project,
@@ -187,10 +216,10 @@ and none is added.
 
 While the details are shown the band scrolls with the page, so that at
 320 px it never covers more than a few lines of the window. The line of
-the error may take two lines at 320 px, the one case where the band is
-more than one line high, and pushes the page down when it comes: an
-error of the application is rare, and the page must be reloaded after
-it.
+the error takes several lines at 320 px, three to five with a message
+of a line, the one case where the band is more than one line high, and
+pushes the page down when it comes: an error of the application is
+rare, and the page must be reloaded after it.
 
 ### What stays elsewhere
 
@@ -251,13 +280,13 @@ It reads:
   `aboutToStart`, and its `subscribe`;
 - the log of the errors, `src/ui/defects.ts`;
 - the tab shown, from `src/ui/pageTab.ts`;
-- the starts of the calculation worker, a count the entry raises at
-  each `onPopneiReady` of the worker client.
+- `stopping` of the store's state, for "Stopping".
 
 What the line says is a pure function of these, `bandOf` of
-`src/ui/band/band.ts`, tested in node; the time a Stop started is the
-one thing it is given beside them, for the 10 s of "Stopping". The band
-holds of its own only whether its details are shown.
+`src/ui/band/band.ts`, tested in node, given beside them the time now
+and the time the band first saw `stopping`, for the 10 s of
+"Stopping". The band holds of its own two things: whether its details
+are shown, and that time.
 
 The tab shown was state of the page's component until this piece
 (`VariantsPage.tsx`). The band is drawn in another root and must show
@@ -279,8 +308,8 @@ change; it is still the screen's, not the project's
 | the link to an error | "PCA: could not be calculated, in the PCA tab"; "PCoA: could not be calculated, in the PCA tab" |
 | the buttons | "Stop"; "Details"; "Close"; "Copy the details" |
 | the name of the Stop for a screen reader | "Stop reading panel.vcf.gz"; "Stop the PCA"; "Stop the PCoA" |
-| an error of the application | "The application met an error of its own. Reload the page, and open your files again." |
-| its details | the message of the first error; "1 more error followed it."; "3 more errors followed it." |
+| an error of the application | the three sentences of `barText` on this page, "An error of the application", with the message in each |
+| its details | "1 more error followed it."; "3 more errors followed it." |
 | the band's own status region | "The details were copied."; "The details could not be copied. Select them in the box below and copy them." |
 | the name of the band for a screen reader | "What the page is doing" |
 | the status region of the page, a Stop pressed in the band | the words of that Stop where it is pressed elsewhere: of the PCA, "PCA stopped. Press Run in the PCA tab to calculate it again."; of the one pass, what its Stop in the box says today |
@@ -301,10 +330,13 @@ and to clash with a screen reader's.
 
 When the control with the focus goes from the band, the focus does not
 fall on nothing: after its Stop, whose line then changes to "Stopping
-…" with no button, the focus goes to the band itself, so that the next press of
-the Tab key goes on from the band and a screen reader reads its new
-line; the band is not itself a stop of the Tab key. The same when the
-link goes because the line now says something else. After "Close"
+…" with no button, the focus goes to the heading "Popnei", which is not
+a stop of the Tab key, so the next press of the Tab key goes on to the
+box of the variants file. A screen reader then says the heading's name
+and the status region's words of the Stop, "PCA stopped. Press Run in
+the PCA tab to calculate it again.", once; the band's own line is not
+read, since the focus is not on it, so the Stop is not said twice. The
+same when the link goes because the line now says something else. After "Close"
 the focus goes to the heading "Popnei", as the error bar's Close does.
 After the link, the focus is on the heading of the warnings or of the
 tab, as above.
@@ -327,6 +359,16 @@ same Stop pressed elsewhere would say, so nothing is said twice: the
 band says nothing aloud of what the status region says, and the status
 region says nothing of the band.
 
+While a dialog is open, the dialog of the download among them, React
+Aria makes the rest of the page out of reach of the keyboard and of a
+screen reader, but for the elements marked as live announcers,
+`data-live-announcer`, as `ErrorBar.tsx` and `StatusRegion.tsx` mark
+theirs. The band's alert and its own status region carry that mark, so
+that an error, or the copy of its details, is heard while the dialog
+is open. Its Stop and its link cannot be reached then; that is
+accepted, since the dialog has its own Stop, and no PCA runs during a
+write.
+
 The line of an error is an alert, as the error bar is: its element is
 on the page, empty, from the first drawing, and only the words of the
 first error are in it, so that the count of later errors is not read
@@ -338,6 +380,13 @@ panel.vcf.gz, 45%" as it is shown; the Stop is named by what it stops,
 "Stop the PCA", since three buttons named "Stop" would not say which.
 The link is a link, read with its words.
 
+### Moving words
+
+The percentage and the clock change every second while a calculation
+runs. They are exempt from success criterion 2.2.2, Pause, Stop, Hide,
+as a progress indicator that informs of a task under way, and they stop
+at the end of the run; the line moves nothing else and blinks nothing.
+
 ### Colour, contrast and the window
 
 The words of the line are in the colour of the text, 4.5:1 at least
@@ -346,12 +395,17 @@ error has the border and the word of danger, `--color-danger`; the link
 to warnings says "warning" in its words and is drawn as a link, not by
 colour alone (1.4.1).
 
-The band covers the top of the window, so a control reached by the Tab
-key must not be hidden under it (2.4.11, "Focus Not Obscured"): the
-page scrolls a control into view below the band, by a padding at the
-top of the scroll of the page equal to the band's height. While the
-details of an error are shown the band scrolls with the page and covers
-nothing.
+While it has words the band covers the top of the window, so a control
+reached by the Tab key must not be hidden under it (2.4.11, "Focus Not
+Obscured"): the page scrolls a control into view below the band, by a
+padding at the top of the scroll of the page equal to the band's
+height, set only while the band stays at the top. It is set in
+`src/ui/base.css` beside the padding at the bottom that keeps a control
+clear of the notices, `scroll-padding-block-end: var(--toast-room)`, as
+`scroll-padding-block-start: var(--band-room)`, a token the band sets
+while it has words and leaves at 0 otherwise. While the band is empty,
+or the details of an error are shown, it scrolls with the page and
+covers nothing.
 
 At 320 px wide (1.4.10) the line is one line, the name of a file cut
 with "…", and the page under it does not scroll sideways; the line of
@@ -374,12 +428,13 @@ colour of danger of each theme.
 **In Vitest, in node**, at `bandOf` of `src/ui/band/band.ts`, from
 states of the real store of the page made with a fake worker: each row
 of the table of "The line", with its words under the PCA and the PCoA;
+each of the three sentences of an error, the one with no store among
+them;
 the order when two hold, the PCA running over a Stop under way, a Stop
 under way over about to start, about to start over the link; the link
 absent while the PCA tab is shown, and present with "2 warnings" while
-the Variants tab is; the line "Stopping the PCA…" from a request in
-`runs` with `stopping` true until a start of the worker is counted, and
-gone after 10 s with none; the line of an error above each of the
+the Variants tab is; the line "Stopping the PCA…" while the store's `stopping` is
+`pca`, gone when it is `null` and after 10 s from the time first seen; the line of an error above each of the
 others; the percentage of a progress of 1,234 of 10,000 bytes, "12%",
 rounded down, so that 100% is said only at the end; the clock at 59 s
 and at 61 s, "0:59" and "1:01".
@@ -387,7 +442,9 @@ and at 61 s, "0:59" and "1:01".
 **In jsdom**, the band drawn: the Stop of the one pass calls
 `autoRuns.stop` with the page's group, and the Stop of the PCA
 `autoRuns.pause("pca")`; the link changes the tab shown to the PCA;
-after a Stop the focus is on the band; Details shows and hides the
+after a Stop the focus is on the heading "Popnei"; the line carries no
+live role, and the alert and the band's status region carry
+`data-live-announcer`; Details shows and hides the
 message with `aria-expanded`; Close calls `defects.dismiss` and gives
 the focus to the heading.
 
@@ -415,8 +472,16 @@ pass held by `e2e/holdWorker.ts`:
   error bar throw it (`docs/specs/entry.md`, "How it is verified"): the
   line of the error in an alert, Details and Close; a PCA held running
   at the same time shows both lines;
-- the page scrolled to its end: the band at the top of the window; a
-  control reached by the Tab key below the band, not under it;
+- the page scrolled to its end with a PCA held running: the band at the
+  top of the window; each control reached by the Tab key from the end
+  of the page back to the top, in WebKit as in Chromium, below the
+  band's rectangle, not under it; with nothing running, the band
+  scrolled away with the page and nothing under it taking a click;
+- after the band's Stop, the focus on the heading "Popnei";
+- the one pass about to start, its start held: "Reading panel.nei" with
+  Stop, which keeps it from starting;
+- with the download's dialog open and an error thrown: the band's alert
+  heard, its element not inert;
 - the band's height the same with nothing, with a line and with a
   Stop, at 1280 and at 320 px, and the top of the heading "Popnei" at
   the same place in each; at 320 px no sideways scroll, and the line of
@@ -436,8 +501,9 @@ dialog), `popgen2-band-warning`, `popgen2-band-error` and
 lines.
 
 **By hand**, by the owner: the band in Safari and Firefox, which
-Playwright cannot start on the owner's Mac; VoiceOver with Safari on
-the region, the Stop and the link.
+Playwright cannot start on the owner's Mac, with a control reached by
+Tab in Safari not under the band; VoiceOver with Safari on the region,
+the Stop and the link, and after the band's Stop the stop said once.
 
 ## Choices made by the session
 
@@ -448,9 +514,9 @@ order of the lines when several hold; the clock and no percentage for
 the PCA, whose bar stands full while popnei decomposes the matrix and
 would say 100% for minutes; the write said with no Stop; the link to an
 error of the PCA as well as to its warnings; a link and not a button;
-the error's message under "Details" rather than on the line; the 10 s
-after which "Stopping" goes; the focus on the band after its Stop; and
-the words.
+the count of the errors and Copy under "Details"; the 10 s after which
+"Stopping" goes; the focus on the heading after its Stop; and the
+words.
 
 ## Left for the running application
 
@@ -460,23 +526,26 @@ thin border while it is empty.
 
 ## Open points
 
-1. **The band's room while nothing runs.** The band keeps one line at
-   the top of the page from the first drawing, empty while it has
-   nothing to say, so that the page never moves when a PCA starts by
-   itself. That line costs about 40 px of the window at every width,
-   an estimate from the height of a button of the page, 24 px, and its
-   margins, not yet measured in a browser: on a phone of 320 by 568 px,
-   about one fourteenth of the screen, above the heading "Popnei". The other way is a band
-   that appears over the top of the page when it has something to say,
-   covering the heading line and the top of what is scrolled under it,
-   with no room kept: the page never moves either, but the band hides
-   what is under it while it shows, for as long as something runs, up
-   to the minutes of a PCA of thousands of individuals. Recommended: the room kept, since
-   the band then covers nothing at the top of the page, and the cost is
-   a line of margin. Meanwhile: the room kept; the other way changes
-   the drawing of the band and its screenshots, task 5.3 of
-   `docs/plans/no-undo.md`. The screenshot `popgen2-band-empty` of the
-   plan shows the cost before the owner accepts the screen.
+1. **The band's room while nothing runs.** Three ways:
+   (a) the band stays at the top of the window always, its line empty
+   while it has nothing to say: the page never moves, but an empty
+   band still covers the top 40 px of what scrolls under it, about one
+   fourteenth of a phone of 320 by 568 px, the height an estimate from
+   the 24 px of a button and its margins, not measured in a browser;
+   (b) the band appears over the top of the page only while it has
+   something to say, with no room kept: nothing is covered while it is
+   empty, but while it shows it covers the line of the heading and the
+   top of the page, for as long as something runs, up to the minutes of
+   a PCA of thousands of individuals; (c) its room kept in the page at
+   the top, the band staying at the top of the window only while it has
+   words, and empty, taking no click, scrolling away with the page:
+   nothing moves when it starts or stops, and while empty it covers
+   nothing; while it has words and the page is scrolled it covers the
+   top 40 px, as (a). Recommended: (c), which covers only while there is
+   something to read. Meanwhile: (c), which "Its place" describes; (a)
+   or (b) changes the drawing of the band and its screenshots, task 5.3
+   of `docs/plans/no-undo.md`. The screenshot `popgen2-band-empty` shows
+   the cost before the owner accepts the screen.
 
 ## Not in this spec
 

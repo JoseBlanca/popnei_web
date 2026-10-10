@@ -912,6 +912,31 @@ of `src/ui/popgen2Store.ts` passes `popgen2FirstProject()` of
 popgen2.html"); the store of `popgen.html`, `src/ui/popgenStore.ts`,
 passes `firstProject("popgen")`.
 
+### Stopping
+
+From 10 October 2026, for the band of `popgen2.html`
+(`docs/specs/steps/popgen2-band.md`, "Stopping"), on both pages, since
+it costs a field. A Stop ends the calculation worker, and a Run after
+it waits until the new worker has loaded popnei and opened the variants
+file again; the page shows "Stopping the PCA…" meanwhile. The client
+settles a cancel at once, and the request leaves `runs` before the page
+is drawn again, so `runs` cannot tell it. The state's `stopping` can:
+`cancelRun` of an analysis whose request is in flight sets it to that
+analysis, `autoRuns.stop` of the one pass among the callers; it goes
+back to `null` at the next `popneiReady`, at a `startRun`, at an
+`open`, and at a change of the load of the variants file, each of which
+ends the wait or makes it moot. `popneiReady` with the version the store
+already has, which changed nothing until then, gives a new state with
+`stopping` `null` and calls the listeners when `stopping` was set, and
+changes nothing otherwise. A cancel of a request that waited in the
+client's queue restarts no worker, and no `popneiReady` follows it; the
+store does not know which it was, and the band ends its line after 10 s
+in that case. Checked with Vitest: `cancelRun` of the PCA in flight
+gives `stopping` `"pca"`; `popneiReady` of the same version then gives
+`null` and one call of each listener; `popneiReady` with `stopping`
+already `null` gives the same state object; `startRun` and `open`
+clear it.
+
 ### A calculation that failed
 
 When popnei refuses a calculation, the store keeps its message under the
@@ -1390,6 +1415,10 @@ export interface AppState<R, F = never> {  // F: the type of a written file, Blo
   readonly popneiVersion: string | null;
   readonly analyses: readonly AnalysisView<R>[];  // in the order of the definitions
   readonly runs: readonly RunView[];      // the calculations in flight
+  /** The analysis whose calculation in flight cancelRun stopped, until the calculation worker
+      started again says it is ready (popneiReady), a startRun, an open or a change of the load;
+      null otherwise. From 10 October 2026, for the band of popgen2.html ("Stopping"). */
+  readonly stopping: AnalysisId | null;
   readonly notice: Notice | null;
   /** The individuals the filters keep, and each filter's counts; null
       when projectNeeds or individualListNeeds gives a reason

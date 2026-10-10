@@ -591,10 +591,10 @@ keep their order.
 ### The error bar
 
 On `popgen2.html`, from 10 October 2026, the error bar is the first
-line of the band at the top of the page, with the same words, its
-"Copy the details" and its Close, and its message under a button
-"Details" (`docs/specs/steps/popgen2-band.md`, "An error of the
-application"). What follows holds for `popgen.html`, and for the words
+line of the band at the top of the page, with the same words, from
+`barText`, and its Close; the count of the errors after the first and
+"Copy the details" are under a button "Details"
+(`docs/specs/steps/popgen2-band.md`, "An error of the application"). What follows holds for `popgen.html`, and for the words
 and the buttons the band takes from it.
 
 An error of our own code that no error boundary sees, a component that

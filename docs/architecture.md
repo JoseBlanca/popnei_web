@@ -2768,8 +2768,7 @@ for the smallest part of it.
   where the error bar was, so that it stays when an error has emptied
   the application's root. It reads the store, the code that starts the
   analyses by themselves (`src/ui/autoRuns.ts`), the log of the errors
-  (`src/ui/defects.ts`), the tab shown and the starts of the
-  calculation worker, and sends the Stops the boxes and the tab already
+  (`src/ui/defects.ts`) and the tab shown, and sends the Stops the boxes and the tab already
   send. The tab shown, the screen's own state, moves from the page's
   component into a small store of the page made by the entry, so that
   the two roots read and change the same one. The band is not a status
@@ -2995,7 +2994,8 @@ src/core/
                     subscription the screens read; from 10 October 2026
                     the setting dropLeftBehind of popgen2.html, under
                     which a result is thrown away once its key is left
-                    behind (section 3)
+                    behind (section 3), and stopping, the analysis whose
+                    Stop waits for the calculation worker to start again
   analyses/         one module per analysis, with the shape of section 4,
                     the checks of the Variants step among them from stage 3:
                     individualChecks, variantChecks, filterCounts; from
@@ -3124,8 +3124,7 @@ src/ui/
                     October 2026; from 8 October 2026, no notice; and,
                     from 10 October 2026, the band (band/) drawn in
                     #defects in the place of the error bar, the tab
-                    shown (pageTab.ts) given to both roots, and the
-                    starts of the calculation worker given to the band
+                    shown (pageTab.ts) given to both roots
   popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES, the
                     summary of the variants file alone, POPGEN2_CHAIN,
                     and no counts, statistics config or writing, and the
@@ -3212,8 +3211,8 @@ src/ui/
   band/             from 10 October 2026, the band of popgen2.html
                     (section 7; docs/specs/steps/popgen2-band.md): what
                     it shows, worked out from the store, autoRuns.ts,
-                    the log of the errors, the tab shown and the starts
-                    of the calculation worker by a pure function tested
+                    the log of the errors and the tab shown, by a pure
+                    function tested
                     in node (band.ts), its words (bandWords.ts), and the
                     band drawn (Band.tsx), which reuses the words and
                     buttons of the error bar
