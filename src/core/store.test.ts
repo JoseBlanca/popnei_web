@@ -8280,18 +8280,21 @@ interface Popgen2Made<S extends Store<JobResult, string>> {
  * The store of popgen2.html as `createPopgen2Store` of
  * src/ui/popgen2Store.ts makes it, which core's tests do not import: its
  * first project, its analyses, the one pass as the statistics, its write
- * and no counts; with the setting `stopLeftBehind` as given, and fake
- * sends that record each request and its `cancel()` and never end one.
+ * and no counts; with the settings `stopLeftBehind` and `dropLeftBehind`
+ * as given, the second false when absent, and fake sends that record
+ * each request and its `cancel()` and never end one.
  * popnei is ready and panel.nei opened and read.
  */
 function popgen2Store(
   stopLeftBehind: true,
+  dropLeftBehind?: boolean,
 ): Popgen2Made<Popgen2Store<JobResult, string>>;
 function popgen2Store(
   stopLeftBehind: false,
 ): Popgen2Made<Store<JobResult, string>>;
 function popgen2Store(
   stopLeftBehind: boolean,
+  dropLeftBehind = false,
 ): Popgen2Made<Store<JobResult, string>> {
   const sent: Popgen2Sent[] = [];
   const record = (key: string, what: string): Popgen2Sent => {
@@ -8350,7 +8353,7 @@ function popgen2Store(
     keptNoneStep: null,
   };
   const store = stopLeftBehind
-    ? createStore({ ...config, stopLeftBehind: true })
+    ? createStore({ ...config, stopLeftBehind: true, dropLeftBehind })
     : createStore(config);
   store.popneiReady("0.2.2");
   store.open((p) =>
@@ -8778,5 +8781,260 @@ describe("AP3 D1 the column the page chooses at a read, recorded into the histor
       "pop",
     );
     expect(made.store.getState()).toBe(read);
+  });
+});
+
+/** The distance of the LD pruning of the PCA of popgen2.html set to
+    `maxDist`, emptied when `null`, the other options as `PCA2_OPTIONS`. */
+function pcaDistance(maxDist: number | null): (p: Project) => Project {
+  return (p) =>
+    setAnalysisOptions(p, pcaOnPopgen2, {
+      ...PCA2_OPTIONS,
+      ld: { ...PCA2_OPTIONS.ld, maxDist },
+    });
+}
+
+/** The state of the one pass in `state`. */
+function passOf(state: AppState<JobResult, string>): AnalysisStatus<JobResult> {
+  const view = state.analyses.find((one) => one.id === "variantsSummary");
+  if (view === undefined) {
+    throw new Error("no one pass");
+  }
+  return view.status;
+}
+
+/** The read of panel.nei, two individuals, recorded for the load
+    `fileId`. */
+function readPanel(store: Store<JobResult, string>, fileId: string): void {
+  store.variantsRead(fileId, {
+    kind: "read",
+    individuals: POPGEN2_INDIVIDUALS,
+    ploidy: 2,
+    numVars: null,
+    keepsPassed: false,
+  });
+}
+
+/** The PCA of `made` started and ended done; its result. */
+function pcaDone(made: ReturnType<typeof popgen2Store>): PcaResult {
+  made.store.startRun("pca");
+  const result = popgen2PcaResult();
+  made.end(made.sent.at(-1), result);
+  expect(pcaOf(made.store.getState()).kind).toBe("done");
+  return result;
+}
+
+describe("NU1 D2 dropLeftBehind on the store of popgen2.html", () => {
+  test("a PCA done, the threshold moved: ready under the new key; set back by a command: ready, not done, and no request sent", () => {
+    const made = popgen2Store(true, true);
+    passDone(made);
+    pcaDone(made);
+    moveMissing(made.store, 0.2);
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+    moveMissing(made.store, 0.1);
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+    expect(made.sent).toHaveLength(2);
+  });
+
+  test("a PCA in flight, the threshold moved, its cancel() called, its result given: nothing cached under its key; set back: ready", () => {
+    const made = popgen2Store(true, true);
+    passDone(made);
+    made.store.startRun("pca");
+    moveMissing(made.store, 0.2);
+    expect(made.sent[1]?.cancels()).toBe(1);
+    made.end(made.sent[1], popgen2PcaResult());
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+    moveMissing(made.store, 0.1);
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+    expect(made.store.getState().runs).toEqual([]);
+  });
+
+  test("a PCA in flight, the threshold moved, its cancel() called, set back, then its result: ready, not done, and the number of variants not recorded", () => {
+    const made = popgen2Store(true, true);
+    // The one pass not run, so that the variants of the file are not
+    // known, and the PCA's result would record them.
+    made.store.startRun("pca");
+    const key = made.sent[0]?.key;
+    moveMissing(made.store, 0.2);
+    expect(made.sent[0]?.cancels()).toBe(1);
+    moveMissing(made.store, 0.1);
+    const back = pcaOf(made.store.getState());
+    expect(back.kind === "ready" ? back.key : null).toBe(key);
+    const project = made.store.getState().project;
+    made.end(made.sent[0], popgen2PcaResult());
+    const after = made.store.getState();
+    expect(pcaOf(after).kind).toBe("ready");
+    expect(after.project).toBe(project);
+    const read = after.project.variants?.read;
+    expect(read?.kind === "read" ? read.numVars : "not read").toBeNull();
+    expect(after.runs).toEqual([]);
+  });
+
+  test("createStore given dropLeftBehind without stopLeftBehind: a defect", () => {
+    const config: StoreConfig<Job, JobResult, string> = {
+      first: popgen2FirstProject(),
+      analyses: POPGEN2_ANALYSES,
+      send: () => {
+        throw new Error("nothing is sent");
+      },
+      countsOf,
+      counts: null,
+      statistics: null,
+      write: null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1_000_000,
+      maxUndoSteps: 1,
+      keptNoneStep: null,
+    };
+    expect(() => createStore({ ...config, dropLeftBehind: true })).toThrow(
+      /^popnei_web defect:/,
+    );
+    expect(() =>
+      createStore({ ...config, stopLeftBehind: false, dropLeftBehind: true }),
+    ).toThrow(/^popnei_web defect:/);
+    expect(() =>
+      createStore({ ...config, stopLeftBehind: true, dropLeftBehind: true }),
+    ).not.toThrow();
+  });
+
+  test("a PCA refused by popnei, in error; the threshold moved and set back: ready, not error", () => {
+    const made = popgen2Store(true, true);
+    passDone(made);
+    made.store.startRun("pca");
+    made.store.runEnded(2, {
+      kind: "failed",
+      error: { kind: "popnei", message: "no variant left" },
+    });
+    expect(pcaOf(made.store.getState()).kind).toBe("error");
+    moveMissing(made.store, 0.2);
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+    moveMissing(made.store, 0.1);
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+  });
+
+  test("a PCA in flight, the threshold moved and set back, then popnei's refusal: ready, not error", () => {
+    const made = popgen2Store(true, true);
+    passDone(made);
+    made.store.startRun("pca");
+    moveMissing(made.store, 0.2);
+    moveMissing(made.store, 0.1);
+    made.store.runEnded(2, {
+      kind: "failed",
+      error: { kind: "popnei", message: "no variant left" },
+    });
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+  });
+
+  test("a PCA done, its LD distance emptied: locked; typed again with the same value: done, the same result object, no request", () => {
+    const made = popgen2Store(true, true);
+    passDone(made);
+    const result = pcaDone(made);
+    made.store.apply("the distance changed", pcaDistance(null));
+    expect(pcaOf(made.store.getState()).kind).toBe("locked");
+    made.store.apply("the distance changed", pcaDistance(50_000));
+    const back = pcaOf(made.store.getState());
+    expect(back.kind === "done" ? back.result : null).toBe(result);
+    expect(made.sent).toHaveLength(2);
+  });
+
+  test("a PCA done, its distance emptied and typed with another value: ready; that value set back, through the lock or not: ready", () => {
+    const made = popgen2Store(true, true);
+    passDone(made);
+    pcaDone(made);
+    made.store.apply("the distance changed", pcaDistance(null));
+    made.store.apply("the distance changed", pcaDistance(20_000));
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+    made.store.apply("the distance changed", pcaDistance(null));
+    made.store.apply("the distance changed", pcaDistance(50_000));
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+    made.store.apply("the distance changed", pcaDistance(20_000));
+    made.store.apply("the distance changed", pcaDistance(50_000));
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+    expect(made.sent).toHaveLength(2);
+  });
+
+  test("a PCA done, the colour of the points changed: done, the same result object", () => {
+    const made = popgen2Store(true, true);
+    passDone(made);
+    const result = pcaDone(made);
+    made.store.apply("the colour of the points changed", (p) =>
+      setAnalysisOptions(p, pcaOnPopgen2, { ...PCA2_OPTIONS, colourBy: "pop" }),
+    );
+    const after = pcaOf(made.store.getState());
+    expect(after.kind === "done" ? after.result : null).toBe(result);
+  });
+
+  test("the one pass done, a threshold and the FILTER box changed: done, the same result; another variants file opened and read: the old load's result gone", () => {
+    const made = popgen2Store(true, true);
+    passDone(made);
+    const done = passOf(made.store.getState());
+    expect(done.kind).toBe("done");
+    moveMissing(made.store, 0.3);
+    made.store.apply("the FILTER box changed", (p) =>
+      turnOffVariantFilter(p, "passed"),
+    );
+    const kept = passOf(made.store.getState());
+    expect(kept.kind === "done" && done.kind === "done" && kept.result).toBe(
+      done.kind === "done" && done.result,
+    );
+    made.store.open((p) =>
+      loadVariants(p, { ...POPGEN2_LOAD, fileId: OTHER_VARIANTS_ID }),
+    );
+    readPanel(made.store, OTHER_VARIANTS_ID);
+    // The first load opened again, which no page does, since every pick
+    // is a load of its own, so that its key is given again.
+    made.store.open((p) => loadVariants(p, POPGEN2_LOAD));
+    readPanel(made.store, VARIANTS_ID);
+    expect(passOf(made.store.getState()).kind).toBe("ready");
+    expect(made.sent).toHaveLength(1);
+  });
+
+  test("the one pass in flight, another file opened and the first opened again, then its result: ready, not done", () => {
+    const made = popgen2Store(true, true);
+    made.store.startRun("variantsSummary");
+    made.store.open((p) =>
+      loadVariants(p, { ...POPGEN2_LOAD, fileId: OTHER_VARIANTS_ID }),
+    );
+    expect(made.sent[0]?.cancels()).toBe(1);
+    made.store.open((p) => loadVariants(p, POPGEN2_LOAD));
+    readPanel(made.store, VARIANTS_ID);
+    const back = passOf(made.store.getState());
+    expect(back.kind === "ready" ? back.key : null).toBe(made.sent[0]?.key);
+    made.end(made.sent[0], summaryResult(["1"], [1200]));
+    expect(passOf(made.store.getState()).kind).toBe("ready");
+  });
+
+  test("a PCA done under another version of popnei given: the result of the old version gone when that version comes back", () => {
+    const made = popgen2Store(true, true);
+    passDone(made);
+    pcaDone(made);
+    made.store.popneiReady("0.2.3");
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+    made.store.popneiReady("0.2.2");
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+  });
+});
+
+describe("NU1 D3 a store made with stopLeftBehind alone keeps a result left behind", () => {
+  test("a PCA in flight, the threshold moved and set back, then its result: done, from the cache", () => {
+    const made = popgen2Store(true);
+    passDone(made);
+    made.store.startRun("pca");
+    moveMissing(made.store, 0.2);
+    moveMissing(made.store, 0.1);
+    const result = popgen2PcaResult();
+    made.end(made.sent[1], result);
+    const after = pcaOf(made.store.getState());
+    expect(after.kind === "done" ? after.result : null).toBe(result);
+  });
+
+  test("a PCA done, the threshold moved and set back by a command: done, the same result", () => {
+    const made = popgen2Store(true);
+    passDone(made);
+    const result = pcaDone(made);
+    moveMissing(made.store, 0.2);
+    moveMissing(made.store, 0.1);
+    const after = pcaOf(made.store.getState());
+    expect(after.kind === "done" ? after.result : null).toBe(result);
   });
 });

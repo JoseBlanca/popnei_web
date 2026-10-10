@@ -8,7 +8,7 @@
  * events of the workers; it never waits.
  */
 
-import { emptyCache, get, put, use } from "./cache.ts";
+import { emptyCache, get, put, remove, use } from "./cache.ts";
 import type { Cache } from "./cache.ts";
 import { commit, mapProjects, redo, startHistory, undo } from "./history.ts";
 import type { History } from "./history.ts";
@@ -474,6 +474,18 @@ export interface StoreConfig<J, R, F = never> {
       this has it, a `Popgen2Store`. The one pass of that page reads no filter,
       so no change stops it. */
   readonly stopLeftBehind?: boolean;
+  /** Whether the store keeps a result, and popnei's refusal, only under
+      the key its analysis has, or had when it was last not locked: after
+      a change that gives an analysis another key, what the cache and the
+      refusals hold under the key before is removed, and a request whose
+      key a change left behind gives nothing to the cache nor to the
+      refusals when it ends, even when the key came back since
+      (docs/specs/core/store.md, "dropLeftBehind"). True on popgen2.html,
+      which calculates the PCA again by itself and shows no result of
+      values left behind; false when absent. Given without
+      `stopLeftBehind`, a defect: a calculation left behind would run on
+      out of sight, its result dropped. */
+  readonly dropLeftBehind?: boolean;
 }
 
 /** What the store takes from the pass of a result. */
@@ -734,8 +746,9 @@ type WrittenKept<F> = Extract<
  * The store of a page, made once by its entry, with the first project,
  * frozen, as the history's only one. Throws a defect when two definitions
  * have one id, when `statistics` names no definition or one that reads
- * any filter, when `counts` names no definition, or when the bounds are
- * not what `startHistory` and `emptyCache` take. The statistics read no
+ * any filter, when `counts` names no definition, when it is given
+ * `dropLeftBehind` without `stopLeftBehind`, or when the bounds are not
+ * what `startHistory` and `emptyCache` take. The statistics read no
  * filter: the filters of individuals would make them wait for
  * themselves, and the filters of the variants, which count over the
  * individuals they keep, would make them depend on those filters, which
@@ -764,6 +777,12 @@ export function createStore<J, R, F = never>(
   }
   const statistics = config.statistics;
   const stopLeftBehind = config.stopLeftBehind === true;
+  const dropLeftBehind = config.dropLeftBehind === true;
+  if (dropLeftBehind && !stopLeftBehind) {
+    throw defect(
+      "createStore was given dropLeftBehind without stopLeftBehind: a change would throw away the result under a key left behind and leave its calculation running out of sight, its result dropped too.",
+    );
+  }
   /** The step the words of no individual kept send the user to. */
   const keptNoneStep =
     config.keptNoneStep === undefined
@@ -810,6 +829,14 @@ export function createStore<J, R, F = never>(
   let historyMoves = 0;
   let popneiVersion: string | null = null;
   let cache: Cache<CachedResult<R>> = emptyCache(config.cacheMaxBytes);
+  /** Under `dropLeftBehind`, the last key each analysis had, by its
+      place, kept through the changes that lock it; `null` until it has
+      one. */
+  const lastKeys: (Key | null)[] = defs.map(() => null);
+  /** Under `dropLeftBehind`, the requests in flight whose key a change
+      left behind since they were sent, even when it came back since:
+      their outcome gives nothing to the cache nor to the failures. */
+  const leftBehindRuns = new Set<number>();
   let keyed: Keyed | null = null;
   const listeners = new Set<() => void>();
   /** The requests in flight by their id, in the order they started. */
@@ -993,11 +1020,42 @@ export function createStore<J, R, F = never>(
     }
     const made = keysOf(project, version);
     keyed = { project, popneiVersion: version, writeFormat, ...made };
+    if (dropLeftBehind) {
+      dropBehind(made.keys);
+    }
     cache = use(
       cache,
       made.keys.flatMap((k) => (k.kind === "keyed" ? [k.key] : [])),
     );
     return made.keys;
+  };
+
+  /** Under `dropLeftBehind`, after the keys `keys` were made for a new
+      project or version: the result and the refusal kept under the key
+      each analysis had before, when it now has another, removed, a lock
+      in between not counting as a change; and each request of an
+      analysis whose key `keys` do not give marked as left behind. */
+  const dropBehind = (keys: readonly AnalysisKey[]): void => {
+    for (const [index, current] of keys.entries()) {
+      if (current.kind !== "keyed") {
+        continue;
+      }
+      const last = lastKeys[index] ?? null;
+      if (last !== null && last !== current.key) {
+        cache = remove(cache, last);
+        refusals.delete(last);
+      }
+      lastKeys[index] = current.key;
+    }
+    for (const request of requests.values()) {
+      if (request.target.kind !== "analysis") {
+        continue;
+      }
+      const current = keys[request.target.index];
+      if (current?.kind !== "keyed" || current.key !== request.key) {
+        leftBehindRuns.add(request.runId);
+      }
+    }
   };
 
   /** The keys made among `keys`, those of the analyses not locked. */
@@ -2184,10 +2242,16 @@ export function createStore<J, R, F = never>(
 
   /** What an outcome leaves in the store: the result in the cache with
       its warnings and its number of variants recorded, or the file kept,
-      or the failure kept. */
+      or the failure kept. A request of an analysis `leftBehind`, whose
+      key a change left behind since it was sent under `dropLeftBehind`,
+      leaves nothing but a variants file that could not be read again:
+      its result and its failure are of values the user left, and values
+      set back are calculated again (docs/specs/core/store.md,
+      "dropLeftBehind"). */
   const ended = (
     request: InFlight<J, R, F>,
     outcome: Outcome<R | Written<F>>,
+    leftBehind: boolean,
   ): void => {
     switch (outcome.kind) {
       case "done": {
@@ -2218,6 +2282,9 @@ export function createStore<J, R, F = never>(
             `the request ${String(request.runId)} of ${nameOf(target)} ended with a file written.`,
           );
         }
+        if (leftBehind) {
+          return;
+        }
         tookResult(request, target.def, target.index, key, result);
         return;
       }
@@ -2225,6 +2292,9 @@ export function createStore<J, R, F = never>(
         // What was read before a refusal of the file may be what the
         // refusal is about.
         forgetStoppedUnder(request.key);
+        if (leftBehind && outcome.error.kind !== "reopenFailed") {
+          return;
+        }
         if (outcome.error.kind === "popnei") {
           refusals.set(request.key, {
             kind: "refused",
@@ -2663,6 +2733,7 @@ export function createStore<J, R, F = never>(
       // so are the Runs that waited for it, which send only when it
       // ended done.
       requests.delete(runId);
+      const leftBehind = leftBehindRuns.delete(runId);
       const waiting = [...waits.values()].filter(
         (wait) => wait.statsRunId === runId,
       );
@@ -2696,7 +2767,7 @@ export function createStore<J, R, F = never>(
         }
       }
       try {
-        ended(request, outcome);
+        ended(request, outcome, leftBehind);
       } catch (error) {
         // A defect of our code, which the analysis shows until the next
         // change, rather than ready with nothing said.
@@ -2714,7 +2785,9 @@ export function createStore<J, R, F = never>(
       let sent: Run<R | Written<F>>[] = [];
       if (outcome.kind === "done") {
         try {
-          sent = sendWaiting(waiting);
+          // The Runs that waited for statistics left behind were ended
+          // at the change, as stopLeftBehind does; none is sent.
+          sent = sendWaiting(leftBehind ? [] : waiting);
         } catch (error) {
           return changedAfter(error);
         }
