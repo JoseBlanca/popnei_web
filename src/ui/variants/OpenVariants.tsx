@@ -9,9 +9,8 @@
  * did not open go to the page, which shows them in the box of the file
  * above the zone.
  *
- * It reads the project from the store and opens the file as a new history,
- * with nothing to undo (`openVariantsFile` of popgen2Store.ts), since the
- * page's Undo serves the changes of the filters alone.
+ * It reads the project from the store and opens the file as a new history
+ * (`openVariantsFile` of popgen2Store.ts).
  */
 import type { VariantLoad } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";

@@ -11,16 +11,16 @@
  * what to do (docs/specs/analyses/diversity.md, "Accessibility", the
  * locked reason). A button may also have a hint, what pressing it would
  * do, which is shown in a tooltip on hover and on the focus of the
- * keyboard and is its description as well, as Undo and Redo have
- * (docs/specs/shell.md, "The header"); a button given both is described
+ * keyboard and is its description as well, as Undo and Redo of
+ * popgen.html have (docs/specs/shell.md, "The header"); a button given both is described
  * by the two, the description first. A button may look like a link, in a
  * line of text, as "Use the default" of the diversity does, so that it is
  * not taken for the button of a step; it keeps the role and the keys of a
  * button, since it changes the project and goes nowhere.
  *
- * A button may wait, with its reason, as Undo and Redo of popgen2.html do
- * while a PCA runs (docs/specs/steps/popgen2-pca.md, "Undo and Redo"). A
- * disabled button cannot take the focus, and its tooltip would show to
+ * A button may wait, with its reason, as Undo and Redo of popgen2.html did
+ * while a PCA ran, until 10 October 2026, when the page lost them; no
+ * button of the applications waits since. A disabled button cannot take the focus, and its tooltip would show to
  * the mouse alone; so a waiting button stays enabled for React Aria and a
  * stop of the Tab key, carries `aria-disabled` and its reason as its
  * tooltip and its description in place of its hint, is drawn as

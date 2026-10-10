@@ -721,7 +721,6 @@ describe("AP6 D2 the store of popgen2.html with the PCA, a fake worker and the g
             (p) => setThreshold(p, missing, to),
           );
         },
-        describe: () => "the filter of the variants by missing data changed",
         ended: () => undefined,
       });
 

@@ -6,8 +6,8 @@
  * click changes no plot. Shown once the opening of the file has answered
  * that its variants record their FILTER, in every state of the
  * statistics, since it is a filter of the project and no part of the
- * plots. Each click is one change of the project, with its step of
- * Undo and no notice, as the owner asked on 8 October 2026: the check
+ * plots. Each click is one change of the project, with no notice, as the
+ * owner asked on 8 October 2026: the check
  * box's own change of state is what a screen reader hears. The page sends
  * nothing to the worker for it, since the key of the one pass holds no
  * filter.

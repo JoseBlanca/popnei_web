@@ -8,8 +8,8 @@
  * tab" and which never shows a value looser than the one the PCA uses;
  * and the LD pruning, a switch with its r² and its distance under it
  * while it is on. Every "PCA" is "PCoA" under the PCoA. Each choice, each
- * number committed and each move of a slider is one command, a step of
- * Undo, with this page's description.
+ * number committed and each move of a slider is one command, with this
+ * page's description.
  *
  * Under the distance a line says how to choose it. While the LD pruning
  * has no distance, the reason of the lock, in full, stands under that
@@ -185,8 +185,8 @@ export function PcaTabOptions(): React.JSX.Element {
                 <NumberField
                   label={DISTANCE_LABEL}
                   // No distance typed yet: React Aria shows NaN as an
-                  // empty field, where undefined would let it keep the
-                  // number an Undo took out of the project.
+                  // empty field, where undefined would let it keep a
+                  // number the project no longer holds.
                   value={options.ld.maxDist ?? Number.NaN}
                   minValue={1}
                   maxValue={MAX_LD_DIST}

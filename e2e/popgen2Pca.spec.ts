@@ -7,7 +7,7 @@
  * distance, and free once a distance is typed; a PCA held running, the
  * bar moving, with the thresholds, the FILTER box and the PCA's options
  * greyed, `aria-disabled`, reached by the Tab key and refusing a press, a
- * key and a drag; Undo greyed and Ctrl+Z doing nothing; the column of the
+ * key and a drag; Ctrl+Z doing nothing; the column of the
  * populations left open; another variants file opened, which stops the
  * PCA; the download of the filtered variants waiting with its words; the
  * end of a run said in the status region while the Variants tab is
@@ -18,8 +18,7 @@
  * the explained variance and the table, for the PCA, its filters made
  * stricter, the LD pruning off and the PCoA; the legend with
  * "Unclassified" and the populations of panel_pops.csv with no request;
- * an Undo that brings the result back with no request, and Ctrl+Z with a
- * menu open; the menus of the plot and the tables, chosen with the
+ * the menus of the plot and the tables, chosen with the
  * keyboard and read back; the 3D view turned, hidden with its tab and
  * shown again, and drawn when its run ended while its tab was hidden.
  *
@@ -536,7 +535,7 @@ test.describe("AP6 D3 the locks while a PCA runs", () => {
     // The keys leave the reason shown.
     await expect(page.getByRole("tooltip")).toHaveText(LOCKED);
     // Ctrl+Z after the keys, in the box and on the line: no run of the
-    // keys was started to be made a change, and Undo waits.
+    // keys was started to be made a change, and the keys change nothing.
     for (const control of [rate.box, rate.slider]) {
       await control.focus();
       await page.keyboard.press("ArrowDown");
@@ -545,9 +544,6 @@ test.describe("AP6 D3 the locks while a PCA runs", () => {
     }
     await expect(rate.box).toHaveValue("0.1");
     await expect(rate.slider).toHaveValue(before);
-    await expect(
-      page.getByRole("button", { name: "Undo", exact: true }),
-    ).toHaveAccessibleDescription(LOCKED);
     const thumb = rate.slider.locator("xpath=../..");
     await thumb.scrollIntoViewIfNeeded();
     const box = await thumb.boundingBox();
@@ -715,22 +711,16 @@ test("AP6 D3 Run pressed within the second of an arrow key on a threshold: the P
   ).toBeVisible();
 });
 
-test("AP6 D3 while a PCA runs Undo is greyed with the reason and Ctrl+Z undoes nothing; the column of the populations stays open and a column chosen leaves the PCA running; another variants file opened stops it, the tab ready", async ({
+test("AP6 D3 while a PCA runs Ctrl+Z changes nothing; the column of the populations stays open and a column chosen leaves the PCA running; another variants file opened stops it, the tab ready", async ({
   page,
 }) => {
   test.setTimeout(90_000);
   await openHeld(page, "panel.nei");
   await typeDistance(page, "50000");
-  const undo = page.getByRole("button", { name: "Undo", exact: true });
-  await expect(undo).toBeVisible();
   await runHeld(page);
 
-  await expect(undo).toHaveAttribute("aria-disabled", "true");
-  await expect(undo).toHaveAccessibleDescription(LOCKED);
   await page.getByRole("heading", { level: 1, name: "Popnei" }).click();
   await page.keyboard.press("ControlOrMeta+z");
-  // Pressed though it says it waits, as a user may.
-  await undo.click({ force: true });
   await expect(distance(page)).toHaveValue("50000");
   await expect(stop(page)).toBeVisible();
 
@@ -757,11 +747,10 @@ test("AP6 D3 while a PCA runs Undo is greyed with the reason and Ctrl+Z undoes n
   // The options kept, the distance among them.
   await expect(run(page)).toBeEnabled({ timeout: 30_000 });
   await expect(distance(page)).toHaveValue("50000");
-  await expect(undo).toHaveCount(0);
 });
 
 /** Expects what a running PCA locks open again: the options of the PCA
-    tab, Undo, and, in the Variants tab, the boxes and lines of the
+    tab, and, in the Variants tab, the boxes and lines of the
     thresholds, the FILTER box when drawn, and the download of the
     filtered variants. Leaves the Variants tab shown. */
 async function expectUnlocked(page: Page): Promise<void> {
@@ -769,9 +758,6 @@ async function expectUnlocked(page: Page): Promise<void> {
   for (const { control } of await pcaTabControls(page)) {
     await expect(control).not.toHaveAttribute("aria-disabled");
   }
-  const undo = page.getByRole("button", { name: "Undo", exact: true });
-  await expect(undo).not.toHaveAttribute("aria-disabled");
-  await expect(undo).toHaveAccessibleDescription(/^Undo: /u);
   await tab(page, "Variants").click();
   for (const control of [
     ...(await stats(page).getByRole("textbox").all()),
@@ -784,7 +770,7 @@ async function expectUnlocked(page: Page): Promise<void> {
   await expect(downloadButton(page)).toHaveAccessibleDescription("");
 }
 
-test("AP6 D3 a PCA that ends with its result gives back the options of the PCA, the thresholds, the FILTER box, Undo and the download of the filtered variants", async ({
+test("AP6 D3 a PCA that ends with its result gives back the options of the PCA, the thresholds, the FILTER box and the download of the filtered variants", async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -797,7 +783,7 @@ test("AP6 D3 a PCA that ends with its result gives back the options of the PCA, 
   await expectUnlocked(page);
 });
 
-test("AP6 D3 a PCA that fails: its words in the tab and in the status region, Run offered again, the filters, Undo and the download given back; axe light and dark", async ({
+test("AP6 D3 a PCA that fails: its words in the tab and in the status region, Run offered again, the filters and the download given back; axe light and dark", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -1192,13 +1178,15 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
       "aria-valuetext",
       "0.1, as in the Variants tab",
     );
-    // A move there and back changes no key: the result stays. One
-    // ArrowLeft moves it one step of the axis of panel.nei, 0.001.
+    // A move there and back: the result goes, since no result is kept
+    // for a value the screen left, and Run is offered. One ArrowLeft moves
+    // it one step of the axis of panel.nei, 0.001.
     await missing.focus();
     await missing.press("ArrowLeft");
     await expect(missing).toHaveAttribute("aria-valuetext", "0.099");
     await missing.press("End");
-    await expect(tableCaptionOf(page)).toBeVisible();
+    await expect(tableCaptionOf(page)).toHaveCount(0);
+    await expect(run(page)).toBeEnabled();
     await moveTo(missing, "ArrowLeft", "0.05");
     await runToResult(page);
     await expect(tableCaptionOf(page)).toContainText("from 532 variants.");
@@ -1226,8 +1214,10 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     await rate.box.press("Enter");
     await tab(page, "PCA").click();
     await expect(missing).toHaveAttribute("aria-valuetext", "0.05");
-    // The key of 0.05 again, its result from the cache.
-    await expect(tableCaptionOf(page)).toContainText("from 532 variants.");
+    // The key of 0.05 again, whose result was not kept: Run, and no
+    // request until it is pressed.
+    await expect(tableCaptionOf(page)).toHaveCount(0);
+    await expect(run(page)).toBeEnabled();
     expect(await runsPosted(page)).toBe(posted);
 
     await missing.focus();
@@ -1264,7 +1254,7 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     await expectAxeBothSchemes(page, makeAxeBuilder);
   });
 
-  test("AP10 D2 the slider of the missing data dragged from its end to about 0.05: the value at the release, one step of Undo, made stricter; ArrowLeft, one step, changed", async ({
+  test("AP10 D2 the slider of the missing data dragged from its end to about 0.05: the value at the release, made stricter; ArrowLeft, changed", async ({
     page,
   }) => {
     test.setTimeout(60_000);
@@ -1274,7 +1264,6 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
       "aria-valuetext",
       "0.1, as in the Variants tab",
     );
-    const undo = page.getByRole("button", { name: "Undo", exact: true });
     await trackOf(missing).scrollIntoViewIfNeeded();
     const track = await trackOf(missing).boundingBox();
     if (track === null) throw new Error("no track");
@@ -1289,28 +1278,11 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     await expect(missing).toHaveValue(
       String(Number(await missing.getAttribute("aria-valuetext"))),
     );
-    await expect(undo).toHaveAccessibleDescription(
-      "Undo: the missing data filter of the PCA was made stricter",
-    );
     const dragged = await missing.getAttribute("aria-valuetext");
-    // One step: one Undo takes the drag back whole.
-    await undo.click();
-    await expect(missing).toHaveAttribute(
-      "aria-valuetext",
-      "0.1, as in the Variants tab",
-    );
-
-    await page.keyboard.press("ControlOrMeta+Shift+z");
-    await expect(missing).toHaveAttribute("aria-valuetext", dragged ?? "");
     await missing.focus();
     await missing.press("ArrowLeft");
     const left = (Number(dragged) * 1000 - 1) / 1000;
     await expect(missing).toHaveAttribute("aria-valuetext", String(left));
-    await expect(undo).toHaveAccessibleDescription(
-      "Undo: the missing data filter of the PCA changed",
-    );
-    await undo.click();
-    await expect(missing).toHaveAttribute("aria-valuetext", dragged ?? "");
   });
 
   test("AP6 D3 the PCoA within 50,000: its title, PC1 (3.68%) and PC2 (3.54%), the warning of the correction with 7.87%, 0.047, 53% and 0.22, and the line under the explained variance; axe light and dark", async ({
@@ -1348,47 +1320,6 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     await to2d(page, "Principal coordinates, PC1 and PC2");
     await expect(axisLabels(page)).toHaveText(["PC1 (3.68%)", "PC2 (3.54%)"]);
     await expectAxeBothSchemes(page, makeAxeBuilder);
-  });
-
-  test("AP6 D3 Undo: a threshold that removes the result moved, Undo brings the plot back with no request; a menu open, Ctrl+Z undoes and leaves it open", async ({
-    page,
-  }) => {
-    test.setTimeout(90_000);
-    await openReady(page);
-    await runToResult(page);
-    await to2d(page);
-    const posted = await runsPosted(page);
-
-    await tab(page, "Variants").click();
-    const rate = histogram(page, "Proportion of missing genotypes");
-    await rate.box.fill("0.05");
-    await rate.box.press("Enter");
-    await tab(page, "PCA").click();
-    await expect(tableCaptionOf(page)).toHaveCount(0);
-    await expect(run(page)).toBeEnabled();
-    const undo = page.getByRole("button", { name: "Undo", exact: true });
-    await undo.click();
-    await expect(tableCaptionOf(page)).toContainText("from 548 variants.");
-    await expect(axisLabels(page)).toHaveText(["PC1 (3.55%)", "PC2 (3.40%)"]);
-    expect(await runsPosted(page)).toBe(posted);
-
-    // The menu of the explained variance open; the undo of the 2D view
-    // keeps the table, and the menu.
-    await expect(undo).toHaveAccessibleDescription(
-      "Undo: the PCA was drawn in 2D",
-    );
-    await menuButton(page, "the explained variance of the PCA").focus();
-    await page.keyboard.press("Enter");
-    const menu = page.getByRole("menu");
-    await expect(menu).toBeVisible();
-    await page.keyboard.press("ControlOrMeta+z");
-    await expect(
-      shown(page).getByRole("radio", { name: "3D", exact: true }),
-    ).toBeChecked();
-    await expect(menu).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(menu).toHaveCount(0);
-    expect(await runsPosted(page)).toBe(posted);
   });
 
   test("AP6 D3 the downloads by the keyboard alone: the coordinates read back, the table sorted by PC1 in that order, the explained variance, a PNG of the 3D view, and the menu waiting while three.js downloads; axe with a menu open, light and dark", async ({

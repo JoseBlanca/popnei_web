@@ -43,7 +43,6 @@ import {
   thresholdChange,
   variantThreshold,
 } from "./thresholdChange.ts";
-import type { ThresholdChange } from "./thresholdChange.ts";
 import { useAppState, useStore } from "../store.tsx";
 
 /** What the mark of the code is drawn with. */
@@ -136,7 +135,7 @@ function VariantHistogram({
   const threshold = useAppState((s) =>
     filter === null ? null : thresholdValue(s.project, filter),
   );
-  const { onSet, describeSet } = useThresholdSet(filter);
+  const onSet = useThresholdSet(filter);
   const [moving, setMoving] = useState<number | null>(null);
   const [typed, setTyped] = useState<number | null>(null);
   // Made again only when what it shows changes, so that the plot is not
@@ -172,7 +171,6 @@ function VariantHistogram({
       onMoving={setMoving}
       onTyped={setTyped}
       onSet={onSet}
-      describeSet={describeSet}
     />
   );
 }
@@ -231,7 +229,7 @@ function IndividualHistogram({
 }: IndividualHistogramProps): React.JSX.Element {
   const filter = individualThreshold(statistic);
   const threshold = useAppState((s) => thresholdValue(s.project, filter));
-  const { onSet, describeSet } = useThresholdSet(filter);
+  const onSet = useThresholdSet(filter);
   const [moving, setMoving] = useState<number | null>(null);
   const [typed, setTyped] = useState<number | null>(null);
   const set = useMemo(
@@ -271,7 +269,6 @@ function IndividualHistogram({
           onMoving={setMoving}
           onTyped={setTyped}
           onSet={onSet}
-          describeSet={describeSet}
         />
       )}
     </IndividualPlace>
@@ -308,30 +305,18 @@ function waitingOf(from: DrawnFrom, variantsName: string): string | null {
   return wait === null ? null : passDownloadWaitingText(variantsName, wait);
 }
 
-/** How a histogram sets the threshold of `filter` in the project. */
-interface ThresholdSet {
-  /** Makes the change of the project that sets the threshold to `value`,
-      on the step of its axis, 1 or `null` for off, with the description
-      of its step of Undo; none when it is the value the project has, nor
-      for a histogram with no threshold, `null`. */
-  readonly onSet: (value: number | null) => void;
-  /** The description `onSet(value)` would give its step of Undo now, or
-      `null` when it would make no change. */
-  readonly describeSet: (value: number) => string | null;
-}
-
-/** The setting of the threshold of `filter`, for its histogram. */
-function useThresholdSet(filter: Threshold | null): ThresholdSet {
+/** The setting of the threshold of `filter` for its histogram: makes
+    the change of the project that sets the threshold to `value`, on the
+    step of its axis, 1 or `null` for off, with its description; none
+    when it is the value the project has, nor for a histogram with no
+    threshold, `null`. */
+function useThresholdSet(
+  filter: Threshold | null,
+): (value: number | null) => void {
   const store = useStore();
-  const changeTo = (value: number | null): ThresholdChange | null =>
-    filter === null
-      ? null
-      : thresholdChange(store.getState().project, filter, value);
-  return {
-    onSet: (value) => {
-      const change = changeTo(value);
-      if (change !== null) store.apply(change.description, change.command);
-    },
-    describeSet: (value) => changeTo(value)?.description ?? null,
+  return (value) => {
+    if (filter === null) return;
+    const change = thresholdChange(store.getState().project, filter, value);
+    if (change !== null) store.apply(change.description, change.command);
   };
 }

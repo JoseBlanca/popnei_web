@@ -16,7 +16,7 @@
  * The threshold is a filter of the project
  * (docs/specs/steps/popgen2-filters.md, "A threshold, on and off", "When
  * a threshold changes the project"): the box and the line show the
- * project's value, so that Undo and Redo move them, and change it once
+ * project's value, and change it once
  * per drag, at the release of the pointer, once per number committed in
  * the box, by Enter, Tab or leaving it, and once per run of the keys, a
  * second after the last press or when the focus leaves; meanwhile only
@@ -36,9 +36,10 @@
  * change the filters." as their tooltip and their description, and a
  * key, a number or a drag changes nothing (`useFiltersLock`).
  *
- * Ctrl+Z and Ctrl+Y on the line or in the box while a run waits make the
- * run a change, and then go on to the page's Undo or Redo, so that Undo
- * undoes the run. A threshold that leaves the page, the worker crashed,
+ * The page has no Undo and no Redo: Ctrl+Z and Ctrl+Y on the line leave
+ * a run waiting as it is, and in the box put back its number only when
+ * something is typed (docs/specs/steps/popgen2-filters.md, "Undo, Redo
+ * and their keys"). A threshold that leaves the page, the worker crashed,
  * makes its run, its drag or its number typed a change first, and the
  * focus it held goes to the heading of the page.
  */
@@ -47,7 +48,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { HistogramFrame } from "../../charts/histogram.ts";
 import { classOf } from "../classOf.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
-import { shortcutOf } from "../shell/shortcuts.ts";
 import type { ThresholdLook } from "../../core/thresholds.ts";
 import { thresholdRefusedText } from "../steps/variants/words.ts";
 import type { PlotDownload } from "../widgets/downloadItems.ts";
@@ -85,14 +85,10 @@ export interface StatsHistogramProps {
   /** Sets the threshold of the project to `value`, on the step of its
       axis, 1 for off, or `null` for an emptied box. */
   readonly onSet: (value: number | null) => void;
-  /** The description of the step of Undo that `onSet(value)` would make
-      now, "the MAF filter changed", or `null` when it would make none;
-      Undo names it while a run of the keys waits. */
-  readonly describeSet: (value: number) => string | null;
 }
 
 /** The kind of the announcement of a threshold's look, of which only the
-    latest is said, and which an undo just after drops. */
+    latest is said. */
 const LOOK_ANNOUNCED = "thresholdLook";
 
 /** Writes `frame`, where the plot drew its frame, on `element`, around
@@ -121,7 +117,6 @@ export function StatsHistogram({
   onMoving,
   onTyped,
   onSet,
-  describeSet,
 }: StatsHistogramProps): React.JSX.Element {
   const announcer = useAnnouncer();
   const gate = useRunGate();
@@ -151,12 +146,10 @@ export function StatsHistogram({
   // render that made it, and for the cleanup.
   const onSetRef = useRef(onSet);
   const onMovingRef = useRef(onMoving);
-  const describeSetRef = useRef(describeSet);
   const setRef = useRef(set);
   useLayoutEffect(() => {
     onSetRef.current = onSet;
     onMovingRef.current = onMoving;
-    describeSetRef.current = describeSet;
     setRef.current = set;
   });
   // Says once that a change turned the threshold on, grey or off from
@@ -174,7 +167,6 @@ export function StatsHistogram({
   const runOf = (): ThresholdRun => {
     runRef.current ??= createThresholdRun({
       gate,
-      describe: (to) => describeSetRef.current(to),
       // The threshold drawn at the end of the run is drawn at `to`, in
       // the look the change gives it.
       change: (to) => {
@@ -385,19 +377,6 @@ export function StatsHistogram({
       role="group"
       aria-label={plot.data.title}
       className={classOf(styles, "block")}
-      onKeyDown={(event) => {
-        // Undo or Redo with a run waiting: the run made a change first,
-        // and the keys go on to the page's Undo or Redo, the buttons at
-        // the top right corner of the page. With something typed in the
-        // box, its own handler has put its number back.
-        if (
-          !event.defaultPrevented &&
-          shortcutOf(event) !== null &&
-          runRef.current?.waiting() === true
-        ) {
-          runRef.current.end();
-        }
-      }}
       onBlur={() => {
         runRef.current?.end();
       }}

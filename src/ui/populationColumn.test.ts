@@ -364,21 +364,16 @@ describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of pop
     openVariants(store);
     openIndividuals(store, loadId(1));
     let ended = 0;
-    gate.hold(
-      () => {
-        ended += 1;
-        store.apply("the threshold of the missing genotypes changed", (p) =>
-          setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.03),
-        );
-      },
-      () => "the threshold of the missing genotypes changed",
-    );
+    gate.hold(() => {
+      ended += 1;
+      store.apply("the threshold of the missing genotypes changed", (p) =>
+        setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.03),
+      );
+    });
     await recorded(store, loadId(1), readOf(PANEL_POPS));
     expect(chosen()).toBe(1);
     expect(ended).toBe(0);
-    expect(gate.pending()).toBe(
-      "the threshold of the missing genotypes changed",
-    );
+    expect(gate.underWay()).toBe(1);
     expect(columnOf(store.getState().project)).toBe("popcat");
     gate.endAll();
     expect(store.getState().undo).toBe(

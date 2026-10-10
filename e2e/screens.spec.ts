@@ -5733,43 +5733,39 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-threshold-grey${at}-${theme}`);
       });
 
-      test("Undo alone at the right end of the line of the heading, after the FILTER box unticked", async ({
+      test("the line of the heading, the heading alone, after the FILTER box unticked", async ({
         page,
       }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
           timeout: 20_000,
         });
+        // A change that drew Undo until 10 October 2026.
         await page.getByText(FILTER_LABEL, { exact: true }).click();
-        await expect(
-          page.getByRole("button", { name: "Undo", exact: true }),
-        ).toBeVisible();
-        await expect(
-          page.getByRole("button", { name: "Redo", exact: true }),
-        ).toHaveCount(0);
-        await page.mouse.click(1, 1);
-        await save(page, `popgen2-undo${at}-${theme}`);
-      });
-
-      test("Undo and Redo, after the FILTER box unticked, ticked and an Undo", async ({
-        page,
-      }) => {
-        await pickOnNewPage(page, "panel.vcf.gz");
-        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
-          timeout: 20_000,
-        });
-        const label = page.getByText(FILTER_LABEL, { exact: true });
-        await label.click();
-        await label.click();
-        await page.getByRole("button", { name: "Undo", exact: true }).click();
         await expect(
           page.getByRole("checkbox", { name: FILTER_LABEL }),
         ).not.toBeChecked();
-        await expect(
-          page.getByRole("button", { name: "Redo", exact: true }),
-        ).toBeVisible();
         await page.mouse.click(1, 1);
-        await save(page, `popgen2-undo-redo${at}-${theme}`);
+        await page.evaluate(() => {
+          window.scrollTo(0, 0);
+        });
+        const heading = page.getByRole("heading", { level: 1, name: "Popnei" });
+        const box = await heading.boundingBox();
+        const viewport = page.viewportSize();
+        if (box === null || viewport === null) {
+          throw new Error("the heading or the window has no size");
+        }
+        // The whole width of the window, from its top to a little under
+        // the heading, where the buttons stood at its right end.
+        await page.screenshot({
+          path: join(SCREENS, `popgen2-heading${at}-${theme}.png`),
+          clip: {
+            x: 0,
+            y: 0,
+            width: viewport.width,
+            height: Math.ceil(box.y + box.height + 16),
+          },
+        });
       });
 
       test("the PCA tab locked: Run waits for the one pass, held", async ({
@@ -5937,56 +5933,40 @@ for (const theme of ["light", "dark"] as const) {
         });
       }
 
-      for (const shot of ["running", "undo-waiting"] as const) {
-        test(`a PCA held running: ${shot === "running" ? "its tab with Stop, the bar and its options greyed" : "Undo greyed, its reason shown on the focus"}`, async ({
-          page,
-        }) => {
-          await holdSummary(page, { holdPca: true });
-          await page.goto("popgen2.html");
-          await pickOnNewPage(page, "panel.nei");
-          await release(page, "allSoFar");
-          await release(page, "result");
-          await page
-            .getByRole("tablist", { name: "Files and analyses" })
-            .getByRole("tab", { name: "PCA", exact: true })
-            .click();
-          const panel = page.getByRole("tabpanel");
-          const run = panel.getByRole("button", { name: "Run", exact: true });
-          await expect(run).toHaveAccessibleDescription(
-            /^Type the LD distance/u,
-            {
-              timeout: 20_000,
-            },
-          );
-          const field = panel.getByRole("textbox", {
-            name: /^Distance within which variants are compared/u,
-          });
-          await field.fill("50000");
-          await field.press("Enter");
-          await run.click();
-          await expect(
-            panel.getByRole("progressbar", { name: "Calculating the PCA" }),
-          ).toHaveAttribute("aria-valuenow", /^[1-9]\d*$/u, {
+      test("a PCA held running: its tab with Stop, the bar and its options greyed", async ({
+        page,
+      }) => {
+        await holdSummary(page, { holdPca: true });
+        await page.goto("popgen2.html");
+        await pickOnNewPage(page, "panel.nei");
+        await release(page, "allSoFar");
+        await release(page, "result");
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "PCA", exact: true })
+          .click();
+        const panel = page.getByRole("tabpanel");
+        const run = panel.getByRole("button", { name: "Run", exact: true });
+        await expect(run).toHaveAccessibleDescription(
+          /^Type the LD distance/u,
+          {
             timeout: 20_000,
-          });
-          if (shot === "running") {
-            await page.mouse.move(0, 0);
-            await save(page, `popgen2-pca-running${at}-${theme}`);
-            return;
-          }
-          const undo = page.getByRole("button", { name: "Undo", exact: true });
-          await undo.focus();
-          // Out and back by the keyboard, which shows the tooltip.
-          await page.keyboard.press("Shift+Tab");
-          await page.keyboard.press("Tab");
-          await expect(page.getByRole("tooltip")).toHaveText(
-            "Stop the PCA to change the filters.",
-          );
-          await save(page, `popgen2-undo-waiting${at}-${theme}`, {
-            fullPage: false,
-          });
+          },
+        );
+        const field = panel.getByRole("textbox", {
+          name: /^Distance within which variants are compared/u,
         });
-      }
+        await field.fill("50000");
+        await field.press("Enter");
+        await run.click();
+        await expect(
+          panel.getByRole("progressbar", { name: "Calculating the PCA" }),
+        ).toHaveAttribute("aria-valuenow", /^[1-9]\d*$/u, {
+          timeout: 20_000,
+        });
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-pca-running${at}-${theme}`);
+      });
 
       for (const shot of ["3d", "2d", "pcoa", "menu"] as const) {
         test(`the PCA tab done: ${shot === "pcoa" ? "the PCoA with its warning" : shot === "menu" ? "the menu of the plot open" : `in ${shot.toUpperCase()}`}`, async ({

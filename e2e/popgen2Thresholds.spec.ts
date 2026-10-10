@@ -10,8 +10,9 @@
  * pattern and its contrasts; 0 a filter at 0; Down from off; a run that
  * ends where it began; a crash while a run waits and during a drag; the
  * expected heterozygosity with no threshold; the thresholds through another file, also one dropped while
- * a run waits; no plot changed by any of it; axe in each look. Undo and
- * Redo of the thresholds, and their keys, are in popgen2Undo.spec.ts.
+ * a run waits; no plot changed by any of it; axe in each look. The keys
+ * of Undo and Redo, which change no threshold on this page, are in
+ * popgen2NoUndo.spec.ts.
  *
  * panel.vcf.gz and panel.nei hold the same 1,200 variants of 200 diploid
  * individuals, counted by popnei; panel.vcf.gz records the FILTER of its

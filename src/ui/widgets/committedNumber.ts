@@ -42,8 +42,9 @@ export type NumberRefusal =
       readonly text: string;
     };
 
-/** The attribute a number field gives its input, so that the shell
-    takes Undo and Redo of the keyboard pressed in it for the project's:
+/** The attribute a number field gives its input, so that the shell of
+    popgen.html takes Undo and Redo of the keyboard pressed in it for the
+    project's:
     the field handles them itself while something is typed in it, and
     leaves them to the shell otherwise (src/ui/shell/shortcuts.ts). */
 export const NUMBER_FIELD_ATTRIBUTE = "data-number-field";

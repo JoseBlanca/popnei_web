@@ -38,7 +38,6 @@ function runOf(gate = createRunGate()): {
   const ends = { count: 0 };
   const run = createThresholdRun({
     gate,
-    describe: (to) => `the MAF filter changed to ${String(to)}`,
     change: (to) => {
       changes.push(to);
     },
@@ -99,33 +98,6 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
     expect(ends.count).toBe(1);
   });
 
-  test("while a run waits the gate gives the description of the change it will become, and tells its listeners at each press and at its end; nothing for a run back where it started", () => {
-    const gate = createRunGate();
-    const { run } = runOf(gate);
-    let told = 0;
-    const stop = gate.subscribe(() => {
-      told += 1;
-    });
-    expect(gate.pending()).toBeNull();
-    run.press(0.5, 0.49);
-    expect(told).toBe(1);
-    expect(gate.pending()).toBe("the MAF filter changed to 0.49");
-    run.press(0.49, 0.48);
-    expect(told).toBe(2);
-    expect(gate.pending()).toBe("the MAF filter changed to 0.48");
-    // Back where it started: it will be no change.
-    run.press(0.48, 0.49);
-    run.press(0.49, 0.5);
-    expect(gate.pending()).toBeNull();
-    run.press(0.5, 0.49);
-    vi.advanceTimersByTime(RUN_QUIET_MS);
-    expect(told).toBe(6);
-    expect(gate.pending()).toBeNull();
-    stop();
-    run.press(0.49, 0.48);
-    expect(told).toBe(6);
-  });
-
   test("a run waiting is made a change before another command reaches the project, and the gate lets it go once ended", () => {
     const gate = createRunGate();
     const store = gatedStore(
@@ -146,7 +118,6 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
           setThreshold(p, maf, to),
         );
       },
-      describe: () => "the MAF filter was turned on",
       ended: () => undefined,
     });
     const filtersOf = (p: Project): string =>
@@ -195,7 +166,6 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
       change: () => {
         opened.push("run");
       },
-      describe: () => "the MAF filter was turned on",
       ended: () => undefined,
     });
     const letGo = gate.typing(() => {
@@ -231,7 +201,6 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
           setThreshold(p, maf, to),
         );
       },
-      describe: () => "the MAF filter was turned on",
       ended: () => undefined,
     });
     gate.typing(() => {
@@ -295,7 +264,6 @@ describe("AP3 D2 the gate before applyAfresh", () => {
           setThreshold(p, maf, to),
         );
       },
-      describe: () => "the MAF filter was turned on",
       ended: () => undefined,
     });
     run.press(1, 0.05);
@@ -347,7 +315,6 @@ describe("AP3 D2 the gate before applyAfresh", () => {
       change: () => {
         order.push("run");
       },
-      describe: () => "the MAF filter was turned on",
       ended: () => undefined,
     });
     gate.typing(() => {
@@ -430,7 +397,7 @@ describe("NU3 D1 the gate counts the changes under way", () => {
     expect(told.count).toBe(toldBefore + 1);
   });
 
-  test("a run made a change by another command lets its hold go, and the listener is told", () => {
+  test("a run made a change by another command lets its hold go, and the listener is told when the count falls to 0", () => {
     const { gate, told } = listened();
     const { run, changes } = runOf(gate);
     const release = gate.holdChange();
@@ -440,9 +407,10 @@ describe("NU3 D1 the gate counts the changes under way", () => {
     gate.endAll();
     expect(changes).toEqual([0.49]);
     expect(gate.underWay()).toBe(1);
+    expect(told.count).toBe(toldBefore);
     release();
     expect(gate.underWay()).toBe(0);
-    expect(told.count).toBe(toldBefore + 2);
+    expect(told.count).toBe(toldBefore + 1);
   });
 
   test("a hold whose control is removed, through the release the widget gives at its removal, brings the count back to 0", () => {
@@ -510,7 +478,6 @@ describe("NU1 the listeners of the gate see the change a run of the keys made", 
           setThreshold(p, maf, to),
         );
       },
-      describe: () => "the MAF filter was turned on",
       ended: () => undefined,
     });
     const seen: (number | null)[] = [];
@@ -580,19 +547,13 @@ describe("NU1 the gate when a listener or an end throws", () => {
     const gate = createRunGate();
     const failure = new Error("an end failed");
     const ended: string[] = [];
-    gate.hold(
-      () => {
-        ended.push("first");
-        throw failure;
-      },
-      () => null,
-    );
-    gate.hold(
-      () => {
-        ended.push("second");
-      },
-      () => null,
-    );
+    gate.hold(() => {
+      ended.push("first");
+      throw failure;
+    });
+    gate.hold(() => {
+      ended.push("second");
+    });
     let told = 0;
     gate.subscribe(() => {
       told += 1;
@@ -641,5 +602,50 @@ describe("NU1 when the gate tells its listeners", () => {
     });
     gate.endAll();
     expect(told).toBe(0);
+  });
+});
+
+describe("NU2 D2 the gate tells only when the count of the changes under way rises from 0 or falls to 0", () => {
+  test("a press of a run held, a second run held, and the first let go tell nothing; the count falling to 0 tells once", () => {
+    const gate = createRunGate();
+    let told = 0;
+    gate.subscribe(() => {
+      told += 1;
+    });
+    const first = runOf(gate).run;
+    const second = runOf(gate).run;
+
+    first.press(0.5, 0.49);
+    expect(told).toBe(1);
+    first.press(0.49, 0.48);
+    second.press(0.3, 0.29);
+    expect(gate.underWay()).toBe(2);
+    expect(told).toBe(1);
+    first.end();
+    expect(gate.underWay()).toBe(1);
+    expect(told).toBe(1);
+    second.end();
+
+    expect(gate.underWay()).toBe(0);
+    expect(told).toBe(2);
+  });
+
+  test("a run held while a hold of a widget holds tells nothing, nor its end", () => {
+    const gate = createRunGate();
+    const release = gate.holdChange();
+    let told = 0;
+    gate.subscribe(() => {
+      told += 1;
+    });
+    const { run, changes } = runOf(gate);
+
+    run.press(0.5, 0.49);
+    run.press(0.49, 0.48);
+    vi.advanceTimersByTime(RUN_QUIET_MS);
+
+    expect(changes).toEqual([0.48]);
+    expect(told).toBe(0);
+    release();
+    expect(told).toBe(1);
   });
 });

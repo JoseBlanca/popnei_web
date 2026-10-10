@@ -212,10 +212,10 @@ export interface NumberFieldProps {
       takes, from a character thrown away until a deletion mends the
       text, and at each commit, when the field shows again the number
       committed or kept. The value of the field changed otherwise, by an
-      Undo, gives no call: before an Undo the field was committed, whether
-      it lost the focus or holds its number with nothing typed, the one
-      case the keys of Undo reach the project from it, so no number typed
-      is left. */
+      Undo of popgen.html, gives no call: before an Undo the field was
+      committed, whether it lost the focus or holds its number with
+      nothing typed, the one case the keys of Undo reach the project from
+      it, so no number typed is left. popgen2.html has no Undo. */
   readonly onTyped?: (typed: number | null) => void;
   /** Called with the number committed, within the bounds and on the
       step, never with an empty field nor with a number refused. */
@@ -281,7 +281,7 @@ export function NumberField({
   const hiddenDescriptionId = useId();
   // The line of the last number refused, which is the screen's: it goes
   // at the next commit, and when the value changes otherwise, by an undo
-  // or a new load, since it names the value kept.
+  // of popgen.html or a new load, since it names the value kept.
   const [refused, setRefused] = useState<string | null>(null);
   const [refusedFor, setRefusedFor] = useState(value);
   if (!Object.is(value, refusedFor)) {
@@ -304,7 +304,8 @@ export function NumberField({
   const lastText = useRef("");
   // Whether anything was typed, or thrown away, since the last commit:
   // Undo and Redo of the keyboard are then the field's, and otherwise the
-  // project's (docs/specs/shell.md, "The header").
+  // project's on popgen.html (docs/specs/shell.md, "The header") and
+  // nobody's on popgen2.html, which has no Undo.
   const typed = useRef(false);
   // Whether the commit under way gave its number to `onChange`, or
   // refused it: React Aria gives neither for the number the field holds.
@@ -321,15 +322,16 @@ export function NumberField({
   useLayoutEffect(() => {
     typedTo.current = onTyped;
   });
-  // The number changed otherwise than by a commit, by an Undo or a new
-  // load: nothing typed is left, nor a character thrown away (the spec,
+  // The number changed otherwise than by a commit, by an Undo of
+  // popgen.html or a new load: nothing typed is left, nor a character thrown away (the spec,
   // "The threshold typed and not yet committed").
   useEffect(() => {
     notTaken.current = false;
     typed.current = false;
     typedTo.current?.(null);
   }, [value]);
-  // The field gone, by its switch turned off, an Undo or a Clear: a
+  // The field gone, by its switch turned off, an Undo of popgen.html or a
+  // Clear: a
   // number typed in it is typed no longer, and the screen, which may
   // draw it elsewhere, a threshold on a plot, is told so.
   useEffect(
@@ -682,15 +684,16 @@ function FieldInput({
   // The browser's own undo and redo of the text, never the field's
   // (docs/specs/steps/popgen2-filters.md, "Undo, Redo and their keys").
   // Its keys are caught at the key below while something is typed, and
-  // otherwise by the page's Undo and Redo, on the window, on both pages
-  // (src/ui/shell/UndoRedoButtons.tsx). On popgen2.html, while it drew no
-  // Undo and caught no key, until 9 October 2026, Ctrl+Z, or Cmd+Z on
-  // macOS, took the text back to the 1 that 0.9 was typed over and gave
-  // it as the threshold, off, even pressed on the heading, where Chromium
-  // moved the focus into the box to do it (seen in Chromium 153 on
-  // GitHub's Linux runner, and in Chromium and WebKit on macOS with Cmd+Z,
-  // 9 October 2026); this refusal is what kept it out then, and keeps out
-  // the undo of the menu Edit now. The keys offer the undo in a
+  // otherwise, on popgen.html, by its Undo and Redo, on the window
+  // (src/ui/shell/UndoRedoButtons.tsx). popgen2.html, with no Undo since
+  // 10 October 2026, catches no key, as it caught none until 9 October
+  // 2026, when Ctrl+Z, or Cmd+Z on macOS, took the text back to the 1
+  // that 0.9 was typed over and gave it as the threshold, off, even
+  // pressed on the heading, where Chromium moved the focus into the box
+  // to do it (seen in Chromium 153 on GitHub's Linux runner, and in
+  // Chromium and WebKit on macOS with Cmd+Z, 9 October 2026); so this
+  // refusal is what keeps the keys from changing the project there, and
+  // keeps out the undo of the menu Edit on both pages. The keys offer the undo in a
   // `beforeinput` that can be cancelled, and it is.
   // `document.execCommand("undo")`, the command a menu Edit gives, offers
   // it so in WebKit, but Chromium carries it out with no `beforeinput`
@@ -924,8 +927,9 @@ function FieldInput({
         }
         // Undo and Redo are never the browser's here (docs/specs/shell.md,
         // "The header"): with something typed, Ctrl+Z puts the number back
-        // and redo does nothing; with nothing typed, the shell takes them
-        // for the project.
+        // and redo does nothing; with nothing typed, the shell of
+        // popgen.html takes them for the project, and on popgen2.html,
+        // which has no Undo, the refusal above keeps the browser's.
         // Escape with something typed puts back the number the field
         // holds, as Ctrl+Z does, so that the next Tab commits nothing
         // (docs/specs/shell.md, "The header"); with nothing typed it is

@@ -224,8 +224,7 @@ function ReadOptions({
     option: "encoding" | "separator" | "decimal",
     next: CsvOptions,
   ): void => {
-    // A read again is no step of Undo: the history starts afresh after
-    // it (popgen2-input.md, "What it sends and reads").
+    // A read again starts the history afresh (popgen2-input.md, "What it sends and reads").
     store.applyAfresh(csvOptionCommand(option, name, next).command);
   };
   return (

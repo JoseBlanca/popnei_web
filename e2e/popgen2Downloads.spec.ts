@@ -611,14 +611,13 @@ test("AP5 D4 axe with a histogram's menu open and with the table's menu open, li
   }
 });
 
-test('AP5 D4 Ctrl+Z, or Cmd+Z, with a histogram\'s menu open undoes the threshold changed before, and the menu stays open (docs/specs/steps/popgen2-pca.md, "The keys")', async ({
+test("NU2 D3 Ctrl+Z, or Cmd+Z, with a histogram's menu open changes nothing, the threshold changed before kept, and the menu stays open", async ({
   page,
 }) => {
   await openDone(page);
   const box = stats(page).getByRole("textbox", {
     name: "Missing genotypes max: maximum proportion of missing genotypes",
   });
-  const before = await box.inputValue();
   await box.fill("0.05");
   await box.press("Enter");
   await expect(box).toHaveValue("0.05");
@@ -628,7 +627,7 @@ test('AP5 D4 Ctrl+Z, or Cmd+Z, with a histogram\'s menu open undoes the threshol
   const menu = page.getByRole("menu");
   await expect(menu).toBeVisible();
   await page.keyboard.press("ControlOrMeta+z");
-  await expect(box).toHaveValue(before);
+  await expect(box).toHaveValue("0.05");
   await expect(menu).toBeVisible();
   await expect(menu.getByRole("menuitem").first()).toBeFocused();
 });

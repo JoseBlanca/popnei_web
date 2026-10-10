@@ -253,13 +253,10 @@ describe("the gate of the button", () => {
     const gate = createRunGate();
     draw(store, gate);
     let ended = 0;
-    gate.hold(
-      () => {
-        ended += 1;
-        tickFilter(store);
-      },
-      () => "the FILTER box changed",
-    );
+    gate.hold(() => {
+      ended += 1;
+      tickFilter(store);
+    });
 
     // A click with no pointer and no focus, as an assistive technology
     // may give: the button press alone runs the gate.
@@ -278,12 +275,9 @@ describe("the gate of the button", () => {
     const gate = createRunGate();
     draw(store, gate);
     let ended = 0;
-    gate.hold(
-      () => {
-        ended += 1;
-      },
-      () => null,
-    );
+    gate.hold(() => {
+      ended += 1;
+    });
 
     act(() => {
       downloadButton().click();

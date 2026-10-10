@@ -454,6 +454,52 @@ describe("the section of the statistics of the open file", () => {
     }
   });
 
+  test("NU2 D2 Ctrl+Z, Ctrl+Y and Meta+Z on a threshold whose run of the keys waits leave the run waiting and the project as it was", async () => {
+    const page = await drawPage();
+    await open(page, FIRST);
+    const request = page.requests.at(-1);
+    if (request === undefined) throw new Error("no request was sent");
+    await act(async () => {
+      request.soFar(summaryResult(["1"], [523], ["i1", "i2"]));
+      await Promise.resolve();
+    });
+    await settled();
+    const box = sectionOf()?.querySelector(
+      '[role="group"][aria-label="Major allele frequency"] input[data-number-field]',
+    );
+    if (!(box instanceof HTMLInputElement)) throw new Error("no MAF box");
+    await act(async () => {
+      box.focus();
+      box.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+      );
+      await Promise.resolve();
+    });
+    const before = page.store.getState().project;
+
+    for (const keys of [
+      { key: "z", code: "KeyZ", ctrlKey: true },
+      { key: "y", code: "KeyY", ctrlKey: true },
+      { key: "z", code: "KeyZ", metaKey: true },
+    ]) {
+      await act(async () => {
+        box.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            ...keys,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+        await Promise.resolve();
+      });
+    }
+
+    // The run still waits: no change was made, and the opening is still
+    // the last step.
+    expect(page.store.getState().project).toBe(before);
+    expect(page.store.getState().undo).toBe("a new variants file was loaded");
+  });
+
   test("live-stats 2 the plots are drawn from each result so far while the pass runs, saying so, with no download, and from the result at its end", async () => {
     const page = await drawPage();
     await open(page, FIRST);
