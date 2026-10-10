@@ -3275,9 +3275,15 @@ src/ui/
                     October 2026, the line of a threshold dragged over a
                     histogram (section 7), which tells the end of a drag
                     with a pointer apart from a key; from 10 October
-                    2026 Slider.tsx, ThresholdSlider.tsx, Select.tsx
-                    and NumberField.tsx tell the gate of popgen2.html
-                    when a change begins and ends; NumberField.tsx,
+                    2026 Slider.tsx, ThresholdSlider.tsx, Select.tsx,
+                    NumberField.tsx and DownloadMenu.tsx, and the
+                    dialog of variants/DownloadVariants.tsx, hold the
+                    change the user is in the middle of through
+                    changeHold.ts, whose narrow holder sees nothing of
+                    the gate of popgen2.html but holdChange: that page
+                    gives the gate as the holder, popgen.html one that
+                    holds nothing, and a widget given none is a defect;
+                    NumberField.tsx,
                     with an option, popgen2.html's alone, under which an
                     emptied box commits "off", and, from 8 October 2026,
                     its text put back to the number it is given whenever

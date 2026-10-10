@@ -400,9 +400,13 @@ task 2.2 of the plan; until then also at each move of a run of the
 arrow keys), so that `autoRuns`'s listener, and any screen, reads
 `busy()`. The count goes from 1 to 2 and back with nobody told, so no
 screen reads it with the subscription; it is for the tests. `Slider.tsx`,
-`ThresholdSlider.tsx`, `Select.tsx` and `NumberField.tsx` of
-`src/ui/widgets/`, and the dialog of the download, take and release a
-`holdChange` through `RunGateProvider`. `holdKeyRun` is left to the
+`ThresholdSlider.tsx`, `Select.tsx`, `NumberField.tsx` and
+`DownloadMenu.tsx` of `src/ui/widgets/`, and the dialog of
+`src/ui/variants/DownloadVariants.tsx`, take and release a hold through
+`src/ui/widgets/changeHold.ts`, whose narrow holder, `ChangeHolds`, has
+`holdChange` alone: `popgen2.html` gives the gate as the holder, through
+`ChangeHoldsProvider`, `popgen.html` a holder that holds nothing, and a
+widget drawn with none is a defect. `holdKeyRun` is left to the
 runs of the arrow keys, whose `HeldRun.release(made)` makes the run's
 change: any change by another control ends a run held through
 `endAll`, so a widget that took one would lose it in the middle of a
@@ -1232,7 +1236,9 @@ engines that start on the owner's Mac, on `panel.nei`,
   the slider of the missing data of the PCA and on the closed list of
   the method start one PCA, after the last press, and no control greys
   before it (the worker's requests counted); a slider held still for
-  3 s, the list held open for 3 s and digits typed slowly over 3 s each
+  3 s, a threshold's line moved and held still for 3 s, a thumb pressed
+  and held without moving for 3 s, the list held open for 3 s, a menu
+  "Download…" held open for 3 s and digits typed slowly over 3 s each
   keep working, before any PCA starts; after a change the tab never
   shows the old result, nor Run, between the change and the bar, read
   every animation frame; the line of the quiet second, then the bar;
