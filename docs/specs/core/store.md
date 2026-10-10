@@ -124,8 +124,9 @@ page alone; and a third way to change the project, `applyAfresh`, a
 command after which the history starts afresh, through which that page
 sends the changes of its individuals file, so that they are no steps
 of its Undo, which comes back the same day, and stop nothing that a
-command would not (below, "On popgen2.html: no notice, and a history of
-the filters"). Revised again that day for the owner's answer 2 to the
+command would not (below, "On popgen2.html: no notice, no Undo, and
+no result kept for values left behind"). Revised again that day for
+the owner's answer 2 to the
 plan `docs/plans/analyses-pca.md`: while a PCA runs, that page locks
 the filters it reads and makes the keys and buttons of Undo and Redo
 wait, so on that page no change the screen allows leaves a calculation
@@ -1557,8 +1558,8 @@ export function createStore<J, R, F = never>(config: {
       `keptNoneReason`: the Variants step when absent; null on popgen2.html, which has no steps. */
   readonly keptNoneStep?: string | null;
   /** Whether a change makes no notice and stops at once every calculation, wait and write it leaves
-      behind (above, "On popgen2.html: no notice, and a history of the filters"); true on
-      popgen2.html, false when absent. */
+      behind (above, "On popgen2.html: no notice, no Undo, and no result kept for values left
+      behind"); true on popgen2.html, false when absent. */
   readonly stopLeftBehind?: boolean;
 }): Store<R, F>;   // a Popgen2Store<R, F> when given StopLeftBehindConfig, below
 
@@ -1679,7 +1680,7 @@ export interface Popgen2Store<R, F = never> extends Store<R, F> {
   /** The page chose `column` as the column of the populations of the read of the individuals
       file of the load `fileId`: the grouping written into every project of the history that
       holds that load read and the present project's grouping, with no step (above,
-      "On popgen2.html: no notice, and a history of the filters"). */
+      "On popgen2.html: no notice, no Undo, and no result kept for values left behind"). */
   populationColumnChosen(fileId: string, column: string): void;
 }
 ```

@@ -479,12 +479,13 @@ export interface StoreConfig<J, R, F = never> {
       every Run waiting for the statistics and every write whose key the
       change leaves behind, which no notice could then offer to stop or
       bring back (docs/specs/core/store.md, "On popgen2.html: no notice,
-      and a history of the filters"): true on popgen2.html, which draws
-      no notice; false when absent. `applyAfresh` stands on the first
-      half: a notice names its cause and offers an Undo, which a change
-      that leaves nothing to undo cannot give, so only a store made with
-      this has it, a `Popgen2Store`. The one pass of that page reads no filter,
-      so no change stops it. */
+      no Undo, and no result kept for values left behind"): true on
+      popgen2.html, which draws no notice; false when absent. Only a
+      store made with this has `applyAfresh`, a `Popgen2Store`: on
+      popgen.html a notice names the cause of a change and offers its
+      Undo, which a change that leaves nothing to undo could not give.
+      The one pass of popgen2.html reads no filter, so no change stops
+      it. */
   readonly stopLeftBehind?: boolean;
 }
 
@@ -613,19 +614,20 @@ export interface Store<R, F = never> {
 
 /** The store of popgen2.html, made with `stopLeftBehind`: the store, and
     the two changes of the project that leave no step, which only a
-    store that makes no notice has. A notice names its cause and offers
-    an Undo, which neither could give, so the store of popgen.html,
-    made without the setting, has neither (docs/specs/core/store.md, "On
-    popgen2.html: no notice, and a history of the filters"). */
+    store that makes no notice has. On popgen.html a notice names its
+    cause and offers an Undo, which neither could give, so the store of
+    that page, made without the setting, has neither
+    (docs/specs/core/store.md, "On popgen2.html: no notice, no Undo, and
+    no result kept for values left behind"). */
 export interface Popgen2Store<R, F = never> extends Store<R, F> {
   /** Applies `command` to the current project as `apply` does, stopping
       what it leaves behind, and then starts the history afresh at the
       project it gives, with nothing to undo or redo, counting one in
       `historyMoves`; nothing changes when it gives the project it was
-      given. popgen2.html sends through it the changes of its
-      individuals file, which are no steps of its Undo
-      (docs/specs/core/store.md, "On popgen2.html: no notice, and a
-      history of the filters"). */
+      given. popgen2.html, which has no Undo since 10 October 2026, sends
+      through it the changes of its individuals file
+      (docs/specs/core/store.md, "On popgen2.html: no notice, no Undo,
+      and no result kept for values left behind"). */
   applyAfresh(command: (p: Project) => Project): void;
   /** The page chose `column` as the column of the populations at the
       read of the individuals file of the load `fileId`, a choice that is

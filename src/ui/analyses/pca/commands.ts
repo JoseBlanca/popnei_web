@@ -3,9 +3,10 @@
  * (docs/specs/analyses/pca.md, "What it sends and reads" and "On
  * popgen2.html"): each option the panel changes is `setAnalysisOptions(p,
  * ‹the page's definition›, { ...pcaOptions(p, page), ‹the option› })`,
- * with the description that ends the notice and names the header's Undo,
- * in the words of the page (docs/specs/steps/popgen2-pca.md, "What is a
- * step"). Each reads and writes the options of its page: on popgen2.html a
+ * with its description in the words of the page, which on popgen.html
+ * ends the notice and names the header's Undo, and on popgen2.html, with
+ * no Undo since 10 October 2026, is shown nowhere
+ * (docs/specs/steps/popgen2-pca.md, "No Undo and no Redo"). Each reads and writes the options of its page: on popgen2.html a
  * command that read the old page's would write PCA_DEFAULTS, whose LD
  * filter follows, and turn the LD pruning off at the first change of the
  * colour. Pure, so that a test in node checks them.
@@ -217,7 +218,7 @@ export function ownValueCommand(
 /**
  * A missing data or a MAF filter of popgen2.html made stricter than the
  * Variants tab's: `follow` false and the value `value` in one command, one
- * step of Undo, the value the upper end of its field, so that the choice
+ * change of the project, the value the upper end of its field, so that the choice
  * alone changes no variant the PCA reads (docs/specs/steps/popgen2-pca.md,
  * "Its filters").
  */

@@ -32,7 +32,8 @@ import { individualsReadAnnouncement } from "./variants/individualsWords.ts";
  * A read is newly recorded when the individuals file of the project, of
  * the same load id and options of a CSV as before the change, had a read
  * waiting, pending or failed in its worker, and now has a read or a
- * refusal; an undo, a redo or an opening of a variants file makes none.
+ * refusal; an opening of a variants file makes none, and the page has
+ * no undo nor redo to make one.
  * The choice and the words come in a microtask, after every listener of
  * the change has run, so that nothing is sent in the middle of telling
  * them. `store` is the store itself, not the one gated as the screens'
@@ -158,9 +159,9 @@ function isNewlyRecorded(
   // The options of a CSV compared are a guard no change of this page
   // reaches since 9 October 2026: a change of them makes the read
   // pending, the store records a read only into the options it was made
-  // with, and the change starts the history afresh, so no undo crosses
-  // it, as one from a separator waiting to the read of another did
-  // before. Kept for a way of changing them that a later page may add.
+  // with, and the page has no undo to go back across the change, as one
+  // from a separator waiting to the read of another did before 9 October
+  // 2026. Kept for a way of changing them that a later page may add.
   if (
     was?.fileId !== now.fileId ||
     !sameCsv(was.csv, now.csv) ||

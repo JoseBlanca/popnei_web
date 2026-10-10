@@ -135,8 +135,8 @@ export function pcaTabErrorText(
  * "Accessibility"): "PCA of panel.nei calculated.", "PCoA of panel.nei
  * calculated."; "The PCA of panel.nei could not be calculated: " and the
  * words of its error. `null` for any other change: a run stopped, or one
- * left behind by another variants file, ends with no result and no
- * error; a result brought back by an undo did not run.
+ * left behind by another variants file or by a change of a filter, ends
+ * with no result and no error.
  */
 export function pcaEndAnnouncement(
   before: AppState<JobResult, unknown>,

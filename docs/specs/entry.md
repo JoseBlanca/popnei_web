@@ -480,7 +480,8 @@ that is `null`. The store records it as it records the read: the
 grouping becomes `{ kind: "populations", column }` in every project of
 the history that holds that load read and the grouping the present
 project has, with no step (`docs/specs/core/store.md`, "On
-popgen2.html: no notice, and a history of the filters"). The column the
+popgen2.html: no notice, no Undo, and no result kept for values left
+behind"). The column the
 page chooses is not a change of the user's. Until 9 October 2026 it was
 sent with `apply`, described "the column of the populations was
 chosen", a step of the history, and then that day with `applyAfresh`,

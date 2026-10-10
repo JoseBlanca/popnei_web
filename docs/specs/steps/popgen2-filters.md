@@ -68,10 +68,11 @@ them and does not repeat them.
 ## The terms
 
 - **The project** is everything the user has set: the file open and the
-  filters with their values. **The store** holds it, its history for
-  Undo and Redo, and the results; a screen changes the project only by
-  sending the store a command, with a description that names the step
-  of Undo.
+  filters with their values. **The store** holds it, its history, of
+  one past project on this page, which has no Undo and no Redo since 10
+  October 2026, and the results; a screen changes the project only by
+  sending the store a command, with a description of the change, which
+  this page shows nowhere.
 - **The notice** is the panel of the old page, `popgen.html`, fixed at
   the bottom of the window, that says what the last change removed or
   stopped, with its Undo. It is part of **the shell** of that page, the
@@ -237,8 +238,8 @@ Five thresholds, each on its histogram: the missing rate, the MAF and
 the observed heterozygosity of the variants, and the missing rate and
 the observed heterozygosity of the individuals. Each keeps the variants
 or individuals whose value is at most its number. The line and the box
-show the project's value, so Undo and Redo, when the page draws them,
-move them. The only value
+show the project's value, so whatever changes the project moves them.
+The only value
 they hold of their own is the number being dragged, typed or moved with
 the arrow keys and not yet made a change.
 
@@ -746,10 +747,13 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
   FILTER box ticked, while the PCA has not been run for the file (once
   it has, `docs/specs/steps/popgen2-pca.md` says what a change starts);
 - the page has no button Undo nor Redo, before a file and after one;
-- Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z, and Cmd+Z and Cmd+Shift+Z, pressed
-  on the heading, on a line while its run waits, the page's clock
-  stopped, and after, and in a box, change neither a threshold nor the
-  FILTER box, and leave the focus on the heading;
+- Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z, and Cmd+Z and Cmd+Shift+Z, each
+  pressed alone, on the heading, on a line while its run waits, the
+  page's clock stopped, and after, and in a box, change neither a
+  threshold, the FILTER box nor the PCA's result, read after each key,
+  and leave the focus where they were pressed, on the heading among
+  them; the run then becomes a change at its second, which leaves the
+  PCA's result behind;
 - Ctrl+Y and Cmd+Y pressed in a box reached by Tab, its text selected,
   leave its number in the box, and the live regions say no "Empty";
 - Ctrl+Shift+Z, Cmd+Shift+Z and Ctrl+Y pressed in a box with 0.9 typed

@@ -2,8 +2,9 @@
  * The FILTER box of popgen2.html, apart from its drawing
  * (docs/specs/steps/popgen2-filters.md, "The FILTER box" and "What it
  * sends and reads"): whether it is shown, whether it is ticked, and the
- * change of the project a click makes, with the description that names
- * its step of Undo. Pure, so that a test in node
+ * change of the project a click makes, with its description, the words
+ * the store keeps with the change, which popgen2.html, with no Undo
+ * since 10 October 2026, shows nowhere. Pure, so that a test in node
  * checks them over the real store of the page.
  */
 import { setVariantFilter, turnOffVariantFilter } from "../../core/project.ts";
@@ -27,17 +28,19 @@ export function passedFilterOn(p: Project): boolean {
 }
 
 /** The description of a click that ticks the box, in the box's own
-    words, so that the hints of Undo and Redo and the words of an undo say
-    what the box says (decided by the session on 8 October 2026). */
+    words (decided by the session on 8 October 2026, when the hints of
+    Undo and Redo named it); shown nowhere on popgen2.html, which has no
+    Undo since 10 October 2026. */
 const PASSED_FILTER_ON = "the variants that failed their FILTER are left out";
 
 /** The description of a click that unticks it. */
 const PASSED_FILTER_OFF = "the variants that failed their FILTER are kept";
 
-/** A change of the project and the description of its step of Undo. */
+/** A change of the project and its description. */
 export interface PassedFilterChange {
-  /** The words that name the step of Undo, the words of the box: "the variants that failed their FILTER are
-      kept". */
+  /** The description of the change, the words of the box, "the variants
+      that failed their FILTER are kept", which the store keeps with the
+      change and popgen2.html shows nowhere. */
   readonly description: string;
   /** The command of the project. */
   readonly command: (p: Project) => Project;

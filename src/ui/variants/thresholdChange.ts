@@ -2,8 +2,10 @@
  * The thresholds of popgen2.html as filters of the project
  * (docs/specs/steps/popgen2-filters.md, "What it sends and reads"): the
  * filter each histogram's threshold is, and the change of the project a
- * threshold set makes, `setThreshold` of the project, with the
- * description that names its step of Undo, chosen by comparing the
+ * threshold set makes, `setThreshold` of the project, with its
+ * description, the words the store keeps with the change, which
+ * popgen2.html, with no Undo since 10 October 2026, shows nowhere,
+ * chosen by comparing the
  * threshold's value, `thresholdValue`, before and after: a number then
  * another, "the MAF filter changed"; off then a number, "the MAF filter
  * was turned on"; a number then off, "the MAF filter was turned off";
@@ -47,9 +49,10 @@ export function individualThreshold(statistic: IndividualStatistic): Threshold {
   }
 }
 
-/** A change of the project and the description of its step of Undo. */
+/** A change of the project and its description. */
 export interface ThresholdChange {
-  /** The words that name the step of Undo, "the MAF filter changed". */
+  /** The description of the change, "the MAF filter changed", which the
+      store keeps with it and popgen2.html shows nowhere. */
   readonly description: string;
   /** The command of the project. */
   readonly command: (p: Project) => Project;
@@ -58,7 +61,7 @@ export interface ThresholdChange {
 /** The change that sets `threshold` of `p` to `value`, a number on the
     step of its axis, 1 for off, or `null` for its box emptied, as
     `setThreshold` takes it; `null` when it gives the value `p` already
-    has, which is no change and leaves no step of Undo. */
+    has, which is no change, and the store is given none. */
 export function thresholdChange(
   p: Project,
   threshold: Threshold,

@@ -74,8 +74,8 @@ whose file was read long ago.
   populations and the options of the PCA. The opening, the removal, a
   change of an option of the reader of the individuals file, and the
   column the page chooses at the end of its read, each start one too
-  (`docs/specs/core/store.md`, "On popgen2.html: no notice, and a history
-  of the filters"). The steps before them are gone.
+  (`docs/specs/core/store.md`, "On popgen2.html: no notice, no Undo, and no
+  result kept for values left behind"). The steps before them are gone.
 - **A record of a read changes every project of the history that holds
   that load**, and makes no step (`docs/architecture.md`, section 6, step
   3). A pick of the variants file is a step; the read of the file that

@@ -1212,11 +1212,18 @@ engines that start on the owner's Mac, on `panel.nei`,
   and "Colour the points by" not greyed, a column chosen leaving the PCA
   running; an opening of another variants file stops it, the tab
   ready.
-- **No Undo**: no button Undo nor Redo when the page opens, after
-  `panel.nei`, after a threshold moved and after the PCA; Ctrl+Z,
-  Meta+Z, Ctrl+Shift+Z and Ctrl+Y on the heading, on a line and in a
-  box with nothing typed change no threshold, no option and no result;
-  0.9 typed in the MAF box, Ctrl+Z: the box back to its number.
+- **No Undo**, in `e2e/popgen2NoUndo.spec.ts`: no button Undo nor
+  Redo when the page opens, after `panel.nei`, after a threshold moved
+  and after the PCA; Ctrl+Z, Meta+Z, Ctrl+Shift+Z, Meta+Shift+Z and
+  Ctrl+Y, each pressed alone on the heading, on a line and in a box
+  with nothing typed, change no threshold, no option and no result,
+  read after each key, and leave the focus where they were pressed;
+  the same keys on a line whose run of the arrow keys waits leave the
+  run to become a change at its second; Ctrl+Y and Meta+Y in a box
+  reached by Tab leave its number; 0.9 typed in the MAF box, the keys
+  of redo leave it typed, and Ctrl+Z puts the box back to its number;
+  the PCA done, a threshold moved and moved back: Run, and no result,
+  with no request until Run.
 - **Live**, the design's checks in the browser, in `e2e/popgen2Live.spec.ts`:
   after Run and its end, ten presses of an arrow key on a threshold, on
   the slider of the missing data of the PCA and on the closed list of
@@ -1250,9 +1257,10 @@ engines that start on the owner's Mac, on `panel.nei`,
 
 The flows of the old page's PCA are run again, since its module and
 panel are shared, and so are the old page's flows of Undo, which keeps
-it. The flows of `popgen2Undo.spec.ts` that check Undo and Redo on this
-page go, and its checks that no key undoes anything stay, in the bullet
-"No Undo".
+it. `e2e/popgen2Undo.spec.ts` became `e2e/popgen2NoUndo.spec.ts` on 10
+October 2026: its flows that checked Undo and Redo on this page went,
+and its checks that no key undoes anything stayed, in the bullet "No
+Undo".
 
 **The numbers** are popnei's, from release 0.2.2 under node on 9
 October 2026, on `e2e/fixtures/panel.nei`. The reference is the first
