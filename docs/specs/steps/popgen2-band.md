@@ -435,7 +435,13 @@ After the link, the focus is on the heading of the warnings or of the
 tab, as above; when the PCA tab has no such heading, as when an error
 has emptied the application's root, it goes to the heading "Popnei".
 
-Every button and the link are at least 24 by 24 px (2.5.8).
+Every button is at least 24 by 24 px (2.5.8). The link is as tall as
+its line of text, 17 to 19 px in Chromium and WebKit (the review of
+work package 5 of `docs/plans/no-undo.md`, 10 October 2026), and meets
+2.5.8 by its exception of spacing: a circle of 24 px centred on it
+touches no other control, since nothing else stands in the line beside
+it. Its ring of the focus is drawn whole, not cut by the box of the
+words, which the flows check.
 
 ### What a screen reader hears
 

@@ -440,7 +440,34 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       .toBe("Popnei PCoA: 2 warnings, in the PCA tab");
     await expectAxeBothSchemes(page, makeAxeBuilder);
 
-    await link.focus();
+    // Reached by the keyboard, its ring of the focus, 2 px wide and 2 px
+    // away from it, is drawn whole, not cut by the box of the words; and
+    // a circle of 24 px centred on it meets no other control (WCAG 2.5.8).
+    await heading(page).focus();
+    await page.keyboard.press("Tab");
+    await expect(link).toBeFocused();
+    const ring = await link.evaluate((element) => {
+      // The box of the words, around the link, which React Aria draws
+      // as a span with the role of a link when it has no address.
+      const words = element.parentElement;
+      if (words === null) return null;
+      const linkBox = element.getBoundingClientRect();
+      const wordsBox = words.getBoundingClientRect();
+      const others = [
+        ...(element
+          .closest("header")
+          ?.querySelectorAll("button, a, [role='link']") ?? []),
+      ].filter((other) => other !== element);
+      return {
+        inside:
+          linkBox.left - 4 >= wordsBox.left - 0.5 &&
+          linkBox.right + 4 <= wordsBox.right + 0.5 &&
+          linkBox.top - 4 >= wordsBox.top - 0.5 &&
+          linkBox.bottom + 4 <= wordsBox.bottom + 0.5,
+        others: others.length,
+      };
+    });
+    expect(ring).toEqual({ inside: true, others: 0 });
     await page.keyboard.press("Enter");
     await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
     await expect(
@@ -813,7 +840,13 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
           wordsCut: words.scrollWidth > words.clientWidth,
           buttonInLine: buttonBox.right <= lineBox.right + 0.5,
           buttonOneLine: buttonBox.height < 2 * 14 * 1.5,
-          gap: Math.round(buttonBox.left - wordsBox.right),
+          // From the end of the words' margin, which takes back the
+          // padding that holds the ring of the focus of a link.
+          gap: Math.round(
+            buttonBox.left -
+              wordsBox.right -
+              parseFloat(getComputedStyle(words).marginInlineEnd),
+          ),
         };
       });
       expect(fit).toEqual({

@@ -62,10 +62,15 @@
 }
 
 /* The words take the room they need, on one line, cut with "…" at their
-   end when there is too little; the control after them stays whole. */
+   end when there is too little; the control after them stays whole. The
+   padding, taken back by the margins, holds the ring of the focus of the
+   link, 2px wide and 2px away from it, which the hidden overflow would
+   cut otherwise. */
 .words {
   flex: 0 1 auto;
   min-inline-size: 0;
+  padding: var(--space-1);
+  margin: calc(-1 * var(--space-1));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
