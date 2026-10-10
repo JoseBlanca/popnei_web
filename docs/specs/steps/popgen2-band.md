@@ -670,7 +670,13 @@ pass held by `e2e/holdWorker.ts`:
   page;
 - the time from a Stop of a PCA of 9,381 individuals to the end of
   "Stopping the PCA…", in Chromium and WebKit, measured once and
-  written into this spec;
+  written into this spec: on the gzipped VCF of 300 variants of
+  `e2e/bigVcf.ts`, the band's Stop pressed after 10 s of the PCA, the
+  line lasted 0.023 s in Chromium 153 and 0.059 s in WebKit 26.6, the
+  new worker's popnei ready at 0.013 s and 0.042 s, and the PCA tab's
+  Run enabled after it in both; on the owner's Mac, an Apple M5 Pro of
+  64 GB with macOS 27.0.1, on 10 October 2026, with a load average of
+  3.3 over the last minute (`NU5 D6` of `e2e/measure.spec.ts`);
 - axe, the checker of accessibility, with the band in each state, in
   light and in dark.
 

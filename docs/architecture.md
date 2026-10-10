@@ -3759,7 +3759,11 @@ tests of the application are the same with it.
   variants file again; a Run waits meanwhile, and the band shows the
   line for 10 s at most (`docs/specs/steps/popgen2-band.md`,
   "Stopping"). From a Stop of a PCA of 9,381 individuals, on the same
-  VCF and Mac, the line lasted [STOPPING TIME, task 5.4].
+  VCF and Mac, the band's Stop pressed after 10 s of the PCA, the line
+  lasted 0.023 s in Chromium 153 and 0.059 s in WebKit 26.6, the new
+  worker's popnei ready at 0.013 s and 0.042 s, with a load average of
+  3.3 over the last minute (10 October 2026, `NU5 D6` of
+  `e2e/measure.spec.ts`).
 - **The page frozen.** The key of every analysis is made on the page after
   every command, from the canonical form of its inputs, and the
   individuals table of 10,000 rows is among them. Since the project is
