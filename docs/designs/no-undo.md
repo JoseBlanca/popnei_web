@@ -491,6 +491,10 @@ not cached. A locked analysis, `{ kind: "locked" }` of `AnalysisKey` in
   "While a PCA runs", "The states" (no "results removed"; a state about
   to start); `popgen2-filters.md`, "Undo, Redo and their keys";
   `popgen2-download.md`, as open point 2 decides.
+- `docs/functionality.md`: the paragraphs of the thresholds and of the
+  PCA tab of `popgen2.html` that describe its Undo and Redo and an Undo
+  that brings a result back (added on 10 October 2026, when the specs
+  were reviewed).
 - `docs/architecture.md`: section 2 ("Immutable, so that undo…", now of
   `popgen.html` alone), 3 (the paragraphs on `popgen2.html` and its
   cache), 5 (the PCA started by `autoRuns.ts`, the measurement above),

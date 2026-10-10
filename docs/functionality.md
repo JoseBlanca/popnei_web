@@ -140,20 +140,15 @@ October 2026 (docs/designs/stats-filters.md): a change of it, by a drag,
 the arrow keys or the box, is a change of the project, and a run of
 presses of the arrow keys is one change. No change of a filter gives a
 notice, and opening a file, the first or another, starts the page's
-history afresh (the owner, 8 October 2026). Undo and Redo, which the
-owner hid on 8 October 2026, came back on 9 October 2026
-(docs/designs/analyses-pca.md, "Undo and Redo"): two buttons at the
-right end of the line of the page's heading, each drawn only while it
-has a step to take, whose tooltip names the step, and Ctrl+Z or Cmd+Z
-anywhere on the page but in a number box with something typed in it.
-They take back and give again the changes of the thresholds, of the
-FILTER box, of the column of the populations the user chooses and of
-the options of the PCA; opening a variants file or an individuals
-file, removing the individuals file or reading it again with other
-options starts the history afresh, with nothing to undo. While a PCA
-runs, the buttons are greyed and the keys do nothing, as are the
-thresholds and the FILTER box, so that nothing the PCA reads changes
-under it. A
+history afresh (the owner, 8 October 2026). The page has no Undo and
+no Redo, as the owner decided on 10 October 2026
+(docs/designs/no-undo.md, "the marimo model"): what it shows is always
+the result of the values on the screen, calculated again when they
+change, and nothing is undone; Ctrl+Z and Cmd+Z only put back the
+number of a box with something typed in it. Undo and Redo stood at the
+right end of the line of the heading from 9 to 10 October 2026, and
+`popgen.html` keeps its own. While a PCA runs, the thresholds and the
+FILTER box are greyed, so that nothing the PCA reads changes under it. A
 threshold is on or off. It is
 turned off by emptying its box, or by giving it 1, the value at which a
 maximum keeps everything, however 1 is reached, typed or by the line
@@ -570,14 +565,21 @@ give the principal components that go into the GWAS as covariates.
   starts it with the tab's button Run, which waits until the page has
   read the variants file to the end for its plots. While it
   runs, the thresholds and the FILTER box of the Variants tab, the PCA's
-  own options, Undo and Redo, and the download of the filtered variants
+  own options and the download of the filtered variants
   wait, greyed with the reason, "Stop the PCA to change the filters.",
   so that no change of what it reads is made under it, as the owner
-  decided on 9 October 2026; the individuals file and the column that
-  colours the points stay open, since they only colour the points. A
-  later change of what the PCA reads takes its result off the screen;
-  the page keeps the result in its memory while the tab is open, so an
-  Undo of the change brings it back without a calculation.
+  decided on 9 October 2026 and again on 10 October 2026; the
+  individuals file and the column that colours the points stay open,
+  since they only colour the points. From 10 October 2026
+  (docs/designs/no-undo.md), once Run has been pressed for the file, a
+  later change of what the PCA reads takes its result off the screen
+  and calculates it again by itself a second after the user stops
+  changing things; a value set back is calculated again too, since the
+  page keeps no result for values it no longer shows. Stop ends the
+  run and keeps the PCA from starting again until Run is pressed, and
+  another variants file waits for its own Run. A band at the top of the
+  window says what is running, with its Stop, while the user is in any
+  tab (docs/specs/steps/popgen2-band.md).
 
 ## 6. Each population
 
