@@ -490,6 +490,8 @@ test.describe("AP6 D3 the locks while a PCA runs", () => {
     await page.keyboard.press("ArrowLeft");
     await page.keyboard.press("PageDown");
     await expect(rate.slider).toHaveValue(before);
+    // The keys leave the reason shown.
+    await expect(page.getByRole("tooltip")).toHaveText(LOCKED);
     // Ctrl+Z after the keys, in the box and on the line: no run of the
     // keys was started to be made a change, and Undo waits.
     for (const control of [rate.box, rate.slider]) {
