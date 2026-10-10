@@ -259,6 +259,13 @@ the first error in them (`docs/specs/shell.md`, "The error bar"):
   which names where Start again is, since the band stands apart from
   the box; the error bar of `popgen.html`, which never shows this
   sentence, keeps its words;
+- the calculation worker stopped during the write of the filtered
+  variants, `writeStopped`, which the dialog of the download also says
+  (`popgen2-download.md`, "When the write fails"): "The application
+  stopped as it wrote the filtered variants: ‹message›. Leave out more
+  variants or individuals with the filters and download again, or write
+  the file with popnei in Python.", the dialog's way to put it right and
+  not a reload, so that the two do not contradict each other;
 - any other: "The application met an error of its own: ‹message›.
   Reload the page, and open your files again."
 

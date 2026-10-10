@@ -433,10 +433,15 @@ words of the failure, read out by a screen reader as they appear
 Close and Escape close the dialog, the button is back, and the focus
 goes to it. The words, by failure, are in "Its words", below, from
 `writeVariants.md`, "Its words on popgen2.html". A failure of the
-worker, and a defect of our own code, are also given to the error bar
-of the page once, as the failures of the one pass are
-(`src/ui/variants/workerDefects.ts`), so that what the worker said can
-be copied and reported.
+worker, and a defect of our own code, are also given to the line of an
+error of the band at the top of the page once, as the failures of the
+one pass are (`src/ui/variants/workerDefects.ts`), so that what the
+worker said can be copied and reported. For the worker stopped during
+the write, its words there agree with the dialog's: "The application
+stopped as it wrote the filtered variants: ‹message›. Leave out more
+variants or individuals with the filters and download again, or write
+the file with popnei in Python." (`popgen2-band.md`, "An error of the
+application"), and not the reload that the band says of other errors.
 
 A Download pressed again after a refusal of popnei under the same
 filters and format sends nothing, since the store keeps a refusal for

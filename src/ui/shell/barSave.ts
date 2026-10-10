@@ -50,7 +50,9 @@ export type BarPage = "starting" | "saving" | "noSaving";
     `saveFailed`, that it could not be saved; on a page that saves no
     project, to press Start again in the box of the variants file after
     the worker stopped during the pass of the count and the statistics,
-    and otherwise to
+    to write a smaller file after it stopped during the write of the
+    filtered variants, as the dialog of the download says, and otherwise
+    to
     reload the page and open the files again; before the store, as the page started, to reload. */
 export function barText(
   first: Pick<Defect, "message" | "origin">,
@@ -69,6 +71,12 @@ export function barText(
     // defect, is not.
     if (first.origin === "countStopped") {
       return `The application stopped as it counted the variants and calculated the statistics: ${text}. Press Start again in the box Variants file, and if it stops again, reload the page and open your files again.`;
+    }
+    // A worker stopped during the write is said by the dialog of the
+    // download too, whose way to put it right these words repeat
+    // (docs/specs/steps/popgen2-download.md, "When the write fails").
+    if (first.origin === "writeStopped") {
+      return `The application stopped as it wrote the filtered variants: ${text}. Leave out more variants or individuals with the filters and download again, or write the file with popnei in Python.`;
     }
     return `The application met an error of its own: ${text}. Reload the page, and open your files again.`;
   }

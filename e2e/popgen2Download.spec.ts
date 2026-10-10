@@ -364,9 +364,12 @@ test("DL6 D4 a crash of the worker during a write gives its words in the dialog,
   await close.click();
   await expect(dialog(page)).toHaveCount(0);
   await expect(button(page)).toBeFocused();
-  // The error bar has what the worker said, for a report.
+  // The band's line of an error has what the worker said, for a report,
+  // with the dialog's way to put it right and no reload.
   await expect(
-    page.getByText(/^The application met an error of its own/u),
+    page.getByText(
+      /^The application stopped as it wrote the filtered variants: .*\. Leave out more variants or individuals with the filters and download again, or write the file with popnei in Python\.$/u,
+    ),
   ).toBeVisible();
 
   const got = await download(page, "VCF compressed with bgzip (.vcf.gz)");
