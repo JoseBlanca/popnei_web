@@ -46,11 +46,12 @@ const TOOLTIP_OFFSET_PX = 8;
 
 /** A tooltip held open by the caller, as a greyed tab's reason: it opens
     on a press of its trigger, by the caller, as well as on the pointer
-    and the focus; a press does not close it; it stays through a scroll
-    while its trigger has the focus; and it is placed under another
-    element than its trigger. It closes on Escape, when the focus leaves
-    the trigger, when the pointer leaves the trigger and the tooltip, and
-    when its text becomes null. */
+    and the focus; a press never closes it; and it is placed under
+    another element than its trigger. Like every tooltip of
+    `WithTooltip`, it stays through a scroll while its trigger has the
+    focus, and it closes on Escape, when the focus leaves the trigger,
+    when the pointer leaves the trigger and the tooltip, and when its
+    text becomes null. */
 export interface HeldTooltip {
   /** Whether the tooltip is open; the caller holds it. */
   readonly isOpen: boolean;
