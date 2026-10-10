@@ -47,12 +47,14 @@
  * under way. It starts once for each key the project gives: a key the
  * store leaves behind is forgotten, so a value set back is calculated
  * again. A Stop, `pause`, ends the live state, and another load ends it
- * too; a failure does not.
+ * too; so does a failure the page's `endsLive` names, a crash of the
+ * memory or one only a reload mends, while every other failure leaves
+ * it live, for the next change of its key to try again.
  */
 
 import type { Key } from "../core/keys.ts";
 import type { AnalysisId } from "../core/project.ts";
-import type { AnalysisStatus, Store } from "../core/store.ts";
+import type { AnalysisStatus, AppState, Store } from "../core/store.ts";
 import type { RunGate } from "./variants/thresholdRun.ts";
 
 /** What the analyses started by themselves need of the store. */
@@ -113,6 +115,15 @@ export interface LiveDeps {
   readonly runStart: (id: AnalysisId) => Promise<void> | null;
   /** The quiet second, `LIVE_QUIET_MS` on the page. */
   readonly quietMs: number;
+  /** Whether the failure of the live analysis `id` in `state` ends its
+      live state, as a Stop does: `failureEndsLive` of
+      analyses/pca/liveEnd.ts on the page, a crash of the memory or a
+      failure only a reload mends; false for a state that is not an
+      error. */
+  readonly endsLive: (
+    state: AppState<unknown, unknown>,
+    id: AnalysisId,
+  ) => boolean;
 }
 
 /** What the page is told of the live analyses beyond the store: one
@@ -402,6 +413,9 @@ export function createAutoRuns(deps: {
       store gives it that key. */
   const liveStarted = new Map<AnalysisId, Key>();
   const liveListeners = new Set<(event: LiveEvent) => void>();
+  /** The kind of the status of each live analysis at the last change of
+      the store, from which a failure is told when it comes. */
+  const lastKinds = new Map<AnalysisId, AnalysisStatus<unknown>["kind"]>();
   /** The live state last told to the listeners of `subscribe`, and the
       one last given by `liveState`, by analysis. */
   const toldLive = new Map<AnalysisId, LiveState>();
@@ -476,6 +490,14 @@ export function createAutoRuns(deps: {
       : "changes";
   }
 
+  /** Ends the live state of `id` for the load open, as the user's Stop
+      does. */
+  function endLive(id: AnalysisId): void {
+    liveFor.delete(id);
+    const fileId = fileIdNow();
+    if (fileId !== null) pausedFor.set(id, fileId);
+  }
+
   function stoppedByUser(id: AnalysisId): boolean {
     const fileId = fileIdNow();
     return fileId !== null && pausedFor.get(id) === fileId && !isLive(id);
@@ -527,6 +549,13 @@ export function createAutoRuns(deps: {
         const key = "key" in status ? status.key : null;
         if (liveStarted.has(id) && liveStarted.get(id) !== key) {
           liveStarted.delete(id);
+        }
+        // A failure that ends the live state, when it comes: as a Stop,
+        // with nothing said, since the failure's own words are.
+        const wasError = lastKinds.get(id) === "error";
+        lastKinds.set(id, status.kind);
+        if (!wasError && isLive(id) && live.endsLive(state, id)) {
+          endLive(id);
         }
       }
       if (state.project !== lastProject) {
@@ -631,9 +660,7 @@ export function createAutoRuns(deps: {
     },
     pause: (id) => {
       liveDefect(id);
-      liveFor.delete(id);
-      const fileId = fileIdNow();
-      if (fileId !== null) pausedFor.set(id, fileId);
+      endLive(id);
       if (statusOf(id).kind === "running") store.cancelRun(id);
       changed();
       tellLive({ kind: "paused", id });

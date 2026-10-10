@@ -1687,7 +1687,11 @@ The page and each worker talk through typed messages
   fall on a control the user is still using. A Stop of the PCA ends the
   live state until Run is pressed again, the owner's choice of 10
   October 2026 (open point 1 of the design); another variants file ends
-  it too, and so does a reload. The code that starts it is
+  it too, and so does a reload, and, as a Stop does, a crash of the
+  worker whose words speak of the memory and a failure only a reload
+  mends, which a retry at each change would only repeat (from the
+  review of work package 4 of `docs/plans/no-undo.md`, 10 October
+  2026). The code that starts it is
   `src/ui/autoRuns.ts`, which already starts the one pass: the PCA is a
   second group after `POPGEN2_CHAIN`, so it waits for the one pass to
   end as it waited at Run; it starts nothing while a calculation or a

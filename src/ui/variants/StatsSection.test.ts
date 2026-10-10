@@ -53,6 +53,7 @@ import { StatsSection } from "./StatsSection.tsx";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
 import { createRunGate, gatedStore } from "./thresholdRun.ts";
 import { ChangeHoldsProvider } from "../widgets/changeHold.ts";
+import { failureEndsLive } from "../analyses/pca/liveEnd.ts";
 
 vi.mock("../download.ts", () => ({
   downloadText: vi.fn(),
@@ -171,6 +172,7 @@ async function drawPage(announced = true): Promise<Page> {
       changes: createRunGate(),
       runStart: (id) => startAnalysis(store, id),
       quietMs: LIVE_QUIET_MS,
+      endsLive: failureEndsLive,
     },
   });
   store.subscribe(() => {

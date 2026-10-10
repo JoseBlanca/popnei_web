@@ -1188,6 +1188,17 @@ function noDistanceText(
     : `${grouped(pairs)} pairs of individuals of ${fileName} have no variant called in both, so they have no Kosman distance and the PCoA cannot place them; ${who} is in ${grouped(inPairs)} of them. ${remedy}`;
 }
 
+/** Whether the words of a worker that stopped with no answer while it
+    calculated the principal components of `numIndividuals` speak of the
+    memory, `crashText`: from `PCA_MEMORY_WORDS_BYTES` of their matrix
+    up, 2,264 individuals or more. popgen2.html ends the PCA's live state
+    at such a crash (docs/specs/steps/popgen2-pca.md, "Live"). */
+export function crashSpeaksOfMemory(numIndividuals: number): boolean {
+  return (
+    BYTES_PER_CELL * numIndividuals * numIndividuals >= PCA_MEMORY_WORDS_BYTES
+  );
+}
+
 /**
  * The words of a worker that stopped with no answer, a `workerFailed`, by
  * the memory the calculation of `numIndividuals` needed, 48.8 bytes for
@@ -1207,7 +1218,7 @@ export function crashText(
     throw defect("crashText was given a project with no variants file.");
   }
   const bytes = BYTES_PER_CELL * numIndividuals * numIndividuals;
-  if (bytes < PCA_MEMORY_WORDS_BYTES) {
+  if (!crashSpeaksOfMemory(numIndividuals)) {
     return `The calculation stopped unexpectedly. Run it again. If it stops again, ${PLACES[page].openAgain(escaped(p.variants.name))}.`;
   }
   const what =

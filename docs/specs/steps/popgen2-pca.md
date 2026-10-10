@@ -237,11 +237,26 @@ state ends at a Stop of the PCA, in this tab or in the band, during a
 run or during the quiet second, as the owner chose on 10 October 2026
 (open point 1 of the design); at the opening of another variants file,
 or of the same one again, which is a new load; and at a reload of the
-page, which keeps nothing. It does not end when the PCA fails, is
-locked, or the user turns to another tab: after a failure the next
-change of what the PCA reads tries again under its new key, and Run
-again in the tab tries again under the same key; a failure never asks
-for Run to be pressed to make the PCA live again.
+page, which keeps nothing. It does not end when the PCA is locked or
+the user turns to another tab, nor at popnei's refusal or a crash of
+the calculation worker whose words do not speak of the memory: after
+such a failure the next change of what the PCA reads tries again under
+its new key, and Run again in the tab tries again under the same key.
+It ends, as a Stop ends it, at a crash whose words speak of the memory,
+a PCA of 2,264 individuals or more (`crashText` of
+`src/core/analyses/pca.ts`), and at the failures only a reload mends:
+the calculations that could not start, the page out of date, and an
+error of the application's own. The tab then shows the failure's words
+and, under them, the line after a Stop ("Stop", below), and nothing
+starts until Run. The reasons: a worker ended in the middle of a
+calculation keeps its memory in WebKit for 40 s and more
+(`docs/designs/no-undo.md`), and a PCA tried again a second after each
+change of a user who follows the crash's advice, to keep fewer
+individuals, would grey the filters and pile that memory up; and a
+failure only a reload mends fails again at every change. (The
+session's decision of 10 October 2026, from the review of work package
+4 of `docs/plans/no-undo.md`; until then every failure left the PCA
+live.)
 
 **When it starts.** While the PCA is live, it starts by itself once
 all of these hold:
@@ -352,9 +367,10 @@ calculation; another distance calculates.
 
 **What starts nothing.** The PCA not live; locked, with its reason
 beside Run, until the lock lifts; done under the key; in error under
-the key, popnei's refusal or a failure of the worker, which a change to
-another key starts again, and Run again in the tab tries again under
-the same key; and a change that gives the key it had.
+the key, popnei's refusal or a crash of the worker not of the memory,
+which a change to another key starts again, and Run again in the tab
+tries again under the same key; and a change that gives the key it
+had.
 
 **Stop.** Stop, in the tab or in the band, ends the run, as before,
 and the live state: the tab shows Run with no result, since none is
@@ -1190,7 +1206,10 @@ once while the focus is on a threshold of the Variants tab.
   emptied and typed again with the same value shows the result kept,
   with no request; a PCA refused by popnei under a key does not start
   again under it, a change to another key starts it, and the PCA is
-  still live after the failure; `aboutToStart` `"changes"` during the
+  still live after the failure, as after a crash not of the memory; a
+  crash of the memory, and the calculations that could not start, end
+  the live state, stopped, and a change then starts nothing;
+  `aboutToStart` `"changes"` during the
   quiet second and while a change under way of a control holds it, a
   slider held, a list open, `"download"` while the dialog of the
   download is open or its write runs, and `null` otherwise; `liveState`
@@ -1363,7 +1382,9 @@ the method's alone, since a list open elsewhere is a user still
 choosing; the dialog of the download holding it; the line of the quiet
 second in the place of the bar; "Calculating the PCA again. Stop it to
 change the filters." said at each start by itself, and the Stop said in
-the status region; a failure that leaves the PCA live; Stop beside the
+the status region; popnei's refusal and a crash not of the memory
+leaving the PCA live, and a crash of the memory and a failure only a
+reload mends ending it; Stop beside the
 lock of a live PCA; every open popover of the page holding the second.
 
 Decided by the owner and no longer the session's: the filters a running

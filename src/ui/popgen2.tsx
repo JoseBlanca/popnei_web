@@ -15,6 +15,7 @@
 import "./tokens.css";
 import "./base.css";
 
+import { failureEndsLive } from "./analyses/pca/liveEnd.ts";
 import { LIVE_QUIET_MS, createAutoRuns } from "./autoRuns.ts";
 import type { AutoRuns } from "./autoRuns.ts";
 import type { Defects } from "./defects.ts";
@@ -132,6 +133,7 @@ function startByThemselves(
       changes: gate,
       runStart: (id) => startAnalysis(gated, id),
       quietMs: LIVE_QUIET_MS,
+      endsLive: failureEndsLive,
     },
   });
   store.subscribe(() => {

@@ -23,6 +23,7 @@ import {
 import { summaryResult } from "../../core/testSupport.ts";
 import type { Job, JobResult, Outcome, Run } from "../../worker/protocol.ts";
 import type { Popgen2PageStore } from "../popgen2Store.ts";
+import { failureEndsLive } from "../analyses/pca/liveEnd.ts";
 
 /** How the download of the code of the section goes: held until `gate`
     resolves, then failed when `fail`; `calls` counts the downloads. */
@@ -191,6 +192,7 @@ async function drawPage(): Promise<Page> {
       changes: createRunGate(),
       runStart: (id) => startAnalysis(store, id),
       quietMs: LIVE_QUIET_MS,
+      endsLive: failureEndsLive,
     },
   });
   store.subscribe(() => {

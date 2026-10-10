@@ -43,6 +43,7 @@ import {
 } from "./variants/thresholdRun.ts";
 import type { RunGate } from "./variants/thresholdRun.ts";
 import { SUMMARY_ID } from "./variants/words.ts";
+import { failureEndsLive } from "./analyses/pca/liveEnd.ts";
 
 const ID = SUMMARY_ID;
 
@@ -945,7 +946,9 @@ function panelLoad(fileId: string): VariantLoad {
  * that the PCA is ready. The page's `sync` after every change of the
  * store, in a microtask, as the entry calls it.
  */
-async function livePage(): Promise<{
+async function livePage(
+  individuals: readonly string[] = ["s000", "s001"],
+): Promise<{
   readonly raw: Popgen2PageStore<JobResult, Blob>;
   readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly gate: RunGate;
@@ -1001,6 +1004,7 @@ async function livePage(): Promise<{
       changes: gate,
       runStart: (id) => startAnalysis(store, id),
       quietMs: LIVE_QUIET_MS,
+      endsLive: failureEndsLive,
     },
   });
   const events: string[] = [];
@@ -1015,7 +1019,7 @@ async function livePage(): Promise<{
   openVariantsFile(store, panelLoad(FIRST));
   raw.variantsRead(FIRST, {
     kind: "read",
-    individuals: ["s000", "s001"],
+    individuals,
     ploidy: 2,
     numVars: null,
     keepsPassed: false,
@@ -1041,7 +1045,7 @@ async function livePage(): Promise<{
   pass.end({
     kind: "done",
     key: pass.key,
-    result: summaryResult(["1"], [1200]),
+    result: summaryResult(["1"], [1200], individuals),
   });
   await flush();
   const pcaRequests = (): readonly LiveRequest[] =>
@@ -1427,6 +1431,46 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     expect(page.auto.run("pca")).toBe(true);
     expect(page.pcaRequests()).toHaveLength(3);
     expect(page.pcaRequests()[2]?.key).toBe(page.pcaRequests()[1]?.key);
+  });
+
+  test.each([
+    { kind: "couldNotStart", reason: "no ready" },
+    { kind: "protocolMismatch" },
+    { kind: "defect", message: "a message that did not validate" },
+  ] as const)(
+    "a failure only a reload mends, $kind, ends the live state as a Stop does, with no Stop said, and a change then starts nothing",
+    async (error) => {
+      const page = await liveDone();
+      page.setMissing(0.05);
+      await wait(1000);
+      await page.endPca({ kind: "failed", error });
+      expect(page.pca().kind).toBe("error");
+      expect(page.auto.isLive("pca")).toBe(false);
+      expect(page.auto.liveState("pca")).toEqual({ kind: "stopped" });
+      expect(page.events).toEqual(["startedByItself pca"]);
+      page.setMissing(0.06);
+      await wait(5000);
+      expect(page.pcaRequests()).toHaveLength(2);
+    },
+  );
+
+  test("a crash whose words speak of the memory, 2,264 individuals, ends the live state; Run makes it live again", async () => {
+    const individuals = Array.from(
+      { length: 2264 },
+      (_, i) => `s${String(i).padStart(4, "0")}`,
+    );
+    const page = await livePage(individuals);
+    page.auto.run("pca");
+    await page.endPca({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    expect(page.auto.liveState("pca")).toEqual({ kind: "stopped" });
+    page.setMissing(0.05);
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(page.auto.run("pca")).toBe(true);
+    expect(page.auto.isLive("pca")).toBe(true);
   });
 
   test('aboutToStart: null before Run, while running and done; "changes" during the quiet second and while a hold of a control holds it; null after a Stop', async () => {

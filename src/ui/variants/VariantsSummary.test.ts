@@ -30,6 +30,7 @@ import { createAnnouncer } from "../shell/status.ts";
 import type { Announcer } from "../shell/status.ts";
 import { StoreProvider } from "../store.tsx";
 import { VariantsSummary } from "./VariantsSummary.tsx";
+import { failureEndsLive } from "../analyses/pca/liveEnd.ts";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -134,6 +135,7 @@ async function drawPage(
       changes: createRunGate(),
       runStart: (id) => startAnalysis(store, id),
       quietMs: LIVE_QUIET_MS,
+      endsLive: failureEndsLive,
     },
   });
   const said: string[] = [];

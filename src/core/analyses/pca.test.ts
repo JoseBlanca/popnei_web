@@ -4,6 +4,7 @@ import {
   PCA_DEFAULTS,
   PCA_MAX_INDIVIDUALS,
   PCA_NUM_COMPS_KEPT,
+  crashSpeaksOfMemory,
   crashText,
   pca,
   pcaFilters,
@@ -973,6 +974,16 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
     ).toBe(
       `${start} the PCoA cannot run. popnei could not read panel.nei: out of memory. Open the file again in the box Variants file, or another file.`,
     );
+  });
+
+  test("a crash speaks of the memory from 2,264 individuals, 250 MB of their matrix, and not below", () => {
+    expect(crashSpeaksOfMemory(2263)).toBe(false);
+    expect(crashSpeaksOfMemory(2264)).toBe(true);
+    const p = project({ options: LD_50000 });
+    expect(crashText(p, 2263, "popgen2")).toContain(
+      "stopped unexpectedly. Run",
+    );
+    expect(crashText(p, 2264, "popgen2")).toContain("memory of this tab");
   });
 
   test("the words of a calculation that stopped with no answer, on popgen2.html", () => {

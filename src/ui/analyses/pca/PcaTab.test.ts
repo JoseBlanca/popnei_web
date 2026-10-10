@@ -37,6 +37,7 @@ import { createRunGate, gatedStore } from "../../variants/thresholdRun.ts";
 import type { RunGate } from "../../variants/thresholdRun.ts";
 import { ChangeHoldsProvider } from "../../widgets/changeHold.ts";
 import { PcaTab } from "./PcaTab.tsx";
+import { failureEndsLive } from "./liveEnd.ts";
 
 // The result drawn as nothing: its plots need a browser's layout, and
 // what is checked here is the button and its line.
@@ -155,6 +156,7 @@ async function drawTab(): Promise<Page> {
       changes: gate,
       runStart: (id) => startAnalysis(store, id),
       quietMs: LIVE_QUIET_MS,
+      endsLive: failureEndsLive,
     },
   });
   raw.subscribe(() => {

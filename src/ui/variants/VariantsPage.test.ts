@@ -56,6 +56,7 @@ import { setAnalysisOptions } from "../../core/project.ts";
 import type * as PcaModule from "../../core/analyses/pca.ts";
 import type * as PcaTabModule from "../analyses/pca/PcaTab.tsx";
 import type { PcaTabProps } from "../analyses/pca/PcaTab.tsx";
+import { failureEndsLive } from "../analyses/pca/liveEnd.ts";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -240,6 +241,7 @@ async function drawPage(pickedId?: string): Promise<{
       changes: createRunGate(),
       runStart: (id) => startAnalysis(store, id),
       quietMs: LIVE_QUIET_MS,
+      endsLive: failureEndsLive,
     },
   });
   store.subscribe(() => {

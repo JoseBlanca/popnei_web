@@ -52,6 +52,7 @@ import { RunGateProvider } from "./runGate.tsx";
 import { createRunGate } from "./thresholdRun.ts";
 import { ChangeHoldsProvider } from "../widgets/changeHold.ts";
 import { VariantsPage } from "./VariantsPage.tsx";
+import { failureEndsLive } from "../analyses/pca/liveEnd.ts";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -211,6 +212,7 @@ async function drawPage(): Promise<Drawn> {
       changes: createRunGate(),
       runStart: (id) => startAnalysis(store, id),
       quietMs: LIVE_QUIET_MS,
+      endsLive: failureEndsLive,
     },
   });
   store.subscribe(() => {
