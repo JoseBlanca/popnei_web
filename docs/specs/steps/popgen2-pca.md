@@ -494,8 +494,15 @@ switch and its two fields. Each is drawn greyed, carries
 the keyboard learns why; its tooltip, on the mouse, the focus and a
 press, and its description for a screen reader, are "Stop the PCA to
 change the filters.", "Stop the PCoA …" under the PCoA, the way the
-greyed tabs give their reason (`WithTooltip` of the widgets). A press, a
-key or a drag on it changes nothing. Undo and Redo wait with the same
+greyed tabs give their reason (`WithTooltip` of the widgets). A
+tooltip shown by the focus stays through any scroll while its control
+has the focus, and goes with Escape, when the focus leaves the control,
+or when the mouse leaves it: the browser scrolls a control reached by
+the Tab key into view a frame after its tooltip shows, and React Aria
+closed the tooltip on that scroll, so that the line of a threshold
+reached by the Tab key lost its reason in 2 of 12 runs of its flow in
+Chromium (since 10 October 2026). A press, a key or a drag on it
+changes nothing, and leaves its tooltip shown. Undo and Redo wait with the same
 words (above, "Undo and Redo"), and so does the download of the
 filtered variants, with its own ("Its words"). When the PCA ends, fails
 or is stopped, each is as before.

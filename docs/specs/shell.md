@@ -202,6 +202,17 @@ its own components, can show the reason; if it does not take a `Link`
 when it is built, the reason is a line of text under the stepper while
 the link has the pointer or the focus.
 
+A tooltip shown by the focus, the reason of a link of the stepper or
+the description of Undo and Redo (above, "The header"), stays through
+any scroll while its control has the focus, and goes with Escape, when
+the focus leaves the control, or when the mouse leaves it. Until 10
+October 2026 React Aria closed it on any scroll of what holds its
+control, which the browser makes when the Tab key brings a control into
+view, a frame after the tooltip shows; the change was made for the
+locked controls of popgen2.html (`docs/specs/steps/popgen2-pca.md`,
+"While a PCA runs"), in `WithTooltip`, the widget that draws every
+tooltip of both pages, so it changed here too.
+
 | step | state | when | its reason |
 |---|---|---|---|
 | Variants | To do | no variants file | for an opened project, the text of `askedFileText` of `projectFile.ts` (`docs/specs/core/projectFile.md`, "Opening"); otherwise the reason `projectNeeds` gives, "Load a variants file in the Variants step." |
