@@ -1525,3 +1525,25 @@ edge of the 48 rem column; a refused PNG's words over the plot's
 corner; three texts under an empty LD distance; the table of the
 individuals without a frozen first column; Safari, Firefox and
 VoiceOver not seen; the times of work package 7 taken under load.
+
+### Work package 10, round 1, 10 October 2026: the owner's changes
+
+The owner, having read the report, asked on 10 October 2026 for:
+
+1. The method, PCA or PCoA, chosen in a drop-down list, not two radio
+   buttons.
+2. The PCA's own missing-data and MAF filters as sliders whose range
+   ends at the value of the Variants tab, in place of the two radio
+   buttons "As in the Variants tab" and "Stricter for the PCA" with a
+   number box. The session's reading: each slider starts at the
+   Variants tab's value, which filters nothing more, and can only move
+   to stricter values (missing data from 0 to that value; the major
+   allele frequency from 0.5 to it); the value is shown beside it. The
+   LD pruning's r² and distance stay number boxes.
+3. No buttons to turn, tilt, view along an axis, zoom or reset the 3D
+   view: it is turned by dragging and zoomed with Ctrl and the wheel,
+   as now. A user of the keyboard alone can no longer turn it, and has
+   the 2D plot of any two components; said to the owner.
+4. Undo and Redo removed, "the marimo model": a result whose
+   parameters changed is calculated again. Asked back before it is
+   built (what it changes is in the reply of 10 October).
