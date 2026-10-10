@@ -90,7 +90,11 @@ the heading and covers nothing. While it has words it stays at the top
 of the window while the page scrolls, with the page's background and a
 border under it, so that what scrolls under it does not show through
 them. This is the third option of the open point below, recommended
-and followed meanwhile.
+and followed meanwhile. The one exception to "nothing moves" is an
+error of the application, whose line takes more than the kept room and
+pushes the page down when it comes ("An error of the application",
+below): the room is kept for the line the band shows every few
+seconds, and an error is rare and asks the user to reload.
 
 It stands below the page's popovers, tooltips and dialogs in the order
 in which they cover one another, so that a menu or a tooltip near the
@@ -526,22 +530,26 @@ thin border while it is empty.
 
 ## Open points
 
-1. **The band's room while nothing runs.** Three ways:
+1. **The band's room while nothing runs.** The band is about 40 px
+   high, an estimate from the 24 px of a button and its margins, to be
+   measured in work package 5 of `docs/plans/no-undo.md`; on a phone of
+   320 by 568 px that is about one fourteenth of the screen. The
+   screenshot `popgen2-band-empty` of that package is where the owner
+   sees it. Three ways, each said by what the user sees:
    (a) the band stays at the top of the window always, its line empty
-   while it has nothing to say: the page never moves, but an empty
-   band still covers the top 40 px of what scrolls under it, about one
-   fourteenth of a phone of 320 by 568 px, the height an estimate from
-   the 24 px of a button and its margins, not measured in a browser;
+   while it has nothing to say: the page never moves, but while the
+   page is scrolled the empty band hides the top 40 px of what is under
+   it, at every moment;
    (b) the band appears over the top of the page only while it has
-   something to say, with no room kept: nothing is covered while it is
-   empty, but while it shows it covers the line of the heading and the
-   top of the page, for as long as something runs, up to the minutes of
-   a PCA of thousands of individuals; (c) its room kept in the page at
-   the top, the band staying at the top of the window only while it has
-   words, and empty, taking no click, scrolling away with the page:
-   nothing moves when it starts or stops, and while empty it covers
-   nothing; while it has words and the page is scrolled it covers the
-   top 40 px, as (a). Recommended: (c), which covers only while there is
+   something to say, with no room kept: the page is 40 px shorter at
+   the top, but while the band shows it hides the heading "Popnei" and
+   the top of the page under it, for as long as something runs, up to
+   the minutes of a PCA of thousands of individuals; (c) its room kept
+   in the page at the top, a margin of 40 px above the heading, the band
+   staying at the top of the window only while it has words, and
+   scrolling away with the page while empty: nothing moves when it
+   starts or stops, an empty band hides nothing, and a band with words
+   on a scrolled page hides the top 40 px under it, as (a). Recommended: (c), which covers only while there is
    something to read. Meanwhile: (c), which "Its place" describes; (a)
    or (b) changes the drawing of the band and its screenshots, task 5.3
    of `docs/plans/no-undo.md`. The screenshot `popgen2-band-empty` shows

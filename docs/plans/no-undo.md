@@ -1,10 +1,49 @@
 # Plan: no Undo on popgen2.html, the PCA calculated again by itself, and the band
 
-10 October 2026. A draft, for the owner's approval with the specs it
-builds from. Once approved it is carried out without a stop for the
-owner before its last work package, in which they try the page; what
-would be a stop by the `building` skill is named below ("The stops"),
-with what the session does meanwhile.
+10 October 2026. A draft.
+
+## For the owner
+
+What you will try at the end, on `popgen2.html`: no Undo and no Redo;
+after you press Run in the PCA tab once for a file, any later change of
+a filter or of an option of the PCA calculates the PCA again by itself,
+one second after you stop changing things (the quiet second: each
+change, or a slider still held, a list still open, a number still being
+typed, puts the start a second later); meanwhile the PCA tab says the
+PCA starts again in a moment (the state called "about to start"), with
+a Stop; Stop keeps the PCA from starting again until you press Run; a
+value set back is calculated again; and a band at the top of the window
+says what is running, with its Stop, from whichever tab you are in.
+
+The order of the eight packages:
+
+1. The part of the application that keeps the results learns to throw
+   a result away as soon as its filters change.
+2. Undo and Redo leave the page, and that rule is turned on for it.
+3. The page learns when you are in the middle of a change: a slider
+   held, a list open, a number being typed.
+4. The PCA starts again by itself after a change.
+5. The band at the top of the window.
+6. The instructions of the project and the documents brought up to
+   date.
+7. The session looks at every screenshot and runs every check.
+8. You try the page.
+
+You are stopped before package 8 only if: a control of the page gives
+no signal that you are still using it, so the quiet second could not
+wait for you; one change starts two PCAs; a result is shown for other
+values than those on the screen; or a package fails three times. Each
+of these would mean the design does not hold as approved.
+
+What is asked of you now: to approve this plan and the specs it builds
+from, before any code is written. The band's spec has one open point,
+how much room the band keeps at the top of the page; you can answer it
+now or when you try the page in package 8, and meanwhile the
+recommendation is followed.
+
+You can stop reading here. The rest is for the sessions that build it.
+
+## The plan
 
 It builds the design `docs/designs/no-undo.md`, approved by the owner
 on 10 October 2026 with the recommendations of its three open points,
@@ -77,8 +116,10 @@ sections 2, 3, 5, 7, 9, 11 and 12.
   test: `NU2 D3` is work package 2, deliverable 3, of this plan (`NU`
   for no Undo). No test name on this branch starts with `NU` followed by
   a digit (a search of `src/` and `e2e/` on 10 October 2026), so on the
-  commit the plan starts from every check below selects no test, and
-  fails by its count. A Vitest count is read from the summary line of
+  commit the plan starts from every check below selects no test; each
+  check asks for at least a number of tests, and a run that selects
+  none falls short of that number, so the check fails there as it
+  must. A Vitest count is read from the summary line of
   `npx vitest run <path> -t "<tag>"`, "Tests N passed", since a tag that
   selects nothing exits 0; a Playwright count from the summary of the
   browser check, half in each engine.
@@ -244,11 +285,12 @@ Tasks:
   analysis, the refusals left behind, and the late result not cached
   (the store spec, "On popgen2.html: no notice, no Undo, and no result
   kept for values left behind", its bullets of `dropLeftBehind`, and the
-  interface of `createStore`). Deliverables 2 and 3. Stands on 1.1. A
-  key left behind whose result stays would show the PCA of other
-  filters as current nowhere, but would let a value set back show the
-  old result with no calculation, against the owner's answer; so this
-  is a commit of its own, guarded by deliverable 2.
+  interface of `createStore`). Deliverables 2 and 3. Stands on 1.1. If
+  a result stayed in the cache under a key left behind, nothing on the
+  screen would look wrong until the user set a value back, when the old
+  result would come back with no calculation, against the owner's
+  answer, and no test but deliverable 2's would notice; so this is a
+  commit of its own, guarded by deliverable 2.
 - [ ] 1.3 `stopping` in the state of `src/core/store.ts` (the store
   spec, "Stopping", and `AppState` in its interface). Deliverable 4.
   May run after 1.2 in the same subagent.
@@ -402,11 +444,16 @@ Deliverables:
 5. The screens `popgen2-pca-about-to-start` and
    `popgen2-pca-live-locked`, at 1280 and 320 px, light and dark.
 6. The memory of a PCA started by itself after a finished one, in
-   WebKit, by the measurement run, alone on the machine: a PCA of 9,381
-   individuals ended, a threshold moved, the PCA again; the engine's
-   memory at the peak of the second run no more than that of the first
-   and 0.25 GB (the screen spec, "Stop", and its bullet "Live" of "How
-   it is checked"), written under "What was done".
+   WebKit, by the measurement run, alone on the machine, on a VCF of 300 variants and 9,381 diploid individuals, written by
+   `e2e/bigVcf.ts` as the PCA tab's plan measured it, about 11 MB (4
+   bytes of genotypes per individual and variant), on the owner's Apple
+   M5 Pro with 64 GB, in WebKit 26.6 under Playwright:
+   a PCA ended, a threshold moved, the PCA again by itself. The bound:
+   the peak of the second run, the memory of the engine's processes
+   summed every 250 ms, is at most the peak of the first run plus 0.25
+   GB; a second run on top of the memory of the first would be about 3
+   GB more. (The screen spec, "Stop", and its bullet "Live" of "How it
+   is checked".) Written under "What was done".
 
 Tasks:
 
@@ -466,7 +513,9 @@ Deliverables:
 4. Axe with the band in each state, light and dark.
 5. The screens of the band spec's "How it is checked", "The screens",
    ten states at 1280 and 320 px, light and dark.
-6. The time from a Stop of a PCA of 9,381 individuals to the end of
+6. The time from a Stop of a PCA of 9,381 individuals, on the same
+   VCF of 300 variants written by `e2e/bigVcf.ts`, on the owner's Mac,
+   to the end of
    "Stopping the PCA…", in Chromium and WebKit, by the measurement run,
    written into the band spec under "How it is checked".
 
@@ -564,8 +613,17 @@ line carries no live role.
 
 ## The categories of each review
 
-The `code-review` skill's four that always run, `spec`, `tests`,
-`stale` and `errors`, for every work package that changes code, with:
+The `code-review` skill's categories, each a reviewer that reads the
+work for one kind of fault: `spec`, whether the code does what the spec
+says; `tests`, whether the tests would fail if it did not; `stale`,
+comments and documents that no longer say what the code does;
+`errors`, failures handled and said to the user; `api`, the interfaces
+between the parts; `architecture`, the rules of
+`docs/architecture.md`; `react`, the code of the screens; `accessibility`,
+the keyboard, the screen reader and the contrast; `ux`, what the user
+sees and understands; `browser`, what differs between the engines; and
+`bundle`, what the page downloads. The first four run for every work
+package that changes code, with:
 
 - 1: `api`, `architecture` (a setting of the store shared by two
   pages);

@@ -141,8 +141,9 @@ the arrow keys or the box, is a change of the project, and a run of
 presses of the arrow keys is one change. No change of a filter gives a
 notice, and opening a file, the first or another, starts the page's
 history afresh (the owner, 8 October 2026). The page has no Undo and
-no Redo, as the owner decided on 10 October 2026
-(docs/designs/no-undo.md, "the marimo model"): what it shows is always
+no Redo, as the owner decided on 10 October 2026 (docs/designs/no-undo.md),
+after marimo, a Python notebook that runs again every cell that
+depends on a value the user changed and has no undo: what it shows is always
 the result of the values on the screen, calculated again when they
 change, and nothing is undone; Ctrl+Z and Cmd+Z only put back the
 number of a box with something typed in it. Undo and Redo stood at the
@@ -574,7 +575,9 @@ give the principal components that go into the GWAS as covariates.
   (docs/designs/no-undo.md), once Run has been pressed for the file, a
   later change of what the PCA reads takes its result off the screen
   and calculates it again by itself a second after the user stops
-  changing things; a value set back is calculated again too, since the
+  changing things, a second that waits while a slider is held, a list
+  is open or a number is being typed, during which the PCA tab says it
+  starts again in a moment; a value set back is calculated again too, since the
   page keeps no result for values it no longer shows. Stop ends the
   run and keeps the PCA from starting again until Run is pressed, and
   another variants file waits for its own Run. A band at the top of the
