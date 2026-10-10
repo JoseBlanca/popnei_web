@@ -109,10 +109,12 @@ Out, each with where it goes:
 
 ## The open point of the specs
 
-The band spec has one open point, "The band's room while nothing runs":
-the band keeps one line at the top of the page from the first drawing,
-empty while it has nothing to say, or appears over the top of the page
-only when it has something to say. Meanwhile: the room kept, as
+The band spec has one open point, "The band's room while nothing runs",
+with three ways: (a) the band always at the top of the window, empty
+while it has nothing to say; (b) the band over the top of the page only
+while it has something to say, with no room kept; (c) its room kept in
+the page, the band at the top of the window only while it has words,
+and scrolling away, taking no click, while empty. Meanwhile: (c), as
 recommended. Another answer changes task 5.3 and the screenshots of
 deliverable 5.5.
 
@@ -224,10 +226,15 @@ Deliverables:
    work package 2's, on a store made by `createStore` with the analyses
    and the first project of `popgen2.html`, `stopLeftBehind` and
    `dropLeftBehind`, under `NU1 D2` in `src/core/store.test.ts`. At
-   least 7 tests.
+   least 9 tests, the late result whose key comes back before its
+   outcome and the defect of `dropLeftBehind` without `stopLeftBehind`
+   among them.
 3. The old page's store, and a store made with `stopLeftBehind` alone,
    unchanged: the tests of `src/core/store.test.ts` and
    `src/ui/popgenStore.test.ts` that were there pass untouched.
+4. `stopping` of the store's state: the checks of the store spec's
+   section "Stopping", under `NU1 D4` in `src/core/store.test.ts`. At
+   least 4 tests.
 
 Tasks:
 
@@ -242,6 +249,9 @@ Tasks:
   filters as current nowhere, but would let a value set back show the
   old result with no calculation, against the owner's answer; so this
   is a commit of its own, guarded by deliverable 2.
+- [ ] 1.3 `stopping` in the state of `src/core/store.ts` (the store
+  spec, "Stopping", and `AppState` in its interface). Deliverable 4.
+  May run after 1.2 in the same subagent.
 
 What could go wrong: a lock. The PCA locked by its distance emptied has
 no key, and a store that compares only the keys before and after a
@@ -287,9 +297,10 @@ Deliverables:
 
 Tasks:
 
-- [ ] 2.1 The store of the page, in `src/ui/popgen2Store.ts` and every
-  caller its type change breaks (the store spec, "No Undo on
-  `popgen2.html`"). Deliverable 1. The flows of
+- [ ] 2.1 The store of the page, `Popgen2PageStore` in
+  `src/ui/popgen2Store.ts`, and the callers the store spec's "No Undo on
+  `popgen2.html`" lists, each typed with the new type (the store spec,
+  that paragraph and "The TypeScript interface"). Deliverable 1. The flows of
   `e2e/popgen2Undo.spec.ts` that bring a result back by Undo fail from
   this commit until 2.2; 2.1 and 2.2 are one subagent's, and the browser
   check is run after 2.2.
@@ -320,15 +331,18 @@ Deliverables:
    `src/ui/variants/thresholdRun.test.ts`: two holds taken, one
    released: still held; the second released: one call of the
    listener; a hold released twice counts once; a run of the arrow keys
-   is a hold from its first press to its change.
+   is a hold from its first press to its change; a hold whose control
+   is removed, through the release the widget gives at its removal,
+   brings the count back to 0.
 2. The widgets, in jsdom, under `NU3 D2` beside each: a slider
    (`Slider.tsx`, `ThresholdSlider.tsx`) holds from its first `onChange`
    of a pointer to its `onChangeEnd`, or until it leaves the page, and
-   a press of a key takes no hold; a list (`Select.tsx`) holds while
-   open; a number box (`NumberField.tsx`) holds while its text differs
+   a press of a key takes no hold; a list (`Select.tsx`) and a menu
+   "Download…" (`DownloadMenu.tsx`) hold while open; a number box (`NumberField.tsx`) holds while its text differs
    from the value it is given, and lets go at Enter, Tab, the loss of
    the focus and Escape; the dialog of the download
-   (`DownloadVariants.tsx`) holds while open; and none of them takes a
+   (`DownloadVariants.tsx`) holds while open; each lets its hold go
+   when it leaves the page while holding; and none of them takes a
    hold on the old page, which gives no gate.
 3. The flows of `popgen2.html` pass untouched, since nothing reads the
    holds yet. What a hold does in a browser, a drag held still, a list
@@ -367,12 +381,15 @@ Deliverables:
    `src/ui/autoRuns.test.ts`, on the real store of the page, a fake
    worker, the gate and Vitest's clock: each case of the screen spec's
    "How it is checked", In Vitest, its bullet "The PCA calculated again
-   by itself". At least 14 tests.
+   by itself". At least 16 tests, `aboutToStart` during the holds and
+   the PCA still live after a failure among them.
 2. The PCA tab: Run through `autoRuns.run`, Stop through
    `autoRuns.pause`, the state about to start with its line and its
-   Stop, under `NU4 D2` beside `PcaTab.tsx` in jsdom; the words of the
-   line, of "Calculating the PCA again." and of the Stop, by the method,
-   in `tabWords.ts`'s tests; the status region says the start by itself
+   Stop, the line while the dialog of the download holds it, and Stop in
+   the place of Run while the PCA is live and locked, under `NU4 D2`
+   beside `PcaTab.tsx` in jsdom; the words of the lines, of
+   "Calculating the PCA again. Stop it to change the filters." and of
+   the Stop, by the method, in `tabWords.ts`'s tests; the status region says the start by itself
    once and the Stop, in `announceChanges.ts`'s tests.
 3. The flows under `NU4 D3` in a new `e2e/popgen2Live.spec.ts`: the
    bullet "Live" of the screen spec's "How it is checked", In
@@ -384,6 +401,12 @@ Deliverables:
    page's flows of the PCA, `e2e/pca*.spec.ts`.
 5. The screens `popgen2-pca-about-to-start` and
    `popgen2-pca-live-locked`, at 1280 and 320 px, light and dark.
+6. The memory of a PCA started by itself after a finished one, in
+   WebKit, by the measurement run, alone on the machine: a PCA of 9,381
+   individuals ended, a threshold moved, the PCA again; the engine's
+   memory at the peak of the second run no more than that of the first
+   and 0.25 GB (the screen spec, "Stop", and its bullet "Live" of "How
+   it is checked"), written under "What was done".
 
 Tasks:
 
@@ -400,6 +423,8 @@ Tasks:
   giving the gate to `createAutoRuns` (the screen spec, "Run and Stop",
   "The states", "Its words", "Accessibility"). Deliverables 2 to 5.
   Stands on 4.1.
+- [ ] 4.3 The measurement of deliverable 6, alone on the machine.
+  Stands on 4.2.
 
 What could go wrong: the thresholds' run of the arrow keys holds the
 second for its own second, so the PCA starts about two seconds after
@@ -425,8 +450,8 @@ Deliverables:
 1. `bandOf` and its words, under `NU5 D1` in
    `src/ui/band/band.test.ts`: each case of the band spec's "How it is
    checked", In Vitest. At least 12 tests.
-2. The band drawn, the tab shown in `src/ui/pageTab.ts`, and the starts
-   of the worker counted by the entry, under `NU5 D2` in jsdom: each
+2. The band drawn and the tab shown in `src/ui/pageTab.ts`, under
+   `NU5 D2` in jsdom: each
    case of the band spec's "How it is checked", In jsdom; the row of
    tabs and the band change the same tab shown.
 3. The flows under `NU5 D3` in a new `e2e/popgen2Band.spec.ts`: each
@@ -456,11 +481,14 @@ Tasks:
   beside 5.1.
 - [ ] 5.3 `src/ui/band/Band.tsx`, drawn by `popgen2.tsx` in `#defects`
   in place of the error bar, with the words and buttons of the error
-  bar reused from `src/ui/shell/` and not copied, the count of the
-  worker's starts from `connectStore` of `src/ui/pageStart.tsx`, the
-  room kept, the band fixed at the top while the page scrolls, and the
-  padding of the scroll for the focus (the band spec, "Its place", "An
-  error of the application", "Accessibility", "The layout"). The rest
+  bar reused from `src/ui/shell/` and not copied, `barText`'s three
+  sentences, the one drawn with no store among them, `stopping` of the
+  store, the room kept, the band at the top while it has words, below
+  the popovers and dialogs, its alert and status region marked as live
+  announcers, the padding of the scroll in `src/ui/base.css` beside the
+  toasts', and the focus on the heading after its Stop (the band spec,
+  "Its place", "Stopping", "An error of the application",
+  "Accessibility", "The layout"). The rest
   of deliverable 2, and deliverables 3 to 5. Stands on 5.1 and 5.2. The
   answer to the band spec's open point changes this task.
 - [ ] 5.4 The measurement of "Stopping", alone on the machine
@@ -469,7 +497,7 @@ Tasks:
 What could go wrong: the band fixed at the top in its own root, outside
 the page's column, in WebKit; and a control reached by the Tab key
 under the band, which deliverable 3 reads by the band's rectangle and
-the control's. A screen reader hearing the band twice, once as its
+the control's in WebKit as in Chromium, and the owner in Safari. A screen reader hearing the band twice, once as its
 line and once from the status region; deliverable 2 checks that the
 line carries no live role.
 
@@ -484,11 +512,12 @@ line carries no live role.
   skill; each place found by `grep -rn -i "undo\|notice\|popgen2"
   CLAUDE.md .claude/` that says what `popgen2.html` no longer does. The
   report lists the files.
-- [ ] 6.2 The documents: `docs/architecture.md` against what was built,
-  the time of "Stopping" where section 11 names the band; each spec of
-  this plan says it is built on the branch `pca-tab`, with what a round
-  changed; `docs/functionality.md` where it names Undo on `popgen2.html`;
-  "What was done" complete.
+- [ ] 6.2 The documents: `docs/architecture.md` and
+  `docs/functionality.md`, revised for the design on 10 October 2026,
+  against what was built; the time of "Stopping" and the memory of
+  deliverable 4.6 where section 11 of the architecture gives the costs;
+  each spec of this plan says it is built on the branch `pca-tab`, with
+  what a round changed; "What was done" complete.
 
 ## Work package 7: the end
 
@@ -520,8 +549,9 @@ line carries no live role.
   control to the next, and the two seconds after the arrow keys on a
   threshold; the choices of the band spec's and the screen spec's
   "Choices made by the session"; the band spec's open point, if not
-  answered before; whether Safari and Firefox show the band fixed at
-  the top, and what Cmd+Z does in Safari.
+  answered before; whether Safari and Firefox show the band at the top
+  with no control reached by Tab under it, what Cmd+Z does in Safari,
+  and what VoiceOver says after the band's Stop.
 - [ ] 8.2 The rounds. Two are expected. Each change the owner asks for
   goes into the spec first, then into the code, with its commit and its
   screenshots taken again; a change that reaches `src/core/`, the
@@ -547,7 +577,7 @@ The `code-review` skill's four that always run, `spec`, `tests`,
   calculation at a time), `react`, `accessibility`, `ux`, `browser`,
   with its screenshots;
 - 5: `api`, `architecture` (a second root that reads the store and
-  changes the tab shown), `react`, `accessibility`, `ux`, `browser`
+  changes the tab shown, and the store's `stopping`), `react`, `accessibility`, `ux`, `browser`
   (the band fixed at the top, the focus not hidden under it), `bundle`
   (the band's code in the first load), with its screenshots;
 - 6: `stale` alone, on the instructions and the documents;
