@@ -120,21 +120,21 @@ export function Slider({
               if (!waits) onChange(ended);
             }}
           >
-            <div className={classOf(styles, "head")}>
-              <Label className={classOf(styles, "label")}>{label}</Label>
+            <Label className={classOf(styles, "label")}>{label}</Label>
+            <div className={classOf(styles, "row")}>
+              <SliderTrack ref={trackRef} className={classOf(styles, "track")}>
+                <SliderThumb
+                  className={classOf(styles, "thumb")}
+                  inputRef={inputRef}
+                  {...(description !== undefined && {
+                    "aria-describedby": description,
+                  })}
+                />
+              </SliderTrack>
               <SliderOutput className={classOf(styles, "output")}>
                 {text}
               </SliderOutput>
             </div>
-            <SliderTrack ref={trackRef} className={classOf(styles, "track")}>
-              <SliderThumb
-                className={classOf(styles, "thumb")}
-                inputRef={inputRef}
-                {...(description !== undefined && {
-                  "aria-describedby": description,
-                })}
-              />
-            </SliderTrack>
           </AriaSlider>
         );
       }}

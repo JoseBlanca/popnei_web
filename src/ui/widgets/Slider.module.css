@@ -1,20 +1,9 @@
 /* The tokens are those of src/ui/tokens.css. */
 
-/* As wide as its column, and no wider than a field of a number would
-   be read across: 20 rem. */
 .slider {
   display: grid;
   gap: var(--space-1);
-  inline-size: min(100%, 20rem);
-}
-
-/* The name, and the value at the end of its line; the value goes under
-   the name when the line is too narrow for both. */
-.head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-  justify-content: space-between;
+  inline-size: 100%;
 }
 
 .label {
@@ -22,17 +11,30 @@
   overflow-wrap: anywhere;
 }
 
+/* The track and, after it, the value; the value goes under the track
+   when the column is too narrow for both. */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  align-items: center;
+}
+
 .output {
+  flex: 0 1 auto;
   font-variant-numeric: tabular-nums;
 }
 
-/* As high as a target, so that a press near the line reaches it; the
-   line itself drawn thin in its middle. React Aria makes it the box the
-   thumb is placed in. */
+/* As high as a target, so that a press near the line reaches it, and
+   at most 20 rem long; set in by half a thumb at each end, so that the
+   thumb at an end stays within the column. React Aria makes it the box
+   the thumb is placed in. */
 .track {
   position: relative;
-  inline-size: 100%;
+  flex: 1 1 12rem;
+  max-inline-size: 20rem;
   block-size: var(--target-min);
+  margin-inline: calc(var(--target-min) / 2);
 }
 
 .track::before {
