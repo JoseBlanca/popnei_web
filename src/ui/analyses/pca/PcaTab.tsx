@@ -24,10 +24,12 @@
 import { useEffect, useSyncExternalStore } from "react";
 
 import { pcaOnPopgen2, pcaOptions } from "../../../core/analyses/pca.ts";
-import type { AutoRuns } from "../../autoRuns.ts";
+import type { AutoRuns, LiveState } from "../../autoRuns.ts";
+import type { PcaMethod } from "../../../worker/protocol.ts";
 import { useAppState } from "../../store.tsx";
 import { summaryStatus } from "../../variants/words.ts";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
+import type { PanelLive } from "../AnalysisPanel.tsx";
 import { passLock } from "./passLock.ts";
 import { pcaTabPanel } from "./pcaTabPanel.ts";
 import { prefetchPcaResults } from "./PcaTabResults.tsx";
@@ -44,6 +46,25 @@ export interface PcaTabProps {
       the code of the result is then downloaded, so that it is there
       when a run ends. */
   readonly shown: boolean;
+}
+
+/** The live state `state` of the PCA as its panel draws it, with the
+    words of its lines by the method `method`. */
+function panelLive(state: LiveState, method: PcaMethod): PanelLive {
+  switch (state.kind) {
+    case "off":
+      return { kind: "off" };
+    case "stopped":
+      return { kind: "stopped", line: stoppedLine(method) };
+    case "live":
+      return {
+        kind: "live",
+        aboutToStartLine:
+          state.aboutToStart === null
+            ? null
+            : aboutToStartLine(method, state.aboutToStart),
+      };
+  }
 }
 
 /** The PCA tab: its heading, its options, the line of the individuals,
@@ -71,16 +92,13 @@ export function PcaTab({ autoRuns, shown }: PcaTabProps): React.JSX.Element {
   const state = useSyncExternalStore(autoRuns.subscribe, () =>
     autoRuns.liveState(PCA),
   );
-  const about = state.kind === "live" ? state.aboutToStart : null;
   return (
     <AnalysisPanel
       id={PCA}
       ui={pcaTabPanel(method)}
       page={{
         lock,
-        live: state.kind === "live",
-        aboutToStart: about === null ? null : aboutToStartLine(method, about),
-        stoppedLine: state.kind === "stopped" ? stoppedLine(method) : null,
+        live: panelLive(state, method),
         onRun: () => {
           autoRuns.run(PCA);
         },

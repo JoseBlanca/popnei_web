@@ -72,23 +72,30 @@ export interface PagePanel {
       locks a Run the store offers and takes the place of the store's
       reason; `null` when the page locks nothing. */
   readonly lock: string | null;
-  /** Whether the analysis is live, started again by itself after each
-      change: a Run locked, by the store or by the page, is then Stop,
-      enabled, beside the lock, so that the user can end the live state
-      before the lock lifts (docs/specs/steps/popgen2-pca.md, "Run and
-      Stop"). */
-  readonly live: boolean;
-  /** The line of the quiet second while the analysis is about to start
-      by itself, beside Stop in the place of Run; `null` otherwise. */
-  readonly aboutToStart: string | null;
-  /** The line beside Run after the user's Stop ended the live state;
-      `null` otherwise. */
-  readonly stoppedLine: string | null;
+  /** Whether the analysis is started again by itself after each change,
+      with the words of its lines (docs/specs/steps/popgen2-pca.md, "Run
+      and Stop"). */
+  readonly live: PanelLive;
   /** The user's Run: makes the analysis live and starts it. */
   readonly onRun: () => void;
   /** The user's Stop: stops its run and ends its live state. */
   readonly onStop: () => void;
 }
+
+/** The live state of an analysis as its panel draws it. */
+export type PanelLive =
+  /** Not live, and not stopped by the user: Run as it is. */
+  | { readonly kind: "off" }
+  /** The user's Stop ended its live state: Run, with `line`, which says
+      why nothing starts by itself any more. */
+  | { readonly kind: "stopped"; readonly line: string }
+  /** Live, started again by itself after each change: a Run locked, by
+      the store or by the page, is then Stop, enabled, beside the lock,
+      so that the user can end the live state before the lock lifts; and
+      while it is about to start, Stop in the place of Run beside
+      `aboutToStartLine`, the line of the quiet second, `null` while it
+      is not about to start. */
+  | { readonly kind: "live"; readonly aboutToStartLine: string | null };
 
 /** What the panel of an analysis is drawn with. */
 export interface AnalysisPanelProps {
@@ -155,7 +162,7 @@ export function AnalysisPanel({
         <RunButton
           button={button}
           runLabel="Run"
-          line={line}
+          {...(line === null ? {} : { line })}
           onRun={() => {
             if (page === undefined) void startAnalysis(store, id);
             else page.onRun();
@@ -197,16 +204,23 @@ function pageButton(
   if (page === undefined || button?.kind !== "run") {
     return { button, line: null };
   }
-  if (button.reason !== null) {
-    return page.live
-      ? { button: { kind: "stop" }, line: button.reason }
-      : { button, line: null };
-  }
   const ready = status.kind === "ready" || status.kind === "removed";
-  if (ready && page.aboutToStart !== null) {
-    return { button: { kind: "stop" }, line: page.aboutToStart };
+  switch (page.live.kind) {
+    case "off":
+      return { button, line: null };
+    case "stopped":
+      return {
+        button,
+        line: ready && button.reason === null ? page.live.line : null,
+      };
+    case "live":
+      if (button.reason !== null) {
+        return { button: { kind: "stop" }, line: button.reason };
+      }
+      return ready && page.live.aboutToStartLine !== null
+        ? { button: { kind: "stop" }, line: page.live.aboutToStartLine }
+        : { button, line: null };
   }
-  return { button, line: ready ? page.stoppedLine : null };
 }
 
 /** What the parts above and below the button are drawn with. */

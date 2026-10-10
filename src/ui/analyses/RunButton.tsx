@@ -46,8 +46,8 @@ export interface RunButtonProps {
       reason describes a disabled Run: on popgen2.html, the line of the
       quiet second beside Stop, the lock beside a Stop that takes the
       place of a locked Run, the line beside Run after a Stop; none when
-      absent or `null`. */
-  readonly line?: string | null;
+      absent. */
+  readonly line?: string;
 }
 
 /** Run or Stop, one button in one place. */
@@ -68,7 +68,7 @@ function OneButton({
   onGone,
   onButton,
   reasonRef,
-  line = null,
+  line,
 }: RunButtonProps): React.JSX.Element {
   const element = useRef<HTMLButtonElement>(null);
   const setElement = (node: HTMLButtonElement | null): void => {
@@ -100,7 +100,7 @@ function OneButton({
 
   // The same element with its line and without, so that the focus stays
   // on it when the line comes or goes.
-  const described = line === null ? {} : { description: line };
+  const described = line === undefined ? {} : { description: line };
   if (button.kind === "stop") {
     return (
       <Button label="Stop" onPress={onStop} ref={setElement} {...described} />
