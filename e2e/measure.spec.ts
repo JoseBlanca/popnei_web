@@ -116,8 +116,10 @@
  * the file once for the Variants tab and keeps that memory, a PCA and a
  * PCoA of 1,000, 4,000 and 9,381 individuals from the VCFs of IP6 D6,
  * the PCA's LD pruning off, each run once on a new page; whether it gave
- * a result, failed or closed the tab, its time, and the memory of the
- * engine before the file was opened, at the end of the pass, at the
+ * a result of the method chosen, failed or closed the tab, whether it ran
+ * in the worker that made the one pass, its time from the run posted to
+ * the calculation worker to its answer, as in IP6 D6, and the memory of
+ * the engine before the file was opened, at the end of the pass, at the
  * peak of the run and 3 s after its answer.
  *
  * The time to write and read a project file, and to make a key, is
@@ -210,6 +212,8 @@ interface Logged {
   readonly pass?: number;
   /** Of a result of the PCA, the variants it used. */
   readonly numVarsUsed?: number;
+  /** Of a result of the PCA, its method, "pca" or "pcoa". */
+  readonly method?: string;
 }
 
 /** Put in the page before its scripts: every worker it makes is timed
@@ -261,9 +265,13 @@ function instrument(): void {
         const data = event.data as {
           readonly bytesRead?: unknown;
           readonly pass?: unknown;
-          readonly result?: { readonly numVarsUsed?: unknown };
+          readonly result?: {
+            readonly numVarsUsed?: unknown;
+            readonly method?: unknown;
+          };
         };
         const used = data.result?.numVarsUsed;
+        const method = data.result?.method;
         log.push({
           worker,
           url: name,
@@ -279,6 +287,9 @@ function instrument(): void {
             : {}),
           ...(kind === "result" && typeof used === "number"
             ? { numVarsUsed: used }
+            : {}),
+          ...(kind === "result" && typeof method === "string"
+            ? { method }
             : {}),
         });
       });
@@ -3735,6 +3746,14 @@ interface AfterPassRun {
   readonly restarted: boolean;
   /** Of a result, the variants it used. */
   readonly numVarsUsed: number | null;
+  /** Of a result, its method. */
+  readonly method: string | null;
+  /** The worker, numbered in the order the page made them, that answered
+      the one pass, and the one the PCA's run was posted to; `null` when
+      the tab closed. The PCA is meant to run in the worker that keeps the
+      memory of the pass. */
+  readonly passWorker: number;
+  readonly runWorker: number | null;
   /** From the file picked to the answer of the one pass. */
   readonly passMs: number;
 }
@@ -3850,6 +3869,9 @@ async function pcaAfterPass(
         after: null,
         restarted: false,
         numVarsUsed: null,
+        method: null,
+        passWorker: pass.worker,
+        runWorker: null,
         passMs,
       };
     }
@@ -3875,6 +3897,9 @@ async function pcaAfterPass(
       after: sampler.samples.at(-1)?.total ?? null,
       restarted,
       numVarsUsed: answer.numVarsUsed ?? null,
+      method: answer.method ?? null,
+      passWorker: pass.worker,
+      runWorker: posted.worker,
       passMs,
     };
   } finally {
@@ -3908,7 +3933,7 @@ test.describe("AP7 D1 the memory and the time of a PCA after the one pass", () =
           x === null ? "" : `${(x / 1e9).toFixed(3)} GB`;
         report(
           `AP7 D1 the ${name} of ${size} individuals after the one pass`,
-          `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; the gzipped VCF of ${String(PCA_VARIANTS)} variants of e2e/bigVcf.ts of IP6 D6, the thresholds of a new page, the PCA's LD pruning off; Run pressed once, 2 s after the one pass answered; the memory is the footprints of the engine's processes summed, taken every ${String(n <= 2_000 ? 20 : 250)} ms and the time of a sample`,
+          `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; the gzipped VCF of ${String(PCA_VARIANTS)} variants of e2e/bigVcf.ts of IP6 D6, the thresholds of a new page, the PCA's LD pruning off; Run pressed once, 2 s after the one pass answered, and the time from the run posted to the calculation worker to its answer; the memory is the footprints of the engine's processes summed, taken every ${String(n <= 2_000 ? 20 : 250)} ms and the time of a sample`,
           [
             "individuals",
             "method",
@@ -3922,6 +3947,8 @@ test.describe("AP7 D1 the memory and the time of a PCA after the one pass", () =
             "3 s after the answer",
             "worker started again",
             "variants used",
+            "worker of the pass",
+            "worker of the run",
           ],
           [
             [
@@ -3939,6 +3966,8 @@ test.describe("AP7 D1 the memory and the time of a PCA after the one pass", () =
               gb(ran.after),
               ran.restarted ? "yes" : "no",
               ran.numVarsUsed === null ? "" : String(ran.numVarsUsed),
+              String(ran.passWorker),
+              ran.runWorker === null ? "" : String(ran.runWorker),
             ],
           ],
         );
@@ -3946,7 +3975,13 @@ test.describe("AP7 D1 the memory and the time of a PCA after the one pass", () =
         // fails nothing; the memory was taken in every case.
         expect(ran.beforeFile).toBeGreaterThan(0);
         expect(ran.endOfPass).toBeGreaterThan(0);
+        // The PCA runs in the worker that made the one pass and keeps its
+        // memory, which is what the measurement is about.
+        if (ran.runWorker !== null) {
+          expect(ran.runWorker).toBe(ran.passWorker);
+        }
         if (ran.answer === "result") {
+          expect(ran.method).toBe(method);
           expect(ran.peak).toBeGreaterThan(0);
           expect(ran.after).toBeGreaterThan(0);
           // The PCoA's result tells no variants used.
