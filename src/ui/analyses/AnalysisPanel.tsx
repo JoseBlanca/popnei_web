@@ -54,6 +54,7 @@ import type { AnalysisId } from "../../core/project.ts";
 import type { AnalysisStatus } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
+import { useFocusAfterLoss } from "../steps/variants/FocusSpot.tsx";
 import { startAnalysis } from "../runs.ts";
 import { useAppState, useStore } from "../store.tsx";
 import styles from "./AnalysisPanel.module.css";
@@ -134,6 +135,21 @@ export function AnalysisPanel({
   const notice = useAppState((s) => s.notice);
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
+  // On popgen2.html, the button shown and the reason of a disabled Run,
+  // which take the focus when what had it goes, before the heading: Stop
+  // recalculating pressed while the PCA is locked leaves a disabled Run,
+  // whose reason a screen reader then reads with its name (the PCA tab's
+  // spec, "The focus at a Stop"), as the Count of popgen.html does.
+  const shownButton = useRef<HTMLButtonElement | null>(null);
+  const reason = useRef<HTMLSpanElement>(null);
+  const lost = useFocusAfterLoss(() => {
+    const shown = shownButton.current;
+    return (
+      (shown !== null && !shown.disabled ? shown : null) ??
+      reason.current ??
+      heading.current
+    );
+  });
 
   const { button, line, stopLabel, under } = pageButton(
     lockedBy(buttonOf(status), page?.lock ?? null),
@@ -184,8 +200,17 @@ export function AnalysisPanel({
             else page.onStop();
           }}
           onGone={() => {
-            heading.current?.focus();
+            if (page === undefined) heading.current?.focus();
+            else lost();
           }}
+          {...(page === undefined
+            ? {}
+            : {
+                reasonRef: reason,
+                onButton: (node: HTMLButtonElement | null) => {
+                  shownButton.current = node;
+                },
+              })}
         />
       )}
       {/* The line of the quiet second or of a Stop, in the place of the

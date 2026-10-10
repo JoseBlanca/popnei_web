@@ -371,12 +371,15 @@ describe("NU4 D2 the words of the PCA started again by itself, by the method", (
   });
 
   test("the status region at a Stop, in the tab or in the band", () => {
-    expect(liveStoppedText("pca")).toBe(
+    expect(liveStoppedText("pca", true)).toBe(
       "PCA stopped. Press Run in the PCA tab to calculate it again.",
     );
-    expect(liveStoppedText("pcoa")).toBe(
+    expect(liveStoppedText("pcoa", true)).toBe(
       "PCoA stopped. Press Run in the PCA tab to calculate it again.",
     );
+    // With no Run to press, Run disabled or the result shown.
+    expect(liveStoppedText("pca", false)).toBe("PCA stopped.");
+    expect(liveStoppedText("pcoa", false)).toBe("PCoA stopped.");
   });
 
   test("the line beside Run after a Stop", () => {

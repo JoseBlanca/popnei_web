@@ -207,9 +207,18 @@ export function startedByItselfText(method: PcaMethod): string {
 
 /** What the status region says at a Stop of the PCA, in its tab or in
     the band, which leaves the tab out of sight: "PCA stopped. Press Run
-    in the PCA tab to calculate it again."; "PCoA stopped. …". */
-export function liveStoppedText(method: PcaMethod): string {
-  return `${methodName(method)} stopped. Press Run in the PCA tab to calculate it again.`;
+    in the PCA tab to calculate it again." when the tab then offers Run,
+    `runOffered`; "PCA stopped." alone when it does not, Run disabled by
+    a lock, whose reason takes the focus in the tab, or the result shown
+    with no button; "PCoA stopped. …" under the PCoA. */
+export function liveStoppedText(
+  method: PcaMethod,
+  runOffered: boolean,
+): string {
+  const stopped = `${methodName(method)} stopped.`;
+  return runOffered
+    ? `${stopped} Press Run in the PCA tab to calculate it again.`
+    : stopped;
 }
 
 /** The line after a Stop, until Run or another variants file, which

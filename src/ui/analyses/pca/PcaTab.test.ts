@@ -419,12 +419,18 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
     expect(stop?.disabled).toBe(false);
     expect(descriptionOf(stop)).toBe(NO_DISTANCE);
 
+    stop?.focus();
     await press(stop);
     expect(page.autoRuns.isLive("pca")).toBe(false);
     const run = button("Run");
     expect(run?.disabled).toBe(true);
     expect(descriptionOf(run)).toBe(NO_DISTANCE);
     expect(lineShown(STOPPED)).toBe(true);
+    // The focus on the reason of the disabled Run, which a screen reader
+    // reads with the name of the button, and not on the heading.
+    expect(document.activeElement?.textContent).toBe(
+      `Run is unavailable: ${NO_DISTANCE}`,
+    );
   });
 
   test("a crash of the worker that leaves the PCA live: its words, and Stop recalculating", async () => {

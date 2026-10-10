@@ -426,7 +426,11 @@ started a second after a finished one does not pile up on it; the
 plan checks it in WebKit. The status
 region says "PCA stopped. Press Run in the PCA tab to calculate it
 again." ("PCoA"), whichever Stop was pressed, since a Stop in the band
-leaves the tab out of sight.
+leaves the tab out of sight; and "PCA stopped." alone when the tab then
+offers no Run to press: Run disabled by a lock, whose reason takes the
+focus in the tab and is read as "Run is unavailable: " and the reason,
+or the result shown, with no button (from the review of work package 4,
+10 October 2026, which heard "Press Run…" beside a disabled Run).
 
 **Another variants file** stops the PCA, as before, and ends the live
 state: for the new file, the PCA waits for its Run.
@@ -1057,7 +1061,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | the button while the PCA is live and no PCA runs | "Stop recalculating" |
 | under the button, in the place of the bar, after a Stop, until Run or another variants file | "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change."; "Stopped: the PCoA …" |
 | the status region, a PCA started by itself | "Calculating the PCA again. To change the filters, stop it in the PCA tab."; "Calculating the PCoA again. To change the filters, stop it in the PCA tab." |
-| the status region, a Stop of the PCA, in the tab or in the band | "PCA stopped. Press Run in the PCA tab to calculate it again."; "PCoA stopped. …" |
+| the status region, a Stop of the PCA, in the tab or in the band | "PCA stopped. Press Run in the PCA tab to calculate it again."; "PCoA stopped. …"; with no Run to press, Run disabled or the result shown, "PCA stopped."; "PCoA stopped." |
 | the download of the filtered variants while a PCA runs | "Waits for the PCA to end; or stop it in the PCA tab." |
 | the thresholds and the FILTER box of the Variants tab and the PCA's options, while a PCA runs, as tooltip and description | "Stop the PCA in the PCA tab to change the filters; then press Run there to calculate it again."; under the PCoA, "Stop the PCoA in the PCA tab to change the filters; then press Run there to calculate it again." |
 | the button of a download | "Download…", named for a screen reader "Download the plot of the proportion of missing genotypes of the variants", "Download the table of panel_pops.csv", "Download the plot of the PCA", "Download the explained variance of the PCA", "Download the table of the individuals of the PCA", from the title the table or the plot carries; but "Download the plot of the unbiased expected heterozygosity of the variants", whose title says "Expected heterozygosity (unbiased)", and "Download the counts per population of panel_pops.csv", whose caption names the individuals of the variants file |

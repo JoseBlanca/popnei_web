@@ -7,7 +7,9 @@
  * entry calls it once, before the page is drawn; a test calls it over the
  * store of the page and the section alone.
  */
+import type { AnalysisId } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
+import { buttonOf, statusOf } from "../analyses/status.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { pcaOptions } from "../../core/analyses/pca.ts";
@@ -92,6 +94,19 @@ export function announceChanges(
   };
 }
 
+/** Whether the panel of the analysis `id` offers an enabled Run once it
+    is stopped in `s`: ready, or a failure it may run again; or running
+    still, its run cancelled, whose end gives Run. Not while locked, nor
+    with its result shown. The lock of the one pass, which the store does
+    not know, is not read: a live analysis is stopped only once the pass
+    is read to the end, since its Run waits for that. */
+function runOffered(s: AppState<JobResult, Blob>, id: AnalysisId): boolean {
+  const status = statusOf(s, id);
+  if (status.kind === "running") return true;
+  const button = buttonOf(status);
+  return button?.kind === "run" && button.reason === null;
+}
+
 /** The id of the load of the variants file in `s`, or `null`. */
 function fileIdOf(s: AppState<JobResult, Blob>): string | null {
   return s.project.variants?.fileId ?? null;
@@ -105,7 +120,8 @@ function fileIdOf(s: AppState<JobResult, Blob>): string | null {
  * focus, so that a user who changed a threshold and then finds it greyed
  * learns why; and "PCA stopped. Press Run in the PCA tab to calculate it
  * again." at a Stop, in the tab or in the band, which leaves the tab out
- * of sight. "PCoA" under the PCoA, the method read from `store` then.
+ * of sight, or "PCA stopped." alone when the tab then offers no Run to
+ * press. "PCoA" under the PCoA, the method read from `store` then.
  * It listens for as long as the page lives.
  */
 export function announceLive(
@@ -120,7 +136,9 @@ export function announceLive(
         announcer.announce(startedByItselfText(method));
         return;
       case "paused":
-        announcer.announce(liveStoppedText(method));
+        announcer.announce(
+          liveStoppedText(method, runOffered(store.getState(), event.id)),
+        );
         return;
     }
   });
