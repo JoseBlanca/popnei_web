@@ -211,6 +211,22 @@ the PCA again at the press of Run itself.
 **Recommended: (a).** (b) would win if `popgen2.html` ever saved its
 project to a file and the live state should come back with it.
 
+Revised on 10 October 2026, after the `errors` review of work package
+4 of `docs/plans/no-undo.md`: what ends the live state. Besides another
+variants file and Stop, two kinds of failure end it, with the line
+after a Stop beside the failure's words: a crash of the worker for lack
+of memory, and a failure that only a reload mends (the worker could not
+start, a page out of date, a defect). Before, the specs said every
+failure kept the PCA live and the next change tried again. Seen in the
+code: a user who followed the crash's words, "keep fewer individuals",
+with a threshold had a new PCA start a second after each change, each
+greying the filters until it crashed again; and a worker ended in the
+middle of a calculation keeps its memory in WebKit for 40 s and more
+("Why a change does not stop a run"), the reason Stop ends the live
+state. A failure that reloads alone mend failed again at every change.
+popnei's refusal of the values, and any other crash, keep the PCA live,
+since a change of the filters can mend them.
+
 ### 4. The history
 
 **(a) Keep the history inside, but give this page no way to call Undo
