@@ -1547,3 +1547,14 @@ The owner, having read the report, asked on 10 October 2026 for:
 4. Undo and Redo removed, "the marimo model": a result whose
    parameters changed is calculated again. Asked back before it is
    built (what it changes is in the reply of 10 October).
+
+The owner's answers on item 4, 10 October 2026: once the user has
+pressed Run for the file, a change of a parameter the PCA reads starts
+it again by itself, about 1 s after the user stops moving the control,
+and a change during a run stops it and starts it again, so the lock of
+the filters during a run goes; no result is kept to come back when a
+parameter is set back, every change calculates; while it calculates
+again the tab shows only the progress, the old result gone. Since it
+changes the history and the cache of `docs/architecture.md`, it gets a
+design, `docs/designs/no-undo.md`, for the owner's approval before its
+code, on this branch, after round 1.
