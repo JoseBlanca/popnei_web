@@ -472,7 +472,9 @@ export function NumberField({
             // Tab is of the number the field holds and sends nothing, guard
             // or not (the review of work package 8 of docs/plans/filters.md,
             // 8 October 2026). It stays for a React Aria that would not.
-            if (refusing.current || tabbed.current) return;
+            // A field that waits gives nothing, whatever reached React
+            // Aria's commit: its paste does not check its read-only state.
+            if (waits || refusing.current || tabbed.current) return;
             // An empty field gives NaN, which sends nothing, or the call of an
             // emptied field when the screen gives one. React Aria has put back
             // the number it was given, which the screen may now change.
@@ -846,6 +848,14 @@ function FieldInput({
         onText(event.currentTarget.value);
       }}
       onPasteCapture={(event) => {
+        // A field that waits takes no paste: React Aria's own handler
+        // commits a text pasted over the whole field without checking
+        // that the field is read only, so it is stopped before it.
+        if (waits) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
         // Before React Aria's handler, and only for a text pasted over the
         // whole field, which React Aria commits at once; a paste at the
         // caret is the browser's, and a character it would put in that the

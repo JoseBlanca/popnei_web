@@ -932,3 +932,26 @@ describe("NU3 D2 the number box holds from the first key to the commit", () => {
     expect(calls.changes).toEqual([0.2]);
   });
 });
+
+describe("NU3 a box that waits takes no paste", () => {
+  test("a number pasted over the whole of a threshold that waits changes nothing", () => {
+    const calls = newCalls();
+    const input = draw(
+      thresholdProps(0.1, calls, { waiting: "Change it once the PCA ends." }),
+    );
+    act(() => {
+      input.focus();
+      input.setSelectionRange(0, input.value.length);
+    });
+    act(() => {
+      const event = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", {
+        value: { getData: () => "0.3" },
+      });
+      input.dispatchEvent(event);
+    });
+    blur(input);
+    expect(calls.changes).toEqual([]);
+    expect(input.value).toBe("0.1");
+  });
+});
