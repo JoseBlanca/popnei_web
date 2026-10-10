@@ -14,6 +14,7 @@ import {
   turnOffVariantFilter,
 } from "../core/project.ts";
 import type { VariantLoad } from "../core/project.ts";
+import { createStore } from "../core/store.ts";
 import type { Store } from "../core/store.ts";
 import { summaryResult } from "../core/testSupport.ts";
 import type {
@@ -30,6 +31,7 @@ import {
   POPGEN2_AUTO_GROUPS,
   createPopgen2Store,
   openVariantsFile,
+  popgen2StoreConfig,
 } from "./popgen2Store.ts";
 import type { Popgen2PageStore } from "./popgen2Store.ts";
 import { startAnalysis } from "./runs.ts";
@@ -747,21 +749,30 @@ describe("AP6 D2 the store of popgen2.html with the PCA, a fake worker and the g
 });
 
 describe("NU2 D1 the store of popgen2.html has no Undo, keeps one past project and drops what a change leaves behind", () => {
-  test("its type has neither undo nor redo", () => {
+  test("it has neither undo nor redo, in its type nor at run time", () => {
     const { store } = storeWithPassDone();
     // @ts-expect-error -- the page's store has no undo
     const undo: unknown = store.undo;
     // @ts-expect-error -- nor redo
     const redo: unknown = store.redo;
-    // The functions are still there at run time, for the history the
-    // code of popgen.html needs; no screen of the page reaches them.
-    expect([typeof undo, typeof redo]).toEqual(["function", "function"]);
+    expect([undo, redo]).toEqual([undefined, undefined]);
+    expect(["undo" in store, "redo" in store]).toEqual([false, false]);
   });
 
   test("its history keeps one past project: after three commands one undo leaves nothing to undo, and a second changes nothing", () => {
-    const { store: page } = storeWithPassDone();
-    // Read through the type of a store that has undo, as only a test can.
-    const store = page as unknown as Store<JobResult, Blob>;
+    // The store made with the page's settings, with the undo the page's
+    // store does not give, as only a test reaches it.
+    const store = createStore(
+      popgen2StoreConfig({
+        send: () => {
+          throw new Error("popnei_web defect: no request is sent here");
+        },
+        sendWrite: () => {
+          throw new Error("popnei_web defect: no write is sent here");
+        },
+        appVersion: "0.1.0",
+      }),
+    );
     for (const value of [0.2, 0.3, 0.4]) {
       store.apply("the MAF filter changed", (p) =>
         setThreshold(p, { of: "variants", kind: "maf" }, value),

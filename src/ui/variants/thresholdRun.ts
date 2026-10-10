@@ -27,6 +27,7 @@
  * which the PCA's quiet second runs (docs/specs/steps/popgen2-pca.md,
  * "The PCA calculated again by itself").
  */
+import { withoutUndo } from "../popgen2Store.ts";
 import type { Popgen2PageStore } from "../popgen2Store.ts";
 
 /** The quiet time after the last press of a run that ends it, in
@@ -206,13 +207,14 @@ export function createRunGate(): RunGate {
     moment later (docs/specs/steps/popgen2-pca.md, "Run and Stop"). Each
     takes a function of the project and not a project, or nothing, so that
     none is given a project made before the gate changed it. The rest is
-    the store's own. */
+    the store's own, but for an undo and a redo, which it does not give
+    even when `store` has them. */
 export function gatedStore<R, F>(
   store: Popgen2PageStore<R, F>,
   gate: RunGate,
 ): Popgen2PageStore<R, F> {
   return {
-    ...store,
+    ...withoutUndo(store),
     apply: (description, command) => {
       gate.endAll();
       store.apply(description, command);

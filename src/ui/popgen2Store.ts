@@ -30,7 +30,12 @@ import { CACHE_MAX_BYTES } from "../core/cache.ts";
 import { loadVariants } from "../core/project.ts";
 import type { AnalysisId, VariantLoad } from "../core/project.ts";
 import { createStore } from "../core/store.ts";
-import type { Popgen2Store, Store, StoreConfig } from "../core/store.ts";
+import type {
+  Popgen2Store,
+  StopLeftBehindConfig,
+  Store,
+  StoreConfig,
+} from "../core/store.ts";
 import type { Job, JobResult } from "../worker/protocol.ts";
 
 /** The one group of the analyses the page starts by itself, which the
@@ -49,10 +54,10 @@ export const POPGEN2_AUTO_GROUPS: readonly (readonly AnalysisId[])[] =
   Object.freeze([POPGEN2_CHAIN]);
 
 /** The store of popgen2.html as its screens see it: no undo, no redo,
-    so that a screen of that page that calls them does not compile. The
-    store keeps its history, which the code of popgen.html needs, and
-    the state still names its undo and redo, which no screen of the page
-    reads. */
+    so that a screen of that page that calls them does not compile, and
+    none at run time either (`withoutUndo`). The store keeps its
+    history, which the code of popgen.html needs, and the state still
+    names its undo and redo, which no screen of the page reads. */
 export type Popgen2PageStore<R, F = never> = Omit<
   Popgen2Store<R, F>,
   "undo" | "redo"
@@ -81,7 +86,30 @@ export interface Popgen2StoreDeps {
 export function createPopgen2Store(
   deps: Popgen2StoreDeps,
 ): Popgen2PageStore<JobResult, Blob> {
-  return createStore<Job, JobResult, Blob>({
+  return withoutUndo(createStore(popgen2StoreConfig(deps)));
+}
+
+/** A copy of `store` without its undo and redo, at run time as in its
+    type, so that no code of popgen2.html reaches them through a cast or
+    a spread: the page has had no Undo since 10 October 2026. */
+export function withoutUndo<R, F>(
+  store: Popgen2PageStore<R, F>,
+): Popgen2PageStore<R, F> {
+  const page = { ...store };
+  Reflect.deleteProperty(page, "undo");
+  Reflect.deleteProperty(page, "redo");
+  return page;
+}
+
+/** What the store of the page is made with: its first project, its
+    analyses, the one pass, the writing, one past project, and the
+    settings `stopLeftBehind` and `dropLeftBehind`. Given apart from
+    `createPopgen2Store` so that a test reads the history the page does
+    not reach. */
+export function popgen2StoreConfig(
+  deps: Popgen2StoreDeps,
+): StoreConfig<Job, JobResult, Blob> & StopLeftBehindConfig {
+  return {
     first: popgen2FirstProject(),
     analyses: POPGEN2_ANALYSES,
     send: deps.send,
@@ -107,7 +135,7 @@ export function createPopgen2Store(
     // nothing: a value set back is calculated again, not shown from the
     // cache.
     dropLeftBehind: true,
-  });
+  };
 }
 
 /**

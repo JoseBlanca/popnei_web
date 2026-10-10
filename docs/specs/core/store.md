@@ -558,7 +558,9 @@ the present and the one before it, where it kept up to 201, and gives
 the page a type with no `undo` and no `redo`, `Popgen2PageStore`,
 declared beside it in `src/ui/popgen2Store.ts` ("The TypeScript
 interface", below), so that a screen of that page that calls them does
-not compile. The code typed with `Popgen2Store` today that takes the
+not compile; and the store it gives, and the gate's `gatedStore`, are
+copies without them at run time too, `withoutUndo`, so that no cast or
+spread reaches them. The code typed with `Popgen2Store` today that takes the
 new type: `src/ui/popgen2.tsx`, `src/ui/store.tsx`, the gate
 `gatedStore` of `src/ui/variants/thresholdRun.ts`, which loses its
 wraps of `undo` and `redo` for that page, `populationColumn.ts`,
@@ -1588,6 +1590,12 @@ and not in core, from 10 October 2026:
 export type Popgen2PageStore<R, F = never> = Omit<Popgen2Store<R, F>, "undo" | "redo">;
 
 export function createPopgen2Store(deps: Popgen2StoreDeps): Popgen2PageStore<JobResult, Blob>;
+
+/** What createPopgen2Store makes the store with, for a test that reads the history. */
+export function popgen2StoreConfig(deps: Popgen2StoreDeps): StoreConfig<Job, JobResult, Blob> & StopLeftBehindConfig;
+
+/** A copy of `store` without undo and redo at run time. */
+export function withoutUndo<R, F>(store: Popgen2PageStore<R, F>): Popgen2PageStore<R, F>;
 
 /** What the store takes from the pass of a result. */
 export interface PassFound<R> {

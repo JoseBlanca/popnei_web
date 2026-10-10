@@ -226,6 +226,24 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
   });
 });
 
+describe("NU2 D1 the gated store has no undo nor redo", () => {
+  test("a store with undo and redo, gated: neither at run time", () => {
+    const withUndo = {
+      ...createPopgen2Store({
+        send: () => unsent(),
+        sendWrite: () => {
+          throw new Error("popnei_web defect: no write is sent here");
+        },
+        appVersion: "0.1.0",
+      }),
+      undo: () => undefined,
+      redo: () => undefined,
+    };
+    const store = gatedStore(withUndo, createRunGate());
+    expect(["undo" in store, "redo" in store]).toEqual([false, false]);
+  });
+});
+
 describe("AP3 D2 the gate before applyAfresh", () => {
   /** The store of the page through a gate, and the gate. */
   const gated = (): {
