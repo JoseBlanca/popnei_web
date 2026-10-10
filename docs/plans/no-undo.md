@@ -862,3 +862,40 @@ measurement). The second PCA was posted 1.03 s after the press.
 Checks at b4a7db75: typecheck, lint, format clean; Vitest 158 files,
 5,147 tests; in Chromium and WebKit the flows of `popgen2.html` 304 and
 the old page's `pca*` 210; `popgen2Live` with `--repeat-each=3` 90.
+
+### Work package 5, tasks 5.1 to 5.3, 10 October 2026
+
+Commits f0101720 (5.1), cc208cc3 (5.2), 1110b46e (5.3). The band is
+51 px high in every state but an error, at 1280 and 320 px, in both
+engines. The review, all eleven categories the plan gives: the findings
+that held were fixed in 69c49b90 to 3991aeac, one commit each, test
+first. The builder had shown an idle line and "Stop recalculating"
+whenever the PCA was live, against the owner's decision; the band now
+shows "Popnei" alone while nothing runs, offers "Stop recalculating"
+only while the PCA is about to start and "Stop" while it runs, and
+drops its PCA control while the PCA tab is shown (the plan's paragraph
+of 5.3 corrected in 78101b47). The ones a user would meet: a defect in
+the band's own line emptied the whole band with the page's only
+heading and every later error; a click on a control half under the band
+was lost; an error band covered the window at 200 to 400% zoom; the
+focus fell on nothing when a band control went by itself; the band
+named the wrong method after a Stop; printed, the band covered every
+page; the stopped pass's error sent the user to a "Start again" the
+band does not have; the words of the one pass differed from its box's.
+The `bundle` review found nothing: the band adds 4.07 KB gzipped to the
+first load, 320.23 KB at 1110b46e (316.16 before the band, 307.82 at
+fdddbbf3, 281.69 on main), by the sum of Vite's gzip sizes of the 9
+files the page loads.
+
+Checks at 3991aeac: typecheck, lint, format clean; Vitest 162 files,
+5,186 tests; in Chromium and WebKit, popgen2*, shell and openVariants
+418, saving and entry 110; screens of the band 44.
+
+Left for the next session: the screens popgen2-band-error-running
+show the band out of view when an error comes on a scrolled page,
+since an error band now scrolls with the page (to decide: bring the
+error into view when it comes, or take the screens at the top); at
+320 px the band looks cramped with quarter-rem gaps, made so that the
+whole "Stop recalculating" fits. Then task 5.4, work package 6
+(the instructions, by the session, and the documents), work package 7
+and the report, and work package 8, the owner's try.
