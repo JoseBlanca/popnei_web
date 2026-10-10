@@ -25,8 +25,10 @@ its cache as they are.
   the last press, a drag when the mouse button is released, a typed
   number at Enter, Tab or a click elsewhere. No second is added after
   those.
-- No result is kept for a parameter set back: the page keeps only the
-  results of the values on the screen.
+- No result is kept for a parameter set back: a result leaves the page
+  when a parameter its analysis reads changes, and is kept while the
+  analysis is only locked, so that it comes back if the lock lifts with
+  nothing changed.
 - Undo and Redo, their buttons and their keys go from the page, and so
   does the greying of the filters while a PCA runs.
 - The code that already starts the one pass by itself, `src/ui/autoRuns.ts`,
@@ -165,10 +167,30 @@ the owner asked for, and a release or an Enter is the user's own end of
 the change; the stop that (b) would spare costs under a second of
 calculation. (b) would win if users often changed two controls in a
 row with the mouse during a PCA of thousands of individuals; then each
-second change would throw away more. Whichever is chosen, the PCA's own
-sliders, new in round 1 of the plan, must pass through the gate as the
-thresholds do: otherwise every press of an arrow key on them is a
-change of the project, and under (a) a stop and a start of the PCA.
+second change would throw away more. Whichever is chosen, every control the PCA reads that changes its value
+at each press of a key passes through the gate as the thresholds do, so
+that a run of presses is one change; otherwise each press is a change
+of the project, and under (a) a stop and a start of the PCA. These are:
+
+- the lines and boxes of the five thresholds of the Variants tab,
+  through the gate today;
+- the PCA's own sliders of missing data and MAF, new in round 1 of the
+  plan;
+- the drop-down list of the method, PCA or PCoA, a React Aria `Select`
+  (`react-aria-components` 1.21.1). Closed, it changes its value at each
+  press of the left or the right arrow key, with a key held repeating
+  (`useSelect` of `react-aria` 3.52.1, its `ArrowLeft` and `ArrowRight`,
+  `allowRepeats: true`), and at each letter typed that begins an option;
+  the up and down arrows open its list, where Enter chooses. So a user
+  who presses the right arrow and then the left would start a PCoA and
+  stop it for a PCA.
+
+Not through the gate, since one press is one deliberate change: the
+FILTER box and the switch of the LD pruning, which turn at a press of
+Space; the number boxes of r² and of the distance, which give their
+number at Enter, Tab or a click elsewhere. The column of the
+populations, the colour of the points, the axes and the view change no
+key of the PCA and start nothing.
 
 ### 3. Where "live" is recorded
 
@@ -198,8 +220,20 @@ What a Stop does is the owner's to decide (open point 1).
 whose type has no `undo` and `redo`**, so that no screen of that page
 can call them, with at most one step kept instead of 200. The buttons,
 the keys, the gate's wraps of Undo and Redo and the waiting of Undo go;
-`applyAfresh` stays, now the same as `apply` on that page. A few lines
-in core, none in `history.ts`.
+`applyAfresh` stays. It is not the same as `apply` there: it still
+counts one in `historyMoves`, the count of the store at which a screen
+that holds typed text beside a part of the project drops that text,
+which is why the gate commits a number typed in a box before it. A few
+lines in core, none in `history.ts`.
+
+Two ways for `historyMoves` on that page: (i) leave it counting, as
+now, with the gate's commit before `applyAfresh`; (ii) under the
+setting, have it count nothing, since there is no history to move.
+Recommended: (i). No screen of `popgen2.html` reads the count today,
+only the filters of individuals of `popgen.html`
+(`src/ui/steps/variants/IndividualFilters.tsx`), so (ii) changes
+nothing a user sees and adds a case to the store; the count goes with
+the history when `popgen.html` is deleted.
 
 **(b) A setting of the store with no history at all**, under which a
 command replaces the project and `applyAfresh` and the event that
@@ -215,12 +249,31 @@ were to stay.
 ### 5. The cache
 
 **(a) A setting of the store, true on `popgen2.html` only: after every
-change, every result whose key the new project gives to no analysis
-leaves the cache, and a result that arrives under such a key is not
-kept.** The one pass's result stays, since no filter changes its key,
-and so do its histograms and the statistics that the individuals kept
-are worked out from. A filter set back gives a key with nothing under
-it, and the PCA starts again.
+change, the result of an analysis leaves the cache when the new project
+gives that analysis a different key, and a result that arrives under a
+key so replaced is not kept.** An analysis that is locked, that cannot
+run for a reason the store gives, has no key at all
+(`AnalysisKey` of `src/core/store.ts`), and its last result stays in
+the cache, not shown, until the analysis has a key again: the same key
+shows it again with no calculation, a different one drops it. Dropping
+every result whose key the project gives to no analysis would throw
+away the result of a PCA at every lock. On the old page that lock
+comes with the individuals file while it is read, so loading the
+individuals file after a PCA of 9,381 individuals would cost 2 to 4
+minutes of calculation under the same key. On `popgen2.html` the
+individuals file never locks the PCA (`docs/specs/analyses/pca.md`, "On
+popgen2.html", `needs`), and every lock there comes from a parameter the
+PCA reads: the LD pruning on with its distance emptied, the filters of
+individuals keeping none, or more than 9,381 kept under the PCoA. So
+the one departure from the owner's answer 2 is a parameter changed
+into a lock and set back to the same value, the distance emptied and
+typed again, which shows the old result rather than calculating it
+again; it is equal to what a calculation would give. The rule keeps a
+result through any lock a later piece adds. The one pass's result stays,
+since no filter changes its key, and so do its histograms and the
+statistics that the individuals kept are worked out from. A filter set
+back from another value gives a key with nothing under it, and the PCA
+starts again.
 
 **(b) Keep the cache, and have `autoRuns.ts` start the PCA again even
 when the cache holds its result.** The store shows the result in the
@@ -295,13 +348,23 @@ of the arrow keys, per drag and per typed number, never one per press.
 A user who, during a PCA of 9,381 individuals, changes three filters a
 minute apart loses three minutes and waits a fourth; that is the
 owner's choice, answer 1, and a Stop of the PCA is the way out (open
-point 1). What was not measured: whether the browser gives back the 3
-to 4.3 GB of a worker ended before the new worker's PCA grows. If it
-does not, two such PCAs overlap in the tab, about twice the memory of
-one, and wasm32 cannot hold more than 4 GB in one worker but the tab as
-a whole can be closed by the browser. A PCA after a stop needs a pass
-over the file before its matrix grows, so the overlap, if any, is
-short; it is the first thing the tests below measure.
+point 1).
+
+What is known of the memory: after a finished PCA or PCoA of 1,000
+individuals or more, which restarts the worker, the engine was no
+larger 3 s later than before the Run, in Chromium 153 and WebKit 26.6
+on 29 September 2026 (`docs/specs/analyses/pca.md`, "How it runs").
+What is not known: how soon the memory of a worker ended in the middle
+of a run is given back, against how soon the new worker's calculation
+grows. The new one grows at once. The PCoA asks for its matrix, 8 bytes
+for each pair of individuals, about 0.7 GB at 9,381, before its pass,
+and holds beside it during the pass 4 bytes more a pair, about 1.1 GB
+in all; the PCA's pass over a few hundred variants takes milliseconds
+before its decomposition grows. So for a moment the tab may hold the
+old worker's 3 to 4.3 GB and the new one's first 1.1 GB. Each wasm
+cannot hold more than 4 GB, but it is the tab as a whole that the
+browser closes when it runs out. This is measured before the plan
+(below, "How it will be tested").
 
 ## The invariants
 
@@ -321,9 +384,19 @@ short; it is the first thing the tests below measure.
    live state is not part of the project, by choice 3, for the reasons
    there; a screen holds nothing of the project.
 4. **Core with no DOM and no React: kept.**
-5. **Two workers, one request at a time: kept.** `autoRuns.ts` starts
-   nothing while a calculation runs, and the store stops the PCA left
-   behind before the new one is started.
+5. **Two workers, one request at a time: kept**, with one guard added.
+   The store stops the PCA left behind before the new one is started.
+   `autoRuns.ts` starts nothing while one of its own analyses runs, but
+   it does not look at the write of the filtered variants, which runs on
+   the same calculation worker: a PCA it started during a write would
+   wait in the queue of the worker, while the store, which has no state
+   for a request waiting there, showed it as running with a bar that
+   does not move. Under these choices nothing makes a live PCA ready
+   during a write, since the write's dialog keeps every filter out of
+   reach and the download waits for a running PCA before it starts; a
+   later lock that lifts by itself, a read ending, would. So
+   `autoRuns.ts` also starts nothing while the store's write is running,
+   one condition and its test.
 6. **A cancel ends the worker and starts another: kept**, and paid much
    more often: at every change during a run instead of only at a Stop or
    an opening (above, "The cost of a stop").
@@ -365,18 +438,28 @@ short; it is the first thing the tests below measure.
   key; a change during a run stops it and starts the new key; a filter
   set back calculates again, the cache holding nothing under the old
   key; a change of the colour of the points starts nothing; another
-  variants file ends the live state; the PCA waits for the one pass.
+  variants file ends the live state; the PCA waits for the one pass;
+  an individuals file opened after a PCA calculates nothing again, the
+  result staying on the screen; a PCA locked by its distance emptied
+  keeps its result in the cache, shown again when the same distance is
+  typed; and no PCA starts while a write runs.
 - In Chromium and WebKit: ten presses of an arrow key on a threshold,
   less than a second apart, start one PCA, and none while a press
-  waits; a drag starts one at its release; the tab never shows the old
-  result after a change, nor Run between the change and the bar.
-- The measurement that would send the design back: a PCA of 9,381
-  individuals, live, with three changes of a threshold 30 seconds
-  apart, then left to end, in Chromium and WebKit, the tab's memory
-  read through it. If the tab closes, or its memory after a stop grows
-  to the sum of two PCAs, a stop must wait for the old worker to be
-  gone before the new one starts, or the page must not start a PCA
-  above some number of individuals by itself.
+  waits; a drag starts one at its release; presses of the arrow keys
+  on the closed list of the method make one change; the tab never shows
+  the old result after a change, nor Run between the change and the
+  bar.
+- The measurement that would send the design back: a PCA and a PCoA of
+  9,381 individuals, live, each stopped by three changes of a threshold
+  30 seconds apart, then left to end, in Chromium and WebKit, the tab's
+  memory read through it. If the tab closes, or its memory after a stop
+  grows to the old worker's 3 to 4.3 GB and the new one's 1.1 GB
+  together, a stop must wait for the old worker to be gone before the
+  new one starts, or the page must not start a PCA above some number of
+  individuals by itself. Firefox, which is in the floor of the
+  applications, is left out: Playwright cannot start it on the owner's
+  Mac, so it is seen only on GitHub's CI, which runs the flows and not
+  this measurement, or by the owner by hand.
 
 ## What is hard to undo
 
@@ -425,11 +508,17 @@ change of habit for them.
    of 9,381 individuals who types three filters, each more than a second
    apart, pays a restart and loses the time run between them, and has
    no way to say "not yet".
-2. **The download while a live PCA runs.** (a) It waits, as now, with
-   its words; (b) pressing it stops the PCA, writes the file, and the
-   PCA starts again after the write. Recommended: (a) for now, as it is
-   built, and (b) if the owner finds the wait in the way when trying it;
-   (b) throws away the PCA's time so far, which (a) does not.
+2. **The download while a live PCA runs.** With the PCA calculated
+   again at every change, "Download filtered variants…" is greyed after
+   each change of a filter for as long as the PCA takes: up to 4
+   minutes on a file of 9,381 individuals, a second or less up to 1,000.
+   (a) It waits, as now, with "Waits for the PCA to end; or stop it in
+   the PCA tab."; the user waits or goes to the PCA tab to stop it.
+   (b) Pressing it stops the PCA, writes the file, and the PCA starts
+   again after the write; the download never waits, and the PCA's time
+   so far is thrown away. Recommended: (a) for now, as it is built, and
+   (b) if the owner finds the wait in the way when trying it on a large
+   file.
 3. **Seconds after a drag or a typed number** (choice 2). Recommended:
    none, (a) there.
 4. **The column of the populations.** With the lock gone, the owner's
