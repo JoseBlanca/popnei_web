@@ -1229,6 +1229,17 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     expect(page.pcaRequests()).toHaveLength(2);
   });
 
+  test("Run is refused while a write of the filtered variants runs: no PCA asked for, and the PCA not made live", async () => {
+    const page = await livePage();
+    void startWriting(page.store, "vcf");
+    expect(page.writes).toHaveLength(1);
+    expect(page.auto.run("pca")).toBe(false);
+    expect(page.pcaRequests()).toHaveLength(0);
+    expect(page.auto.isLive("pca")).toBe(false);
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(0);
+  });
+
   test("nothing starts while the PCA runs, and the clock passing during its run starts no second one", async () => {
     const page = await livePage();
     page.auto.run("pca");

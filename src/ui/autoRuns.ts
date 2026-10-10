@@ -138,8 +138,12 @@ export interface AutoRuns {
   readonly getVersion: () => number;
   /** The user's Run of the live analysis `id`: makes it live for the
       load of the variants file open and starts it at once, through the
-      gate. Returns whether it started it. A defect for an analysis that
-      is not live. */
+      gate. Returns whether it started it. Refused, false and nothing made
+      live, while a write of the filtered variants runs, since the
+      calculation worker runs one request at a time and the PCA would wait
+      behind the write shown as running (docs/specs/steps/
+      popgen2-download.md, "When the PCA starts by itself"). A defect for
+      an analysis that is not live. */
   run(id: AnalysisId): boolean;
   /** The user's Stop of the live analysis `id`, in its tab or in the
       band: cancels its run, if one is in flight, and ends its live
@@ -517,7 +521,7 @@ export function createAutoRuns(deps: {
     run: (id) => {
       liveDefect(id);
       const fileId = fileIdNow();
-      if (live === null || fileId === null) return false;
+      if (live === null || fileId === null || writeRunning()) return false;
       liveFor.set(id, fileId);
       pausedFor.delete(id);
       const sent = live.runStart(id);
