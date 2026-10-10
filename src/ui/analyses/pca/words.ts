@@ -30,8 +30,7 @@ export function methodName(method: PcaMethod): string {
 /** The name of the group of the method. */
 export const METHOD_LABEL = "Method";
 
-/** The two methods, as their radio buttons on the old page, and the
-    items of the drop-down list on popgen2.html, say them. */
+/** The two methods, as their radio buttons on the old page say them. */
 export const METHOD_ITEMS: readonly {
   readonly id: PcaMethod;
   readonly label: string;
@@ -42,6 +41,21 @@ export const METHOD_ITEMS: readonly {
     label: "PCoA of the Kosman distances, for data with many missing genotypes",
   },
 ]);
+
+/** The two items of the drop-down list of the method on popgen2.html,
+    whose advice of the PCoA is the line under the list, METHOD_ADVICE,
+    so that an item fits one line of the button
+    (docs/specs/steps/popgen2-pca.md, "The PCA tab"). */
+export const POPGEN2_METHOD_ITEMS: readonly {
+  readonly id: PcaMethod;
+  readonly label: string;
+}[] = Object.freeze([
+  { id: "pca", label: "PCA of the genotypes" },
+  { id: "pcoa", label: "PCoA of the Kosman distances" },
+]);
+
+/** The line under the drop-down list of the method on popgen2.html. */
+export const METHOD_ADVICE = "The PCoA suits data with many missing genotypes.";
 
 /** The heading of the filters of the analysis: "Filters of the variants
     for the PCA", or "for the PCoA". */

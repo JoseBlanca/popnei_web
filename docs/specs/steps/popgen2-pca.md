@@ -329,9 +329,14 @@ once calculated, the result.
 
 **The method**, a drop-down list named "Method", React Aria's
 `Select`, as the components on the axes and "Colour the points by"
-are, with the old panel's two items, "PCA of the genotypes" and "PCoA
-of the Kosman distances, for data with many missing genotypes"; PCA by
-default. A drop-down list since 10 October 2026, as the owner asked on
+are, with two items, "PCA of the genotypes" and "PCoA of the Kosman
+distances", and under it the line "The PCoA suits data with many
+missing genotypes.", which a screen reader reads as its description;
+PCA by default. The old panel's second item says the same in one,
+"PCoA of the Kosman distances, for data with many missing genotypes",
+which in the button of the list wrapped to two lines at 1280 px and
+read as part of the method's name, so the advice is a line of its own
+since 10 October 2026 (round 1 of work package 10). A drop-down list since 10 October 2026, as the owner asked on
 trying the page (`docs/plans/analyses-pca.md`, work package 10, round
 1); two radio buttons before, as on the old panel, which keeps them.
 
@@ -768,6 +773,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | Undo, Redo | "Undo"; "Redo"; their tooltips "Undo: ‹the description›", "Redo: ‹the description›" |
 | the status region, an undo or a redo | "Undone: ‹the description›."; "Redone: ‹the description›." |
 | the heading of the tab | "PCA"; "PCoA" |
+| the drop-down list of the method, its items and the line under it | "PCA of the genotypes"; "PCoA of the Kosman distances"; "The PCoA suits data with many missing genotypes." |
 | the filters | "Filters of the variants for the PCA"; "The PCA reads the variants the Variants tab keeps. Its own missing data and MAF filters can only be stricter."; "Maximum proportion of missing genotypes for the PCA"; "Maximum major allele frequency for the PCA"; "Prune the variants by linkage disequilibrium (LD)" |
 | the value of a slider | "0.1, as in the Variants tab"; "Off, as in the Variants tab"; "0.05" |
 | the ends of a slider, under its track | "0" and "0.1"; "0.5" and "Off" |

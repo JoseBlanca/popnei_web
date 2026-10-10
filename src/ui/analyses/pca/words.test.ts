@@ -8,11 +8,30 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  METHOD_ADVICE,
+  METHOD_ITEMS,
+  POPGEN2_METHOD_ITEMS,
   filtersHeading,
   popgen2FiltersLine,
   stricterSliderLabel,
 } from "./words.ts";
 import { filtersLockedText } from "../words.ts";
+
+describe("AP10 D1 the words of the drop-down list of the method", () => {
+  test("its two items, each short enough for one line, and the advice of the PCoA under it; the old page's radio buttons as they were", () => {
+    expect(POPGEN2_METHOD_ITEMS.map((item) => item.label)).toEqual([
+      "PCA of the genotypes",
+      "PCoA of the Kosman distances",
+    ]);
+    expect(METHOD_ADVICE).toBe(
+      "The PCoA suits data with many missing genotypes.",
+    );
+    expect(METHOD_ITEMS.map((item) => item.label)).toEqual([
+      "PCA of the genotypes",
+      "PCoA of the Kosman distances, for data with many missing genotypes",
+    ]);
+  });
+});
 
 describe("AP6 D1 the words of the PCA tab", () => {
   test("the heading of the filters and the line under it, by the method", () => {

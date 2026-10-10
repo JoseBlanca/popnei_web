@@ -110,3 +110,18 @@ describe("AP10 D2 a filter of the PCA's own whose slider would have no range", (
     expect(container.textContent).not.toContain("cannot be stricter");
   });
 });
+
+describe("AP10 D1 the drop-down list of the method", () => {
+  test("shows the PCA of the genotypes, with the advice of the PCoA under it as its description", () => {
+    drawWith([]);
+    const button = container.querySelector("button");
+    if (button === null) throw new Error("no button");
+    expect(button.textContent).toBe("PCA of the genotypes");
+    const described = (button.getAttribute("aria-describedby") ?? "")
+      .split(" ")
+      .map((id) => document.getElementById(id)?.textContent);
+    expect(described).toContain(
+      "The PCoA suits data with many missing genotypes.",
+    );
+  });
+});

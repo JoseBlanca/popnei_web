@@ -179,7 +179,7 @@ async function choosePcoa(page: Page): Promise<void> {
   await methodButton(page).click();
   await page.getByRole("option", { name: /^PCoA of the Kosman/u }).click();
   await expect(methodButton(page)).toHaveAccessibleName(
-    "PCoA of the Kosman distances, for data with many missing genotypes Method",
+    "PCoA of the Kosman distances Method",
   );
 }
 

@@ -70,8 +70,9 @@ import {
 import type { StricterKind } from "./stricter.ts";
 import {
   DISTANCE_HINT,
-  METHOD_ITEMS,
+  METHOD_ADVICE,
   METHOD_LABEL,
+  POPGEN2_METHOD_ITEMS,
   filtersHeading,
   popgen2FiltersLine,
   stricterSliderLabel,
@@ -109,8 +110,9 @@ export function PcaTabOptions(): React.JSX.Element {
     <div className={classOf(styles, "options")}>
       <Select
         label={METHOD_LABEL}
-        items={METHOD_ITEMS}
+        items={POPGEN2_METHOD_ITEMS}
         value={options.method}
+        description={METHOD_ADVICE}
         waiting={lock}
         onChange={(method) => {
           apply(methodCommand(method, page));
