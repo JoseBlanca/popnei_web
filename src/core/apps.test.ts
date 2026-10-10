@@ -90,6 +90,7 @@ function stateWith(
     undo: null,
     redo: null,
     historyMoves: 0,
+    stopping: null,
     popneiVersion: "0.1.0",
     analyses: views,
     runs: [],
