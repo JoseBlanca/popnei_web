@@ -5781,6 +5781,71 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-pca-locked${at}-${theme}`);
       });
 
+      test("the PCA tab locked by the LD pruning with no distance, once the file is read", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "PCA", exact: true })
+          .click();
+        const run = page
+          .getByRole("tabpanel")
+          .getByRole("button", { name: "Run", exact: true });
+        await expect(run).toHaveAccessibleDescription(
+          /^Type the LD distance/u,
+          { timeout: 20_000 },
+        );
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-pca-locked-ld${at}-${theme}`);
+      });
+
+      for (const shot of ["loading", "load-failed"] as const) {
+        test(`the result's code of the PCA ${shot === "loading" ? "downloading" : "that could not be downloaded"}`, async ({
+          page,
+        }) => {
+          await pickOnNewPage(page, "panel.nei");
+          // The plots of the Variants tab drawn, the code they share with
+          // the result there; then the result's own file held.
+          await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+            timeout: 20_000,
+          });
+          const resultsFile = /\/PcaTabResultView-[^/]*\.js(\?.*)?$/u;
+          const held: Route[] = [];
+          await page.route(resultsFile, (route) => {
+            held.push(route);
+          });
+          await page
+            .getByRole("tablist", { name: "Files and analyses" })
+            .getByRole("tab", { name: "PCA", exact: true })
+            .click();
+          const panel = page.getByRole("tabpanel");
+          const run = panel.getByRole("button", { name: "Run", exact: true });
+          await expect(run).toHaveAccessibleDescription(
+            /^Type the LD distance/u,
+            { timeout: 20_000 },
+          );
+          const field = panel.getByRole("textbox", {
+            name: /^Distance within which variants are compared/u,
+          });
+          await field.fill("50000");
+          await field.press("Enter");
+          await run.click();
+          await expect(
+            panel.getByText("Loading the result…", { exact: true }),
+          ).toBeVisible({ timeout: 30_000 });
+          if (shot === "load-failed") {
+            for (const route of held) await route.abort();
+            await expect(
+              panel.getByText(/^The result of the PCA could not be loaded/u),
+            ).toBeVisible();
+          }
+          await page.mouse.move(0, 0);
+          await save(page, `popgen2-pca-${shot}${at}-${theme}`);
+          await page.unrouteAll({ behavior: "ignoreErrors" });
+        });
+      }
+
       test("the PCA tab ready: a distance typed, Run", async ({ page }) => {
         await pickOnNewPage(page, "panel.nei");
         await page
@@ -5789,9 +5854,12 @@ for (const theme of ["light", "dark"] as const) {
           .click();
         const panel = page.getByRole("tabpanel");
         const run = panel.getByRole("button", { name: "Run", exact: true });
-        await expect(run).toHaveAccessibleDescription(/^The LD pruning/u, {
-          timeout: 20_000,
-        });
+        await expect(run).toHaveAccessibleDescription(
+          /^Type the LD distance/u,
+          {
+            timeout: 20_000,
+          },
+        );
         const field = panel.getByRole("textbox", {
           name: /^Distance within which variants are compared/u,
         });
@@ -5817,9 +5885,12 @@ for (const theme of ["light", "dark"] as const) {
             .click();
           const panel = page.getByRole("tabpanel");
           const run = panel.getByRole("button", { name: "Run", exact: true });
-          await expect(run).toHaveAccessibleDescription(/^The LD pruning/u, {
-            timeout: 20_000,
-          });
+          await expect(run).toHaveAccessibleDescription(
+            /^Type the LD distance/u,
+            {
+              timeout: 20_000,
+            },
+          );
           const field = panel.getByRole("textbox", {
             name: /^Distance within which variants are compared/u,
           });
@@ -5862,9 +5933,12 @@ for (const theme of ["light", "dark"] as const) {
             .click();
           const panel = page.getByRole("tabpanel");
           const run = panel.getByRole("button", { name: "Run", exact: true });
-          await expect(run).toHaveAccessibleDescription(/^The LD pruning/u, {
-            timeout: 20_000,
-          });
+          await expect(run).toHaveAccessibleDescription(
+            /^Type the LD distance/u,
+            {
+              timeout: 20_000,
+            },
+          );
           if (shot === "pcoa") {
             await panel
               .getByRole("radiogroup", { name: "Method" })
