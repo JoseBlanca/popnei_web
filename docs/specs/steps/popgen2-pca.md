@@ -1350,7 +1350,9 @@ engines that start on the owner's Mac, on `panel.nei`,
   shows the old result, nor Run, between the change and the bar, read
   every animation frame; the line of the quiet second, then the bar;
   the status region says "Calculating the PCA again. To change the
-  filters, stop it in the PCA tab." once; a value set
+  filters, stop it in the PCA tab." at most once, and never joined with
+  "PCA of panel.nei calculated.", which on panel.nei, whose PCA ends
+  within the region's pause, is said alone; a value set
   back calculates again (a request); Stop during the second: Run, and a
   later change sends nothing; the numbers of the PCA started by itself
   after the missing data of the PCA moved to 0.05 are those of "Its

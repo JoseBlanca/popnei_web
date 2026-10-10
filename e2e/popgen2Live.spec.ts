@@ -13,19 +13,25 @@
  * the user left it; after a change the tab never shows the result left
  * behind, nor Run, between the change and the bar, read every animation
  * frame; the line of the quiet second, then the bar; the status region
- * says the start once; a value set back is calculated again; Stop
- * during the second gives Run and a later change sends nothing; the
- * numbers of the PCA started by itself with the missing data of the PCA
- * at 0.05; the download pressed within the second goes first, and after
- * a Stop of a run a change sends nothing; axe in the state about to
- * start, light and dark.
+ * says the end of the run, never joined with its start; a value set back
+ * is calculated again; Stop recalculating during the second gives Run
+ * and a later change sends nothing; the numbers of the PCA started by
+ * itself with the missing data of the PCA at 0.05, and the count of
+ * variants of each PCA started by itself where it differs from 548; the
+ * download pressed within the second goes first, and after a Stop of a
+ * run a change sends nothing; axe in the state about to start, light
+ * and dark.
  *
  * The 3 s are what the spec asks a change under way to hold, so they
  * are waited for in real time; every other wait is for what the page
- * shows. panel.nei holds 1,200 variants of 200 diploid individuals; its
- * PCA within 50,000 bp, the missing data at 0.1, keeps 548 variants, and
- * at 0.05, 532, PC1 3.58% (popnei 0.2.2 under node, the screen spec,
- * "The numbers").
+ * shows. The page's timers are the fake clock's from its load, and a
+ * flow that makes a change and then presses a control within the quiet
+ * second stops them across the two, so that a loaded machine cannot let
+ * the second run out between. panel.nei holds 1,200 variants of 200
+ * diploid individuals; its PCA within 50,000 bp keeps, with the missing
+ * data at 0.1, 548 variants, at 0.05, 532, PC1 3.58%, and at 0.045, 519;
+ * with the missing data at 0.099 and the r² at 0.2, 1,072 (popnei 0.2.2
+ * under node; the screen spec, "The numbers", for 548 and 532).
  */
 import { join } from "node:path";
 
@@ -72,6 +78,15 @@ const DISTANCE =
 const R2 = "Maximum r² with a variant kept before it, from 0 to 1";
 
 const MISSING_TITLE = "Proportion of missing genotypes";
+const MAF_TITLE = "Major allele frequency";
+
+/** Ten presses of keys on a missing rate at 0.1 that step by 0.001:
+    five of Page Down, ten steps each, and five of the left arrow, to
+    0.045. */
+const TEN_PRESSES = [
+  ...Array.from({ length: 5 }, () => "PageDown"),
+  ...Array.from({ length: 5 }, () => "ArrowLeft"),
+] as const;
 
 /** Counts the calculations the page asks of its workers, every "run"
     message, in `window.postedRuns`. */
@@ -215,6 +230,10 @@ function axisLabels(page: Page): Locator {
 async function openLive(page: Page): Promise<void> {
   await page.addInitScript(countRuns);
   await recordAnnouncements(page);
+  // Every timer of the page is the fake clock's from its load, so that a
+  // flow that stops it holds every quiet second, the one set by the
+  // distance's Enter below among them; until then time flows as usual.
+  await page.clock.install();
   await page.goto("popgen2.html");
   await pick(page, "panel.nei");
   await tab(page, "PCA").click();
@@ -231,10 +250,29 @@ async function openLive(page: Page): Promise<void> {
 }
 
 /** Expects one more calculation than `posted` once the PCA started by
-    itself has given its result, and none more meanwhile. */
-async function expectOneMore(page: Page, posted: number): Promise<void> {
+    itself has given its result, and none more meanwhile; and, given
+    `variants`, "from 532 variants.", the caption of that result. */
+async function expectOneMore(
+  page: Page,
+  posted: number,
+  variants?: string,
+): Promise<void> {
   await expect(caption(page)).toBeAttached({ timeout: RESULT_TIMEOUT });
+  if (variants !== undefined) {
+    await expect(caption(page)).toContainText(variants);
+  }
   expect(await runsPosted(page)).toBe(posted + 1);
+}
+
+/** Stops the page's timers, so that what a flow does next, a commit and
+    the press of a control, happens within one quiet second however
+    loaded the machine; `startClock` lets them run again. */
+async function stopClock(page: Page): Promise<void> {
+  await page.clock.pauseAt(Date.now() + 1000);
+}
+
+async function startClock(page: Page): Promise<void> {
+  await page.clock.resume();
 }
 
 /** Waits `ms` of real time: the time a change under way is held for,
@@ -249,7 +287,7 @@ async function expectNotGreyed(control: Locator): Promise<void> {
 }
 
 test.describe("NU4 D3 the PCA calculated again by itself", () => {
-  test("NU4 D3 ten presses of the left arrow on the line of a threshold start one PCA, after the last, and no control greys before it", async ({
+  test("NU4 D3 ten presses of Page Down and the left arrow on the line of a threshold start one PCA, after the last, for the value they reached, and no control greys before it", async ({
     page,
   }) => {
     test.setTimeout(90_000);
@@ -258,16 +296,18 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     await tab(page, "Variants").click();
     const missing = histogram(page, MISSING_TITLE);
     await missing.slider.focus();
-    for (let press = 0; press < 10; press += 1) {
-      await page.keyboard.press("ArrowLeft");
+    // Five of ten steps and five of one, 0.1 to 0.045, where the PCA
+    // keeps 519 variants and not the 548 of 0.1.
+    for (const key of [...TEN_PRESSES]) {
+      await page.keyboard.press(key);
       await expectNotGreyed(missing.slider);
     }
-    await expect(missing.slider).toHaveValue("0.09");
+    await expect(missing.slider).toHaveValue("0.045");
     await expect(caption(page)).toHaveCount(0);
-    await expectOneMore(page, posted);
+    await expectOneMore(page, posted, "from 519 variants.");
   });
 
-  test("NU4 D3 ten presses of the left arrow on the slider of the missing data of the PCA start one PCA, after the last, and no control greys before it", async ({
+  test("NU4 D3 ten presses of Page Down and the left arrow on the slider of the missing data of the PCA start one PCA, after the last, for the value they reached, and no control greys before it", async ({
     page,
   }) => {
     test.setTimeout(90_000);
@@ -275,12 +315,12 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     const posted = await runsPosted(page);
     const missing = pcaSlider(page, "missing");
     await missing.focus();
-    for (let press = 0; press < 10; press += 1) {
-      await page.keyboard.press("ArrowLeft");
+    for (const key of [...TEN_PRESSES]) {
+      await page.keyboard.press(key);
       await expectNotGreyed(missing);
     }
-    await expect(missing).toHaveAttribute("aria-valuetext", "0.09");
-    await expectOneMore(page, posted);
+    await expect(missing).toHaveAttribute("aria-valuetext", "0.045");
+    await expectOneMore(page, posted, "from 519 variants.");
   });
 
   test("NU4 D3 ten presses of the arrow keys on the closed list of the method start one PCA, after the last, and no control greys before it", async ({
@@ -313,8 +353,17 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     const track = await trackOf(missing).boundingBox();
     if (track === null) throw new Error("no track");
     const y = track.y + track.height / 2;
+    // A change first, the MAF of the PCA a step down, whose quiet second
+    // the drag must hold: the drag itself changes the project only at its
+    // release. The page's timers stand still from the change to the press,
+    // so that the second cannot run out between them.
+    await stopClock(page);
+    const maf = pcaSlider(page, "maf");
+    await maf.focus();
+    await maf.press("ArrowLeft");
     await page.mouse.move(track.x + track.width, y);
     await page.mouse.down();
+    await startClock(page);
     await page.mouse.move(track.x + track.width / 2, y, { steps: 12 });
     await holdFor(page, HELD_MS);
     expect(await runsPosted(page)).toBe(posted);
@@ -340,8 +389,16 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     if (box === null) throw new Error("no thumb");
     const x = box.x + box.width / 2;
     const y = box.y + box.height / 2;
+    // A change first, the MAF typed in its box, whose quiet second the
+    // drag must hold: the drag itself changes the project only at its
+    // release. The page's timers stand still from the change to the press.
+    await stopClock(page);
+    const maf = histogram(page, MAF_TITLE);
+    await maf.box.fill("0.9");
+    await maf.box.press("Enter");
     await page.mouse.move(x, y);
     await page.mouse.down();
+    await startClock(page);
     await page.mouse.move(x - 60, y, { steps: 8 });
     await holdFor(page, HELD_MS);
     expect(await runsPosted(page)).toBe(posted);
@@ -361,16 +418,18 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     await openLive(page);
     const posted = await runsPosted(page);
     const missing = pcaSlider(page, "missing");
-    await missing.focus();
-    await missing.press("ArrowLeft");
     const maf = pcaSlider(page, "maf");
     const before = await maf.getAttribute("aria-valuetext");
     const thumb = thumbOf(maf);
     await thumb.scrollIntoViewIfNeeded();
     const box = await thumb.boundingBox();
     if (box === null) throw new Error("no thumb");
+    await stopClock(page);
+    await missing.focus();
+    await missing.press("ArrowLeft");
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
+    await startClock(page);
     await holdFor(page, HELD_MS);
     expect(await runsPosted(page)).toBe(posted);
     await expectNotGreyed(maf);
@@ -386,11 +445,13 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     await openLive(page);
     const posted = await runsPosted(page);
     const missing = pcaSlider(page, "missing");
+    await stopClock(page);
     await missing.focus();
     await missing.press("ArrowLeft");
     await methodButton(page).click();
     const list = page.getByRole("listbox");
     await expect(list).toBeVisible();
+    await startClock(page);
     await holdFor(page, HELD_MS);
     await expect(list).toBeVisible();
     expect(await runsPosted(page)).toBe(posted);
@@ -407,6 +468,7 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     const posted = await runsPosted(page);
     await tab(page, "Variants").click();
     const missing = histogram(page, MISSING_TITLE);
+    await stopClock(page);
     await missing.box.fill("0.05");
     await missing.box.press("Enter");
     await stats(page)
@@ -417,12 +479,13 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
       .click();
     const menu = page.getByRole("menu");
     await expect(menu).toBeVisible();
+    await startClock(page);
     await holdFor(page, HELD_MS);
     await expect(menu).toBeVisible();
     expect(await runsPosted(page)).toBe(posted);
     await page.keyboard.press("Escape");
     await expect(menu).toBeHidden();
-    await expectOneMore(page, posted);
+    await expectOneMore(page, posted, "from 532 variants.");
   });
 
   test("NU4 D3 a change, then digits typed slowly in the r² of the PCA, over 3 s: no PCA starts and the box keeps taking them; Enter, and the PCA starts with both", async ({
@@ -432,12 +495,17 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     await openLive(page);
     const posted = await runsPosted(page);
     const missing = pcaSlider(page, "missing");
+    const r2 = shown(page).getByRole("textbox", { name: R2 });
+    await stopClock(page);
     await missing.focus();
     await missing.press("ArrowLeft");
-    const r2 = shown(page).getByRole("textbox", { name: R2 });
     await r2.click();
     await r2.press("ControlOrMeta+a");
-    for (const key of ["0", ".", "2"]) {
+    await r2.press("0");
+    await startClock(page);
+    await holdFor(page, HELD_MS / 3);
+    expect(await runsPosted(page)).toBe(posted);
+    for (const key of [".", "2"]) {
       await r2.press(key);
       await holdFor(page, HELD_MS / 3);
       expect(await runsPosted(page)).toBe(posted);
@@ -445,12 +513,13 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     }
     await expect(r2).toHaveValue("0.2");
     await r2.press("Enter");
-    await expectOneMore(page, posted);
+    // The missing data at 0.099 and the r² at 0.2: 1,072 variants.
+    await expectOneMore(page, posted, "from 1,072 variants.");
     await expect(r2).toHaveValue("0.2");
     await expect(missing).toHaveAttribute("aria-valuetext", "0.099");
   });
 
-  test("NU4 D3 the missing data of the PCA moved to 0.05: the line of the quiet second, then the bar, never the result left behind nor Run between; 532 variants and PC1 3.58%; the start said once", async ({
+  test("NU4 D3 the missing data of the PCA moved to 0.05: the line of the quiet second, then the bar, never the result left behind nor Run between; 532 variants and PC1 3.58%; its end said, never joined with its start", async ({
     page,
   }) => {
     test.setTimeout(90_000);
@@ -477,8 +546,19 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
       bar: true,
       resultBeforeBar: 0,
     });
+    // panel.nei's PCA ends within the status region's pause, so its end
+    // is said alone, and its start, if said, never joined with it.
+    const END = "PCA of panel.nei calculated.";
+    await expect
+      .poll(async () => (await announced(page)).some((t) => t.includes(END)))
+      .toBe(true);
     const said = await announced(page);
-    expect(said.filter((text) => text.includes(STARTED))).toHaveLength(1);
+    expect(
+      said.filter((text) => text.includes(STARTED)).length,
+    ).toBeLessThanOrEqual(1);
+    expect(
+      said.filter((text) => text.includes(STARTED) && text.includes(END)),
+    ).toEqual([]);
   });
 
   test("NU4 D3 a value set back is calculated again: 0.05 and back to 0.1, each a PCA", async ({
@@ -512,9 +592,10 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     await openLive(page);
     const posted = await runsPosted(page);
     // The page's timers stand still from here, so that the second does
-    // not run out before Stop is pressed, whatever the machine.
-    await page.clock.install();
-    await page.clock.pauseAt(Date.now() + 1000);
+    // not run out before Stop recalculating is pressed, whatever the
+    // machine; the clock was installed before the page loaded, so no
+    // timer of its own is left running.
+    await stopClock(page);
     const missing = pcaSlider(page, "missing");
     await missing.focus();
     await missing.press("ArrowLeft");
@@ -576,10 +657,12 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     const posted = await runsPosted(page);
     await tab(page, "Variants").click();
     const missing = histogram(page, MISSING_TITLE);
+    await stopClock(page);
     await missing.box.fill("0.05");
     await missing.box.press("Enter");
     await downloadButton(page).click();
     await expect(downloadDialog(page)).toBeVisible();
+    await startClock(page);
     await holdFor(page, HELD_MS);
     expect(await runsPosted(page)).toBe(posted);
     await expect(
@@ -587,8 +670,7 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     ).toBeAttached();
     await downloadDialog(page).getByRole("button", { name: "Cancel" }).click();
     await expect(downloadDialog(page)).toBeHidden();
-    await expect(caption(page)).toBeAttached({ timeout: RESULT_TIMEOUT });
-    expect(await runsPosted(page)).toBe(posted + 1);
+    await expectOneMore(page, posted, "from 532 variants.");
     await expect(missing.slider).toHaveValue("0.05");
   });
 
