@@ -4,7 +4,7 @@
  * "Stop" and "Accessibility"), told by the analyses started by
  * themselves, over the store of the page with a fake worker.
  */
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
 import { setAnalysisOptions } from "../../core/project.ts";
@@ -15,8 +15,26 @@ import type { LiveEvent } from "../autoRuns.ts";
 import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
 import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
+import { ANNOUNCE_DELAY_MS, createAnnouncer } from "../shell/status.ts";
 import type { Announcer } from "../shell/status.ts";
-import { announceLive } from "./announceChanges.ts";
+import { announceChanges, announceLive } from "./announceChanges.ts";
+
+/** A result of the PCA of `s000` and `s001`. */
+function pcaResult(): JobResult {
+  return {
+    analysis: "pca",
+    method: "pca",
+    individuals: ["s000", "s001"],
+    numComps: 1,
+    numCompsFound: 1,
+    projections: Float64Array.from([1, -1]),
+    explainedVariancePercent: Float64Array.from([100]),
+    numVarsUsed: 548,
+    lingoesConstant: null,
+    negativeEigenvaluesPercent: null,
+    passStats: { numVars: 548, filtering: {} },
+  };
+}
 
 /** An announcer that keeps what it was given. */
 function recorder(): {
@@ -42,18 +60,27 @@ function recorder(): {
 }
 
 /** As `setUp`, with `panel.nei` read, its one pass done and the LD
-    distance typed, so that the PCA is ready and its Run enabled. */
-async function setUpReady(): Promise<ReturnType<typeof setUp>> {
+    distance typed, so that the PCA is ready and its Run enabled; and
+    `endLast`, which ends the last request with `outcome`, or its result
+    when it is a function of the key. */
+async function setUpReady(announcer?: Announcer): Promise<
+  ReturnType<typeof setUp> & {
+    readonly endLast: (outcome: (key: string) => Outcome<JobResult>) => void;
+  }
+> {
   const ends: ((outcome: Outcome<JobResult>) => void)[] = [];
   const keys: string[] = [];
-  const page = setUp((key) => ({
-    id: keys.length + 1,
-    outcome: new Promise<Outcome<JobResult>>((resolve) => {
-      keys.push(key);
-      ends.push(resolve);
+  const page = setUp(
+    (key) => ({
+      id: keys.length + 1,
+      outcome: new Promise<Outcome<JobResult>>((resolve) => {
+        keys.push(key);
+        ends.push(resolve);
+      }),
+      cancel: () => undefined,
     }),
-    cancel: () => undefined,
-  }));
+    announcer,
+  );
   page.store.variantsRead("a".repeat(32), {
     kind: "read",
     individuals: ["s000", "s001"],
@@ -75,7 +102,17 @@ async function setUpReady(): Promise<ReturnType<typeof setUp>> {
   end({ kind: "done", key, result: summaryResult(["1"], [1200]) });
   await pass;
   expect(statusOf(page.store.getState(), "pca").kind).toBe("ready");
-  return page;
+  return {
+    ...page,
+    endLast: (outcome) => {
+      const last = ends.at(-1);
+      const lastKey = keys.at(-1);
+      if (last === undefined || lastKey === undefined) {
+        throw new Error("no request to end");
+      }
+      last(outcome(lastKey));
+    },
+  };
 }
 
 /** The store of the page with `panel.nei` open, and the events of the
@@ -86,6 +123,7 @@ function setUp(
     outcome: new Promise(() => undefined),
     cancel: () => undefined,
   }),
+  given?: Announcer,
 ): {
   readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly said: string[];
@@ -108,7 +146,9 @@ function setUp(
     readOptions: null,
   });
   const listeners: ((event: LiveEvent) => void)[] = [];
-  const { said, announcer } = recorder();
+  const recorded = recorder();
+  const said = recorded.said;
+  const announcer = given ?? recorded.announcer;
   announceLive(
     store,
     {
@@ -137,6 +177,44 @@ function setUp(
 }
 
 describe("NU4 D2 the status region says the PCA started by itself and its Stop", () => {
+  test("a PCA started by itself that ends within the region's pause is said by its end alone", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const announcer = createAnnouncer();
+      const page = await setUpReady(announcer);
+      announceChanges(page.store, announcer, () => null);
+      const run = startAnalysis(page.store, "pca");
+      page.tell({ kind: "startedByItself", id: "pca" });
+      page.endLast((key) => ({ kind: "done", key, result: pcaResult() }));
+      await run;
+      await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+      expect(announcer.getState()).toBe("PCA of panel.nei calculated.");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a PCA started by itself that ends after the pause: its start said, then its end", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const announcer = createAnnouncer();
+      const page = await setUpReady(announcer);
+      announceChanges(page.store, announcer, () => null);
+      const run = startAnalysis(page.store, "pca");
+      page.tell({ kind: "startedByItself", id: "pca" });
+      await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+      expect(announcer.getState()).toBe(
+        "Calculating the PCA again. To change the filters, stop it in the PCA tab.",
+      );
+      page.endLast((key) => ({ kind: "done", key, result: pcaResult() }));
+      await run;
+      await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+      expect(announcer.getState()).toBe("PCA of panel.nei calculated.");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test("a start by itself is said once, by the method", () => {
     const { said, tell, toPcoa } = setUp();
     tell({ kind: "startedByItself", id: "pca" });

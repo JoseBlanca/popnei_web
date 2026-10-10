@@ -369,7 +369,11 @@ follows, since the Stop also ends the automatic runs, so that a Run is
 needed after it (from the review of work package 4, 10 October 2026;
 "Stop the PCA to change the filters." and "Calculating the PCA again.
 Stop it to change the filters." before). Its end is said as the end of
-any run, "PCA of panel.nei calculated.".
+any run, "PCA of panel.nei calculated."; a PCA that ends before its
+start is written into the region, within its pause of a tenth of a
+second, is said by its end alone, since the two words joined would say
+that it is calculating and that it is done at once (from the review of
+work package 4, 10 October 2026).
 
 **No time limit on the user** (WCAG 2.2, success criterion 2.2.1,
 Timing Adjustable). The quiet second is a time after which the page

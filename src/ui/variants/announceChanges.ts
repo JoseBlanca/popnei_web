@@ -24,6 +24,13 @@ import { statsAnnouncementsOf } from "./statsWords.ts";
 import { announcementsOf } from "./words.ts";
 import type { PageStore } from "../store.tsx";
 
+/** The kind of the status region's words of a run of the PCA, its start
+    by itself and its end, of which only the latest is said: the end of a
+    run drops its start still waiting to be written. A start never drops
+    the end of the run before it, since a PCA starts by itself a quiet
+    second after a change, which is longer than the region's pause. */
+const PCA_RUN_KIND = "pcaRun";
+
 /**
  * Called by the section of the statistics of the load `fileId` once it is
  * drawn; returns the function it calls when it goes. The region says
@@ -75,7 +82,12 @@ export function announceChanges(
     before = after;
     for (const text of texts) announcer.announce(text);
     if (noVariant !== null) announcer.announce(noVariant);
-    if (pcaEnd !== null) announcer.announce(pcaEnd);
+    // Of the kind of the start by itself, which it drops while the start
+    // still waits to be written: a PCA that ends within the region's
+    // pause is said by its end alone.
+    if (pcaEnd !== null) {
+      announcer.announce(pcaEnd, { replaces: PCA_RUN_KIND });
+    }
     const fileId = fileIdOf(after);
     if (fileId !== null && fileId === shownFor) {
       sayStats(after);
@@ -133,7 +145,9 @@ export function announceLive(
     const method = pcaOptions(store.getState().project, "popgen2").method;
     switch (event.kind) {
       case "startedByItself":
-        announcer.announce(startedByItselfText(method));
+        announcer.announce(startedByItselfText(method), {
+          replaces: PCA_RUN_KIND,
+        });
         return;
       case "paused":
         announcer.announce(
