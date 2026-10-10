@@ -747,3 +747,45 @@ Undo. Task 4.2 gained what this review left for it.
 Checks after the fixes: typecheck, lint, format clean; Vitest 153
 files, 5,029 tests; in Chromium and WebKit the flows of `popgen2.html`
 and `e2e/shell.spec.ts`, 308.
+
+### Work package 3, task 3.2, 10 October 2026
+
+Commit d918e439: the widgets of `popgen2.html` hold a change under way
+on the gate (`holdChange`, never the arrow keys' `holdKeyRun`): the
+sliders, the Select, the menus "Download…", the number box and the
+download dialog. No control lacked a signal, so no stop: the browser
+reviewer watched every hold start and end in Chromium and WebKit with
+the mouse, the keyboard and touch.
+
+The review, `spec`, `tests`, `stale`, `errors`, `api`, `react`,
+`accessibility` and `browser`, then a second `react` reading of the
+fixes: the findings that held were fixed in af708308 to c770b15d and
+2a568fc4 to 500dae43, test first. The ones that would have let the PCA
+start under the user's hand once work package 4 is built: the box's
+hold dropped whenever the text typed so far read as its number ("0.1"
+on the way to "0.15"), and now holds from the first key to the commit;
+a thumb pressed and held without moving took no hold, and now holds
+from the press; a cancelled touch drag let the hold go before its value
+reached the project. The ones that would have stopped the automatic
+runs for the session: a throw from the screen's handler of a committed
+number left the box held; a release that threw tore down the React
+tree; a right-click on a threshold's thumb took a hold. Also: a paste
+into a greyed box changed the filter under a running PCA (older, from
+work package 6 of the PCA tab's plan); the widgets now take a narrow
+holder of their own instead of the page's whole gate, and a forgotten
+provider throws a defect; tests that fail if a widget takes the arrow
+keys' hold, if the Select keeps its hold when it begins to wait, or if
+the dialog lets its hold go during the write. Not taken: the `stale`
+reviewer's box held in Spanish, since both pages parse numbers in
+en-US. For work package 4 (deliverable 3 and task 4.2): the threshold
+line, a thumb held still and a menu held open checked in the browser,
+and the dialog's own line. The `accessibility` reviewer expects a
+screen reader user moving a slider one key at a time to be overtaken
+by the start, since VoiceOver reads each value for longer than a
+second; the spec accepts it under WCAG 2.2.1 with Stop first and the
+reason on each greyed control, to be heard in VoiceOver in work
+package 8.
+
+Checks at 500dae43: Vitest 156 files, 5,088 tests; typecheck, lint,
+format clean; in Chromium and WebKit the flows of `popgen2.html`, 274,
+and the old page's thresholds, PCA panel, individuals and shell, 208.
