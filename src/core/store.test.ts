@@ -8886,10 +8886,14 @@ describe("NU1 D2 dropLeftBehind on the store of popgen2.html", () => {
       maxUndoSteps: 1,
       keptNoneStep: null,
     };
-    expect(() => createStore({ ...config, dropLeftBehind: true })).toThrow(
-      /^popnei_web defect:/,
-    );
+    // The type refuses dropLeftBehind without stopLeftBehind: true; a
+    // caller in JavaScript, which no type checks, meets the defect.
     expect(() =>
+      // @ts-expect-error -- dropLeftBehind needs stopLeftBehind: true
+      createStore({ ...config, dropLeftBehind: true }),
+    ).toThrow(/^popnei_web defect:/);
+    expect(() =>
+      // @ts-expect-error -- dropLeftBehind needs stopLeftBehind: true
       createStore({ ...config, stopLeftBehind: false, dropLeftBehind: true }),
     ).toThrow(/^popnei_web defect:/);
     expect(() =>

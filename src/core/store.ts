@@ -483,6 +483,12 @@ export interface StoreConfig<J, R, F = never> {
       this has it, a `Popgen2Store`. The one pass of that page reads no filter,
       so no change stops it. */
   readonly stopLeftBehind?: boolean;
+}
+
+/** The settings of a store made with `stopLeftBehind`, the store of
+    popgen2.html: `dropLeftBehind` is given only with it. */
+export interface StopLeftBehindConfig {
+  readonly stopLeftBehind: true;
   /** Whether the store keeps a result, and popnei's refusal, only under
       the key its analysis has, or had when it was last not locked: after
       a change that gives an analysis another key, what the cache and the
@@ -491,9 +497,9 @@ export interface StoreConfig<J, R, F = never> {
       refusals when it ends, even when the key came back since
       (docs/specs/core/store.md, "dropLeftBehind"). True on popgen2.html,
       which calculates the PCA again by itself and shows no result of
-      values left behind; false when absent. Given without
-      `stopLeftBehind`, a defect: a calculation left behind would run on
-      out of sight, its result dropped. */
+      values left behind; false when absent. Only with `stopLeftBehind`,
+      or a calculation left behind would run on out of sight, its result
+      dropped. */
   readonly dropLeftBehind?: boolean;
 }
 
@@ -764,7 +770,7 @@ type WrittenKept<F> = Extract<
  * the owner decided on 28 September 2026 they do not.
  */
 export function createStore<J, R, F = never>(
-  config: StoreConfig<J, R, F> & { readonly stopLeftBehind: true },
+  config: StoreConfig<J, R, F> & StopLeftBehindConfig,
 ): Popgen2Store<R, F>;
 /** The store of a page made without `stopLeftBehind`, as popgen.html's,
     which has neither `applyAfresh` nor `populationColumnChosen`. */
@@ -772,7 +778,9 @@ export function createStore<J, R, F = never>(
   config: StoreConfig<J, R, F>,
 ): Store<R, F>;
 export function createStore<J, R, F = never>(
-  config: StoreConfig<J, R, F>,
+  // `dropLeftBehind` is read here for a caller in JavaScript, which no
+  // type stops from giving it without `stopLeftBehind`.
+  config: StoreConfig<J, R, F> & { readonly dropLeftBehind?: boolean },
 ): Store<R, F> | Popgen2Store<R, F> {
   const defs = config.analyses;
   const ids = new Set<AnalysisId>();

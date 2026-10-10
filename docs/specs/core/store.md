@@ -1540,19 +1540,27 @@ export function createStore<J, R, F = never>(config: {
       behind (above, "On popgen2.html: no notice, and a history of the filters"); true on
       popgen2.html, false when absent. */
   readonly stopLeftBehind?: boolean;
+}): Store<R, F>;   // a Popgen2Store<R, F> when given StopLeftBehindConfig, below
+
+/** What the overload of popgen2.html's store adds to the config. */
+export interface StopLeftBehindConfig {
+  readonly stopLeftBehind: true;
   /** Whether the result and the refusal under a key an analysis leaves behind are removed from the
       cache, the last key of a locked analysis kept, and a result that ends under a key left behind
       not cached (above, "dropLeftBehind"); true on popgen2.html from 10 October 2026, false when
       absent. */
   readonly dropLeftBehind?: boolean;
-}): Store<R, F>;   // a Popgen2Store<R, F> when given stopLeftBehind: true
+}
 ```
 
-`createStore` throws a defect when it is given `dropLeftBehind` without
-`stopLeftBehind`: a change would throw away the result under a key left
-behind and leave its calculation running out of sight, its result then
-dropped too, the worker held for nothing. The overloads stay as they
-are, `Popgen2Store` with `stopLeftBehind: true`, `Store` otherwise.
+`dropLeftBehind` is a field of `StopLeftBehindConfig` alone, so a call
+that gives it without `stopLeftBehind: true` does not compile. A caller
+in JavaScript, which no type checks, still meets a defect: `createStore`
+throws when it is given `dropLeftBehind` without `stopLeftBehind`,
+since a change would throw away the result under a key left behind and
+leave its calculation running out of sight, its result then dropped too,
+the worker held for nothing. The overloads are `Popgen2Store` with
+`StopLeftBehindConfig`, `Store` otherwise.
 
 The type the page `popgen2.html` is given, in `src/ui/popgen2Store.ts`
 and not in core, from 10 October 2026:
@@ -2195,7 +2203,8 @@ by `createPopgen2Store` with the same fake `send`, from 10 October
   the threshold moved, its `cancel()` called, the threshold set back,
   then its result given by `runEnded`: `ready`, not `done`, and the
   project's number of variants unchanged.
-- `createStore` given `dropLeftBehind` without `stopLeftBehind`: throws.
+- `createStore` given `dropLeftBehind` without `stopLeftBehind`: does
+  not compile, and, past the type, throws.
 - A PCA refused by popnei, `error`, the threshold moved and set back:
   `ready`, not `error`.
 - A PCA done, its LD distance emptied: `locked`; typed again with the
