@@ -1,11 +1,19 @@
+// @vitest-environment jsdom
 /**
  * The keys of the keyboard's Undo and Redo (docs/specs/shell.md, "The
  * header"). Where they are listened for, and a text field that keeps
  * them, are checked in the browser, in e2e/shell.spec.ts.
  */
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { keysAction, shortcutOf, undoesAnotherField } from "./shortcuts.ts";
+import { NUMBER_FIELD_ATTRIBUTE } from "../widgets/committedNumber.ts";
+import { DIALOG_MARK } from "../widgets/dialogMark.ts";
+import {
+  keysAction,
+  refuseUndoKeys,
+  shortcutOf,
+  undoesAnotherField,
+} from "./shortcuts.ts";
 import type { KeysPressed } from "./shortcuts.ts";
 
 /** The key `key` with the modifiers `held`, none by default, at the
@@ -88,7 +96,7 @@ describe("the browser's undo of a field that has not the focus", () => {
   });
 });
 
-describe("AP4 D2 what popgen2.html does with the keys of Undo and Redo", () => {
+describe("AP4 D2 what the window does with the keys of Undo and Redo", () => {
   // The rows of docs/specs/steps/popgen2-pca.md, "The keys", that need no
   // page: who the element of the focus gives the keys to, and whether a
   // part of the page took them first. A run of the arrow keys made a
@@ -118,5 +126,91 @@ describe("AP4 D2 what popgen2.html does with the keys of Undo and Redo", () => {
       "redo",
     );
     expect(shortcutOf(keys("z", { metaKey: true }))).toBe("undo");
+  });
+});
+
+describe("NU2 the window of popgen2.html takes the keys of Undo and Redo from the browser", () => {
+  // Chromium on macOS empties a number box whose text is selected at
+  // Ctrl+Y, its "yank", in a beforeinput that cannot be cancelled; only
+  // the keydown can be (seen by the review of 10 October 2026).
+  let stop: () => void = () => undefined;
+  beforeEach(() => {
+    stop = refuseUndoKeys(window);
+  });
+  afterEach(() => {
+    stop();
+    document.body.replaceChildren();
+  });
+
+  /** Presses `held` with `key` on `element`, the event bubbling to the
+      window as a key does; gives whether its default was prevented. */
+  const press = (
+    element: Element,
+    key: string,
+    held: Partial<KeysPressed>,
+  ): boolean => {
+    const event = new KeyboardEvent("keydown", {
+      ...keys(key, held),
+      bubbles: true,
+      cancelable: true,
+    });
+    element.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+  /** Every key of Undo and Redo, as the modifiers held with its letter. */
+  const UNDO_KEYS: readonly (readonly [string, Partial<KeysPressed>])[] = [
+    ["z", { ctrlKey: true }],
+    ["z", { metaKey: true }],
+    ["Z", { ctrlKey: true, shiftKey: true }],
+    ["Z", { metaKey: true, shiftKey: true }],
+    ["y", { ctrlKey: true }],
+  ];
+  /** An element of `tag` added to the page, with `attributes`. */
+  const added = (
+    tag: string,
+    attributes: Readonly<Record<string, string>> = {},
+  ): HTMLElement => {
+    const element = document.createElement(tag);
+    for (const [name, value] of Object.entries(attributes)) {
+      element.setAttribute(name, value);
+    }
+    document.body.append(element);
+    return element;
+  };
+
+  test("a number box with nothing typed, the heading and an open dialog: every key taken from the browser", () => {
+    const places = [
+      added("input", { type: "text", [NUMBER_FIELD_ATTRIBUTE]: "" }),
+      added("h1", { tabindex: "-1" }),
+    ];
+    const dialog = added("div", { [DIALOG_MARK]: "" });
+    const button = document.createElement("button");
+    dialog.append(button);
+    places.push(button);
+    for (const place of places) {
+      for (const [key, held] of UNDO_KEYS) {
+        expect(press(place, key, held)).toBe(true);
+      }
+    }
+  });
+
+  test("a field of free text keeps the browser's own undo", () => {
+    const field = added("input", { type: "text" });
+    for (const [key, held] of UNDO_KEYS) {
+      expect(press(field, key, held)).toBe(false);
+    }
+  });
+
+  test("Cmd+Y, the history of the browser on macOS, and keys of no shortcut are left to the browser", () => {
+    const box = added("input", { type: "text", [NUMBER_FIELD_ATTRIBUTE]: "" });
+    expect(press(box, "y", { metaKey: true })).toBe(false);
+    expect(press(box, "y", {})).toBe(false);
+    expect(press(box, "z", { ctrlKey: true, altKey: true })).toBe(false);
+  });
+
+  test("stopped, it takes nothing", () => {
+    stop();
+    const heading = added("h1", { tabindex: "-1" });
+    expect(press(heading, "y", { ctrlKey: true })).toBe(false);
   });
 });

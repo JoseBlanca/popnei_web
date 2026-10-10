@@ -7,7 +7,9 @@
  * the project otherwise, and while a dialog of the shell
  * is open, wherever the focus is, since they would change the project
  * behind the question it asks; the notice is not such a dialog. The
- * shell's header listens for them on the window.
+ * shell's header of popgen.html listens for them on the window; the
+ * window of popgen2.html, which has no Undo, takes them from the browser
+ * and does nothing with them.
  */
 
 import { NUMBER_FIELD_ATTRIBUTE } from "../widgets/committedNumber.ts";
@@ -156,4 +158,30 @@ export function keysAction(context: KeyContext): KeysAction {
   // the typing of the last field edited before.
   if (context.owner === "dialog") return "swallow";
   return "take";
+}
+
+/** Takes the keys of Undo and Redo from the browser on the window
+    `target`, for popgen2.html, which has no Undo and no Redo
+    (docs/specs/steps/popgen2-filters.md, "Undo, Redo and their keys"):
+    they then do nothing, but in a field of free text, which keeps its
+    own undo, and in a number box with something typed, which took them
+    first to put back its number. Without it, Chromium on macOS empties a
+    number box whose text is selected at Ctrl+Y, its "yank", in a
+    `beforeinput` that cannot be cancelled (seen in Chromium on macOS on
+    10 October 2026). Cmd+Y, the history of the browser on macOS, is no
+    such key. Listens as the key bubbles, so that the box acts first.
+    Gives the function that stops it. */
+export function refuseUndoKeys(target: Window): () => void {
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (shortcutOf(event) === null) return;
+    const action = keysAction({
+      handled: event.defaultPrevented,
+      owner: ownerOfKeys(event.target),
+    });
+    if (action !== "leave") event.preventDefault();
+  };
+  target.addEventListener("keydown", onKeyDown);
+  return () => {
+    target.removeEventListener("keydown", onKeyDown);
+  };
 }

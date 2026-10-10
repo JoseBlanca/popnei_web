@@ -6,9 +6,11 @@
  * opens, after a variants file, after a threshold moved and after the
  * PCA; Ctrl+Z, Meta+Z, Ctrl+Shift+Z and Ctrl+Y on the heading, on a line
  * and in a box with nothing typed change no threshold, no option and no
- * result; in a box with digits not confirmed, Ctrl+Z puts back the box's
- * number; on a line whose run of the arrow keys waits, the keys leave
- * the run to become a change at its second; the browser's own undo of a
+ * result; Ctrl+Y and Meta+Y in a box reached by Tab, its text selected,
+ * leave its number; in a box with digits not confirmed, Ctrl+Z puts back
+ * the box's number; on a line
+ * whose run of the arrow keys waits, the keys leave the run to become a
+ * change at its second; the browser's own undo of a
  * box held back; the PCA done, a threshold moved and moved back: Run,
  * and no result, with no request until Run. A file opened while the pass
  * of the file before it runs starts its own pass, and is never said to
@@ -292,6 +294,67 @@ test("NU2 D3 0.9 typed in the box of the MAF and not confirmed, Ctrl+Z: the box 
   await maf.box.press("Tab");
   await expect(maf.box).toHaveValue("1");
   await expect(maf.slider).toHaveValue("1");
+});
+
+/** Keeps, from the next load of `page`, every text React Aria's live
+    region takes, for `liveSaid`: the region of a number box, which
+    says "Empty" when its text is emptied, clears itself a few seconds
+    later. */
+async function recordLive(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const texts: string[] = [];
+    Reflect.set(window, "popneiLive", texts);
+    new MutationObserver(() => {
+      for (const region of document.querySelectorAll("[data-live-announcer]")) {
+        const text = region.textContent;
+        if (text !== "") texts.push(text);
+      }
+    }).observe(document, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+  });
+}
+
+/** The texts React Aria's live region took since the load, after
+    `recordLive`. */
+async function liveSaid(page: Page): Promise<string> {
+  return page.evaluate((): string => {
+    const texts: unknown = Reflect.get(window, "popneiLive");
+    return Array.isArray(texts) ? texts.join(" | ") : "";
+  });
+}
+
+test("NU2 D3 a box reached by Tab, its text selected, Ctrl+Y and Meta+Y: the box keeps its number, and no Empty is said", async ({
+  page,
+}) => {
+  // Chromium on macOS emptied the box at Ctrl+Y, its "yank", until the
+  // window took the key (docs/specs/steps/popgen2-filters.md, "Undo,
+  // Redo and their keys").
+  await recordLive(page);
+  await openPage(page);
+  await pick(page, "panel.vcf.gz");
+  await expectDone(page, "panel.vcf.gz");
+  const missing = threshold(page, MISSING_TITLE);
+  for (const keys of ["Control+y", "Meta+y"]) {
+    // Back from the line over the menu "Download…" to the box.
+    await missing.slider.focus();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Shift+Tab");
+    await expect(missing.box).toBeFocused();
+    expect(
+      await missing.box.evaluate(
+        (box: HTMLInputElement) =>
+          box.selectionStart === 0 && box.selectionEnd === box.value.length,
+      ),
+    ).toBe(true);
+    await page.keyboard.press(keys);
+    await expect(missing.box).toHaveValue("0.1");
+    await expect(missing.box).toBeFocused();
+  }
+  await expect(missing.slider).toHaveValue("0.1");
+  expect(await liveSaid(page)).not.toContain("Empty");
 });
 
 test("NU2 D3 a run of the arrow keys waiting on a line, Ctrl+Z and Ctrl+Y: the line stays where the presses put it, and the run becomes a change at its second", async ({

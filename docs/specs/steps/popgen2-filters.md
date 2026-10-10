@@ -178,19 +178,28 @@ October 2026 at the right end of the line of its heading
 the heading now holds the heading alone, and the band of the page stands
 above it (`docs/specs/steps/popgen2-band.md`).
 
-No handler of the page catches Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y, Cmd+Z or
-Cmd+Shift+Z, as the design's choice 6 says:
+The page's window takes Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y, Cmd+Z and
+Cmd+Shift+Z from the browser and does nothing with them, but in a
+field of free text, which keeps its own undo, and in a number box with
+something typed, which takes them first. The design's choice 6 left
+the keys to the browser; the review of 10 October 2026 found that
+Chromium on macOS then empties a number box whose text is selected, as
+it is when the box is reached by Tab, at Ctrl+Y, its "yank", which
+cannot be refused at the box. The value came back when the box lost
+the focus, and the project was not changed, but the box showed no
+number and a screen reader said "Empty". Cmd+Y, the history of the
+browser on macOS, is left to the browser.
 
 | where the focus is | Ctrl+Z or Cmd+Z |
 |---|---|
 | a number box with something typed and not yet given to the project by Enter, Tab or a click elsewhere | puts back the box's number, the project's value, as now |
 | a number box with nothing typed | nothing: the box refuses the browser's own undo of its text, which on 9 October 2026 put back the old text and gave it to the project as a change, in Chromium and WebKit on macOS ("The number box") |
 | a line of a threshold, with a run of the arrow keys waiting | nothing; the run becomes a change at its second, or when the focus leaves |
-| anywhere else on the page | nothing the page does; the browser's own, which on a page with no text field changes nothing |
+| anywhere else on the page | nothing |
 
 Ctrl+Shift+Z, Cmd+Shift+Z and Ctrl+Y likewise. Safari is said to
 reopen the last closed tab at Cmd+Z when the page does not take the
-key; not tried (the design, "The browsers").
+key; the page takes it.
 
 The store keeps its history, of one past project on this page, since
 the code of `popgen.html` needs it (`docs/specs/core/store.md`, "On
@@ -199,7 +208,9 @@ behind"). Opening a variants file goes through the store's `open`, and
 a change of the individuals file through `applyAfresh`, as before; with
 nothing to undo, a user sees no difference between the two.
 `src/ui/shell/UndoRedoButtons.tsx`, `undoRedo.ts` and `shortcuts.ts`
-stay for `popgen.html`, which draws them unchanged.
+stay for `popgen.html`, which draws them unchanged; `popgen2.html` takes
+from `shortcuts.ts` only `refuseUndoKeys`, the window's refusal of the
+keys.
 
 ### No notice
 
@@ -732,6 +743,8 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
   on the heading, on a line while its run waits, the page's clock
   stopped, and after, and in a box, change neither a threshold nor the
   FILTER box, and leave the focus on the heading;
+- Ctrl+Y and Cmd+Y pressed in a box reached by Tab, its text selected,
+  leave its number in the box, and the live regions say no "Empty";
 - the browser's undo key, Ctrl+Z or Cmd+Z, and its redo, in a box whose
   number was typed and committed, leave the number in the box, the line
   and the threshold, also once the focus leaves the box;

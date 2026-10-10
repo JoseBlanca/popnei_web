@@ -5,9 +5,9 @@
  * the stepper, the saving and the shell. It makes the store of the page,
  * wrapped for the screens by the gate of the thresholds' runs, and the
  * worker client, the announcer of the status region, the reads
- * the project waits for, the analyses that start by themselves and the
- * column of the populations chosen at each read of the individuals file,
- * and draws the error bar and the page in two roots, all in one run of
+ * the project waits for, the analyses that start by themselves, the
+ * keys of Undo and Redo taken from the browser, and the column of the
+ * populations chosen at each read of the individuals file, and draws the error bar and the page in two roots, all in one run of
  * this code.
  */
 import "./tokens.css";
@@ -28,6 +28,7 @@ import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "./popgen2Store.ts";
 import { choosePopulationColumns } from "./populationColumn.ts";
 import { startAnalysis } from "./runs.ts";
 import { AnnouncerProvider } from "./shell/announcer.tsx";
+import { refuseUndoKeys } from "./shell/shortcuts.ts";
 import { createAnnouncer } from "./shell/status.ts";
 import { StoreProvider } from "./store.tsx";
 import type { PageStore } from "./store.tsx";
@@ -55,6 +56,9 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
   reportDefects(store, defects);
   syncReads(store, client);
   const autoRuns = startByThemselves(store);
+  // The keys of Undo and Redo do nothing on this page, which has none,
+  // and reach no browser's own action, for as long as the page lives.
+  refuseUndoKeys(window);
   // The screens' commands pass the gate of the thresholds, which makes a
   // run of the keys waiting a change before any other.
   const gate = createRunGate();

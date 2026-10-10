@@ -305,7 +305,7 @@ export function NumberField({
   // Whether anything was typed, or thrown away, since the last commit:
   // Undo and Redo of the keyboard are then the field's, and otherwise the
   // project's on popgen.html (docs/specs/shell.md, "The header") and
-  // nobody's on popgen2.html, which has no Undo.
+  // taken by the window on popgen2.html, which has no Undo, to do nothing.
   const typed = useRef(false);
   // Whether the commit under way gave its number to `onChange`, or
   // refused it: React Aria gives neither for the number the field holds.
@@ -685,15 +685,16 @@ function FieldInput({
   // (docs/specs/steps/popgen2-filters.md, "Undo, Redo and their keys").
   // Its keys are caught at the key below while something is typed, and
   // otherwise, on popgen.html, by its Undo and Redo, on the window
-  // (src/ui/shell/UndoRedoButtons.tsx). popgen2.html, with no Undo since
-  // 10 October 2026, catches no key, as it caught none until 9 October
-  // 2026, when Ctrl+Z, or Cmd+Z on macOS, took the text back to the 1
-  // that 0.9 was typed over and gave it as the threshold, off, even
-  // pressed on the heading, where Chromium moved the focus into the box
-  // to do it (seen in Chromium 153 on GitHub's Linux runner, and in
-  // Chromium and WebKit on macOS with Cmd+Z, 9 October 2026); so this
-  // refusal is what keeps the keys from changing the project there, and
-  // keeps out the undo of the menu Edit on both pages. The keys offer the undo in a
+  // (src/ui/shell/UndoRedoButtons.tsx), and on popgen2.html, with no
+  // Undo since 10 October 2026, by its window, which does nothing with
+  // them (refuseUndoKeys of src/ui/shell/shortcuts.ts). Until 9 October
+  // 2026 popgen2.html caught no key, and Ctrl+Z, or Cmd+Z on macOS, took
+  // the text back to the 1 that 0.9 was typed over and gave it as the
+  // threshold, off, even pressed on the heading, where Chromium moved
+  // the focus into the box to do it (seen in Chromium 153 on GitHub's
+  // Linux runner, and in Chromium and WebKit on macOS with Cmd+Z, 9
+  // October 2026); this refusal keeps out the undo of the menu Edit on
+  // both pages, which sends no key. The keys offer the undo in a
   // `beforeinput` that can be cancelled, and it is.
   // `document.execCommand("undo")`, the command a menu Edit gives, offers
   // it so in WebKit, but Chromium carries it out with no `beforeinput`
@@ -928,8 +929,8 @@ function FieldInput({
         // Undo and Redo are never the browser's here (docs/specs/shell.md,
         // "The header"): with something typed, Ctrl+Z puts the number back
         // and redo does nothing; with nothing typed, the shell of
-        // popgen.html takes them for the project, and on popgen2.html,
-        // which has no Undo, the refusal above keeps the browser's.
+        // popgen.html takes them for the project, and the window of
+        // popgen2.html, which has no Undo, takes them to do nothing.
         // Escape with something typed puts back the number the field
         // holds, as Ctrl+Z does, so that the next Tab commits nothing
         // (docs/specs/shell.md, "The header"); with nothing typed it is
