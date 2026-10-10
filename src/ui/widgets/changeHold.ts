@@ -53,6 +53,22 @@ function useChangeHolds(): ChangeHolds {
   return holds;
 }
 
+/** Calls `release`, and throws what it throws a moment later, to the
+    page's handler of errors, as the gate does at a hold taken: a
+    release runs in the cleanup of a layout effect, or in a widget's
+    handler before the end of its change, and a listener of the gate
+    that threw there would tear the page's tree down, or leave the
+    change half made. */
+function releaseNow(release: () => void): void {
+  try {
+    release();
+  } catch (error) {
+    queueMicrotask(() => {
+      throw error;
+    });
+  }
+}
+
 /** Holds a change under way while `held` is true, and lets it go once it
     is false, or when the component leaves the page. The hold is taken
     and let go as React draws the change, after the handler that made it,
@@ -62,7 +78,10 @@ export function useHoldWhile(held: boolean): void {
   const holds = useChangeHolds();
   useLayoutEffect(() => {
     if (!held) return undefined;
-    return holds.holdChange();
+    const release = holds.holdChange();
+    return () => {
+      releaseNow(release);
+    };
   }, [held, holds]);
 }
 
@@ -94,7 +113,7 @@ export function useChangeHold(): ChangeHold {
     release: () => {
       const release = held.current;
       held.current = null;
-      release?.();
+      if (release !== null) releaseNow(release);
     },
   }));
   useEffect(

@@ -189,6 +189,29 @@ function blur(input: HTMLInputElement): void {
   });
 }
 
+/** Runs `during` with the errors that nothing catches caught in place of
+    Vitest, which would fail the run on them, and gives them: what the
+    window's error event, the bar of the errors of the page, would
+    show. */
+async function uncaughtOf(during: () => void): Promise<unknown[]> {
+  const listeners = process.listeners("uncaughtException");
+  process.removeAllListeners("uncaughtException");
+  const errors: unknown[] = [];
+  process.on("uncaughtException", (error) => {
+    errors.push(error);
+  });
+  try {
+    during();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } finally {
+    process.removeAllListeners("uncaughtException");
+    for (const listener of listeners) {
+      process.on("uncaughtException", listener);
+    }
+  }
+  return errors;
+}
+
 /** The words of the elements that `input`'s `aria-describedby` names, in
     its order, or null when it names none. */
 function describedWords(input: HTMLInputElement): string | null {
@@ -670,6 +693,23 @@ describe("NU3 D2 the number box holds while its text differs from its number", (
     press(input, "Escape");
     expect(input.value).toBe("0.5");
     expect(gate.underWay()).toBe(0);
+  });
+
+  test("a listener of the gate that throws at the release leaves the box on the page, and its error reaches the page's handler", async () => {
+    const gate = createRunGate();
+    const input = drawUnder(gate, newCalls());
+    const failure = new Error("a listener failed");
+    gate.subscribe(() => {
+      if (!gate.busy()) throw failure;
+    });
+    typeOver(input, "0.2");
+    expect(gate.underWay()).toBe(1);
+    const errors = await uncaughtOf(() => {
+      press(input, "Escape");
+    });
+    expect(gate.underWay()).toBe(0);
+    expect(container.querySelector("input")).toBe(input);
+    expect(errors).toEqual([failure]);
   });
 
   test("let go at the loss of the focus, which commits the number", () => {

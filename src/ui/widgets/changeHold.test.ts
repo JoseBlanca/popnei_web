@@ -8,7 +8,7 @@
 import { StrictMode, act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { createRunGate } from "../variants/thresholdRun.ts";
 import {
@@ -17,7 +17,7 @@ import {
   useChangeHold,
   useHoldWhile,
 } from "./changeHold.ts";
-import type { ChangeHolds } from "./changeHold.ts";
+import type { ChangeHold, ChangeHolds } from "./changeHold.ts";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -52,9 +52,15 @@ function HoldsWhile({ held }: { readonly held: boolean }): null {
   return null;
 }
 
-/** A widget that takes a hold for its handlers. */
-function HoldsByHand(): null {
-  useChangeHold();
+/** A widget that takes a hold for its handlers, and gives it to
+    `given`. */
+function HoldsByHand({
+  given,
+}: {
+  readonly given?: (hold: ChangeHold) => void;
+}): null {
+  const hold = useChangeHold();
+  given?.(hold);
   return null;
 }
 
@@ -90,7 +96,7 @@ describe("NU3 the holder of the changes under way", () => {
 
   test.each([
     ["useHoldWhile", createElement(HoldsWhile, { held: false })],
-    ["useChangeHold", createElement(HoldsByHand)],
+    ["useChangeHold", createElement(HoldsByHand, {})],
   ])("%s with no holder given is a defect", (_name, widget) => {
     try {
       draw(widget, null);
@@ -98,5 +104,43 @@ describe("NU3 the holder of the changes under way", () => {
       thrown.push(error);
     }
     expect(String(thrown[0])).toContain("popnei_web defect");
+  });
+
+  test("a release whose holder throws does not throw at the widget: the error is thrown a moment later", () => {
+    const failure = new Error("a listener failed");
+    const holds: ChangeHolds = {
+      holdChange: () => () => {
+        throw failure;
+      },
+    };
+    const queued: (() => void)[] = [];
+    const spied = vi
+      .spyOn(globalThis, "queueMicrotask")
+      .mockImplementation((callback) => {
+        queued.push(callback);
+      });
+    try {
+      const given: { hold: ChangeHold | null } = { hold: null };
+      draw(
+        createElement(HoldsByHand, {
+          given: (hold) => {
+            given.hold = hold;
+          },
+        }),
+        holds,
+      );
+      const taken = given.hold;
+      if (taken === null) throw new Error("no hold given");
+      taken.take();
+      expect(() => {
+        taken.release();
+      }).not.toThrow();
+      expect(queued).toHaveLength(1);
+      expect(() => {
+        queued[0]?.();
+      }).toThrow(failure);
+    } finally {
+      spied.mockRestore();
+    }
   });
 });
