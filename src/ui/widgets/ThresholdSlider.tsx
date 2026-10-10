@@ -171,9 +171,23 @@ export function ThresholdSlider({
   };
 
   /** A pointer pressed on the thumb, before React Aria's handler: its
-      release, on the window wherever it is, ends the drag. */
+      release, on the window wherever it is, ends the drag. Only a press
+      that starts React Aria's drag, of the main button with no Alt, Ctrl
+      or Meta, as the PCA's slider has it: a right-click, or a click with
+      Ctrl that macOS takes for one, may never give its release, and
+      would hold for good. */
   const onPointerDownCapture = (event: React.PointerEvent): void => {
-    if (waits || !event.isPrimary || drag.current !== null) return;
+    if (
+      waits ||
+      !event.isPrimary ||
+      event.button !== 0 ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      drag.current !== null
+    ) {
+      return;
+    }
     const ownerWindow = event.currentTarget.ownerDocument.defaultView;
     if (ownerWindow === null) return;
     const release = (up: PointerEvent): void => {

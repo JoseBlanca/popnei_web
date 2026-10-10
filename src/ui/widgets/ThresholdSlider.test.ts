@@ -387,6 +387,37 @@ describe("NU3 D2 the line holds a drag under way", () => {
     expect(gate.underWay()).toBe(0);
   });
 
+  test.each([
+    ["the right button", { button: 2, buttons: 2 }],
+    ["Ctrl", { ctrlKey: true }],
+    ["Alt", { altKey: true }],
+    ["Meta", { metaKey: true }],
+  ] as const)(
+    "a press with %s, which starts no drag, takes no hold",
+    (_name, init) => {
+      const gate = createRunGate();
+      draw({ moves: [], dragEnds: [] }, 0.5, false, gate);
+      act(() => {
+        thumbOf().dispatchEvent(
+          new PointerEvent("pointerdown", {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            pointerId: 1,
+            pointerType: "mouse",
+            isPrimary: true,
+            button: 0,
+            buttons: 1,
+            clientX: 50,
+            clientY: 10,
+            ...init,
+          }),
+        );
+      });
+      expect(gate.underWay()).toBe(0);
+    },
+  );
+
   test("a press of a key takes no hold", () => {
     const gate = createRunGate();
     const calls: Calls = { moves: [], dragEnds: [] };
