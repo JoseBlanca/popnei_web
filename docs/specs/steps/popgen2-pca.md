@@ -305,9 +305,16 @@ change under way holds it, the tab shows no result,
 since its values are no longer those on the screen, and no Run: the
 options, open to change, the line of the individuals, and, in the
 place of the bar, the line "The PCA starts again in a moment, once the
-filters stop changing." ("The PCoA …" under the PCoA), with Stop beside
-it. While the dialog of the download holds it, the line is "The PCA
-starts again when the download is written or closed." ("The PCoA …"). Stop there ends the live state before the PCA starts: the tab shows
+filters and its options stop changing." ("The PCoA …" under the PCoA),
+with Stop beside it; the line names the options as well as the filters,
+since a change of the method, of a slider of the PCA, of its r² or of
+its distance starts the second as a threshold does (task 4.2 of
+`docs/plans/no-undo.md`, from the review of its work package 2; "once
+the filters stop changing" until 10 October 2026). While the dialog of the download holds it, the line is "The PCA
+starts again when the download is written or closed." ("The PCoA …"),
+which the tab reads from the dialog's own state, since the count of the
+changes under way does not say which control holds it. Stop there ends
+the live state before the PCA starts: the tab shows
 Run, and nothing starts until it is pressed. (Stop during the second is
 the session's decision of 10 October 2026, from the owner's choice that
 Stop pauses the automatic runs: a user who wants to change two filters
@@ -352,7 +359,9 @@ the same key; and a change that gives the key it had.
 **Stop.** Stop, in the tab or in the band, ends the run, as before,
 and the live state: the tab shows Run with no result, since none is
 kept for these values, and a later change starts nothing until Run is
-pressed. The reason is the memory: in WebKit, the engine of Safari, a
+pressed, with the line "Stopped: the PCA no longer starts by itself
+after a change. Press Run to calculate it." beside Run. The reason is
+the memory: in WebKit, the engine of Safari, a
 Stop of a PCA of 9,381 individuals leaves its 3.7 to 4.2 GB in the tab
 for 40 s and more (`docs/architecture.md`, section 5), and a PCA
 started by itself a second after the next change would grow on top of
@@ -637,8 +646,12 @@ those the filters of individuals keep".
 describes it. Run makes the PCA live for the file and starts it at
 once; Stop ends the run and the live state ("The PCA calculated again
 by itself"). During the quiet second the button is Stop, beside the
-line "The PCA starts again in a moment, once the filters stop
-changing."; and while the PCA is live and locked it is Stop too,
+line "The PCA starts again in a moment, once the filters and its
+options stop changing."; after a Stop, until Run or another variants
+file, Run stands beside the line "Stopped: the PCA no longer starts by
+itself after a change. Press Run to calculate it.", so that a user who
+changes a filter and sees nothing start learns why (task 4.2 of
+`docs/plans/no-undo.md`); and while the PCA is live and locked it is Stop too,
 enabled, beside the lock, so that the automatic runs can be turned off
 before the lock lifts. The lock is the first of these:
 
@@ -878,8 +891,8 @@ greyed or shows its line of not built yet.
 |---|---|---|
 | empty | the tab greyed, with its reason, as the row of tabs gives it; if it was shown when it became greyed, the reason in its place | open a variants file |
 | locked | the options, the line of the individuals, Run disabled with the lock beside it, from the table of "Run and Stop"; while the PCA is live, the same lock with Stop in the place of Run, enabled, in the same place of the Tab key's order, which ends the live state, and the PCA starts by itself a second after the lock lifts, unless it lifts with the key it had, which shows the result kept | change the options; type the distance or turn the LD pruning off; Start again the one pass in the box; change the thresholds of the individuals |
-| ready | the options, the line of the individuals, Run: before the first Run for the file, and after a Stop | change the options; Run |
-| about to start | the PCA live, during the quiet second after a change: the options, the line of the individuals, no result, no Run, and in the place of the bar "The PCA starts again in a moment, once the filters stop changing." with Stop | go on changing the options and the thresholds, which puts the start off; Stop, which ends the live state |
+| ready | the options, the line of the individuals, Run: before the first Run for the file, and after a Stop, with "Stopped: the PCA no longer starts by itself after a change. Press Run to calculate it." beside it | change the options; Run |
+| about to start | the PCA live, during the quiet second after a change: the options, the line of the individuals, no result, no Run, and in the place of the bar "The PCA starts again in a moment, once the filters and its options stop changing." with Stop; while the dialog of the download is open, "The PCA starts again when the download is written or closed." | go on changing the options and the thresholds, which puts the start off; Stop, which ends the live state |
 | running | Stop, the bar and the clock, and the line under them; the options and the thresholds and FILTER box of the Variants tab greyed, with "Stop the PCA to change the filters." (above, "While a PCA runs"); the same whether Run or a change started it | Stop; change the individuals file, its column of the populations and the colour of the points; turn to another tab, where the PCA goes on; open another variants file, which stops it |
 | done | the result, its warnings and notes, the downloads; "Loading the result…" in its place while its code downloads, or the words of its code that could not be downloaded, with "Try again" | colour, turn, highlight, sort, download; change the options; Try again |
 | results removed | not a state of its own on this page: a change that takes the result off the screen gives about to start while the PCA is live, and ready, with Run, while it is not (before its first Run is impossible, so only after a Stop); the page makes no notice, as the owner decided on 8 October 2026, and keeps no result to bring back, since 10 October 2026 | as in about to start, or as in ready |
@@ -970,7 +983,8 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | an error, a failure that is not popnei's refusal, in this page's words where the old panel's name the Variants step or a project to save (`popgen2FailureText` of `src/ui/analyses/words.ts`; since 9 October 2026, by task 6.1 of the plan, from the review of work package 2, which found the old words on this page) | the variants file changed on the disk since the one pass read it, a failure and not a refusal, "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants file."; an error of the application's own, "The application met an error of its own: ‹its words›. Run it again."; the calculations that could not start, "The application could not start its calculations. Reload the page and open panel.nei again."; the page out of date, "The page is out of date. Reload the page and open panel.nei again."; the worker that stopped, the PCA's own words of the memory, `crashText` of core with the page |
 | the note of the colours, a column to colour by that the individuals file lacks | "panel_pops.csv has no column height, by which the points were coloured, so they are coloured by the column of the populations chosen in the box Individuals file."; with no column of the populations chosen, or with None, "…, so every point is unclassified. Choose a column of the populations in the box Individuals file, or another column to colour the points by."; with no individuals file, "No individuals file is open in the box Individuals file, so the points cannot be coloured by height." |
 | the end of a run, in the status region | "PCA of panel.nei calculated."; "PCoA of panel.nei calculated."; a refusal or a failure, "The PCA of panel.nei could not be calculated: " followed by the words of its error |
-| in the place of the bar, during the quiet second | "The PCA starts again in a moment, once the filters stop changing."; "The PCoA starts again in a moment, once the filters stop changing."; while the dialog of the download is open, "The PCA starts again when the download is written or closed." |
+| in the place of the bar, during the quiet second | "The PCA starts again in a moment, once the filters and its options stop changing."; "The PCoA starts again in a moment, once the filters and its options stop changing."; while the dialog of the download is open, "The PCA starts again when the download is written or closed."; "The PCoA starts again when the download is written or closed." |
+| beside Run, after a Stop, until Run or another variants file | "Stopped: the PCA no longer starts by itself after a change. Press Run to calculate it."; "Stopped: the PCoA …" |
 | the status region, a PCA started by itself | "Calculating the PCA again. Stop it to change the filters."; "Calculating the PCoA again. Stop it to change the filters." |
 | the status region, a Stop of the PCA, in the tab or in the band | "PCA stopped. Press Run in the PCA tab to calculate it again."; "PCoA stopped. …" |
 | the download of the filtered variants while a PCA runs | "Waits for the PCA to end; or stop it in the PCA tab." |
@@ -1296,6 +1310,7 @@ and in 2D, with the PCoA's warning, while the result's code downloads
 and after it could not be; a menu of a download open; about to start,
 `popgen2-pca-about-to-start`, and running started by itself with the
 Variants tab shown and a threshold greyed, `popgen2-pca-live-locked`;
+ready after a Stop, with its line beside Run, `popgen2-pca-stopped`;
 light and dark; 1280 and 320 px. The screens `popgen2-undo`,
 `popgen2-undo-redo` and `popgen2-undo-waiting` go.
 
