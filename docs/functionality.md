@@ -140,10 +140,19 @@ October 2026 (docs/designs/stats-filters.md): a change of it, by a drag,
 the arrow keys or the box, is a change of the project, and a run of
 presses of the arrow keys is one change. No change of a filter gives a
 notice, and opening a file, the first or another, starts the page's
-history afresh (the owner, 8 October 2026). The page has no Undo and no
-Redo, and Ctrl+Z changes nothing on it: the owner hid them on 8 October
-2026 until a later feature needs them, and the history they would use
-is kept. A threshold is on or off. It is
+history afresh (the owner, 8 October 2026). Undo and Redo, which the
+owner hid on 8 October 2026, came back on 9 October 2026
+(docs/designs/analyses-pca.md, "Undo and Redo"): two buttons at the
+right end of the line of the page's heading, each drawn only while it
+has a step to take, whose tooltip names the step, and Ctrl+Z or Cmd+Z
+anywhere on the page but in a number box with something typed in it.
+They take back and give again the changes of the thresholds, of the
+FILTER box, of the column of the populations the user chooses and of
+the options of the PCA; opening a variants file or an individuals
+file, removing the individuals file or reading it again with other
+options starts the history afresh, with nothing to undo. While a PCA
+runs they wait, greyed, as the filters it reads do (section 5). A
+threshold is on or off. It is
 turned off by emptying its box, or by giving it 1, the value at which a
 maximum keeps everything, however 1 is reached, typed or by the line
 dragged to the top of an axis that ends at 1; 1 is off and not a filter
@@ -173,10 +182,11 @@ when the filters are carried out, after the individuals are judged, so
 an individual's missing rate and heterozygosity are over every variant,
 and a VCF of which no variant passed is shown as any other.
 
-Nothing is read from the file while the filters change: no plot
-changes with a threshold or the box, each plot describes every
-variant and every individual of the file, and its threshold shades
-what it would leave out. The filters are carried out by the download
+Nothing is read from the file while the filters change: no plot of the
+Variants tab changes with a threshold or the box, each plot describes
+every variant and every individual of the file, and its threshold
+shades what it would leave out. The filters are carried out by the
+PCA, which reads the variants they keep (section 5), and by the download
 of the filtered variants, as a `.nei` file or a VCF compressed with
 bgzip, from one button, "Download filtered variants…", after the Variants and
 Individuals sections, as the owner decided on 8 October 2026. After a Stop,
@@ -188,7 +198,10 @@ not yet tried by the owner (`docs/specs/steps/popgen2-download.md`).
 The button, "Download filtered variants…", is greyed out, with its
 reason beside it, until the file has been read to the end once. It opens
 a dialog with the choice of the format, and while the file is written
-the dialog shows a bar and Stop, and no filter can change. When the
+the dialog shows a bar and Stop, and no filter can change. While a PCA
+runs the button waits too, greyed, with "Waits for the PCA to end; or
+stop it in the PCA tab." beside it ("the PCoA" for a PCoA), from 9
+October 2026. When the
 write ends the browser's download starts by itself, and the button
 gives way to a text that says the file, its size, how many variants of
 how many individuals it holds, and how many variants and individuals
@@ -394,7 +407,7 @@ the page says how many they are, as the owner decided the same day
 (`docs/designs/input-page.md`, approved on 9 October 2026). The page
 shows the file in a box of its own beside the variants file's, with the
 list of the column of the populations and the counts, and under a tab,
-"Individuals file", how it was read, the individuals of the variants
+"Individuals" ("Individuals file" until 9 October 2026), how it was read, the individuals of the variants
 file it lacks, and the whole file as a table sorted by any column
 (`docs/specs/steps/popgen2-input.md`, built on the branch
 `individuals-file` on 9 October 2026 and not yet tried by the owner).
@@ -548,6 +561,19 @@ give the principal components that go into the GWAS as covariates.
   with no distance until the user types one or turns it off. The old
   page keeps the rule above. The coordinates are downloaded from the
   plot itself, as the names and PC1 to PC10.
+- On `popgen2.html` the PCA has a tab of its own, beside the tabs
+  Variants, Individuals, Populations and Distances, greyed with its
+  reason until a variants file is open (built on the branch `pca-tab` on
+  9 and 10 October 2026, `docs/specs/steps/popgen2-pca.md`). The user
+  starts it with Run once the file has been read to the end. While it
+  runs, the thresholds and the FILTER box of the Variants tab, the PCA's
+  own options, Undo and Redo, and the download of the filtered variants
+  wait, greyed with the reason, "Stop the PCA to change the filters.",
+  so that no change of what it reads is made under it, as the owner
+  decided on 9 October 2026; the individuals file and the column that
+  colours the points stay open, since they only colour the points. A
+  later change of what the PCA reads takes its result off the screen,
+  and an Undo of the change brings it back without a calculation.
 
 ## 6. Each population
 

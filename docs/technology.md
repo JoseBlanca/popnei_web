@@ -115,8 +115,10 @@ cost without it.
 Unstyled, accessible components from Adobe, which builds its own design
 system on them. They cover the widgets that are hard to make accessible
 by hand and that the applications need: select, switch, number field,
-checkbox, tabs, dialog, disclosure, toast, a sortable table, and a drop
-zone and a file picker for loading files. The look is ours, in CSS.
+checkbox, tabs, dialog, disclosure, toast, a sortable table, a menu,
+from 9 October 2026 for the downloads of every table and plot of
+`popgen2.html`, and a drop zone and a file picker for loading files.
+The look is ours, in CSS.
 
 What it costs: 50.7 KB gzipped of the first script of the page of the
 walking skeleton, 19 KB of it its translations into 34 languages,
@@ -220,6 +222,20 @@ not taken: the owner decided on 9 October 2026 to load them with the
 page, since most users of a page of population analyses open an
 individuals file.
 
+The tabs of the analyses and the PCA tab of `popgen2.html`, built on
+the branch `pca-tab` on 9 and 10 October 2026
+(`docs/plans/analyses-pca.md`), made the first load 307.82 KB gzipped
+against 278.65 KB before them, 29.17 KB more, the sum of the nine files
+the page loads before it draws as `vite build` reported them with Vite
+8.3.0 on the site built at commit fdddbbf3. They hold the row of five
+tabs, the PCA's module on this page, the menus "Download…" with React
+Aria's menu, Undo and Redo, and the PCA tab's options and locks; the
+PCA tab's result is not among them (below, "D3 for the 2D plots"). React
+Aria's menu also went into the script `popgen.html` shares with this
+page, about 5 KB gzipped that the old page never uses; not taken out,
+since the old page is to be deleted and the menu belongs to the tables
+both pages draw.
+
 Not taken: component libraries with their own look, MUI, Chakra,
 Mantine, which bring a style we would fight and, for Chakra, a history of
 large rewrites; and Radix Primitives, whose maintenance slowed.
@@ -297,18 +313,19 @@ grow. three.js is one exception, below. The result of the PCA tab of
 `popgen2.html` is the other: its plot, its tables and their menus are
 loaded with `import()` when the PCA tab is first shown with a variants
 file open, and not with the page (`docs/specs/steps/popgen2-pca.md`,
-"The result"). Its own files are 18.6 KB gzipped, 17,157 bytes of
-script, 1,184 of CSS and 235 of the module that imports it, and it
-shares 15.5 KB more, 14,645 bytes of script and 896 of CSS, with the
-histograms of the Variants tab, which come when a file is opened, all
-with `gzip -9` on the site built on 10 October 2026. With it in the
-first script the first load of `popgen2.html`, 303.5 KB without it,
-would grow by about 34 KB, under the 50 KB the design of the PCA tab
-allows it (`docs/plans/analyses-pca.md`, work package 6, deliverable
-6); it was moved out when its size was taken as about 58 KB, over that
-bound, and stays out so that a user who never runs a PCA downloads
-none of it, for a moment of waiting, "Loading the result…", only when
-a run ends before the code has arrived.
+"The result"). Its own files are 19.1 KB gzipped, 17.68 KB of script,
+1.20 KB of CSS and 0.20 KB of the module that imports it, and it shares
+15.6 KB more, 14.80 KB of script and 0.83 KB of CSS, with the histograms
+of the Variants tab, which come when a file is opened, as `vite build`
+reported them with Vite 8.3.0 on the site built at commit fdddbbf3 on
+10 October 2026. With it in the first script the first load of
+`popgen2.html`, 307.82 KB without it by the same count, would grow by
+about 35 KB, under the 50 KB the design of the PCA tab allows it
+(`docs/plans/analyses-pca.md`, work package 6, deliverable 6); it was
+moved out when its size was taken as about 58 KB, over that bound, and
+stays out so that a user who never runs a PCA downloads none of it, for
+a moment of waiting, "Loading the result…", only when a run ends before
+the code has arrived.
 
 Considered and not taken:
 

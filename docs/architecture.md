@@ -46,7 +46,13 @@ and, the same day, with what the branch `individuals-file` built and
 measured (`docs/plans/input-page.md`), in the figure of section 1, the
 bullets of section 6 that named the reader in TypeScript or xlsx_rs,
 and section 11, the download of table_io's package, the memory of a
-read and the table of the individuals file.
+read and the table of the individuals file. Revised on 9 October 2026
+for the tabs of the analyses and the PCA tab of `popgen2.html`, in
+sections 3 and 7, from `docs/designs/analyses-pca.md`, approved by the
+owner that day; and on 10 October 2026 with what the branch `pca-tab`
+built and measured (`docs/plans/analyses-pca.md`), in sections 3, 5
+and 7, the rows of section 9, and the memory of a PCA after the one
+pass in section 11.
 What was
 revised each time until 30 September 2026 is at the end
 of section 1. The document gives the parts of the web applications of
@@ -994,12 +1000,17 @@ page a notice (`docs/specs/core/store.md`, "The notice, and the
 calculations it stops").
 
 While a PCA runs there, the screen locks the filters it reads, the
-thresholds and the FILTER box of the Variants tab, the column of the
-populations and the PCA's own options, greyed with the words of
-`docs/specs/steps/popgen2-pca.md`, and the buttons and keys of Undo and
-Redo wait, as the download of the filtered variants waits, as the owner
-answered on 9 October 2026 (answer 2 of `docs/plans/analyses-pca.md`).
-So no change the screen allows leaves a running PCA behind, and the
+thresholds and the FILTER box of the Variants tab and the PCA's own
+options, greyed with "Stop the PCA to change the filters." ("the PCoA"
+under the PCoA), and the buttons and keys of Undo and Redo wait, as the
+download of the filtered variants waits, as the owner answered on 9
+October 2026 (answer 2 of `docs/plans/analyses-pca.md`). The box of the
+individuals file, the column of the populations and the column that
+colours the points stay open, since the PCA's key holds none of them and
+they only colour its points: the session's recommendation of 9 October
+2026, which the code follows while the owner's answer is pending (that
+plan, "Work package 3"). So no change the screen allows leaves a running
+PCA behind, and the
 store's setting `stopLeftBehind`, which stops what a change leaves
 behind, is a guard for a change the lock missed; its other half, no
 notice, is what the page needs of it at every change.
@@ -1052,8 +1063,9 @@ page draws no notice and has no Undo to come back to it; a result
 removed stays in the cache under its key, and the filters set back as
 they were show it again. Revised again that day for the owner's
 answer to the open point of that design: Undo and Redo come back to
-`popgen2.html`, at the top right corner of the page and each only while
-it has a step to take, with their keys caught on the whole page; a PCA
+`popgen2.html`, at the right end of the line of the page's heading and
+each only while it has a step to take, with their keys caught on the
+whole page; a PCA
 that a change stopped is not kept for an Undo, which brings back the
 results the cache holds and starts nothing; and the changes of the
 individuals file the user makes go through `applyAfresh`, new in the
@@ -1540,8 +1552,10 @@ The page and each worker talk through typed messages
   summary reads no filter. From 7 October 2026 the thresholds on the
   histograms of `popgen2.html` and its FILTER box are filters of the
   project (`docs/designs/stats-filters.md`): each change is a command,
-  a step of the store's history, and starts no calculation, since the one pass, the only
-  calculation of the page, reads none; a run of presses of the arrow
+  a step of the store's history, and starts no calculation, since the
+  one pass, the only calculation the page starts by itself, reads none,
+  and the PCA, from 9 October 2026 the one calculation of the page that
+  reads them, starts only at the user's Run; a run of presses of the arrow
   keys on a line or in its box is one change, made at a quiet second after the last
   press or when the focus leaves, so that a held key does not fill the
   200 steps of the history. The filters are carried out by the
@@ -2556,9 +2570,10 @@ for the smallest part of it.
   an axis that ends at 1, turns a threshold off (`setThreshold` of
   `docs/specs/core/project.md`). The page has no notice, as the owner
   decided on 8 October 2026. It hid Undo and Redo that day, and brought
-  them back on 9 October 2026 at the top right corner of the page, each
-  drawn only while it has a step to take, with their keys caught on the
-  whole page; they undo and redo the changes of the filters, of the
+  them back on 9 October 2026 at the right end of the line of the page's
+  heading, which is the right edge of the page's column of 48 rem and
+  not the window's corner, each drawn only while it has a step to take,
+  with their keys caught on the whole page; they undo and redo the changes of the filters, of the
   column of the populations and of the options of the PCA, and not the
   opening of a file (`docs/designs/analyses-pca.md`, "Undo and Redo"); its
   first project has the filter of the FILTER column on and the missing
@@ -2636,7 +2651,12 @@ components of the tables, `SortableTable` and `Table` of
 `src/ui/widgets/`, and the React wrappers of the plots carry, so that no
 screen writes a download of its own; the plots of `src/charts` do not
 change, and `usePlot` gives the wrappers the handle of their plot. The
-menu of a plot drawn from the one pass waits for its end.
+menu of a plot drawn from the one pass waits for its end. Built on the
+branch `pca-tab` on 9 and 10 October 2026, with the PCA tab, whose
+result's code, its plots, tables and menus, is downloaded apart from
+the page when the tab is first shown with a variants file open
+(`docs/specs/steps/popgen2-pca.md`; `docs/technology.md`, "D3 for the
+2D plots").
 
 ## 8. The project file, the report and the script
 
@@ -2781,7 +2801,12 @@ src/core/
                     the checks of the Variants step among them from stage 3:
                     individualChecks, variantChecks, filterCounts; from
                     stage 5 popDists and ldDecay; for popgen2.html
-                    variantsSummary; and sfs.ts, the rows,
+                    variantsSummary and, from 9 October 2026, the PCA
+                    given the page, pcaOnPopgen2 of pca.ts, whose filters
+                    narrow those of the Variants tab; fileRefusals.ts,
+                    from 9 October 2026, the refusals of the variants
+                    file that the box of the file and the PCA of
+                    popgen2.html both say; and sfs.ts, the rows,
                     the CSV and the warnings of the folded spectrum, which
                     the diversity's module and panel call and which is no
                     analysis of its own (docs/specs/analyses/sfs.md)
@@ -2797,7 +2822,18 @@ src/core/
   thresholds.ts     from 7 October 2026, the thresholds on the
                     histograms of popgen2.html: the step and the fine
                     edge a number snaps to, and whether one keeps every
-                    variant or individual, which the screen draws grey
+                    variant or individual, which the screen draws grey;
+                    from 10 October 2026 variantThresholdStep, the step
+                    of a threshold of the variants worked out once per
+                    result, for the histogram and for the stricter field
+                    of the PCA
+  popgen2Tabs.ts    from 9 October 2026, which of the tabs PCA,
+                    Populations and Distances of popgen2.html is greyed,
+                    and the kind of its reason
+                    (docs/specs/core/popgen2Tabs.md)
+  csv.ts            from 9 October 2026, the CSV of a table and of the
+                    data of a plot, the values as stored, every row in
+                    the order shown (docs/specs/widgets/downloads.md)
   apps.ts           the steps and the analyses of each application, the
                     step each analysis is shown in, and what the store
                     and the shell read of a result: what its pass
@@ -2808,7 +2844,9 @@ src/core/
                     2026 popgen2FirstProject, the first project of that
                     page
   fileNames.ts      the names of the files the application writes, from
-                    the stem of the variants file
+                    the stem of the variants file; from 9 October 2026
+                    also the names of the downloads of the tables and
+                    plots (downloadName)
   noVariantKept.ts  from 9 October 2026, whether the filters keep no
                     variant for certain, told from the one pass of
                     popgen2.html finished (noVariantForCertain)
@@ -2883,9 +2921,10 @@ src/ui/
                     with the row of Undo and Redo and their keys, reused
                     from shell/ without the rest of the shell, a row the
                     owner hid on 8 October 2026 and brought back on 9
-                    October 2026 at the top right corner, each button
-                    drawn only while it has a step; and, from 8 October
-                    2026, no notice
+                    October 2026 at the right end of the line of the
+                    heading (VariantsPage.tsx), each button drawn only
+                    while it has a step; and, from 8 October 2026, no
+                    notice
   popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES, the
                     summary of the variants file alone, POPGEN2_CHAIN,
                     and no counts, statistics config or writing, and the
@@ -2932,7 +2971,20 @@ src/ui/
                     (IndividualsBox.tsx, individualsCommands.ts,
                     individualsWords.ts), and the tab with how the file
                     was read, the individuals it lacks and its table,
-                    sortable (IndividualsTab.tsx, individualsTable.ts)
+                    sortable (IndividualsTab.tsx, individualsTable.ts);
+                    from 9 and 10 October 2026, built on the branch
+                    pca-tab, the row of five tabs under the boxes and
+                    what each shows (PageTabs.tsx), the words of the
+                    reasons of a greyed tab (analysisTabsWords.ts), the
+                    lock of the filters while a PCA runs (filtersLock.ts),
+                    Undo and Redo at the right end of the line of the
+                    heading (VariantsPage.tsx), and the menus
+                    "Download…" of the histograms and of the tables
+  codeDownload.ts   from 10 October 2026, a download of code apart from
+                    the page's first load, asked for the first time it
+                    is needed, kept once it arrives, and asked again at
+                    another address after a failure: the 3D view with
+                    three.js, and the result of the PCA tab
   popgenStore.ts    the store of the population genetics page, made with
                     the analyses and the functions of apps.ts and the
                     functions of the worker client that send; apart from
@@ -2954,7 +3006,11 @@ src/ui/
                     their keys are a part of their own,
                     UndoRedoButtons.tsx, which the header of popgen.html
                     draws, and the row of popgen2.html drew until the
-                    owner hid it on 8 October 2026
+                    owner hid it on 8 October 2026; from 9 October 2026
+                    the line of the heading of popgen2.html draws it
+                    again with the option onlyWithStep, each button
+                    drawn only while it has a step, its place kept, and
+                    waits, under which both wait while a PCA runs
   runs.ts           awaits the outcome of each run core starts, at a Run
                     or, on popgen2.html, by autoRuns.ts, and hands it to
                     the store, which cancels the runs no longer asked for
@@ -2971,7 +3027,15 @@ src/ui/
                     shell need of the application; panels.ts, the panel
                     of each analysis of the Analyses step; and one folder
                     per analysis, diversity/ first, with its options and
-                    its results
+                    its results. From 9 October 2026 pca/ also holds the
+                    PCA tab of popgen2.html: the tab (PcaTab.tsx), drawn
+                    in the same frame AnalysisPanel.tsx with the page's
+                    lock beside the store's, its options (PcaTabOptions.tsx),
+                    the bounds of its stricter filters (stricter.ts), the
+                    lock of its Run by the one pass (passLock.ts), its
+                    words (tabWords.ts), and its result, whose code is
+                    downloaded apart from the page when the tab is first
+                    shown (PcaTabResults.tsx, PcaTabResultView.tsx)
   report/           renders the report model into its HTML page, with the plots
   widgets/          React Aria components with our styles, one wrapper per
                     widget; among them ThresholdSlider.tsx, from 7
@@ -2991,10 +3055,20 @@ src/ui/
                     the statistics of each individual and, from 9
                     October 2026, the individuals file under the tab of
                     popgen2.html, whose rows are not drawn anew at
-                    each sort above 8 columns (tableSort.ts);
+                    each sort above 8 columns (tableSort.ts), and from 9
+                    October 2026 Table.tsx and SortableTable.tsx carry
+                    the menu "Download…" of their CSV;
                     Tabs.tsx, whose option keepHidden keeps every panel
-                    drawn and the hidden one inert, for the two tabs of
-                    popgen2.html; and TextArea.tsx, the text of several
+                    drawn and the hidden one inert, for the tabs of
+                    popgen2.html, and from 9 October 2026 a greyed tab
+                    that does not open and says its reason;
+                    DownloadMenu.tsx and downloadItems.ts, from 9
+                    October 2026, the menu "Download…" of a table or a
+                    plot and its items; waiting.ts, from 9 October
+                    2026, and WaitingTooltip.tsx, from 10 October, a radio
+                    group, switch, check box or number box that waits,
+                    greyed, still reached by the Tab key, with its reason
+                    as its tooltip; and TextArea.tsx, the text of several
                     lines, the lists of individuals
   tokens.css        the design tokens
 src/probe/          the probe of stage 0, a page of its own outside the
@@ -3048,6 +3122,15 @@ What was revised on 9 October 2026, from `docs/designs/stats-filters.md`,
 "The download of the filtered variants", and its specs: the row of
 `noVariantKept.ts`, a module of core, and the download in the row of
 `variants/`. No rule of the imports changes.
+
+What was revised on 10 October 2026, for what the branch `pca-tab`
+built on 9 and 10 October 2026 (`docs/plans/analyses-pca.md`): the rows
+of `popgen2Tabs.ts` and `csv.ts`, modules of core; the PCA given the
+page and `fileRefusals.ts` among the analyses; `codeDownload.ts` of
+`src/ui`; and the rows of `variants/`, `shell/`, `analyses/` and
+`widgets/`. No rule of the imports changes: `analyses/pca/` imports
+`variants/` for the status of the one pass, its Start again and the
+lock of the filters, as `variants/` imports the PCA tab to draw it.
 
 ## 10. The walking skeleton
 
@@ -3133,7 +3216,21 @@ tests of the application are the same with it.
   individuals took 16.0 s in Chromium 153 and 10.2 s in WebKit 26.6, and
   grew the engine by 613 and 745 MB; one of 9,381 took 205 s and 121 s,
   and grew it by 3.03 and 3.12 GB, and the PCoA a sixth to three tenths
-  longer and 3.30 and 3.40 GB; neither engine closed the tab. popnei reports no progress while it decomposes
+  longer and 3.30 and 3.40 GB; neither engine closed the tab. On
+  `popgen2.html`, where the PCA runs in the calculation worker that has
+  just made the one pass, measured on 10 October 2026 on the same Mac
+  with Chromium 153 and WebKit 26.6, on VCFs of 300 variants, the LD
+  pruning off, Run pressed after the pass: a PCA of 9,381 individuals took 226 s and 134 s and
+  grew the engine by 3.01 and 3.38 GB, and a PCoA 259 s and 215 s and
+  3.29 and 4.33 GB, WebKit's PCoA above the 4.10 GB of the old page's
+  first run; every run completed, as on 29 September. The times are 8
+  to 38% longer, under a load the old measurement did not have, load
+  averages from 1.65 to 8.63 with a macOS virtual machine running beside
+  them. The pass over those 300 variants left the worker 0.04 to 0.07
+  GB larger in Chromium and 0.19 to 0.23 GB in WebKit before the run, so
+  this holds for a pass over a few hundred variants; what a pass over a
+  file of many more leaves before a PCA was not measured
+  (`docs/specs/analyses/pca.md`, "How it runs"). popnei reports no progress while it decomposes
   the matrix, so the bar stands full meanwhile, 6.7 of the 6.75 s of a
   PCA of 2,500 individuals; the panel says so, and popnei is asked for a
   progress of the decomposition, which `js-v0.1.0-dev.3` does not give
