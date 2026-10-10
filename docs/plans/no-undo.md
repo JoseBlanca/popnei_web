@@ -350,7 +350,13 @@ Tasks:
   `StatsHistogram.tsx`, and the comments of
   `NumberField.tsx` that name the page's Undo (the screen spec, "No
   Undo and no Redo"; `popgen2-filters.md`, "Undo, Redo and their
-  keys"). Deliverables 2, 3 and 4. Stands on 2.1.
+  keys"). Deliverables 2, 3 and 4. Stands on 2.1. Added on 10 October
+  2026 by the review of work package 1: with Undo gone, the parts of
+  the gate that only named a waiting run for Undo go too, `pending`,
+  `HeldRun.moved`, the second argument of `hold` and `usePendingChange`
+  of `runGate.tsx`; and the gate's `subscribe` then tells only when
+  the count of changes under way rises from 0 or falls to 0, which its
+  test pins.
 
 What could go wrong: Cmd+Z in WebKit with no handler of the page. Safari
 is said to reopen the last closed tab; WebKit under Playwright is not
