@@ -36,7 +36,10 @@ export const RUN_QUIET_MS = 1000;
 /** The gate of the page. */
 export interface RunGate {
   /** Holds a run waiting of one threshold, which `end` makes a change.
-      Gives the function that lets it go once it ended. */
+      Gives the function that lets it go once it ended. A listener that
+      throws when the run is held does not keep the run from being held
+      and given: its error is thrown a moment later, to the page's
+      handler of errors. */
   readonly hold: (end: () => void) => HeldRun;
   /** Ends every run held, each made a change if it moved. Every run is let
       go and every end called also when one throws, and the listeners are
@@ -105,6 +108,19 @@ export function createRunGate(): RunGate {
     }
     if (thrown.length > 0) throw thrown[0];
   };
+  // Tells the listeners that a hold was taken, and throws what one threw
+  // a moment later, to the page's handler of errors: the hold is then
+  // given all the same, or the count would stay above 0 for the session
+  // with nothing left to let it go.
+  const tellTaken = (): void => {
+    try {
+      tell();
+    } catch (error) {
+      queueMicrotask(() => {
+        throw error;
+      });
+    }
+  };
   return {
     hold: (end) => {
       // A function of its own, so that the same `end` held twice is held
@@ -114,7 +130,7 @@ export function createRunGate(): RunGate {
       };
       const wasFree = count() === 0;
       runs.add(held);
-      if (wasFree) tell();
+      if (wasFree) tellTaken();
       return {
         release: (made) => {
           const wasHeld = runs.delete(held);
@@ -173,18 +189,7 @@ export function createRunGate(): RunGate {
       const release = (): void => {
         if (holds.delete(hold) && count() === 0) tell();
       };
-      if (wasFree) {
-        try {
-          tell();
-        } catch (error) {
-          // The release is given all the same, or the count would stay
-          // above 0 for the session; the error is thrown a moment later,
-          // to the page's handler of errors.
-          queueMicrotask(() => {
-            throw error;
-          });
-        }
-      }
+      if (wasFree) tellTaken();
       return release;
     },
     underWay: count,

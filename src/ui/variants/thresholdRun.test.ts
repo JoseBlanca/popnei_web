@@ -543,6 +543,39 @@ describe("NU1 the gate when a listener or an end throws", () => {
     queued.mockRestore();
   });
 
+  test("a listener that throws when a run of the keys is held: the run is held all the same, ends at its second, the count falls back to 0 and the listeners are told", () => {
+    const gate = createRunGate();
+    const thrown: (() => void)[] = [];
+    const queued = vi
+      .spyOn(globalThis, "queueMicrotask")
+      .mockImplementation((callback) => {
+        thrown.push(callback);
+      });
+    const failure = new Error("a listener failed");
+    let calls = 0;
+    let others = 0;
+    gate.subscribe(() => {
+      calls += 1;
+      if (calls === 1) throw failure;
+    });
+    gate.subscribe(() => {
+      others += 1;
+    });
+    const { run, changes } = runOf(gate);
+    run.press(0.5, 0.49);
+    expect(gate.underWay()).toBe(1);
+    expect(thrown).toHaveLength(1);
+    expect(() => {
+      thrown[0]?.();
+    }).toThrow(failure);
+    vi.advanceTimersByTime(RUN_QUIET_MS);
+    expect(changes).toEqual([0.49]);
+    expect(gate.underWay()).toBe(0);
+    expect(calls).toBe(2);
+    expect(others).toBe(2);
+    queued.mockRestore();
+  });
+
   test("the first of two runs whose end throws: both runs let go, the second ended, the listeners told, and the error thrown", () => {
     const gate = createRunGate();
     const failure = new Error("an end failed");
