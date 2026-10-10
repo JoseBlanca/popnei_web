@@ -174,7 +174,8 @@ on a file of 9,381 individuals (134 to 259 s on the owner's Mac), a
 second or less up to 1,000. The owner chose on 10 October 2026 that it
 waits, rather than stop the PCA to write the file (open point 2 of the
 design); a user who wants the file first presses Stop in the PCA tab or
-in the band, which keeps the PCA from starting again until its Run is
+in the band, or "Stop recalculating" in the PCA tab before the PCA
+starts, which keeps the PCA from starting again until its Run is
 pressed. During the second before it starts, the button is usable: a
 press opens the dialog, and the PCA does not start while the dialog is
 open, nor while the file is written; it starts once the dialog closes,

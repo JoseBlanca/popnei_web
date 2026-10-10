@@ -784,7 +784,7 @@ test("AP6 D3 a PCA that ends with its result gives back the options of the PCA, 
   await expectUnlocked(page);
 });
 
-test("AP6 D3 a PCA that fails: its words in the tab and in the status region, Run offered again, the filters and the download given back; axe light and dark", async ({
+test("AP6 D3 a PCA that fails: its words in the tab and in the status region, Stop recalculating while it stays live and Run after it, the filters and the download given back; axe light and dark", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -811,10 +811,18 @@ test("AP6 D3 a PCA that fails: its words in the tab and in the status region, Ru
       { timeout: 10_000 },
     )
     .toBe(true);
-  await expect(run(page)).toBeEnabled();
+  // The crash, not of the memory, leaves the PCA live: Stop
+  // recalculating, which then gives Run.
+  const stopLive = shown(page).getByRole("button", {
+    name: "Stop recalculating",
+    exact: true,
+  });
+  await expect(stopLive).toBeEnabled();
   await expect(stop(page)).toHaveCount(0);
   await expectAxeBothSchemes(page, makeAxeBuilder);
   await expectUnlocked(page);
+  await stopLive.click();
+  await expect(run(page)).toBeEnabled();
 });
 
 test("AP6 D3 the download of the filtered variants waits while a PCA is held, with its words, and comes back after Stop; the PCoA's words; the text after a download stays during a run; axe light and dark", async ({

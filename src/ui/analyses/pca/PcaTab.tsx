@@ -14,12 +14,12 @@
  *
  * Its Run makes the PCA live, `autoRuns.run`, and its Stop ends the live
  * state, `autoRuns.pause` (docs/specs/steps/popgen2-pca.md, "The PCA
- * calculated again by itself"): while the PCA is about to start by
- * itself, Stop stands in the place of Run beside the line of the quiet
- * second, which names the download when its dialog holds the start, as
- * autoRuns says; while it is
- * live and locked, Stop stands beside the lock; after a Stop, Run stands
- * beside the line that says why nothing starts by itself.
+ * calculated again by itself", "Stop recalculating"): while the PCA is
+ * live and no PCA runs, "Stop recalculating" stands in the place of Run,
+ * beside the lock while it is locked, and, while it is about to start,
+ * the line of the quiet second under it, which names the download when
+ * its dialog holds the start, as autoRuns says; after a Stop, the line
+ * that says why nothing starts by itself stands there.
  */
 import { useEffect, useSyncExternalStore } from "react";
 

@@ -42,12 +42,15 @@ export interface RunButtonProps {
   /** Given the element of the reason of a disabled Run, which then takes
       the focus from a script. */
   readonly reasonRef?: React.RefObject<HTMLSpanElement | null>;
-  /** Words beside a Stop or an enabled Run, which describe it, as a
-      reason describes a disabled Run: on popgen2.html, the line of the
-      quiet second beside Stop, the lock beside a Stop that takes the
-      place of a locked Run, the line beside Run after a Stop; none when
+  /** Words beside a Stop, which describe it, as a reason describes a
+      disabled Run: on popgen2.html, the lock beside the Stop that takes
+      the place of a locked Run while the PCA is live; none when
       absent. */
   readonly line?: string;
+  /** The words of Stop: "Stop recalculating" on popgen2.html while the
+      PCA is live and no PCA runs, which ends its automatic runs; "Stop"
+      when absent. */
+  readonly stopLabel?: string;
 }
 
 /** Run or Stop, one button in one place. */
@@ -69,6 +72,7 @@ function OneButton({
   onButton,
   reasonRef,
   line,
+  stopLabel = "Stop",
 }: RunButtonProps): React.JSX.Element {
   const element = useRef<HTMLButtonElement>(null);
   const setElement = (node: HTMLButtonElement | null): void => {
@@ -103,7 +107,12 @@ function OneButton({
   const described = line === undefined ? {} : { description: line };
   if (button.kind === "stop") {
     return (
-      <Button label="Stop" onPress={onStop} ref={setElement} {...described} />
+      <Button
+        label={stopLabel}
+        onPress={onStop}
+        ref={setElement}
+        {...described}
+      />
     );
   }
   // The reason of a disabled Run takes the focus when the part gives its
@@ -121,7 +130,7 @@ function OneButton({
       onPress={onRun}
       ref={setElement}
       isDisabled={button.reason !== null}
-      {...(button.reason === null ? described : { description: button.reason })}
+      {...(button.reason === null ? {} : { description: button.reason })}
       {...focus}
     />
   );

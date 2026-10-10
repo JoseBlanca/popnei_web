@@ -236,8 +236,10 @@ async function drawTab(): Promise<Page> {
   };
 }
 
-/** The button of the tab named `name`, Run or Stop, or `null`. */
-function button(name: "Run" | "Stop"): HTMLButtonElement | null {
+/** The button of the tab named `name`, or `null`. */
+function button(
+  name: "Run" | "Stop" | "Stop recalculating",
+): HTMLButtonElement | null {
   return (
     [...container.querySelectorAll("button")].find(
       (b) => b.textContent === name,
@@ -245,6 +247,12 @@ function button(name: "Run" | "Stop"): HTMLButtonElement | null {
   );
 }
 
+/** Whether a line of the tab, a paragraph, reads `text`. */
+function lineShown(text: string): boolean {
+  return [...container.querySelectorAll("p")].some(
+    (p) => p.textContent === text,
+  );
+}
 /** The words that describe `element`, by its `aria-describedby`. */
 function descriptionOf(element: Element | null): string {
   const ids = element?.getAttribute("aria-describedby") ?? "";
@@ -303,36 +311,59 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
     expect(page.autoRuns.isLive("pca")).toBe(false);
   });
 
-  test("about to start: Stop in the place of Run, beside the line of the quiet second, with no Run; then the bar", async () => {
+  test("live and done: Stop recalculating, the same button as Stop, the focus kept; pressed, the result kept with the line of a Stop and no button, the focus on the heading", async () => {
+    const page = await drawTab();
+    const run = button("Run");
+    run?.focus();
+    await press(run);
+    expect(button("Stop")).toBe(run);
+    await page.endPca();
+    const stop = button("Stop recalculating");
+    expect(stop).toBe(run);
+    expect(document.activeElement).toBe(stop);
+    expect(button("Stop")).toBeNull();
+    expect(descriptionOf(stop)).toBe("");
+
+    await press(stop);
+    expect(page.autoRuns.isLive("pca")).toBe(false);
+    expect(button("Run")).toBeNull();
+    expect(button("Stop recalculating")).toBeNull();
+    expect(lineShown(STOPPED)).toBe(true);
+    expect(document.activeElement?.tagName).toBe("H2");
+  });
+
+  test("about to start: Stop recalculating in the place of Run, and the line of the quiet second under it, not its description; then Stop and the bar", async () => {
     const page = await drawTab();
     await press(button("Run"));
     await page.endPca();
     await setMissing(page, 0.05);
     expect(button("Run")).toBeNull();
-    const stop = button("Stop");
+    const stop = button("Stop recalculating");
     expect(stop).not.toBeNull();
-    expect(descriptionOf(stop)).toBe(ABOUT);
-    expect(container.textContent).toContain(ABOUT);
+    expect(descriptionOf(stop)).toBe("");
+    expect(lineShown(ABOUT)).toBe(true);
 
     await wait(LIVE_QUIET_MS);
     expect(page.pcaRequests()).toHaveLength(2);
     expect(button("Stop")).not.toBeNull();
-    expect(container.textContent).not.toContain(ABOUT);
+    expect(lineShown(ABOUT)).toBe(false);
     expect(container.querySelector('[role="progressbar"]')).not.toBeNull();
   });
 
-  test("Stop during the second: Run, beside the line of a Stop, the same button, and nothing starts", async () => {
+  test("Stop recalculating during the second: Run, the same button, the line of a Stop under it, and nothing starts", async () => {
     const page = await drawTab();
     await press(button("Run"));
     await page.endPca();
     await setMissing(page, 0.05);
-    const stop = button("Stop");
+    const stop = button("Stop recalculating");
     stop?.focus();
     await press(stop);
     const run = button("Run");
     expect(run).toBe(stop);
     expect(document.activeElement).toBe(run);
-    expect(descriptionOf(run)).toBe(STOPPED);
+    expect(descriptionOf(run)).toBe("");
+    expect(lineShown(STOPPED)).toBe(true);
+    expect(lineShown(ABOUT)).toBe(false);
     await wait(5000);
     expect(page.pcaRequests()).toHaveLength(1);
 
@@ -340,14 +371,15 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
     await setMissing(page, 0.04);
     await wait(5000);
     expect(page.pcaRequests()).toHaveLength(1);
-    expect(descriptionOf(button("Run"))).toBe(STOPPED);
+    expect(lineShown(STOPPED)).toBe(true);
 
     // Run again: live, and the line goes.
     await press(button("Run"));
     expect(page.pcaRequests()).toHaveLength(2);
+    expect(lineShown(STOPPED)).toBe(false);
     await page.endPca();
     await setMissing(page, 0.03);
-    expect(descriptionOf(button("Stop"))).toBe(ABOUT);
+    expect(lineShown(ABOUT)).toBe(true);
   });
 
   test("while the dialog of the download is open, the line says the PCA waits for the download", async () => {
@@ -360,15 +392,15 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
       unmark = page.gate.holdChange("download");
       await Promise.resolve();
     });
-    expect(descriptionOf(button("Stop"))).toBe(ABOUT_DIALOG);
+    expect(lineShown(ABOUT_DIALOG)).toBe(true);
     await act(async () => {
       unmark();
       await Promise.resolve();
     });
-    expect(descriptionOf(button("Stop"))).toBe(ABOUT);
+    expect(lineShown(ABOUT)).toBe(true);
   });
 
-  test("live and locked: Stop, enabled, in the place of Run, beside the lock; pressed, Run disabled with the lock", async () => {
+  test("live and locked: Stop recalculating, enabled, in the place of Run, beside the lock; pressed, Run disabled with the lock", async () => {
     const page = await drawTab();
     await press(button("Run"));
     await page.endPca();
@@ -382,7 +414,7 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
       await Promise.resolve();
     });
     await settle();
-    const stop = button("Stop");
+    const stop = button("Stop recalculating");
     expect(stop).not.toBeNull();
     expect(stop?.disabled).toBe(false);
     expect(descriptionOf(stop)).toBe(NO_DISTANCE);
@@ -392,6 +424,22 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
     const run = button("Run");
     expect(run?.disabled).toBe(true);
     expect(descriptionOf(run)).toBe(NO_DISTANCE);
+    expect(lineShown(STOPPED)).toBe(true);
+  });
+
+  test("a crash of the worker that leaves the PCA live: its words, and Stop recalculating", async () => {
+    const page = await drawTab();
+    await press(button("Run"));
+    const last = page.pcaRequests().at(-1);
+    last?.end({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    await settle();
+    expect(page.autoRuns.isLive("pca")).toBe(true);
+    expect(container.textContent).toContain("stopped unexpectedly");
+    expect(button("Run")).toBeNull();
+    expect(button("Stop recalculating")).not.toBeNull();
   });
 
   test("Stop during a run started by itself: Run with the line of a Stop", async () => {
@@ -405,6 +453,7 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
     expect(page.pcaRequests()[1]?.cancelled).toBe(true);
     page.pcaRequests()[1]?.end({ kind: "cancelled" });
     await settle();
-    expect(descriptionOf(button("Run"))).toBe(STOPPED);
+    expect(button("Run")).not.toBeNull();
+    expect(lineShown(STOPPED)).toBe(true);
   });
 });

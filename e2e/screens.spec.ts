@@ -6008,21 +6008,39 @@ for (const theme of ["light", "dark"] as const) {
           });
           await missing.focus();
           await missing.press("ArrowLeft");
-          const stop = panel.getByRole("button", { name: "Stop", exact: true });
-          await expect(stop).toHaveAccessibleDescription(
-            /^The PCA starts again in a moment/u,
-          );
+          const stop = panel.getByRole("button", {
+            name: "Stop recalculating",
+            exact: true,
+          });
+          await expect(
+            panel.getByText(/^The PCA starts again in a moment/u),
+          ).toBeVisible();
           if (shot === "stopped") {
             await stop.focus();
             await page.keyboard.press("Enter");
             await expect(
               panel.getByRole("button", { name: "Run", exact: true }),
-            ).toHaveAccessibleDescription(/^Stopped: the PCA/u);
+            ).toBeFocused();
+            await expect(panel.getByText(/^Stopped: the PCA/u)).toBeVisible();
           }
           await page.mouse.move(0, 0);
           await save(page, `popgen2-pca-${shot}${at}-${theme}`);
         });
       }
+
+      test("NU4 D5 the PCA live and done, Stop recalculating above its result", async ({
+        page,
+      }) => {
+        const panel = await pcaLive(page);
+        await expect(
+          panel.getByRole("button", {
+            name: "Stop recalculating",
+            exact: true,
+          }),
+        ).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-pca-live-done${at}-${theme}`);
+      });
 
       test("NU4 D5 the PCA started by itself, held running, with the Variants tab shown and a threshold greyed", async ({
         page,
@@ -6049,7 +6067,9 @@ for (const theme of ["light", "dark"] as const) {
         // The held run crashed: the PCA stays live, and the worker made
         // after it holds the next PCA, which a change starts by itself.
         await release(page, "crash");
-        await expect(panel.getByRole("button", { name: "Run" })).toBeVisible({
+        await expect(
+          panel.getByRole("button", { name: "Stop recalculating" }),
+        ).toBeVisible({
           timeout: 20_000,
         });
         await tabs.getByRole("tab", { name: "Variants", exact: true }).click();

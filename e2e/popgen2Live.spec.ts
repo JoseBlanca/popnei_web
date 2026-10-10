@@ -54,7 +54,7 @@ const ABOUT =
 const ABOUT_DIALOG =
   "The PCA starts again when the download is written or closed.";
 
-/** The line beside Run after a Stop. */
+/** The line under Run after a Stop, in the place of the bar. */
 const STOPPED =
   "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change.";
 
@@ -140,6 +140,15 @@ function stop(page: Page): Locator {
   return shown(page).getByRole("button", { name: "Stop", exact: true });
 }
 
+/** The button that ends the automatic runs while the PCA is live and no
+    PCA runs. */
+function stopRecalculating(page: Page): Locator {
+  return shown(page).getByRole("button", {
+    name: "Stop recalculating",
+    exact: true,
+  });
+}
+
 function pcaSlider(page: Page, kind: "missing" | "maf"): Locator {
   return shown(page).getByRole("slider", {
     name:
@@ -218,6 +227,7 @@ async function openLive(page: Page): Promise<void> {
   await expect(caption(page)).toContainText("from 548 variants.", {
     timeout: RESULT_TIMEOUT,
   });
+  await expect(stopRecalculating(page)).toBeVisible();
 }
 
 /** Expects one more calculation than `posted` once the PCA started by
@@ -455,7 +465,7 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     }
     await expect(missing).toHaveAttribute("aria-valuetext", "0.05");
     await expect(shown(page).getByText(ABOUT, { exact: true })).toBeVisible();
-    await expect(stop(page)).toHaveAccessibleDescription(ABOUT);
+    await expect(stopRecalculating(page)).toHaveAccessibleDescription("");
     await expect(caption(page)).toContainText("from 532 variants.", {
       timeout: RESULT_TIMEOUT,
     });
@@ -495,7 +505,7 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     expect(await runsPosted(page)).toBe(posted + 2);
   });
 
-  test("NU4 D3 Stop during the quiet second: Run, beside the line of a Stop, the focus on it, the Stop said; a later change sends nothing", async ({
+  test("NU4 D3 Stop recalculating during the quiet second: Run, the line of a Stop under it, the focus on it, the Stop said; a later change sends nothing", async ({
     page,
   }) => {
     test.setTimeout(90_000);
@@ -508,11 +518,11 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     const missing = pcaSlider(page, "missing");
     await missing.focus();
     await missing.press("ArrowLeft");
-    await expect(stop(page)).toHaveAccessibleDescription(ABOUT);
-    await stop(page).focus();
+    await expect(shown(page).getByText(ABOUT, { exact: true })).toBeVisible();
+    await stopRecalculating(page).focus();
     await page.keyboard.press("Enter");
     await expect(run(page)).toBeFocused();
-    await expect(run(page)).toHaveAccessibleDescription(STOPPED);
+    await expect(shown(page).getByText(STOPPED, { exact: true })).toBeVisible();
     // The status region writes its words a moment later, on the page's
     // clock.
     await page.clock.resume();
@@ -522,11 +532,11 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     await missing.press("ArrowLeft");
     await holdFor(page, HELD_MS);
     expect(await runsPosted(page)).toBe(posted);
-    await expect(run(page)).toHaveAccessibleDescription(STOPPED);
+    await expect(shown(page).getByText(STOPPED, { exact: true })).toBeVisible();
     await expect(caption(page)).toHaveCount(0);
   });
 
-  test("NU4 D3 about to start: the line and Stop, no Run nor result; axe light and dark", async ({
+  test("NU4 D3 about to start: the line and Stop recalculating, no Run nor result; axe light and dark", async ({
     page,
     makeAxeBuilder,
   }) => {
@@ -546,7 +556,7 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
     await expect(shown(page).getByText(ABOUT, { exact: true })).toBeVisible();
-    await expect(stop(page)).toBeVisible();
+    await expect(stopRecalculating(page)).toBeVisible();
     await expect(run(page)).toHaveCount(0);
     await expect(caption(page)).toHaveCount(0);
     for (const scheme of ["light", "dark"] as const) {
@@ -601,7 +611,7 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     await run(page).click();
     await expect(stop(page)).toBeVisible();
     await stop(page).click();
-    await expect(run(page)).toHaveAccessibleDescription(STOPPED);
+    await expect(shown(page).getByText(STOPPED, { exact: true })).toBeVisible();
     const posted = await runsPosted(page);
     await expect.poll(() => announced(page)).toContain(STOPPED_SAID);
 

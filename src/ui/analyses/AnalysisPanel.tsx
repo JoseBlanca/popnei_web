@@ -36,6 +36,10 @@
  *   is neither popnei's refusal nor a variants file the browser can no
  *   longer read, which fails again until it is loaded again.
  *
+ * On popgen2.html, while the analysis is live and none of it runs, the
+ * button is "Stop recalculating", and the line of its quiet second or of
+ * a Stop stands under it, in the place of the bar (`PanelLive`).
+ *
  * Run and Stop are one button in one place, so the focus stays on it when
  * it changes. The button goes when the run ends done, refused, or on a
  * file that can no longer be read; the focus,
@@ -82,20 +86,27 @@ export interface PagePanel {
   readonly onStop: () => void;
 }
 
-/** The live state of an analysis as its panel draws it. */
+/** The live state of an analysis as its panel draws it
+    (docs/specs/steps/popgen2-pca.md, "Run and Stop"). */
 export type PanelLive =
-  /** Not live, and not stopped by the user: Run as it is. */
+  /** Not live, and not stopped by the user: the button as it is. */
   | { readonly kind: "off" }
-  /** The user's Stop ended its live state: Run, with `line`, which says
-      why nothing starts by itself any more. */
+  /** The user's Stop, or a failure that ends it, ended its live state:
+      the button as it is, and under it, in the place of the bar, `line`,
+      which says why nothing starts by itself any more. */
   | { readonly kind: "stopped"; readonly line: string }
-  /** Live, started again by itself after each change: a Run locked, by
-      the store or by the page, is then Stop, enabled, beside the lock,
-      so that the user can end the live state before the lock lifts; and
-      while it is about to start, Stop in the place of Run beside
-      `aboutToStartLine`, the line of the quiet second, `null` while it
-      is not about to start. */
+  /** Live, started again by itself after each change: while no run is
+      under way, "Stop recalculating" in the place of Run, which ends the
+      live state, beside the lock when Run is locked, by the store or by
+      the page, so that the user can end it before the lock lifts; and,
+      while it is about to start, `aboutToStartLine`, the line of the
+      quiet second, under it in the place of the bar, `null` while it is
+      not about to start. */
   | { readonly kind: "live"; readonly aboutToStartLine: string | null };
+
+/** The words of the button that ends the automatic runs of a live
+    analysis while none runs. */
+export const STOP_RECALCULATING = "Stop recalculating";
 
 /** What the panel of an analysis is drawn with. */
 export interface AnalysisPanelProps {
@@ -124,7 +135,7 @@ export function AnalysisPanel({
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
 
-  const { button, line } = pageButton(
+  const { button, line, stopLabel, under } = pageButton(
     lockedBy(buttonOf(status), page?.lock ?? null),
     status,
     page,
@@ -163,6 +174,7 @@ export function AnalysisPanel({
           button={button}
           runLabel="Run"
           {...(line === null ? {} : { line })}
+          {...(stopLabel === null ? {} : { stopLabel })}
           onRun={() => {
             if (page === undefined) void startAnalysis(store, id);
             else page.onRun();
@@ -176,6 +188,10 @@ export function AnalysisPanel({
           }}
         />
       )}
+      {/* The line of the quiet second or of a Stop, in the place of the
+          bar, in the words of the page: not the button's description,
+          which a screen reader would read at each visit of it. */}
+      {under !== null && <p className={classOf(styles, "line")}>{under}</p>}
       <Below id={id} ui={ui} status={status} linesDrawn={linesFirst} />
     </section>
   );
@@ -190,36 +206,41 @@ function lockedBy(button: ButtonOf, lock: string | null): ButtonOf {
     : button;
 }
 
-/** The button of the panel, and the line beside it, given what
-    popgen2.html adds, `page`: Stop in the place of a locked Run while the
-    analysis is live, beside the lock; Stop in the place of Run while it
-    is about to start, beside the line of the quiet second; Run beside the
-    line of a Stop after one. popgen.html, with no `page`, has the
-    button as it is and no line. */
+/** The button of the panel and what stands around it, given what
+    popgen2.html adds, `page`: the button; `line`, the words beside it
+    that describe it, the lock beside "Stop recalculating" in the place
+    of a locked Run; `stopLabel`, the words of a Stop that is not
+    "Stop", `null` for "Stop"; and `under`, the line under it in the
+    place of the bar, of the quiet second or of a Stop. While the
+    analysis is live and none of it runs, the button is "Stop
+    recalculating"; while it runs, Stop. popgen.html, with no `page`,
+    has the button as it is and nothing more. */
 function pageButton(
   button: ButtonOf,
   status: AnalysisStatus<JobResult>,
   page: PagePanel | undefined,
-): { readonly button: ButtonOf; readonly line: string | null } {
-  if (page === undefined || button?.kind !== "run") {
-    return { button, line: null };
+): {
+  readonly button: ButtonOf;
+  readonly line: string | null;
+  readonly stopLabel: string | null;
+  readonly under: string | null;
+} {
+  const none = { line: null, stopLabel: null, under: null };
+  if (page === undefined || status.kind === "running") {
+    return { button, ...none };
   }
-  const ready = status.kind === "ready" || status.kind === "removed";
   switch (page.live.kind) {
     case "off":
-      return { button, line: null };
+      return { button, ...none };
     case "stopped":
-      return {
-        button,
-        line: ready && button.reason === null ? page.live.line : null,
-      };
+      return { button, ...none, under: page.live.line };
     case "live":
-      if (button.reason !== null) {
-        return { button: { kind: "stop" }, line: button.reason };
-      }
-      return ready && page.live.aboutToStartLine !== null
-        ? { button: { kind: "stop" }, line: page.live.aboutToStartLine }
-        : { button, line: null };
+      return {
+        button: { kind: "stop" },
+        line: button?.kind === "run" ? button.reason : null,
+        stopLabel: STOP_RECALCULATING,
+        under: page.live.aboutToStartLine,
+      };
   }
 }
 
