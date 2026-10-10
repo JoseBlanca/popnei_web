@@ -7,12 +7,13 @@
  * give such a hint (docs/specs/shell.md, "The header"). And a tooltip
  * shown by the focus of the keyboard stays through a scroll of the page
  * while its button has the focus, as the browser scrolls a control
- * reached by the Tab key into view.
+ * reached by the Tab key into view; one shown by the mouse alone closes
+ * on a scroll, as React Aria closes it.
  */
 import { StrictMode, act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { Button } from "./Button.tsx";
 
@@ -104,18 +105,47 @@ describe("task 9.2 a tooltip shown by the focus through a scroll", () => {
     expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(hint);
   });
 
-  test("the focus gone, a scroll, and the focus back by the keyboard shows the tooltip again", () => {
+  test("a tooltip shown by the mouse alone, the focus on another field, closes on a scroll", () => {
     const hint = "Stop the PCA to change the filters.";
     draw(hint);
-    tabToButton();
-    act(() => {
-      button().blur();
-    });
-    expect(document.querySelector('[role="tooltip"]')).toBeNull();
-    act(() => {
-      document.dispatchEvent(new Event("scroll"));
-    });
-    tabToButton();
-    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(hint);
+    const before = container.querySelector("input");
+    if (before === null) throw new Error("no field before the button");
+    vi.useFakeTimers();
+    try {
+      act(() => {
+        before.focus();
+      });
+      // React Aria shows a tooltip on the hover of a user it counts as
+      // one of the pointer, by the moves of the pointer over the page.
+      act(() => {
+        document.dispatchEvent(
+          new PointerEvent("pointermove", {
+            bubbles: true,
+            pointerType: "mouse",
+          }),
+        );
+      });
+      act(() => {
+        button().dispatchEvent(
+          new PointerEvent("pointerover", {
+            bubbles: true,
+            pointerType: "mouse",
+          }),
+        );
+      });
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(document.activeElement).toBe(before);
+      expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(
+        hint,
+      );
+      act(() => {
+        document.dispatchEvent(new Event("scroll"));
+      });
+      expect(document.querySelector('[role="tooltip"]')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
