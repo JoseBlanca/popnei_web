@@ -14,7 +14,10 @@ away the result under a key an analysis leaves behind
 (`docs/specs/core/store.md`, `dropLeftBehind`); nothing else changes,
 and `popgen.html` does not call it. The cache keeps the results of the analyses under their keys, on the
 page, so that a result asked for again, by an undo, a value set back, or a
-step of the application visited again, is shown with no calculation. It is
+step of the application visited again, is shown with no calculation. On
+`popgen2.html`, from 10 October 2026, a value set back is calculated
+again, since the store removes a result once its key is left behind
+(`docs/specs/core/store.md`, `dropLeftBehind`). It is
 bounded in bytes, and drops first the result used longest ago
 (`docs/architecture.md`, section 3). It depends on
 `docs/specs/core/keys.md`, for the keys. Stage 2 of `docs/build-order.md`,

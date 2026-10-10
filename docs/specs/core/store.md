@@ -498,14 +498,21 @@ its analysis has, or had when it was last not locked:
   of 9,381 individuals, 2 to 4 minutes, through each load of an
   individuals file; the old page does not take the setting, and the
   rule is written so that it would hold there.
-- **A late result is not cached.** A request that ends `done` under a
-  key that is not the key its analysis has at that moment, a locked
-  analysis having none, after a change that left it
-  behind and before its stop reached the worker, gives no result to
-  the cache and no warnings; nor does the statistics' request of a Run
-  that waited, under a key the project no longer gives them. A refusal
-  that ends so is not kept either. The outcome is otherwise taken in as
-  before: the request leaves `runs`.
+- **A late result is not cached.** A request whose key was left behind
+  at any moment since it was sent, whether `stopLeftBehind` stopped it
+  for that or not, gives no result to the cache and no warnings when it
+  ends `done`, even when the project has given its key back by then: a
+  threshold moved, which stops the PCA, and moved back before the
+  stopped request's outcome reaches the store, must calculate again and
+  not show the result of the stopped run (the design, choice 5). The
+  store marks the request at the change that leaves its key behind,
+  and keeps the mark until its outcome. The same holds for the
+  statistics' request of a Run that waited. A refusal that ends so is
+  not kept either, and the number of variants the result read,
+  `numVarsRead` of its `countsOf`, is not recorded into the project,
+  since the result it came with is dropped and the next calculation
+  records it again. The outcome is otherwise taken in as before: the
+  request leaves `runs`.
 - **The one pass** of the page, the summary of the variants file, reads
   no filter, so no change of a filter gives it another key, and its
   result, its histograms and the statistics of each individual stay;
@@ -535,8 +542,19 @@ which would drop the one pass's result and every histogram with it
 **No Undo on `popgen2.html`.** `createPopgen2Store` of
 `src/ui/popgen2Store.ts` makes the store with `maxUndoSteps: 1`, so that the page keeps two projects at most,
 the present and the one before it, where it kept up to 201, and gives
-the page a type with no `undo` and no `redo`, `Popgen2PageStore`, so
-that a screen of that page that calls them does not compile. The
+the page a type with no `undo` and no `redo`, `Popgen2PageStore`,
+declared beside it in `src/ui/popgen2Store.ts` ("The TypeScript
+interface", below), so that a screen of that page that calls them does
+not compile. The code typed with `Popgen2Store` today that takes the
+new type: `src/ui/popgen2.tsx`, `src/ui/store.tsx`, the gate
+`gatedStore` of `src/ui/variants/thresholdRun.ts`, which loses its
+wraps of `undo` and `redo` for that page, `populationColumn.ts`,
+`IndividualsBox.tsx`, `IndividualsTab.tsx`, and their tests,
+`popgen2Store.test.ts`, `populationColumn.test.ts`,
+`pageStart.test.ts`, `thresholdRun.test.ts` and the tests of
+`src/ui/variants/` and `src/ui/analyses/pca/` that make the store of
+the page. `src/core/store.test.ts` keeps `Popgen2Store`, the core's
+type with `undo`, for the tests of `stopLeftBehind` alone. The
 history, `apply`'s steps, `applyAfresh` and `populationColumnChosen`
 stay as they are: the code of `popgen.html` needs the history, and
 removing it for one page would be a second way through every change of
@@ -1499,6 +1517,22 @@ export function createStore<J, R, F = never>(config: {
       absent. */
   readonly dropLeftBehind?: boolean;
 }): Store<R, F>;   // a Popgen2Store<R, F> when given stopLeftBehind: true
+```
+
+`createStore` throws a defect when it is given `dropLeftBehind` without
+`stopLeftBehind`: a change would throw away the result under a key left
+behind and leave its calculation running out of sight, its result then
+dropped too, the worker held for nothing. The overloads stay as they
+are, `Popgen2Store` with `stopLeftBehind: true`, `Store` otherwise.
+
+The type the page `popgen2.html` is given, in `src/ui/popgen2Store.ts`
+and not in core, from 10 October 2026:
+
+```ts
+/** The store of popgen2.html as its screens see it: no undo, no redo. */
+export type Popgen2PageStore<R, F = never> = Omit<Popgen2Store<R, F>, "undo" | "redo">;
+
+export function createPopgen2Store(deps: Popgen2StoreDeps): Popgen2PageStore<JobResult, Blob>;
 
 /** What the store takes from the pass of a result. */
 export interface PassFound<R> {
@@ -2123,12 +2157,16 @@ by `createPopgen2Store` with the same fake `send`, from 10 October
 2026:
 
 - A PCA done under a threshold, the threshold moved: the PCA `ready`
-  under the new key, and the cache no longer holds the result under the
-  old key (`cache.get` of the old key `undefined`); the threshold set
-  back by a command: the PCA `ready`, not `done`, and no request sent.
+  under the new key; the threshold set back by a command: the PCA
+  `ready`, not `done`, and no request sent. That the entry left the
+  cache is checked by the cache's own tests of `remove`.
 - A PCA in flight, the threshold moved, its `cancel()` called, its
   result given by `runEnded`: nothing cached under its key; the
-  threshold set back: `ready`.
+  threshold set back: `ready`. In this order too: the PCA in flight,
+  the threshold moved, its `cancel()` called, the threshold set back,
+  then its result given by `runEnded`: `ready`, not `done`, and the
+  project's number of variants unchanged.
+- `createStore` given `dropLeftBehind` without `stopLeftBehind`: throws.
 - A PCA refused by popnei, `error`, the threshold moved and set back:
   `ready`, not `error`.
 - A PCA done, its LD distance emptied: `locked`; typed again with the
@@ -2141,9 +2179,11 @@ by `createPopgen2Store` with the same fake `send`, from 10 October
   pass `done`, the same result object; another variants file opened
   with `open`: the result of the old load no longer in the cache.
 - The store of `popgen2.html` has no `undo` nor `redo` in its type
-  (`@ts-expect-error`), and after three commands its history holds one
-  past project (`historyMoves` and the state's `undo` read through the
-  `Store` type).
+  (`@ts-expect-error`). Its bound of one past project, read through the
+  `Store` type, which has them: after three commands, `undo()` once,
+  then the state's `undo` is `null`; a second `undo()` leaves the
+  project the same object. With the bound left at 200 the state's
+  `undo` would still name the first command.
 - The same cases on the store of `popgen.html`: the results kept, an
   undo shows them, as before.
 
