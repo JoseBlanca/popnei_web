@@ -275,7 +275,12 @@ export function createClient(make: {
   decided on 25 September 2026. A request still in the queue leaves it at no
   cost, and one that runs ends its worker, as below; either way its
   outcome is `cancelled`. An undo that asks for that key again later sends
-  it again, which costs its time and never its correctness.
+  it again, which costs its time and never its correctness. That is
+  `popgen.html`. `popgen2.html` has no notice, so its store, made with
+  `stopLeftBehind`, cancels such a request at the change itself, and the
+  page locks what a running PCA reads so that no change of the user's
+  stops it unseen (`docs/specs/core/store.md`, "On popgen2.html: no
+  notice, and a history of the filters").
 
 ### Errors are values
 

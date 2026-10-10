@@ -416,8 +416,9 @@ ends, results removed, is heard only through a live region.
   until the next command, undo, redo or opening replaces it, or until it
   is closed: it has an action, and a notice with an action that
   disappears on a timer fails a user who is slow to reach it (WCAG 2.2.1).
-  Undo and Redo are also always in the header and on the keyboard
-  (below, "Keyboard shortcuts"), so the notice is never the only way. When the change also stops calculations, the same notice
+  On `popgen.html` Undo and Redo are also always in the header and on
+  the keyboard (below, "Keyboard shortcuts"), so the notice is never the
+  only way. When the change also stops calculations, the same notice
   says so, "The ongoing calculations will be stopped unless you undo the
   change". There is no timer: the calculations stop when the notice is
   closed or replaced, or when the user runs another calculation, and then
@@ -427,6 +428,24 @@ ends, results removed, is heard only through a live region.
   file stops the calculations at once, and its notice says so, "2
   calculations stopped because a new variants file was loaded · Undo",
   as the owner decided on 25 September 2026.
+- **`popgen2.html` has no notice**, as the owner decided on 8 October
+  2026, and what is above holds for `popgen.html` alone. Its store is
+  made with `stopLeftBehind` (`docs/specs/core/store.md`, "On
+  popgen2.html: no notice, and a history of the filters"): a change
+  stops at once every calculation whose key the new project no longer
+  gives, and an undo that gives the key back finds the result in the
+  cache or leaves the analysis ready for the user's Run. So that no
+  change stops a PCA without a word, the page locks what a running PCA
+  reads, the thresholds, the FILTER box and the PCA's own options, each
+  greyed with "Stop the PCA to change the filters." as its tooltip and
+  its description, and the buttons and keys of Undo and Redo wait
+  (`docs/specs/steps/popgen2-pca.md`, "While a PCA runs"). Opening a
+  variants or an individuals file there is no step of Undo; only the
+  changes of the filters and the column of the populations are. Its
+  Undo and Redo are two buttons at the top right of the page's column
+  of 48 rem, each shown only while it has a step to take
+  (`docs/specs/steps/popgen2-pca.md`, "Undo and Redo"), with the keys of
+  "Keyboard shortcuts" below.
 - **Errors of a run** are shown in the panel of the analysis with the
   message and are announced as the end of the run is; `role="alert"` is
   kept for what interrupts, which here is only the bar of an error of the
