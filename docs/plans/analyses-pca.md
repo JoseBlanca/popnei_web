@@ -1330,3 +1330,42 @@ keeps the old page's words, "7.87% of their variance lies in directions
 that no space has"; the reviewer proposed "negative eigenvalues", "not
 Euclidean" and advice on which grouping to trust, which is the owner's
 to judge as a population geneticist.
+
+The fixes of work package 6's review, 10 October 2026, in two rounds:
+commits 5a64705a to e829f03a, then 213931c6 to fdddbbf3. All thirty
+taken, but the frozen column of the individuals in fix 21: React Aria's
+virtualizer gives every cell an absolute position, which CSS cannot
+pin, so the table fades at its right edge with "More columns: scroll
+sideways." until it is scrolled to PC10; the screen spec says so. What
+was found on the way: the missed tooltips of the locked controls came
+from React Aria, a tooltip closed at once as another opened and then
+closed again on blur staying stuck waiting for an exit animation; the
+tooltips now skip it (React Aria's own `shouldSkipAnimation`), and no
+tooltip was missed in 260 moves of Tab in each engine. Run now ends a
+waiting run of the arrow keys before it starts (`gatedStore` wraps
+`startRun`); in the browser, turning to the PCA tab already ended it.
+The result's code is downloaded when the tab is first shown, with
+"Loading the result…" meanwhile and, after a failure, its words and Try
+again (`src/ui/codeDownload.ts`, shared with the 3D view). A locked box
+or line refuses every key, so Ctrl+Z inside one changes nothing. The
+step of a threshold's field is worked out once per result
+(`variantThresholdStep`). The old page's first load no longer holds
+this page's store; `widgets/waiting.ts`, shared by both pages' radios,
+switches and checkboxes, stays. Words written by the session and the
+subagents: "Type the LD distance above, or turn the LD pruning off.";
+"Choose the distance beyond which the r² between two variants falls to
+its background level in your species, as studies of its LD decay
+report."; "1 keeps every variant: type a lower value to filter."; "The
+result of the PCA could not be loaded. If the connection works, the
+site may have been updated since this page was opened: try again, or
+reload the page, open panel.nei again and run the PCA again."
+
+Checks at fdddbbf3: Vitest 4,941; the typecheck, the lint and the format
+check clean; in Chromium and WebKit `popgen2Pca.spec.ts` with
+`--repeat-each=3 --retries=0` 132, none flaky, the other flows of
+`popgen2.html` 328, the old page's flows 822. The screenshots of the
+PCA tab, 40, read in part by the session (the empty distance, 2D at 320
+px). The first load of `popgen2.html` 307.82 KB by the sum of Vite's
+gzip sizes of the nine files the page loads (306.71 KB before the
+second round); the figures of 303 to 306 KB above were taken with gzip
+-9 of the files, a different count.
