@@ -1630,3 +1630,10 @@ Checks at e322e9cb: Vitest 152 files, 4,990 tests (a test of the write
 of the filtered variants, older than this round, timed out at 5,082 ms
 against its 5,000 ms once in six runs under load); in Chromium and
 WebKit all 1,552 flows, in three chunks, 506, 686 and 360.
+
+The owner approved on 10 October 2026 the specs and the plan
+`docs/plans/no-undo.md` (at 6887ff90), and answered the band's open
+point: the band always at the top of the window, carrying the page's
+name, "Popnei", while nothing runs, and the information added after it
+when there is some: the band is the page's heading line. The plan is
+carried out on this branch from there.
