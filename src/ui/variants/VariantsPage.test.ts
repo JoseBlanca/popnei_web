@@ -41,6 +41,7 @@ import { createAnnouncer } from "../shell/status.ts";
 import { StoreProvider } from "../store.tsx";
 import { RunGateProvider } from "./runGate.tsx";
 import { createRunGate } from "./thresholdRun.ts";
+import { ChangeHoldsProvider } from "../widgets/changeHold.ts";
 import { VariantsPage } from "./VariantsPage.tsx";
 import type * as FileZoneModule from "../widgets/FileZone.tsx";
 import type { FileZoneProps } from "../widgets/FileZone.tsx";
@@ -242,6 +243,7 @@ async function drawPage(pickedId?: string): Promise<{
     },
     fileOf: (): File | null => null,
   };
+  const gate = createRunGate();
   const tree = createElement(
     StrictMode,
     null,
@@ -253,15 +255,19 @@ async function drawPage(pickedId?: string): Promise<{
         { value: createAnnouncer() },
         createElement(
           RunGateProvider,
-          { value: createRunGate() },
+          { value: gate },
           createElement(
-            FilesProvider,
-            { value: files },
-            createElement(VariantsPage, {
-              autoRuns,
-              onCountButton: () => undefined,
-              onStatsShown: () => () => undefined,
-            }),
+            ChangeHoldsProvider,
+            { value: gate },
+            createElement(
+              FilesProvider,
+              { value: files },
+              createElement(VariantsPage, {
+                autoRuns,
+                onCountButton: () => undefined,
+                onStatsShown: () => () => undefined,
+              }),
+            ),
           ),
         ),
       ),

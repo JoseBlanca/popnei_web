@@ -38,6 +38,7 @@ import { createAnnouncer } from "./shell/status.ts";
 import type { Announcer } from "./shell/status.ts";
 import { announcementsOf, writtenDiscarded } from "./shell/words.ts";
 import { StoreProvider } from "./store.tsx";
+import { ChangeHoldsProvider, HOLDS_NOTHING } from "./widgets/changeHold.ts";
 
 /** Steps 3 to 7 of the opening, after the guard, the listeners and the
     bar of `startPage`: the store, the worker client, the saving and the
@@ -78,15 +79,19 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
   renderApplication(
     defects,
     <StoreProvider value={store}>
-      <AnnouncerProvider value={announcer}>
-        <FilesProvider value={files}>
-          <SavingProvider value={saving}>
-            <ShellWordsProvider value={SHELL_WORDS}>
-              <Shell />
-            </ShellWordsProvider>
-          </SavingProvider>
-        </FilesProvider>
-      </AnnouncerProvider>
+      {/* No PCA here waits for the changes under way, so the widgets
+          hold them on nothing. */}
+      <ChangeHoldsProvider value={HOLDS_NOTHING}>
+        <AnnouncerProvider value={announcer}>
+          <FilesProvider value={files}>
+            <SavingProvider value={saving}>
+              <ShellWordsProvider value={SHELL_WORDS}>
+                <Shell />
+              </ShellWordsProvider>
+            </SavingProvider>
+          </FilesProvider>
+        </AnnouncerProvider>
+      </ChangeHoldsProvider>
     </StoreProvider>,
   );
 }

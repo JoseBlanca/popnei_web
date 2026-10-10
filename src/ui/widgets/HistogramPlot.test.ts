@@ -22,6 +22,7 @@ import { ANNOUNCE_DELAY_MS, createAnnouncer } from "../shell/status.ts";
 import type { Announcer } from "../shell/status.ts";
 import { HistogramPlot } from "./HistogramPlot.tsx";
 import type { PlotDownload } from "./downloadItems.ts";
+import { ChangeHoldsProvider, HOLDS_NOTHING } from "./changeHold.ts";
 
 vi.mock("../download.ts", () => ({
   downloadText: vi.fn(),
@@ -129,12 +130,16 @@ function draw(download: PlotDownload | null): void {
         StrictMode,
         null,
         createElement(
-          AnnouncerProvider,
-          { value: announcer },
-          createElement(HistogramPlot, {
-            data: DATA,
-            ...(download !== null && { download }),
-          }),
+          ChangeHoldsProvider,
+          { value: HOLDS_NOTHING },
+          createElement(
+            AnnouncerProvider,
+            { value: announcer },
+            createElement(HistogramPlot, {
+              data: DATA,
+              ...(download !== null && { download }),
+            }),
+          ),
         ),
       ),
     );

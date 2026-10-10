@@ -51,6 +51,7 @@ import { RunGateProvider } from "./runGate.tsx";
 import { StatsSection } from "./StatsSection.tsx";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
 import { createRunGate, gatedStore } from "./thresholdRun.ts";
+import { ChangeHoldsProvider } from "../widgets/changeHold.ts";
 
 vi.mock("../download.ts", () => ({
   downloadText: vi.fn(),
@@ -190,10 +191,14 @@ async function drawPage(announced = true): Promise<Page> {
         RunGateProvider,
         { value: gate },
         createElement(
-          AnnouncerProvider,
-          { value: announcer },
-          createElement("button", { ref: openButton }, "Open variants file…"),
-          createElement(StatsSection, { autoRuns, openButton, onShown }),
+          ChangeHoldsProvider,
+          { value: gate },
+          createElement(
+            AnnouncerProvider,
+            { value: announcer },
+            createElement("button", { ref: openButton }, "Open variants file…"),
+            createElement(StatsSection, { autoRuns, openButton, onShown }),
+          ),
         ),
       ),
     ),

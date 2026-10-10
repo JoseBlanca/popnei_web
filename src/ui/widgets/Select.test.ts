@@ -5,17 +5,17 @@
  * (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by
  * itself"): from its opening to its closing, by a choice or by Escape, or
  * until it leaves the page; none for a key that chooses on the closed
- * list, which is a change at once; and none on popgen.html, which gives no
- * gate.
+ * list, which is a change at once; and none on popgen.html, whose holder
+ * holds nothing.
  */
 import { StrictMode, act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { RunGateProvider } from "../variants/runGate.tsx";
 import { createRunGate } from "../variants/thresholdRun.ts";
 import type { RunGate } from "../variants/thresholdRun.ts";
+import { ChangeHoldsProvider, HOLDS_NOTHING } from "./changeHold.ts";
 import { Select } from "./Select.tsx";
 
 declare global {
@@ -42,7 +42,7 @@ afterEach(() => {
 type Method = "pca" | "pcoa" | "mds";
 
 /** Draws the select of the method at PCA, under `gate` when one is given,
-    as popgen2.html does, and with none, as popgen.html; each choice is
+    as popgen2.html does, and with the holder of popgen.html, which holds nothing; each choice is
     kept in `chosen` and given back. */
 function draw(gate: RunGate | null, chosen: Method[]): void {
   const render = (value: Method): void => {
@@ -63,9 +63,11 @@ function draw(gate: RunGate | null, chosen: Method[]): void {
       createElement(
         StrictMode,
         null,
-        gate === null
-          ? select
-          : createElement(RunGateProvider, { value: gate }, select),
+        createElement(
+          ChangeHoldsProvider,
+          { value: gate ?? HOLDS_NOTHING },
+          select,
+        ),
       ),
     );
   };
@@ -165,7 +167,7 @@ describe("NU3 D2 the select holds while its list is open", () => {
     expect(gate.underWay()).toBe(0);
   });
 
-  test("with no gate, as on popgen.html, the list opens and chooses as before", () => {
+  test("with the holder of popgen.html, which holds nothing, the list opens and chooses as before", () => {
     const chosen: Method[] = [];
     draw(null, chosen);
     open();

@@ -161,6 +161,7 @@ async function drawPage(): Promise<Page> {
   const { announceChanges } = await import("./announceChanges.ts");
   const { StatsSection } = await import("./StatsSection.tsx");
   const { RunGateProvider } = await import("./runGate.tsx");
+  const { ChangeHoldsProvider } = await import("../widgets/changeHold.ts");
   const { createRunGate, gatedStore } = await import("./thresholdRun.ts");
   const gate = createRunGate();
 
@@ -213,10 +214,14 @@ async function drawPage(): Promise<Page> {
         RunGateProvider,
         { value: gate },
         createElement(
-          AnnouncerProvider,
-          { value: announcer },
-          createElement("button", { ref: openButton }, "Open variants file…"),
-          createElement(StatsSection, { autoRuns, openButton, onShown }),
+          ChangeHoldsProvider,
+          { value: gate },
+          createElement(
+            AnnouncerProvider,
+            { value: announcer },
+            createElement("button", { ref: openButton }, "Open variants file…"),
+            createElement(StatsSection, { autoRuns, openButton, onShown }),
+          ),
         ),
       ),
     ),

@@ -28,6 +28,7 @@ import { StoreProvider } from "../store.tsx";
 import { DownloadVariants } from "./DownloadVariants.tsx";
 import { RunGateProvider } from "./runGate.tsx";
 import { createRunGate, gatedStore } from "./thresholdRun.ts";
+import { ChangeHoldsProvider } from "../widgets/changeHold.ts";
 import type { RunGate } from "./thresholdRun.ts";
 
 declare global {
@@ -151,9 +152,13 @@ function draw(store: Popgen2PageStore<JobResult, Blob>, gate: RunGate): void {
             RunGateProvider,
             { value: gate },
             createElement(
-              AnnouncerProvider,
-              { value: createAnnouncer() },
-              createElement(DownloadVariants),
+              ChangeHoldsProvider,
+              { value: gate },
+              createElement(
+                AnnouncerProvider,
+                { value: createAnnouncer() },
+                createElement(DownloadVariants),
+              ),
             ),
           ),
         ),

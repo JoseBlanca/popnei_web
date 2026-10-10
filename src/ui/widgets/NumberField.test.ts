@@ -15,9 +15,9 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { RunGateProvider } from "../variants/runGate.tsx";
 import { createRunGate } from "../variants/thresholdRun.ts";
 import type { RunGate } from "../variants/thresholdRun.ts";
+import { ChangeHoldsProvider, HOLDS_NOTHING } from "./changeHold.ts";
 import { NumberField } from "./NumberField.tsx";
 import type { NumberFieldProps } from "./NumberField.tsx";
 
@@ -79,7 +79,15 @@ function newCalls(): Calls {
 function draw(props: NumberFieldProps): HTMLInputElement {
   act(() => {
     root.render(
-      createElement(StrictMode, null, createElement(NumberField, props)),
+      createElement(
+        StrictMode,
+        null,
+        createElement(
+          ChangeHoldsProvider,
+          { value: HOLDS_NOTHING },
+          createElement(NumberField, props),
+        ),
+      ),
     );
   });
   const input = container.querySelector("input");
@@ -228,7 +236,11 @@ describe("SF8 D1 the options of the number box", () => {
             createElement(
               StrictMode,
               null,
-              createElement(NumberField, props(1)),
+              createElement(
+                ChangeHoldsProvider,
+                { value: HOLDS_NOTHING },
+                createElement(NumberField, props(1)),
+              ),
             ),
           );
         },
@@ -431,7 +443,17 @@ describe("SF8 D1 the options of the number box", () => {
         });
       }
       act(() => {
-        root.render(createElement(StrictMode, null, createElement(Page)));
+        root.render(
+          createElement(
+            StrictMode,
+            null,
+            createElement(
+              ChangeHoldsProvider,
+              { value: HOLDS_NOTHING },
+              createElement(Page),
+            ),
+          ),
+        );
       });
       const input = container.querySelector("input");
       if (input === null) throw new Error("no input drawn");
@@ -577,9 +599,10 @@ describe("SF6 the browser's own undo of the box's text, done with no beforeinput
 });
 
 describe("NU3 D2 the number box holds while its text differs from its number", () => {
-  /** Draws a threshold at 0.5 under `gate`, as popgen2.html does, or with
-      no gate, as popgen.html; each number committed is kept in `calls`
-      and given back, as the store gives it. */
+  /** Draws a threshold at 0.5 under `gate`, as popgen2.html does, or
+      under the holder of popgen.html, which holds nothing; each number
+      committed is kept in `calls` and given back, as the store gives
+      it. */
   const drawUnder = (gate: RunGate | null, calls: Calls): HTMLInputElement => {
     const render = (value: number): void => {
       const box = createElement(
@@ -595,9 +618,11 @@ describe("NU3 D2 the number box holds while its text differs from its number", (
         createElement(
           StrictMode,
           null,
-          gate === null
-            ? box
-            : createElement(RunGateProvider, { value: gate }, box),
+          createElement(
+            ChangeHoldsProvider,
+            { value: gate ?? HOLDS_NOTHING },
+            box,
+          ),
         ),
       );
     };
@@ -706,7 +731,7 @@ describe("NU3 D2 the number box holds while its text differs from its number", (
     expect(gate.underWay()).toBe(0);
   });
 
-  test("with no gate, as on popgen.html, a number typed is committed at Enter as before", () => {
+  test("with the holder of popgen.html, which holds nothing, a number typed is committed at Enter as before", () => {
     const calls = newCalls();
     const input = drawUnder(null, calls);
     typeOver(input, "0.2");

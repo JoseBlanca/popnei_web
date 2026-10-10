@@ -21,8 +21,8 @@ import { downloadText } from "../download.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { ANNOUNCE_DELAY_MS, createAnnouncer } from "../shell/status.ts";
 import type { Announcer } from "../shell/status.ts";
-import { RunGateProvider } from "../variants/runGate.tsx";
 import { createRunGate } from "../variants/thresholdRun.ts";
+import { ChangeHoldsProvider, HOLDS_NOTHING } from "./changeHold.ts";
 import {
   DownloadMenu,
   PNG_NOT_MADE_TEXT,
@@ -96,7 +96,11 @@ function draw(element: React.ReactElement): void {
       createElement(
         StrictMode,
         null,
-        createElement(AnnouncerProvider, { value: announcer }, element),
+        createElement(
+          ChangeHoldsProvider,
+          { value: HOLDS_NOTHING },
+          createElement(AnnouncerProvider, { value: announcer }, element),
+        ),
       ),
     );
   });
@@ -833,7 +837,7 @@ describe("NU3 D2 the menu Download… holds while it is open", () => {
     gate: ReturnType<typeof createRunGate>,
   ): React.ReactElement =>
     createElement(
-      RunGateProvider,
+      ChangeHoldsProvider,
       { value: gate },
       createElement(DownloadMenu, {
         what: "the plot of the MAF",
@@ -883,7 +887,7 @@ describe("NU3 D2 the menu Download… holds while it is open", () => {
     const gate = createRunGate();
     const element = (waiting: string | null): React.ReactElement =>
       createElement(
-        RunGateProvider,
+        ChangeHoldsProvider,
         { value: gate },
         createElement(DownloadMenu, {
           what: "the plot of the MAF",

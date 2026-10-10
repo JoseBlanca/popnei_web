@@ -37,6 +37,7 @@ import { announceChanges } from "./variants/announceChanges.ts";
 import { RunGateProvider } from "./variants/runGate.tsx";
 import { createRunGate, gatedStore } from "./variants/thresholdRun.ts";
 import { reportDefects } from "./variants/workerDefects.ts";
+import { ChangeHoldsProvider } from "./widgets/changeHold.ts";
 
 /** The opening after the guard, the listeners and the bar: the store and
     the worker client, the bar with the store and no saving, the
@@ -78,17 +79,21 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
     defects,
     <StoreProvider value={gated}>
       <RunGateProvider value={gate}>
-        <AnnouncerProvider value={announcer}>
-          <FilesProvider value={files}>
-            <VariantsPage
-              autoRuns={autoRuns}
-              onCountButton={(node) => {
-                countButton = node;
-              }}
-              onStatsShown={statsShown}
-            />
-          </FilesProvider>
-        </AnnouncerProvider>
+        {/* The widgets hold their changes under way on the gate, and see
+            nothing else of it. */}
+        <ChangeHoldsProvider value={gate}>
+          <AnnouncerProvider value={announcer}>
+            <FilesProvider value={files}>
+              <VariantsPage
+                autoRuns={autoRuns}
+                onCountButton={(node) => {
+                  countButton = node;
+                }}
+                onStatsShown={statsShown}
+              />
+            </FilesProvider>
+          </AnnouncerProvider>
+        </ChangeHoldsProvider>
       </RunGateProvider>
     </StoreProvider>,
   );

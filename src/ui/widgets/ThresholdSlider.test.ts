@@ -12,9 +12,9 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { RunGateProvider } from "../variants/runGate.tsx";
 import { createRunGate } from "../variants/thresholdRun.ts";
 import type { RunGate } from "../variants/thresholdRun.ts";
+import { ChangeHoldsProvider, HOLDS_NOTHING } from "./changeHold.ts";
 import { ThresholdSlider } from "./ThresholdSlider.tsx";
 import type { MovedBy } from "./ThresholdSlider.tsx";
 
@@ -75,9 +75,11 @@ function draw(
       createElement(
         StrictMode,
         null,
-        gate === null
-          ? line
-          : createElement(RunGateProvider, { value: gate }, line),
+        createElement(
+          ChangeHoldsProvider,
+          { value: gate ?? HOLDS_NOTHING },
+          line,
+        ),
       ),
     );
   };
@@ -224,21 +226,25 @@ describe("AP6 D3 the reason of a line that waits", () => {
         createElement(
           StrictMode,
           null,
-          createElement("input", { "aria-label": "Before" }),
-          createElement(ThresholdSlider, {
-            label: "MAF max: maximum major allele frequency",
-            minValue: 0,
-            maxValue: 1,
-            step: 0.01,
-            value: 0.5,
-            valueText: "0.5",
-            muted: false,
-            onChange: (moved) => {
-              moves.push(moved);
-            },
-            onDragEnd: () => undefined,
-            waiting: reason,
-          }),
+          createElement(
+            ChangeHoldsProvider,
+            { value: HOLDS_NOTHING },
+            createElement("input", { "aria-label": "Before" }),
+            createElement(ThresholdSlider, {
+              label: "MAF max: maximum major allele frequency",
+              minValue: 0,
+              maxValue: 1,
+              step: 0.01,
+              value: 0.5,
+              valueText: "0.5",
+              muted: false,
+              onChange: (moved) => {
+                moves.push(moved);
+              },
+              onDragEnd: () => undefined,
+              waiting: reason,
+            }),
+          ),
         ),
       );
     });

@@ -37,6 +37,10 @@ import { AnalysisPanel } from "../AnalysisPanel.tsx";
 import { panelOf } from "../panels.ts";
 import { LdDecayOptionsPart } from "./LdDecayOptionsPart.tsx";
 import { LdDecayResults } from "./LdDecayResults.tsx";
+import {
+  ChangeHoldsProvider,
+  HOLDS_NOTHING,
+} from "../../widgets/changeHold.ts";
 
 // The table drawn by Table is counted here, so that a test sees when a
 // table is drawn again.
@@ -170,9 +174,13 @@ function draw(part: React.ReactElement): Store<JobResult, Blob> {
         StrictMode,
         null,
         createElement(
-          StoreProvider,
-          { value: store },
-          createElement(AnnouncerProvider, { value: ANNOUNCER }, part),
+          ChangeHoldsProvider,
+          { value: HOLDS_NOTHING },
+          createElement(
+            StoreProvider,
+            { value: store },
+            createElement(AnnouncerProvider, { value: ANNOUNCER }, part),
+          ),
         ),
       ),
     );

@@ -42,6 +42,10 @@ import { DiversityResults } from "./DiversityResults.tsx";
 import { noSpectrumLine } from "./spectrumWords.ts";
 import type * as SpectrumWordsModule from "./spectrumWords.ts";
 import type * as HistogramModule from "../../../charts/histogram.ts";
+import {
+  ChangeHoldsProvider,
+  HOLDS_NOTHING,
+} from "../../widgets/changeHold.ts";
 
 // The lines of the populations of the spectrum are made by
 // noSpectrumLine, counted here so that a test sees when the block is
@@ -185,9 +189,13 @@ function draw(part: React.ReactElement): void {
         StrictMode,
         null,
         createElement(
-          StoreProvider,
-          { value: store },
-          createElement(AnnouncerProvider, { value: ANNOUNCER }, part),
+          ChangeHoldsProvider,
+          { value: HOLDS_NOTHING },
+          createElement(
+            StoreProvider,
+            { value: store },
+            createElement(AnnouncerProvider, { value: ANNOUNCER }, part),
+          ),
         ),
       ),
     );

@@ -21,6 +21,7 @@ import { Select } from "./Select.tsx";
 import { Slider } from "./Slider.tsx";
 import { Switch } from "./Switch.tsx";
 import { ThresholdSlider } from "./ThresholdSlider.tsx";
+import { ChangeHoldsProvider, HOLDS_NOTHING } from "./changeHold.ts";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -47,7 +48,13 @@ afterEach(() => {
 
 function draw(element: ReactElement): void {
   act(() => {
-    root.render(createElement(StrictMode, null, element));
+    root.render(
+      createElement(
+        StrictMode,
+        null,
+        createElement(ChangeHoldsProvider, { value: HOLDS_NOTHING }, element),
+      ),
+    );
   });
 }
 

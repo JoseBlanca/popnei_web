@@ -20,6 +20,10 @@ import { AnnouncerProvider } from "../../shell/announcer.tsx";
 import { createAnnouncer } from "../../shell/status.ts";
 import { StoreProvider } from "../../store.tsx";
 import { PcaTabOptions } from "./PcaTabOptions.tsx";
+import {
+  ChangeHoldsProvider,
+  HOLDS_NOTHING,
+} from "../../widgets/changeHold.ts";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -64,12 +68,16 @@ function drawWith(filters: readonly ProjectVariantFilter[]): void {
         StrictMode,
         null,
         createElement(
-          StoreProvider,
-          { value: store },
+          ChangeHoldsProvider,
+          { value: HOLDS_NOTHING },
           createElement(
-            AnnouncerProvider,
-            { value: createAnnouncer() },
-            createElement(PcaTabOptions),
+            StoreProvider,
+            { value: store },
+            createElement(
+              AnnouncerProvider,
+              { value: createAnnouncer() },
+              createElement(PcaTabOptions),
+            ),
           ),
         ),
       ),

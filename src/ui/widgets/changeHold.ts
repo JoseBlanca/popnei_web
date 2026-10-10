@@ -8,12 +8,50 @@
  * itself"). Each hold is `holdChange` of the gate, never `holdKeyRun`,
  * which any change by another control ends. A hold is let go at its
  * release and when its widget leaves the page, so that none is left to
- * keep the PCA from starting for good. On popgen.html, which gives no
- * gate, a widget holds nothing.
+ * keep the PCA from starting for good. A widget sees of the gate only
+ * `holdChange`, through the narrow holder of this file, which
+ * popgen2.html gives as the gate and popgen.html as a holder that holds
+ * nothing; a widget drawn with neither is a defect, so that a holder
+ * forgotten is not a PCA that starts in the middle of a drag.
  */
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
-import { useRunGateIfAny } from "../variants/runGate.tsx";
+/** What a widget holds its change under way on: the gate of
+    popgen2.html, which fits this, or a holder that holds nothing. */
+export interface ChangeHolds {
+  /** Holds a change under way, and gives the function that lets it go;
+      a second call of that function changes nothing. */
+  readonly holdChange: () => () => void;
+}
+
+/** The holder of popgen.html, whose PCA waits for no quiet second:
+    a hold there holds nothing. */
+export const HOLDS_NOTHING: ChangeHolds = Object.freeze({
+  holdChange: () => () => undefined,
+});
+
+const ChangeHoldsContext = createContext<ChangeHolds | null>(null);
+
+/** Gives the holder to every widget under it. */
+export const ChangeHoldsProvider = ChangeHoldsContext.Provider;
+
+/** The holder given. Throws a defect outside a `ChangeHoldsProvider`. */
+function useChangeHolds(): ChangeHolds {
+  const holds = useContext(ChangeHoldsContext);
+  if (holds === null) {
+    throw new Error(
+      "popnei_web defect: a widget that holds a change under way is drawn outside a ChangeHoldsProvider",
+    );
+  }
+  return holds;
+}
 
 /** Holds a change under way while `held` is true, and lets it go once it
     is false, or when the component leaves the page. The hold is taken
@@ -21,11 +59,11 @@ import { useRunGateIfAny } from "../variants/runGate.tsx";
     so a change the release ends with, a choice of a list, has reached
     the project when the gate tells its listeners. */
 export function useHoldWhile(held: boolean): void {
-  const gate = useRunGateIfAny();
+  const holds = useChangeHolds();
   useLayoutEffect(() => {
-    if (!held || gate === null) return undefined;
-    return gate.holdChange();
-  }, [held, gate]);
+    if (!held) return undefined;
+    return holds.holdChange();
+  }, [held, holds]);
 }
 
 /** A hold taken and let go by the handlers of a widget, for a change
@@ -38,20 +76,20 @@ export interface ChangeHold {
   readonly release: () => void;
 }
 
-/** A hold of the gate for a widget's handlers, let go when the widget
-    leaves the page. Both functions do nothing with no gate. */
+/** A hold of the holder for a widget's handlers, let go when the widget
+    leaves the page. */
 export function useChangeHold(): ChangeHold {
-  const gate = useRunGateIfAny();
-  const gateRef = useRef(gate);
+  const holds = useChangeHolds();
+  const holdsRef = useRef(holds);
   useLayoutEffect(() => {
-    gateRef.current = gate;
+    holdsRef.current = holds;
   });
   // The release of the hold held now, or null.
   const held = useRef<(() => void) | null>(null);
   const [hold] = useState<ChangeHold>(() => ({
     take: () => {
-      if (held.current !== null || gateRef.current === null) return;
-      held.current = gateRef.current.holdChange();
+      if (held.current !== null) return;
+      held.current = holdsRef.current.holdChange();
     },
     release: () => {
       const release = held.current;

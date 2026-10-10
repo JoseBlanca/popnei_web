@@ -1,0 +1,102 @@
+// @vitest-environment jsdom
+/**
+ * The holder of the changes under way the widgets are given
+ * (changeHold.ts): a widget holds through the holder it is given, the
+ * gate on popgen2.html, nothing through the one of popgen.html, and a
+ * widget drawn with no holder given is a defect.
+ */
+import { StrictMode, act, createElement } from "react";
+import { createRoot } from "react-dom/client";
+import type { Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
+
+import { createRunGate } from "../variants/thresholdRun.ts";
+import {
+  ChangeHoldsProvider,
+  HOLDS_NOTHING,
+  useChangeHold,
+  useHoldWhile,
+} from "./changeHold.ts";
+import type { ChangeHolds } from "./changeHold.ts";
+
+declare global {
+  var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
+}
+
+let container: HTMLElement;
+let root: Root;
+let thrown: unknown[];
+
+beforeEach(() => {
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  container = document.createElement("div");
+  document.body.append(container);
+  thrown = [];
+  root = createRoot(container, {
+    onUncaughtError: (error) => {
+      thrown.push(error);
+    },
+  });
+});
+
+afterEach(() => {
+  act(() => {
+    root.unmount();
+  });
+  container.remove();
+});
+
+/** A widget that holds while `held`. */
+function HoldsWhile({ held }: { readonly held: boolean }): null {
+  useHoldWhile(held);
+  return null;
+}
+
+/** A widget that takes a hold for its handlers. */
+function HoldsByHand(): null {
+  useChangeHold();
+  return null;
+}
+
+/** Draws `widget` under `holds` when one is given, and with no holder
+    otherwise. */
+function draw(widget: React.ReactElement, holds: ChangeHolds | null): void {
+  act(() => {
+    root.render(
+      createElement(
+        StrictMode,
+        null,
+        holds === null
+          ? widget
+          : createElement(ChangeHoldsProvider, { value: holds }, widget),
+      ),
+    );
+  });
+}
+
+describe("NU3 the holder of the changes under way", () => {
+  test("a widget holds through the gate given as its holder", () => {
+    const gate = createRunGate();
+    draw(createElement(HoldsWhile, { held: true }), gate);
+    expect(gate.underWay()).toBe(1);
+    draw(createElement(HoldsWhile, { held: false }), gate);
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("the holder of popgen.html holds nothing, and the widget draws", () => {
+    draw(createElement(HoldsWhile, { held: true }), HOLDS_NOTHING);
+    expect(thrown).toEqual([]);
+  });
+
+  test.each([
+    ["useHoldWhile", createElement(HoldsWhile, { held: false })],
+    ["useChangeHold", createElement(HoldsByHand)],
+  ])("%s with no holder given is a defect", (_name, widget) => {
+    try {
+      draw(widget, null);
+    } catch (error) {
+      thrown.push(error);
+    }
+    expect(String(thrown[0])).toContain("popnei_web defect");
+  });
+});

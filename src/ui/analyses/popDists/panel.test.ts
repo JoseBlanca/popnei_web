@@ -43,6 +43,10 @@ import { Table } from "../../widgets/Table.tsx";
 import type * as TableModule from "../../widgets/Table.tsx";
 import { numberCells } from "./words.ts";
 import type * as WordsModule from "./words.ts";
+import {
+  ChangeHoldsProvider,
+  HOLDS_NOTHING,
+} from "../../widgets/changeHold.ts";
 
 // The cells of the rows of the table are made by numberCells, and the
 // table drawn by Table, each counted here
@@ -169,9 +173,13 @@ function draw(part: React.ReactElement): Store<JobResult, Blob> {
         StrictMode,
         null,
         createElement(
-          StoreProvider,
-          { value: store },
-          createElement(AnnouncerProvider, { value: ANNOUNCER }, part),
+          ChangeHoldsProvider,
+          { value: HOLDS_NOTHING },
+          createElement(
+            StoreProvider,
+            { value: store },
+            createElement(AnnouncerProvider, { value: ANNOUNCER }, part),
+          ),
         ),
       ),
     );

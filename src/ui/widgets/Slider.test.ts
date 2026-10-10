@@ -5,16 +5,16 @@
  * (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by
  * itself"): from the first move of a pointer that drags it to the end of
  * the drag, or until it leaves the page; never at a key, which is a change
- * at once; and none on popgen.html, which gives no gate.
+ * at once; and none on popgen.html, whose holder holds nothing.
  */
 import { StrictMode, act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { RunGateProvider } from "../variants/runGate.tsx";
 import { createRunGate } from "../variants/thresholdRun.ts";
 import type { RunGate } from "../variants/thresholdRun.ts";
+import { ChangeHoldsProvider, HOLDS_NOTHING } from "./changeHold.ts";
 import { Slider } from "./Slider.tsx";
 
 declare global {
@@ -50,7 +50,7 @@ afterEach(() => {
 });
 
 /** Draws a slider over 0 to 1 by 0.01 at 0.5, under `gate` when one is
-    given, as popgen2.html does, and with none, as popgen.html; the value
+    given, as popgen2.html does, and with the holder of popgen.html, which holds nothing; the value
     given at the end of a move is kept in `ends` and given back. */
 function draw(gate: RunGate | null, ends: number[]): void {
   const render = (shown: number): void => {
@@ -71,9 +71,11 @@ function draw(gate: RunGate | null, ends: number[]): void {
       createElement(
         StrictMode,
         null,
-        gate === null
-          ? slider
-          : createElement(RunGateProvider, { value: gate }, slider),
+        createElement(
+          ChangeHoldsProvider,
+          { value: gate ?? HOLDS_NOTHING },
+          slider,
+        ),
       ),
     );
   };
@@ -203,7 +205,7 @@ describe("NU3 D2 the slider holds a drag under way", () => {
     expect(gate.underWay()).toBe(0);
   });
 
-  test("with no gate, as on popgen.html, a drag gives its value as before", () => {
+  test("with the holder of popgen.html, which holds nothing, a drag gives its value as before", () => {
     const ends: number[] = [];
     draw(null, ends);
     dragTo(40);
