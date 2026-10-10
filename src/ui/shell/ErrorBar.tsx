@@ -167,20 +167,27 @@ export function ErrorBar({
       </p>
     );
 
+  // The number of the last copy of the details, raised by Close, so that
+  // a copy that settles after it, or after a later copy, says nothing.
+  const copies = useRef(0);
   async function copyDetails(): Promise<void> {
+    copies.current += 1;
+    const copy = copies.current;
     const text = details;
     try {
       // navigator.clipboard is missing on a page served over plain HTTP
       // from another machine, and the call then throws.
       await navigator.clipboard.writeText(text);
-      say(COPIED);
+      if (copy === copies.current) say(COPIED);
     } catch {
+      if (copy !== copies.current) return;
       setBoxShown(true);
       say(NOT_COPIED);
     }
   }
 
   function close(): void {
+    copies.current += 1;
     defects.dismiss();
     clear();
     setBoxShown(false);

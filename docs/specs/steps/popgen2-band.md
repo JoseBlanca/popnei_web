@@ -286,7 +286,8 @@ copied.", or shows them in a box of text when the page has no
 clipboard. Pressed again, it hides them; its state is told
 to a screen reader as expanded or collapsed. "Close" empties the line
 and its details, as the error bar's Close does; a later error brings it
-back. The error bar has no Save on this page, which saves no project,
+back, and a copy of the details still under way says nothing when it
+ends. The error bar has no Save on this page, which saves no project,
 and none is added.
 
 While the details are shown the band scrolls with the page, so that at

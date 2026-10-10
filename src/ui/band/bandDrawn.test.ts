@@ -420,4 +420,43 @@ describe("NU5 D2 the band drawn", () => {
     expect(logged).toHaveBeenCalled();
     logged.mockRestore();
   });
+
+  test("a copy of the details that settles after Close says nothing, and shows no box at the next error", async () => {
+    const testPage = page(SUMMARY);
+    let fail = (): void => undefined;
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: () =>
+          new Promise<void>((_resolve, reject) => {
+            fail = () => {
+              reject(new Error("no clipboard"));
+            };
+          }),
+      },
+    });
+    await drawBand(testPage);
+    await act(async () => {
+      testPage.defects.report(new Error("test"), "event", null);
+      await Promise.resolve();
+    });
+    await press(button("Details"));
+    await press(button("Copy the details"));
+    await press(button("Close"));
+
+    await act(async () => {
+      fail();
+      await flush();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+    await act(async () => {
+      testPage.defects.report(new Error("next"), "event", null);
+      await Promise.resolve();
+    });
+    await press(button("Details"));
+
+    expect(container.querySelector('[role="status"]')?.textContent).toBe("");
+    expect(container.querySelector("textarea")).toBeNull();
+    Reflect.deleteProperty(navigator, "clipboard");
+  });
 });

@@ -661,7 +661,9 @@ It has three buttons:
   them, or the browser refuses the copy, the bar says "The details could
   not be copied. Select them in the box below and copy them." and shows
   them in a box of text that can be selected.
-- **Close**, which empties the bar; a later error brings it back. The
+- **Close**, which empties the bar; a later error brings it back. A
+  copy of the details still under way when Close is pressed says
+  nothing when it ends, and shows no box at the next error. The
   focus goes to the `<h1>` of the step on screen, or, when the
   application's root was emptied, to the start of the page.
 
