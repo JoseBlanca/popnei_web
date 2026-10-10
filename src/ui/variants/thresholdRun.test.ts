@@ -619,3 +619,41 @@ describe("NU1 the gate when a listener or an end throws", () => {
     expect(told).toBe(1);
   });
 });
+
+describe("NU1 when the gate tells its listeners", () => {
+  test("a hold taken while a run of the keys is held does not tell: the count does not rise from 0", () => {
+    const gate = createRunGate();
+    const { run } = runOf(gate);
+    run.press(0.5, 0.49);
+    let told = 0;
+    gate.subscribe(() => {
+      told += 1;
+    });
+    gate.holdChange();
+    expect(gate.underWay()).toBe(2);
+    expect(told).toBe(0);
+  });
+
+  test("endAll over two runs tells once", () => {
+    const gate = createRunGate();
+    runOf(gate).run.press(0.5, 0.49);
+    runOf(gate).run.press(0.3, 0.29);
+    let told = 0;
+    gate.subscribe(() => {
+      told += 1;
+    });
+    gate.endAll();
+    expect(gate.underWay()).toBe(0);
+    expect(told).toBe(1);
+  });
+
+  test("endAll with nothing held tells nothing", () => {
+    const gate = createRunGate();
+    let told = 0;
+    gate.subscribe(() => {
+      told += 1;
+    });
+    gate.endAll();
+    expect(told).toBe(0);
+  });
+});
