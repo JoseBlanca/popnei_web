@@ -799,3 +799,62 @@ package 8.
 Checks at 500dae43: Vitest 156 files, 5,088 tests; typecheck, lint,
 format clean; in Chromium and WebKit the flows of `popgen2.html`, 274,
 and the old page's thresholds, PCA panel, individuals and shell, 208.
+
+### Work package 4, 10 October 2026
+
+Commits 87ca6b32 (4.1), d7794013, 5570fd73, 153583a7 and 8e49ff5e
+(4.2), 37497819 (4.3). Neither stop of the plan was met: the `stale`
+reviewer ran twelve orders of changes on the page's real store and no
+change started two PCAs nor showed a result for other values, a run
+left behind by a change the lock missed included.
+
+The review, all ten categories the plan gives: the findings that held
+were fixed in 083d62fa to d62b5af7 and b4a7db75, test first. Decisions
+of the session, in the specs: whenever the PCA is live and nothing
+runs, the tab offers "Stop recalculating" (with no such button, a user
+of the keyboard could not end the automatic runs before the next
+change, Stop being 12 presses of Tab away; WCAG 2.2.1), and while a
+PCA runs, "Stop"; the lines of the quiet second, of the dialog and
+after a Stop drawn where the bar goes, in normal text, not as the
+button's grey description, which read as a lock; a line under "Stop
+recalculating" while the result shows; after a crash that keeps the PCA
+live, Run beside it; a crash for memory, and a failure only a reload
+mends, end the live state (the design's choice 3, revised); the lock's
+words and the status region name the PCA tab, since Stop there also
+ends the automatic runs. Also: Run refused while the filtered variants
+are written; the dialog's open state a tagged hold of the gate, not a
+module variable; one snapshot of the live state that the band can read
+with one subscription; a test that a Run within a run of the arrow keys
+sends the PCA with that run's value (it guards the plan's second stop;
+the browser's focus had hidden its absence); the flows assert the
+variant counts (1,072, 532, 519) and hold the clock across each commit
+and press. Task 5.3 gained what the band needs from this package.
+
+Task 4.3, deliverable 6: the measurement `NU4 D6` of
+`e2e/measure.spec.ts`, once in each engine, alone among this piece's
+agents, under load averages of 3.1 to 4.2 from two sessions of another
+project; Apple M5 Pro with 64 GB, macOS 27.0.1, Playwright 1.63.0; the
+VCF of 300 variants and 9,381 individuals, 1,793,306 bytes gzipped; LD
+pruning off; one press of the PCA's missing-data slider 2 s after the
+first result. Memory of the engine's processes summed every 250 ms, in
+GB:
+
+| | WebKit 26.6 | Chromium 153 |
+|---|---|---|
+| before Run | 0.325 | 0.172 |
+| peak of the first run | 3.371 | 3.186 |
+| at the change | 0.606 | 0.454 |
+| peak of the second run | 3.391 | 3.249 |
+| second peak less the first | 0.019 | 0.063 |
+| 3 s after the second | 0.262 | 0.436 |
+| first run | 128.3 s | 215.1 s |
+| second run | 129.3 s | 214.7 s |
+
+The bound, the second peak at most the first plus 0.25 GB, held in
+both: a finished PCA's worker gives its memory back before the next
+starts, unlike a worker stopped in the middle (the design's
+measurement). The second PCA was posted 1.03 s after the press.
+
+Checks at b4a7db75: typecheck, lint, format clean; Vitest 158 files,
+5,147 tests; in Chromium and WebKit the flows of `popgen2.html` 304 and
+the old page's `pca*` 210; `popgen2Live` with `--repeat-each=3` 90.
