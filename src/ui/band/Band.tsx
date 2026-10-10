@@ -625,17 +625,33 @@ function keepRoom(header: HTMLElement, scrolls: boolean): () => void {
 }
 
 /**
- * Scrolls the page so that an element of it that takes the focus is
- * below the band `header`, fixed at the top of the window, and not under
- * it (WCAG 2.4.11). The padding of the scroll of base.css does it in
- * Chromium; WebKit 26.6 ignores it when the element is already in the
- * window, and left a number box reached by Shift+Tab 42 pixels under the
- * band at 1280 by 600 pixels (seen on 10 October 2026). Looked at as the
- * focus comes; a second look a frame later stopped the menus "Download…"
- * of the Variants tab from handing a PNG to the browser in Chromium 153,
- * for a reason not found, and WebKit needs none.
+ * Scrolls the page so that an element of it that takes the focus from
+ * the keyboard is below the band `header`, fixed at the top of the
+ * window, and not under it (WCAG 2.4.11). The padding of the scroll of
+ * base.css does it in Chromium; WebKit 26.6 ignores it when the element
+ * is already in the window, and left a number box reached by Shift+Tab
+ * 42 pixels under the band at 1280 by 600 pixels (seen on 10 October
+ * 2026). Looked at as the focus comes; a second look a frame later
+ * stopped the menus "Download…" of the Variants tab from handing a PNG
+ * to the browser in Chromium 153, for a reason not found, and WebKit
+ * needs none.
+ *
+ * Not for a focus that follows a press of the pointer, from the press
+ * until the next key: the page moved under the pointer between its
+ * press and its release, and the click of a button half under the band
+ * was lost, in Chromium and WebKit (the review of work package 5, 10
+ * October 2026). The pointer is where the user looks.
  */
 function keepFocusClear(header: HTMLElement): () => void {
+  // Whether the last the user did was a press of the pointer, and not a
+  // key.
+  let byPointer = false;
+  const onPointerDown = (): void => {
+    byPointer = true;
+  };
+  const onKeyDown = (): void => {
+    byPointer = false;
+  };
   const clear = (target: EventTarget | null): void => {
     // The page's own controls alone: a popover, a menu or a dialog of
     // React Aria is drawn outside the application's root, over the band,
@@ -652,10 +668,14 @@ function keepFocusClear(header: HTMLElement): () => void {
     if (covered > 0) window.scrollBy({ top: -covered - FOCUS_CLEARANCE_PX });
   };
   const onFocusIn = (event: FocusEvent): void => {
-    clear(event.target);
+    if (!byPointer) clear(event.target);
   };
+  document.addEventListener("pointerdown", onPointerDown, true);
+  document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("focusin", onFocusIn);
   return () => {
+    document.removeEventListener("pointerdown", onPointerDown, true);
+    document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("focusin", onFocusIn);
   };
 }

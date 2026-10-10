@@ -499,7 +499,10 @@ height, always. It is set in `src/ui/base.css` beside the padding at
 the bottom that keeps a control clear of the notices,
 `scroll-padding-block-end: var(--toast-room)`, as
 `scroll-padding-block-start: var(--band-room)`, a token the band sets
-to its height. While an error of the application is shown it scrolls
+to its height. A control that takes the focus from a press of the
+pointer is not scrolled: the page would move under the pointer between
+the press and the release, and the press of a button half under the
+band would be lost. While an error of the application is shown it scrolls
 with the page and covers nothing, and the token is 0.
 
 At 320 px wide (1.4.10) "Popnei" and the status share one line, the
@@ -584,6 +587,10 @@ pass held by `e2e/holdWorker.ts`:
   band's rectangle, not under it; the same with nothing running, the
   band then showing "Popnei" alone at the top of the window;
 - after the band's Stop, the focus on the heading "Popnei";
+- a button of the page with its top at 47 px of the window, under the
+  band's 51, pressed with the mouse at 53 px: it does what it says, the
+  file chooser of "Open another variants file…" opens, and the page
+  does not scroll;
 - the one pass about to start, its start held: "Statistics of panel.nei" with
   Stop, which keeps it from starting;
 - with the download's dialog open and an error thrown: the band's alert

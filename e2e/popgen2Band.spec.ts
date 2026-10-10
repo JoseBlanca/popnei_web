@@ -587,6 +587,45 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     });
   }
 
+  test("NU5 D3 a button half under the band pressed with the mouse below the band does what it says: the page does not scroll under the pointer", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 600 });
+    await page.goto("popgen2.html");
+    await pick(page, "panel.nei");
+    await expect(variantsBox(page)).toContainText("Variants: 1,200", {
+      timeout: RESULT_TIMEOUT,
+    });
+    const open = page.getByRole("button", {
+      name: "Open another variants file…",
+    });
+    const bandBottom = (await band(page).boundingBox())?.height ?? 0;
+    expect(bandBottom).toBe(51);
+    // The button's top at 47 px of the window, under the band's 51, and
+    // the focus elsewhere, as after the file was picked it is on it.
+    await page.evaluate(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+    await page.evaluate(
+      ([top]) => {
+        const button = [...document.querySelectorAll("button")].find(
+          (b) => b.textContent === "Open another variants file…",
+        );
+        if (button === undefined) throw new Error("no button");
+        window.scrollBy(0, button.getBoundingClientRect().top - top);
+      },
+      [47] as const,
+    );
+    const box = await open.boundingBox();
+    expect(Math.round(box?.y ?? 0)).toBe(47);
+
+    const before = await page.evaluate(() => window.scrollY);
+    const chooser = page.waitForEvent("filechooser", { timeout: 5000 });
+    await page.mouse.click((box?.x ?? 0) + 20, 53);
+    await chooser;
+    expect(await page.evaluate(() => window.scrollY)).toBe(before);
+  });
+
   test("NU5 D3 the dialog of the download open and an error thrown: the band's alert says it, and is not inert", async ({
     page,
   }) => {
