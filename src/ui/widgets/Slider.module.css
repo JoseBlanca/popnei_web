@@ -17,11 +17,16 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-3);
-  align-items: center;
+  align-items: flex-start;
 }
 
+/* As high as the track, so that the value stands level with it and not
+   with the words of the ends under it. */
 .output {
+  display: flex;
   flex: 0 1 auto;
+  align-items: center;
+  min-block-size: var(--target-min);
   font-variant-numeric: tabular-nums;
 }
 

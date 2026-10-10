@@ -5878,6 +5878,65 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-pca-ready${at}-${theme}`);
       });
 
+      for (const shot of [
+        "slider-moved",
+        "tab-stricter",
+        "empty-range",
+      ] as const) {
+        test(`the PCA tab's filters: ${shot === "slider-moved" ? "the slider of the missing data moved to 0.05" : shot === "tab-stricter" ? "the Variants tab at 0.03, stricter than the 0.05 of the PCA" : "the Variants tab's missing data at 0, a slider with no range"}`, async ({
+          page,
+        }) => {
+          await pickOnNewPage(page, "panel.nei");
+          const tabs = page.getByRole("tablist", {
+            name: "Files and analyses",
+          });
+          const missingBox =
+            "Missing genotypes max: maximum proportion of missing genotypes";
+          await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+            timeout: 20_000,
+          });
+          if (shot === "empty-range") {
+            await typeThreshold(page, missingBox, "0");
+          }
+          await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+          const panel = page.getByRole("tabpanel");
+          await expect(
+            panel.getByRole("button", { name: "Run", exact: true }),
+          ).toHaveAccessibleDescription(/^Type the LD distance/u, {
+            timeout: 20_000,
+          });
+          if (shot === "empty-range") {
+            await expect(
+              panel.getByText(
+                "0, as in the Variants tab. The PCA cannot be stricter than the Variants tab here.",
+                { exact: true },
+              ),
+            ).toBeVisible();
+          } else {
+            const missing = panel.getByRole("slider", {
+              name: "Maximum proportion of missing genotypes for the PCA",
+            });
+            await missing.focus();
+            for (let press = 0; press < 5; press += 1) {
+              await missing.press("PageDown");
+            }
+            await expect(missing).toHaveAttribute("aria-valuetext", "0.05");
+            if (shot === "tab-stricter") {
+              await tabs
+                .getByRole("tab", { name: "Variants", exact: true })
+                .click();
+              await typeThreshold(page, missingBox, "0.03");
+              await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+              await expect(
+                panel.getByText(/^The Variants tab keeps at most 0\.03/u),
+              ).toBeVisible();
+            }
+          }
+          await page.mouse.click(1, 1);
+          await save(page, `popgen2-pca-${shot}${at}-${theme}`);
+        });
+      }
+
       for (const shot of ["running", "undo-waiting"] as const) {
         test(`a PCA held running: ${shot === "running" ? "its tab with Stop, the bar and its options greyed" : "Undo greyed, its reason shown on the focus"}`, async ({
           page,
