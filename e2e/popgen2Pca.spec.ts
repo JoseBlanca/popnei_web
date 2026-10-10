@@ -416,7 +416,7 @@ test("AP6 D3 the PCA tab opened during the one pass, held: Run disabled with the
   await mafSlider.press("Home");
   await expect(mafSlider).toHaveAttribute("aria-valuetext", "0.5");
   await mafSlider.press("ArrowRight");
-  await expect(mafSlider).toHaveAttribute("aria-valuetext", /^0\.50?1$/u);
+  await expect(mafSlider).toHaveAttribute("aria-valuetext", "0.51");
   await mafSlider.press("End");
   await expect(mafSlider).toHaveAttribute(
     "aria-valuetext",
@@ -1192,9 +1192,11 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
       "aria-valuetext",
       "0.1, as in the Variants tab",
     );
-    // A move there and back changes no key: the result stays.
+    // A move there and back changes no key: the result stays. One
+    // ArrowLeft moves it one step of the axis of panel.nei, 0.001.
     await missing.focus();
     await missing.press("ArrowLeft");
+    await expect(missing).toHaveAttribute("aria-valuetext", "0.099");
     await missing.press("End");
     await expect(tableCaptionOf(page)).toBeVisible();
     await moveTo(missing, "ArrowLeft", "0.05");
@@ -1260,6 +1262,55 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
       "Turn on the LD pruning of the PCA in its options above, unless such regions are what you are looking for.",
     );
     await expectAxeBothSchemes(page, makeAxeBuilder);
+  });
+
+  test("AP10 D2 the slider of the missing data dragged from its end to about 0.05: the value at the release, one step of Undo, made stricter; ArrowLeft, one step, changed", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await openReady(page);
+    const missing = pcaSlider(page, "missing");
+    await expect(missing).toHaveAttribute(
+      "aria-valuetext",
+      "0.1, as in the Variants tab",
+    );
+    const undo = page.getByRole("button", { name: "Undo", exact: true });
+    await trackOf(missing).scrollIntoViewIfNeeded();
+    const track = await trackOf(missing).boundingBox();
+    if (track === null) throw new Error("no track");
+    const y = track.y + track.height / 2;
+    // From the thumb at the right end to the middle of the track, 0.05.
+    await page.mouse.move(track.x + track.width, y);
+    await page.mouse.down();
+    await page.mouse.move(track.x + track.width / 2, y, { steps: 12 });
+    await page.mouse.up();
+    const released = /^0\.0(49|5|51)$/u;
+    await expect(missing).toHaveAttribute("aria-valuetext", released);
+    await expect(missing).toHaveValue(
+      String(Number(await missing.getAttribute("aria-valuetext"))),
+    );
+    await expect(undo).toHaveAccessibleDescription(
+      "Undo: the missing data filter of the PCA was made stricter",
+    );
+    const dragged = await missing.getAttribute("aria-valuetext");
+    // One step: one Undo takes the drag back whole.
+    await undo.click();
+    await expect(missing).toHaveAttribute(
+      "aria-valuetext",
+      "0.1, as in the Variants tab",
+    );
+
+    await page.keyboard.press("ControlOrMeta+Shift+z");
+    await expect(missing).toHaveAttribute("aria-valuetext", dragged ?? "");
+    await missing.focus();
+    await missing.press("ArrowLeft");
+    const left = (Number(dragged) * 1000 - 1) / 1000;
+    await expect(missing).toHaveAttribute("aria-valuetext", String(left));
+    await expect(undo).toHaveAccessibleDescription(
+      "Undo: the missing data filter of the PCA changed",
+    );
+    await undo.click();
+    await expect(missing).toHaveAttribute("aria-valuetext", dragged ?? "");
   });
 
   test("AP6 D3 the PCoA within 50,000: its title, PC1 (3.68%) and PC2 (3.54%), the warning of the correction with 7.87%, 0.047, 53% and 0.22, and the line under the explained variance; axe light and dark", async ({
@@ -1481,6 +1532,9 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     // Turned by a drag across the view, the only way on this page; the
     // pointer then taken off it, so that no point under it is named.
     await canvas.scrollIntoViewIfNeeded();
+    // The pointer off the view, as for the picture after the drag.
+    await page.mouse.move(0, 0);
+    const unturned = await canvas.screenshot();
     const box = await canvas.boundingBox();
     if (box === null) throw new Error("no box of the 3D view");
     const middle = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
@@ -1490,6 +1544,8 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     await page.mouse.up();
     await page.mouse.move(0, 0);
     const before = await canvas.screenshot();
+    // The drag turned the view.
+    expect(before.equals(unturned)).toBe(false);
     const placesBefore = await labels.evaluateAll((all) =>
       all.map((label) => {
         const style = (label as HTMLElement).style;
