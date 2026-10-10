@@ -52,7 +52,20 @@ sections 3 and 7, from `docs/designs/analyses-pca.md`, approved by the
 owner that day; and on 10 October 2026 with what the branch `pca-tab`
 built and measured (`docs/plans/analyses-pca.md`), in sections 3, 5
 and 7, the rows of section 9, and the memory of a PCA after the one
-pass in section 11.
+pass in section 11. Revised on 10 October 2026 for
+`docs/designs/no-undo.md`, approved by the owner that day with the
+recommendations of its three open points: `popgen2.html` loses Undo
+and Redo, calculates the PCA again by itself one second after a change
+of what it reads, and keeps no result for values left behind; and for
+the band at the top of that page that says what the application is
+doing, which the owner agreed to the same day
+(`docs/plans/analyses-pca.md`, its last paragraph); in sections 2, 3,
+5, 7, 9, 11 and 12, each with a paragraph "What was revised on 10
+October 2026, for the design no-undo" at its end. The specs of that
+piece are `docs/specs/steps/popgen2-band.md`, new, and the revisions of
+the same day of `docs/specs/core/store.md`, `history.md`,
+`docs/specs/steps/popgen2-pca.md`, `popgen2-filters.md` and
+`popgen2-download.md`; its plan is `docs/plans/no-undo.md`.
 What was
 revised each time until 30 September 2026 is at the end
 of section 1. The document gives the parts of the web applications of
@@ -607,8 +620,10 @@ as the owner decided on 25 September 2026, so that a project file that
 holds the numbers of two sessions names the right versions for each
 (`docs/specs/core/projectFile.md`).
 
-- **Immutable**, so that undo is keeping the previous values, and so
-  that the screens know what changed by comparing references.
+- **Immutable**, so that undo is keeping the previous values on
+  `popgen.html`, and so that the screens know what changed by comparing
+  references. `popgen2.html` has no undo from 10 October 2026 (section
+  3), and the property serves it for the second reason alone.
 - **Plain data**, which is what the project file is: saving it is
   writing it as JSON, and opening a project file is validating that JSON
   into a `Project` (section 8).
@@ -808,6 +823,16 @@ file records the FILTER of its variants, the owner decided that the
 filter applies to a `.nei` file with that record, and the read of a
 variants file gained `keepsPassed`.
 
+What was revised on 10 October 2026, for the design no-undo
+(`docs/designs/no-undo.md`, approved by the owner that day): the
+bullet "Immutable" said that the project is immutable so that undo
+keeps the previous values, on both pages. On `popgen2.html` there is no
+undo any more, and the store of that page keeps at most one past
+project, where it kept 200 (section 3); the project stays immutable on
+both pages, since the screens compare references, the keys keep their
+memo of each part by its reference, and `popgen.html` keeps its Undo
+until it is deleted, as the owner decided on 9 October 2026.
+
 ## 3. Results, and how they go stale
 
 A result is never stored in the project. It is stored in a cache, under
@@ -902,6 +927,11 @@ that the current project gives it. So:
 - **Setting a value back to what it was** brings them back in the same
   way, with no calculation.
 
+The last two hold on `popgen.html`. On `popgen2.html`, from 10 October
+2026, there is no undo, and a result is thrown away as soon as a change
+gives its analysis another key, so a value set back is calculated again
+(below, "No result kept for values left behind on `popgen2.html`").
+
 The dependencies are written down once, in the definition of each
 analysis (section 4): which parts of the project go into its key. The
 key itself is made in one place, `src/core/keys.ts`, from a canonical
@@ -976,45 +1006,78 @@ a key that held it, in place of the thresholds, would let two thresholds
 that keep the same individuals share their results, at the cost of a key
 made from a result in the cache rather than from the project alone.
 
-**No notice on `popgen2.html`, and no Undo of an opening.** The one
+**No notice and no Undo on `popgen2.html`.** The one
 calculation of that page until 9 October 2026, the one pass, reads no
 filter, so a change of a threshold or of the FILTER box removed and
 stopped nothing, and gave no notice; the owner decided on 8 October
 2026 that none is needed. From 9 October 2026 the PCA reads the filters
 there, and a setting of the store keeps the page without notice: a
 change makes none, and stops at once every calculation it leaves behind
-(below, "What was revised on 9 October 2026"). Opening a file there, the first or another, is the
-store's `open`, which starts a new history with nothing to undo, stops
-the pass of the file before and gives no notice; the filters are kept
-as the user left them. A change of the individuals file there, its
-opening, its removal or an option of its reader, is the store's
-`applyAfresh`, a command after which the history starts afresh, so that
-it stops nothing that a command would not, the one pass among them, and
-is no step of Undo either. The column the page chooses at the end of a
-read is no change of the user's: the store records it into the projects
-of the history as it records the read, with no step, so the steps made
-while the file was read are kept. So the page's Undo and Redo serve the
-changes of the filters, of the column of the populations the user
-chooses and of the options of the PCA, and the store never gives that
-page a notice (`docs/specs/core/store.md`, "The notice, and the
-calculations it stops").
+(below, "What was revised on 9 October 2026"). From 10 October 2026 the
+page has no Undo and no Redo, as the owner asked that day, "the marimo
+model" (`docs/designs/no-undo.md`): what the screen shows is always the
+result of the values on it, calculated again when they change, and
+nothing is undone. The store of the page still keeps a history, since
+the code of `popgen.html` needs it, but of one past project, and the
+page has no way to walk it (`docs/specs/core/store.md`, "On
+popgen2.html: no notice, no Undo, and no result kept for values left
+behind"). Opening a file there, the first or another, is the store's
+`open`, which starts a new history, stops the pass of the file before
+and gives no notice; the filters are kept as the user left them. A
+change of the individuals file there, its opening, its removal or an
+option of its reader, is the store's `applyAfresh`, a command after
+which the history starts afresh, so that it stops nothing that a
+command would not, the one pass among them. The column the page
+chooses at the end of a read is no change of the user's: the store
+records it into the projects of the history as it records the read.
+`applyAfresh` and that record stay, as built on 9 October 2026, since
+removing them would change the store's code that `popgen.html` shares
+for no gain a user of `popgen2.html` would see.
+
+**No result kept for values left behind on `popgen2.html`.** From 10
+October 2026 a second setting of the store, `dropLeftBehind`, true on
+that page alone, removes from the cache the result, and popnei's
+refusal, under a key an analysis had as soon as a change gives the
+analysis another key, and does not cache a result that arrives under a
+key its analysis no longer has. So a value set back is calculated
+again, as the owner asked ("every change calculates"), and while the PCA
+calculates again its tab shows only the progress. One case is kept
+apart: an analysis that is locked has no key, so a lock is no change of
+its key, and the result it had is kept, not shown, until the lock
+lifts; it is shown again if the lock lifts with the same key, and
+thrown away if with another. On that page every lock of the PCA comes
+from a parameter it reads, the LD pruning on with its distance emptied,
+the filters of individuals keeping none, or more than 9,381 kept under
+the PCoA, so the one departure from "every change calculates" is a
+distance emptied and typed again with the same value, which shows the
+result a calculation would give again. The one pass reads no filter,
+so no change of a filter throws its result away, and its histograms
+stay. The memory the page keeps for results falls from up to the bound
+of 256 MB to the one pass's result and at most one PCA, 0.90 MB at
+9,381 individuals (`docs/specs/analyses/pca.md`, "How it runs"). Not
+taken: the cache kept, with the PCA started again even when it holds the
+result, which would show the old result during the minutes of the new
+calculation; and no cache at all on that page, which would drop the
+one pass's result and with it every histogram and the download.
 
 While a PCA runs there, the screen locks the filters it reads, the
 thresholds and the FILTER box of the Variants tab and the PCA's own
 options, greyed with "Stop the PCA to change the filters." ("the PCoA"
-under the PCoA), and the buttons and keys of Undo and Redo wait, as the
-download of the filtered variants waits, as the owner answered on 9
-October 2026 to the question of `docs/plans/analyses-pca.md` on a
-change made while a PCA runs. The box of the
+under the PCoA), and the download of the filtered variants waits, as
+the owner answered on 9 October 2026 to the question of
+`docs/plans/analyses-pca.md` on a change made while a PCA runs, and
+again on 10 October 2026 after the measurement of section 5, "Why a
+change on `popgen2.html` does not stop a PCA". The box of the
 individuals file, the column of the populations and the column that
 colours the points stay open, since the PCA's key holds none of them and
-they only colour its points: the session's recommendation of 9 October
-2026, which the code follows while the owner's answer is pending (that
-plan, "Work package 3"). So no change the screen allows leaves a running
-PCA behind, and the
-store's setting `stopLeftBehind`, which stops what a change leaves
-behind, is a guard for a change the lock missed; its other half, no
-notice, is what the page needs of it at every change.
+they only colour its points, as the owner decided on 10 October 2026
+(open point 3 of `docs/designs/no-undo.md`). So no change the screen
+allows leaves a running PCA behind, and the store's setting
+`stopLeftBehind`, which stops what a change leaves behind, is a guard
+for a change the lock missed; its other half, no notice, is what the
+page needs of it at every change. Once the PCA has ended, a change of
+what it reads starts it again by itself, a second after the user stops
+changing things (section 5).
 
 **A failure is forgotten when its key is left behind.** A failure that
 is not popnei's, a crash of the worker, is kept under its key until a
@@ -1077,6 +1140,27 @@ recorded as the read is, with no step. And, for the owner's answer to
 the plan of that piece on a change made while a PCA runs, a running PCA locks the filters it reads and
 makes Undo and Redo wait, so the setting's stop is a guard (above, "No
 notice on `popgen2.html`").
+
+What was revised on 10 October 2026, for the design no-undo
+(`docs/designs/no-undo.md`, approved by the owner that day with the
+recommendations of its three open points). The version of 9 October
+2026 gave `popgen2.html` Undo and Redo at the right end of the line of
+its heading, with their keys, which waited while a PCA ran; an Undo
+brought a result back from the cache with no calculation, and a value
+set back did the same. The owner asked on 10 October 2026, on trying
+the PCA tab, for "the marimo model": no Undo, and every change
+calculated again. So the paragraph "No notice on `popgen2.html`, and no
+Undo of an opening" became "No notice and no Undo on `popgen2.html`",
+the paragraph "No result kept for values left behind on
+`popgen2.html`" is new, with the store's setting `dropLeftBehind`, and
+the paragraph on a running PCA no longer names Undo and Redo. The
+history stays in the store, of one past project on that page, since
+removing it would be a second way through every change of the project
+in code of 2,971 lines that `popgen.html` still uses; it goes whole when
+`popgen.html` is deleted. Not taken, the design's options: the store
+starting the PCA itself (section 5), and the live state of the PCA in
+the project, which `popgen.html`'s project file would carry and the
+key of the PCA would have to leave out by hand.
 
 ## 4. An analysis is a module
 
@@ -1525,9 +1609,11 @@ The page and each worker talk through typed messages
   new key, and at the user's Start again; not again after a failure or a
   Stop under the same key. A file opened while the pass of the file
   before it runs stops that pass, and no Undo comes back to it, since an
-  opening starts a new history (section 3). The page has one Stop, in the box of the file
-  beside the one bar of the pass, shown while a pass runs or is about to
-  start by itself, which stops the page's one group, `POPGEN2_CHAIN` of
+  opening starts a new history (section 3). The page has one Stop of
+  the pass, in the box of the file
+  beside the one bar of the pass, and from 10 October 2026 the same Stop
+  in the band at the top of the page (section 7), shown while a pass runs or is about to
+  start by itself, which stops the page's first group, `POPGEN2_CHAIN` of
   `src/ui/popgen2Store.ts` (`stop` of `autoRuns.ts`): the pass running,
   and one about to start, which it records as started so that it does
   not start; and, after a Stop or a crash of the worker, one Start again
@@ -1556,10 +1642,13 @@ The page and each worker talk through typed messages
   a step of the store's history, and starts no calculation, since the
   one pass, the only calculation the page starts by itself, reads none,
   and the PCA, from 9 October 2026 the one calculation of the page that
-  reads them, starts only at the user's Run; a run of presses of the arrow
+  reads them, started only at the user's Run until 10 October 2026, and
+  from then also by itself after a change (below, "The PCA of
+  `popgen2.html` starts again by itself"); a run of presses of the arrow
   keys on a line or in its box is one change, made at a quiet second after the last
-  press or when the focus leaves, so that a held key does not fill the
-  200 steps of the history. The filters are carried out by the
+  press or when the focus leaves, so that a held key did not fill the
+  200 steps of the history while the page had Undo, and from 10 October
+  2026 so that it starts the PCA once. The filters are carried out by the
   download of the filtered variants, which popnei 0.2.2's writers in
   pieces allow, or by a later analysis; how the download is made is in
   the revision of 8 October 2026 of `docs/designs/stats-filters.md`,
@@ -1583,10 +1672,65 @@ The page and each worker talk through typed messages
   result kept for a possible undo, while the request of the new settings
   waited behind it in the queue of the one calculation worker, for minutes
   in the case of a GWAS.
+- **The PCA of `popgen2.html` starts again by itself**, from 10 October
+  2026 (`docs/designs/no-undo.md`). It is live for a load of the
+  variants file once the user has pressed its Run for that load: from
+  then on, once no PCA runs, a change of what its key holds, a threshold
+  or the FILTER box of the Variants tab or an option of the PCA tab,
+  starts it again by itself one second after the user stops changing
+  things, the quiet second, and for the values on the screen when the
+  second runs out. The second starts again at each change, and waits
+  while the user is in the middle of a change that has not reached the
+  project: the mouse button held on a slider, the list of the method
+  open, digits typed in a number box and not confirmed, a run of the
+  arrow keys on a threshold. Without that, the lock of the filters would
+  fall on a control the user is still using. A Stop of the PCA ends the
+  live state until Run is pressed again, the owner's choice of 10
+  October 2026 (open point 1 of the design); another variants file ends
+  it too, and so does a reload. The code that starts it is
+  `src/ui/autoRuns.ts`, which already starts the one pass: the PCA is a
+  second group after `POPGEN2_CHAIN`, so it waits for the one pass to
+  end as it waited at Run; it starts nothing while a calculation or a
+  write runs; it records the live state beside the load it was pressed
+  for, and not in the project, which is shared with `popgen.html` and
+  whose PCA key would have to leave it out by hand; and it forgets a key
+  it started the PCA under once the store leaves that key behind, so
+  that a value set back starts it again. The waits of the second are
+  counted by the gate of the page, `src/ui/variants/thresholdRun.ts`,
+  which the controls tell when a change begins and ends. Not taken: the
+  store starting the PCA itself, which would move the awaiting of each
+  outcome and the handling of its failures out of `src/ui/runs.ts`,
+  several hundred lines and a design of their own, for a behaviour no
+  other page has; it would win if a second page needed it.
+- **Why a change on `popgen2.html` does not stop a PCA.** The owner's
+  first answer of 10 October 2026 was a change during a run that stops
+  it and starts it on the new values, with no lock of the filters. A
+  stop ends the calculation worker, and the question was whether the
+  tab gives the memory of the ended worker back before the new one
+  grows. Measured on 10 October 2026 on `popgen2.html`, a PCA and a
+  PCoA of 9,381 individuals of 300 variants, the LD pruning off, Run,
+  Stop after 40 s, Run again at once, Stop after 40 s, the memory of the
+  engine's processes summed every 250 ms, on the owner's Apple M5 Pro
+  with 64 GB, one run each, at load averages of 21 to 48: Chromium 153
+  held both runs for about 2 s after the Stop, at most 2.83 GB for the
+  PCA and 3.96 GB for the PCoA, then one run's; WebKit 26.6 did not give
+  the stopped run's memory back during the next 40 s, 4.22 and 4.18 GB
+  at the peak, and 3.72 GB 29 s after the last Stop with nothing
+  running. So in Safari each stop of a large PCA leaves 3 to 4 GB in the
+  tab for 40 s and more, and a few changes in a row would pile them up
+  until the browser closes the tab. With these numbers the owner chose
+  the same day to keep the lock: a change waits for the PCA to end or
+  be stopped, and a stop happens only at the user's Stop or at the
+  opening of another variants file. The stop at each change would come
+  back if WebKit gave the memory of an ended worker back within a second
+  or two, as Chromium does, or if popnei could stop a calculation
+  without ending the worker.
 - **The result** comes back as typed arrays, with its key, and goes into
   the cache. It is shown only if the current project still gives that
   key; if the user changed something meanwhile and the request finished
-  before it was stopped, it waits in the cache for an undo.
+  before it was stopped, it waits in the cache for an undo, on
+  `popgen.html`; on `popgen2.html` it is not cached (section 3, "No
+  result kept for values left behind on `popgen2.html`").
 - **Progress** comes from popnei's `Variants.onProgress`, which gives
   four numbers during a run: the bytes of the variant file that the
   current pass has read, the bytes of the file, the pass, and the passes
@@ -1772,6 +1916,21 @@ file, and on `popgen2.html` it runs in a modal dialog, so that no
 filter changes while it runs (the bullet on writing, above), and the
 case of `popgen.html`, a change of a filter that leaves a write behind,
 does not arise there.
+
+What was revised on 10 October 2026, for the design no-undo
+(`docs/designs/no-undo.md`, approved by the owner that day): the PCA of
+`popgen2.html`, which until then started only at the user's Run, starts
+again by itself after a change once Run has been pressed for the load,
+from `src/ui/autoRuns.ts`, a second after the user stops changing
+things; the bullet "The PCA of `popgen2.html` starts again by itself"
+is new, and so is "Why a change on `popgen2.html` does not stop a PCA",
+with the measurement of the memory of a stopped worker that kept the
+lock of the filters. The limit this section named for the first tool
+that starts by itself and reads a filter, a stop and a start at every
+step of a threshold, is settled for the PCA by the lock and the quiet
+second together: no change stops it, and a change after it ends starts
+it once. A result that ends after a change is no longer kept on that
+page for an undo.
 
 ## 6. The files of the user
 
@@ -2563,20 +2722,16 @@ for the smallest part of it.
   `--chart-threshold-keeps-all` with the line dotted and the handle
   hollow; no line says what a threshold keeps; the
   expected heterozygosity has none, since popnei has no filter on it.
-  The line and the box show the project's value, so an Undo would move
-  them back, and hold of their own only the value being dragged or typed,
+  The line and the box show the project's value, so any change of the
+  project moves them, and hold of their own only the value being dragged or typed,
   which is no part of the project (`docs/designs/stats-filters.md`). A
   change of a threshold or of the FILTER box is a command; an empty box,
   or 1 however it is reached, typed or by the line dragged to the top of
   an axis that ends at 1, turns a threshold off (`setThreshold` of
   `docs/specs/core/project.md`). The page has no notice, as the owner
-  decided on 8 October 2026. It hid Undo and Redo that day, and brought
-  them back on 9 October 2026 at the right end of the line of the page's
-  heading, which is the right edge of the page's column of 48 rem and
-  not the window's corner, each drawn only while it has a step to take,
-  with their keys caught on the whole page; they undo and redo the changes of the filters, of the
-  column of the populations and of the options of the PCA, and not the
-  opening of a file (`docs/designs/analyses-pca.md`, "Undo and Redo"); its
+  decided on 8 October 2026, and from 10 October 2026 no Undo and no
+  Redo, and catches none of their keys (section 3; `docs/designs/no-undo.md`);
+  its
   first project has the filter of the FILTER column on and the missing
   rate of the variants at 0.1, the rest off. The download of the
   filtered variants is one button, "Download filtered variants…", after
@@ -2601,6 +2756,29 @@ for the smallest part of it.
   told by `src/core/thresholds.ts` from popnei's fine bins of the
   variants and from popnei's value of each individual; no count of what
   it keeps is shown.
+- **The band of `popgen2.html`**, from 10 October 2026, is one line at
+  the top of the window that says what the application is doing, and
+  stays there while the page scrolls: the reading of the variants file
+  with its percentage and its Stop, the PCA running with its clock and
+  its Stop, the PCA about to start again by itself, a Stop under way,
+  the writing of the filtered variants; a link to a warning or an error
+  of the PCA in its tab while another tab is shown; and the errors of
+  the application's own code, in the place of the error bar of
+  `popgen.html`. It is drawn in the page's second root, `#defects`,
+  where the error bar was, so that it stays when an error has emptied
+  the application's root. It reads the store, the code that starts the
+  analyses by themselves (`src/ui/autoRuns.ts`), the log of the errors
+  (`src/ui/defects.ts`), the tab shown and the starts of the
+  calculation worker, and sends the Stops the boxes and the tab already
+  send. The tab shown, the screen's own state, moves from the page's
+  component into a small store of the page made by the entry, so that
+  the two roots read and change the same one. The band is not a status
+  region: what starts and ends is said by the page's status region, as
+  before, and the band's own words, which change every second, are read
+  only when a screen reader reaches them, so that nothing is read twice.
+  The progress in the box of the variants file and in the PCA tab
+  stays, since the user who is in that tab looks there. Its screen is
+  `docs/specs/steps/popgen2-band.md`.
 - **The step of an application is in the URL hash**, so that the back
   button moves between steps (`docs/technology.md`).
 
@@ -2658,6 +2836,21 @@ result's code, its plots, tables and menus, is downloaded apart from
 the page when the tab is first shown with a variants file open
 (`docs/specs/steps/popgen2-pca.md`; `docs/technology.md`, "D3 for the
 2D plots").
+
+What was revised on 10 October 2026, for the design no-undo
+(`docs/designs/no-undo.md`, approved by the owner that day), and the
+band the owner agreed to the same day (`docs/plans/analyses-pca.md`, its
+last paragraph): the bullet of the thresholds said that the owner brought
+Undo and Redo back on 9 October 2026 at the right end of the line of the
+heading of `popgen2.html`, with their keys caught on the whole page; the
+page has neither from 10 October 2026, and the line of the heading holds
+the heading alone. The bullet "The band of `popgen2.html`" is new. Not
+taken for the band: a line that pushes the page down when it appears,
+which would move a slider from under the pointer a second after the
+user let it go, when the PCA starts by itself; the band in the
+application's root, which an error that empties that root would take
+with it; and the band as the status region itself, whose percentage and
+clock would be read aloud at every change.
 
 ## 8. The project file, the report and the script
 
@@ -2794,10 +2987,15 @@ src/core/
                     imports keys.ts, forms no cycle with it
   result.ts         the Result type of what can fail with good code
   keys.ts           the canonical form of the inputs of a result, and its hash
-  history.ts        undo and redo over projects
+  history.ts        undo and redo over projects; from 10 October 2026
+                    walked by popgen.html alone, and kept by the store
+                    of popgen2.html at one past project
   cache.ts          the results under their keys, bounded in bytes
   store.ts          the current project, the history and the cache, and the
-                    subscription the screens read
+                    subscription the screens read; from 10 October 2026
+                    the setting dropLeftBehind of popgen2.html, under
+                    which a result is thrown away once its key is left
+                    behind (section 3)
   analyses/         one module per analysis, with the shape of section 4,
                     the checks of the Variants step among them from stage 3:
                     individualChecks, variantChecks, filterCounts; from
@@ -2921,24 +3119,34 @@ src/ui/
                     with no stepper and no saving; from 7 October 2026
                     with the row of Undo and Redo and their keys, reused
                     from shell/ without the rest of the shell, a row the
-                    owner hid on 8 October 2026 and brought back on 9
-                    October 2026 at the right end of the line of the
-                    heading (VariantsPage.tsx), each button drawn only
-                    while it has a step; and, from 8 October 2026, no
-                    notice
+                    owner hid on 8 October 2026, brought back on 9
+                    October 2026, and took away with their keys on 10
+                    October 2026; from 8 October 2026, no notice; and,
+                    from 10 October 2026, the band (band/) drawn in
+                    #defects in the place of the error bar, the tab
+                    shown (pageTab.ts) given to both roots, and the
+                    starts of the calculation worker given to the band
   popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES, the
                     summary of the variants file alone, POPGEN2_CHAIN,
                     and no counts, statistics config or writing, and the
                     groups of the analyses the page starts by itself;
                     from 7 October 2026 made with popgen2FirstProject;
                     from 8 October 2026 openVariantsFile, which opens a
-                    file as a new history; apart from the entry, so that
+                    file as a new history; from 10 October 2026 one past
+                    project, a type with no undo nor redo, the setting
+                    dropLeftBehind, and the PCA as a second group after
+                    POPGEN2_CHAIN; apart from the entry, so that
                     a test in node makes it
   autoRuns.ts       the analyses popgen2.html starts by itself, in order,
                     each once for each key once those before it let it,
                     which keys were started, from which the page tells a
                     calculation stopped from one about to start, and the
-                    Stop and the start again of a group, stop and resume
+                    Stop and the start again of a group, stop and resume;
+                    from 10 October 2026 also the PCA of popgen2.html,
+                    live for a load once its Run is pressed, started
+                    again a quiet second after a change, held while the
+                    gate counts a change under way, and paused by its
+                    Stop until Run (section 5)
   variants/         the screens of popgen2.html: the opening of the
                     variants file, the box of what it holds with the bar
                     of the pass running, the count of the variants so
@@ -2979,8 +3187,12 @@ src/ui/
                     reasons of a greyed tab (analysisTabsWords.ts), the
                     lock of the filters while a PCA runs (filtersLock.ts),
                     Undo and Redo at the right end of the line of the
-                    heading (VariantsPage.tsx), and the menus
-                    "Download…" of the histograms and of the tables
+                    heading (VariantsPage.tsx) until 10 October 2026,
+                    and the menus "Download…" of the histograms and of
+                    the tables; from 10 October 2026 the gate counts
+                    the changes under way, a slider held, a list open,
+                    digits not confirmed, a run of the arrow keys, and
+                    tells autoRuns.ts when none is left
   codeDownload.ts   from 10 October 2026, a download of code apart from
                     the page's first load, asked for the first time it
                     is needed, kept once it arrives, and asked again at
@@ -2995,7 +3207,19 @@ src/ui/
   saving.ts         the project file downloaded, and whether the project
                     changed since it was saved or opened; from stage 3, a
                     file of the filtered variants downloaded too
-  defects.ts        the log of the errors the bar at the top of the page shows
+  defects.ts        the log of the errors the bar at the top of the page shows,
+                    and, from 10 October 2026, the band of popgen2.html
+  band/             from 10 October 2026, the band of popgen2.html
+                    (section 7; docs/specs/steps/popgen2-band.md): what
+                    it shows, worked out from the store, autoRuns.ts,
+                    the log of the errors, the tab shown and the starts
+                    of the calculation worker by a pure function tested
+                    in node (band.ts), its words (bandWords.ts), and the
+                    band drawn (Band.tsx), which reuses the words and
+                    buttons of the error bar
+  pageTab.ts        from 10 October 2026, the tab shown on popgen2.html,
+                    a small store of the screen that the page and the
+                    band both read and change
   files.tsx         a picked file: its load id, and the File kept under it
   store.tsx         the store of core, given to the screens
   shell/            the header, the stepper, the summary line, the notices;
@@ -3011,7 +3235,9 @@ src/ui/
                     the line of the heading of popgen2.html draws it
                     again with the option onlyWithStep, each button
                     drawn only while it has a step, its place kept, and
-                    waits, under which both wait while a PCA runs
+                    waits, under which both wait while a PCA runs; from
+                    10 October 2026 drawn by popgen.html alone, with
+                    undoRedo.ts and shortcuts.ts
   runs.ts           awaits the outcome of each run core starts, at a Run
                     or, on popgen2.html, by autoRuns.ts, and hands it to
                     the store, which cancels the runs no longer asked for
@@ -3042,7 +3268,10 @@ src/ui/
                     widget; among them ThresholdSlider.tsx, from 7
                     October 2026, the line of a threshold dragged over a
                     histogram (section 7), which tells the end of a drag
-                    with a pointer apart from a key; NumberField.tsx,
+                    with a pointer apart from a key; from 10 October
+                    2026 Slider.tsx, ThresholdSlider.tsx, Select.tsx
+                    and NumberField.tsx tell the gate of popgen2.html
+                    when a change begins and ends; NumberField.tsx,
                     with an option, popgen2.html's alone, under which an
                     emptied box commits "off", and, from 8 October 2026,
                     its text put back to the number it is given whenever
@@ -3132,6 +3361,19 @@ page and `fileRefusals.ts` among the analyses; `codeDownload.ts` of
 `widgets/`. No rule of the imports changes: `analyses/pca/` imports
 `variants/` for the status of the one pass, its Start again and the
 lock of the filters, as `variants/` imports the PCA tab to draw it.
+
+What was revised on 10 October 2026, for the design no-undo
+(`docs/designs/no-undo.md`, approved by the owner that day) and the
+band of `popgen2.html` (section 7): the rows of `history.ts`,
+`store.ts`, `popgen2.tsx`, `popgen2Store.ts`, `autoRuns.ts`,
+`variants/`, `defects.ts`, `shell/` and `widgets/`, and two new rows of
+`src/ui`, `band/` and `pageTab.ts`. No rule of the imports changes:
+`band/` imports the store's types, `autoRuns.ts`, `defects.ts`,
+`pageTab.ts`, the words of the error bar of `shell/` and the words of
+the PCA tab, as `variants/` does; nothing of core imports it. The
+removal of Undo from `popgen2.html` removes no module, since
+`popgen.html` keeps `UndoRedoButtons.tsx`, `undoRedo.ts` and
+`shortcuts.ts`.
 
 ## 10. The walking skeleton
 
@@ -3368,6 +3610,21 @@ tests of the application are the same with it.
 - **The browsers**: Chrome and Edge 111, Firefox 115 and Safari 16.4, the
   floor the owner set on 24 September 2026 (`docs/technology.md`, section
   6).
+- **The memory of the history and of the results on `popgen2.html`**,
+  from 10 October 2026 (`docs/designs/no-undo.md`). The page keeps at
+  most two projects, the present and one past, where it kept up to 201,
+  and the results of the values shown, the one pass's and at most one
+  PCA, 0.90 MB at 9,381 individuals, where the cache could hold 256 MB.
+  The PCA calculated again after each change costs its time again: up
+  to 4 minutes at 9,381 individuals (226 s in Chromium 153 and 134 s in
+  WebKit 26.6 for the PCA, 259 s and 215 s for the PCoA, above), during
+  which the filters it reads stay greyed and the download of the
+  filtered variants waits; a second or less up to 1,000 individuals. A
+  Stop of a large PCA leaves its 3.7 to 4.2 GB in a WebKit tab for 40 s
+  and more (section 5, "Why a change on `popgen2.html` does not stop a
+  PCA"), which is why Stop ends the automatic runs until Run is pressed
+  again, so that no PCA starts by itself on top of that memory a second
+  after the user's next change.
 - **The page frozen.** The key of every analysis is made on the page after
   every command, from the canonical form of its inputs, and the
   individuals table of 10,000 rows is among them. Since the project is
@@ -3485,6 +3742,12 @@ write of the filtered variants holds by pieces, and that `popgen2.html`
 sets no limit of size, beside the measurement of the write of the whole
 file that `popgen.html`'s limits keep coming from.
 
+What was revised on 10 October 2026, for the design no-undo
+(`docs/designs/no-undo.md`, approved by the owner that day): the bullet
+"The memory of the history and of the results on `popgen2.html`" is
+new, with the time a PCA calculated again by itself costs and the
+memory a stopped worker leaves in WebKit.
+
 ## 12. What is hard to undo
 
 - **The format of the project file**, which users keep. It carries the
@@ -3517,6 +3780,13 @@ file that `popgen.html`'s limits keep coming from.
   and every project file the page will save holds the filter of the
   FILTER column, on or off, so a later change of that start changes what
   those files hold.
+- **The PCA of `popgen2.html` calculated again by itself**, from 10
+  October 2026 (`docs/designs/no-undo.md`). No file depends on it, no
+  key changes, and Undo can come back, since the history and its
+  buttons stay for `popgen.html` until that page is deleted. What is
+  hard to undo is what users learn: that a change of a filter starts the
+  PCA again a second later, and that nothing is undone; taking that
+  away later would be a change of habit for them.
 
 The canonical form of the keys is not among these. No key and no fingerprint of
 settings is saved in a file: the cache lives in the tab, the calculation
@@ -3529,6 +3799,11 @@ What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
 approved by the owner that day: the kind `passed` in version 1 of the
 project file, and the first project of `popgen2.html`, which that
 design lists as hard to undo.
+
+What was revised on 10 October 2026, for the design no-undo
+(`docs/designs/no-undo.md`, approved by the owner that day): the
+bullet "The PCA of `popgen2.html` calculated again by itself", which
+that design lists as hard to undo for the habit it gives users.
 
 ## 13. Open points
 
