@@ -1426,18 +1426,102 @@ its comments say the time runs from the run posted to the worker, as in
 alone in Chromium and WebKit, passed both checks, the pass and the run
 in worker 0. The runs of 4,000 and 9,381 individuals were not run again.
 
-### State of the plan, 10 October 2026, for the next session
+### Work package 9, 10 October 2026
 
-Work packages 1 to 8 are built, reviewed and fixed. Left: work package
-9 (the session's look at every screenshot, the whole browser check in
-chunks, the documents, the project's instructions, the report) and 10
-(the owner's try). One question to the owner is open: whether the
-population column is locked while a PCA runs (asked on 9 October; the
-code follows the session's recommendation, to lock only what the PCA
-reads). For the report, besides the answers: the PCoA's warning keeps
-the old page's words, for the owner to judge; Undo and Redo sit at the
-right edge of the column of 48 rem, not at the window's corner; a
-refused PNG's words cover the plot's corner until the next choice; three
-texts stack under an empty LD distance; the table of the individuals
-cannot freeze its first column; Safari, Firefox and VoiceOver not seen;
-the times of work package 7 taken under the load of a virtual machine.
+Task 9.1, the session's look. Every screenshot of `popgen2.html` was
+taken again at 30fcd51a, since 62 of the 106 under `screens/` dated from
+before the fixes of 10 October: 308 states, light and dark, 1280 and
+320 px, all passed once two states of `e2e/screens.spec.ts` were
+brought up to date (4939d98c, the error of an unreadable file found in
+the box of the variants file alone; 1bc15036, a Tab from a threshold's
+box reaches the plot's "Download…" before its line). The session read
+the PCA tab's ready, running, 2D, 3D, PCoA, menu, locked, empty LD
+distance, loading and load-failed states, the greyed and not-built
+tabs, Undo waiting, Undo and Redo, and the menu, refused and waiting
+states of the downloads, in both themes and at 320 px (cropped to full
+resolution where the page is long). Each state of the screen spec's
+table is there and readable; nothing was found beyond the items already
+listed for the report. The old page's screenshots were not taken: it is
+deprecated, and its flows ran in 9.2. The second copy of an unreadable
+file's error, with popnei's backquotes, is the description of the PCA's
+Run inside the greyed tab's hidden content, which no user sees or
+hears.
+
+Task 9.2, the checks. The first whole run of the flows of
+`popgen2.html` failed once in Chromium: in `AP6 D3`, the locked line of
+the observed heterozygosity had the focus and no tooltip. It came back
+once in three runs of three flow files under load, never in 20 alone.
+The cause, in the page: when the focus lands on a line's input the
+browser scrolls a box around it a frame later, and React Aria closes a
+tooltip on any scroll of a box that holds its control; the held
+tooltips of boxes, switches and radios already ignored it, the plain
+tooltip did not. Fixed in 21ccf0ad: a tooltip stays through a scroll
+while its control has the focus. Also 1caca51e: the PCA tab's error
+box is headed "PCoA" under the PCoA, which `docs/specs/steps/popgen2-pca.md`
+asks and the documents' agent found wrong.
+
+The review of those two commits, `tests`, `react`, `accessibility`,
+`spec` and `errors`. Eight findings held, fixed in 02158a81 to
+2db829fe, each test failing first: the heading read outside the PCA
+tab's error box, so a defect of its options would have removed the
+whole row of tabs (`pcaMethodOf`, which never throws); the lock of the
+filters reading the PCA's options above every error box, which would
+have blanked the page, unreachable today; the heading test of the PCA
+case; a Vitest and the flow's scroll step that could not fail; an arrow
+key on a locked line, or Enter on a waiting Undo, hiding its reason,
+against the screen spec (a work package 6 defect: `keepOnPress`); the
+doc comment of the held tooltip; and the specs of the PCA tab and of
+`shell.md` saying a focused tooltip stays through any scroll. Not
+taken: the change on `popgen.html`, whose focused tooltips now also
+stay through a scroll, which only helps and which `shell.md` now
+records; the accessibility reviewer's one miss in its own throwaway
+flow, not seen again in 14 runs nor in 348 runs of the real flows
+under load.
+
+Also found by 9.2: a property test of the store, older than the
+branch, failed 1 in 9 runs of Vitest (its count of requests with a
+filter off fell to the bound): a fixed seed, 60f62fc9, as its sibling
+had. The flow `TH round 1` of `e2e/thresholds.spec.ts` had failed since
+work package 5 put each histogram's "Download…" on its own line between
+the box and the plot (47 px where the flow allowed 12): the flow now
+measures both gaps, 8 px each at both widths, b14294b9. Earlier counts
+of "the other flows of `popgen2.html`" had not included that file.
+
+Checks at b14294b9: typecheck, lint and format clean; Vitest 151 files,
+4,954 tests, four runs; in Chromium and WebKit, built once, 4 workers:
+the flows of `popgen2.html` 294; the old page's flows of the PCA and
+the analyses 360; the other flows in two chunks, 536 and 360, the 4
+failures of `TH round 1` passing after b14294b9 (its file 64 with
+`--repeat-each=2`); 1,550 in all. The lock flows with
+`--repeat-each=3 --retries=0` 348, none flaky. The `browser` review of
+the whole branch found nothing: no feature newer than Chrome 111,
+Firefox 115 and Safari 16.4 in the built files, no request to another
+origin, the three downloads arriving in both engines, a click focusing
+React Aria's controls in WebKit as in Chromium. Firefox and Safari not
+run.
+
+Task 9.3, the documents: f8e686b6 to c131b5b8, then d80dbdcd after the
+`first-reader`, which answered the five questions set and listed the
+names and sentences it could not follow; they were explained or
+replaced. Where a spec had fallen behind the code, the code was taken
+as right, but the error box's heading, fixed in the code.
+
+Task 9.4, the instructions, by the session: d759d6bf. `react.md`,
+`SKILL.md` and `worker.md` of the `coding` skill, the seven states of
+the `writing-specs` skill and the `stale` category of the review now say
+that `popgen2.html` has no notice, stops at once what a change leaves
+behind, makes no step of an opening, has Undo and Redo at the top right
+of its column, and locks what a running PCA reads. `CLAUDE.md` needed
+no change for this plan.
+
+### State of the plan, 10 October 2026
+
+Work packages 1 to 9 are built, reviewed and fixed, but the report to
+the owner (9.5), given in chat on 10 October. Left: work package 10,
+the owner's try. Open with the owner: whether the population column is
+locked while a PCA runs (the page locks only what the PCA reads); the
+PCoA's warning keeps the old page's words; Undo and Redo at the right
+edge of the 48 rem column; a refused PNG's words over the plot's
+corner; three texts under an empty LD distance; the table of the
+individuals without a frozen first column; Safari, Firefox and
+VoiceOver not seen; the times of work package 7 taken under load.
