@@ -2,7 +2,20 @@
  * The store of core, given to the screens (react.md, "Reading core"). The
  * entry of the page makes the store once, outside any component, and
  * gives it through `StoreProvider`; a screen reads it with `useAppState`
- * and sends it commands through `useStore`.
+ * and sends it commands through one of three hooks, chosen by what it
+ * needs of the store:
+ *
+ * - `useStore`, for code shared by both pages, popgen.html and
+ *   popgen2.html: the store without undo and redo, which the store of
+ *   popgen2.html does not have.
+ * - `usePopgen2Store`, on popgen2.html alone, only to reach `applyAfresh`
+ *   or `populationColumnChosen`, which the store of popgen.html does not
+ *   have.
+ * - `useUndoStore`, on popgen.html alone, only for its Undo, its Redo and
+ *   its notice, which undo and redo.
+ *
+ * Each of the last two throws a defect under the store of the other
+ * page.
  */
 import { createContext, useContext, useSyncExternalStore } from "react";
 
@@ -43,6 +56,8 @@ export function useStore(): PageStore {
     popgen2.html, which has no Undo. */
 export function useUndoStore(): Store<JobResult, Blob> {
   const store = useContext(StoreContext);
+  // `applyAfresh` exists only on the store made with `stopLeftBehind`,
+  // popgen2.html's (the overloads of `createStore` in src/core/store.ts).
   if (store === null || "applyAfresh" in store) {
     throw new Error(
       "popnei_web defect: useUndoStore outside a StoreProvider of the store of popgen.html",
@@ -57,6 +72,8 @@ export function useUndoStore(): Store<JobResult, Blob> {
     those changes. */
 export function usePopgen2Store(): Popgen2PageStore<JobResult, Blob> {
   const store = useContext(StoreContext);
+  // `applyAfresh` exists only on the store made with `stopLeftBehind`,
+  // popgen2.html's (the overloads of `createStore` in src/core/store.ts).
   if (store === null || !("applyAfresh" in store)) {
     throw new Error(
       "popnei_web defect: usePopgen2Store outside a StoreProvider of the store of popgen2.html",

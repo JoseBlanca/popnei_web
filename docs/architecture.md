@@ -3223,7 +3223,11 @@ src/ui/
                     a small store of the screen that the page and the
                     band both read and change
   files.tsx         a picked file: its load id, and the File kept under it
-  store.tsx         the store of core, given to the screens
+  store.tsx         the store of core, given to the screens, through
+                    three hooks: useStore for code shared by both pages;
+                    usePopgen2Store only to reach applyAfresh or
+                    populationColumnChosen on popgen2.html; useUndoStore
+                    only for popgen.html's Undo, Redo and notice
   shell/            the header, the stepper, the summary line, the notices;
                     status.ts, what is read to a screen reader;
                     words.ts, the words of the shell made from the store;
