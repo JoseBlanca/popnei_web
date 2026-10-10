@@ -587,7 +587,7 @@ Tasks:
   "Popnei" alone, as the owner decided; the PCA tab's own "Stop
   recalculating" lets the automatic runs be ended there before any
   change, with no time limit.
-- [ ] 5.4 The measurement of "Stopping", alone on the machine
+- [x] 5.4 The measurement of "Stopping", alone on the machine
   (deliverable 6). Stands on 5.3.
 
 What could go wrong: the band fixed at the top in its own root, outside
@@ -599,7 +599,7 @@ line carries no live role.
 
 ## Work package 6: the instructions and the documents
 
-- [ ] 6.1 The instructions, by the session itself and not by a
+- [x] 6.1 The instructions, by the session itself and not by a
   subagent, since every later session reads them: what the design's
   last section names, the `coding` skill's `SKILL.md`, `react.md` and
   `worker.md` where they say the page has Undo or a notice, the states
@@ -608,7 +608,7 @@ line carries no live role.
   skill; each place found by `grep -rn -i "undo\|notice\|popgen2"
   CLAUDE.md .claude/` that says what `popgen2.html` no longer does. The
   report lists the files.
-- [ ] 6.2 The documents: `docs/architecture.md` and
+- [x] 6.2 The documents: `docs/architecture.md` and
   `docs/functionality.md`, revised for the design on 10 October 2026,
   against what was built; the time of "Stopping" and the memory of
   deliverable 4.6 where section 11 of the architecture gives the costs;
@@ -617,12 +617,12 @@ line carries no live role.
 
 ## Work package 7: the end
 
-- [ ] 7.1 The session's own look: it reads every screenshot of work
+- [x] 7.1 The session's own look: it reads every screenshot of work
   packages 2, 4 and 5 with `Read`, state by state, in both themes and
   both widths, and checks that each state of the band spec's table and
   of the screen spec's "The states" is there and readable; what it
   finds is a fix sent to a subagent, test first, before 7.2.
-- [ ] 7.2 The checks of the `coding` skill on the last commit, and the
+- [x] 7.2 The checks of the `coding` skill on the last commit, and the
   browser check of the whole suite in Chromium and WebKit, in chunks of
   spec files that each end within a foreground command; the counts of
   each chunk recorded below; a flaky test run again three times and
@@ -987,3 +987,24 @@ screens of `popgen2.html` other than the band's were taken before the
 band was built (12:50 and 18:38, the band at 19:59), and show a page
 that no longer is; they are taken again at the last commit before the
 look goes on.
+
+### Work package 7, 10 October 2026
+
+The screens taken again at 93659177, all 388 of `popgen2.html`, and
+again after 6074ef27, which draws the band at the top of the document
+in the pictures of the whole page: a fixed band had been drawn where
+the window was scrolled, over the page's lines, a fault of the
+pictures and not of the page. The session read the band's eleven
+states and the PCA tab's live states (about to start, running, locked,
+stopped, done, failed) in at least one theme and width each, the dark
+320 px forms among them: each as the specs say, the band agreeing with
+the state.
+
+The `browser` review of the whole branch, main..6074ef27: no finding.
+Every feature the branch adds is in the browsers the page supports
+(Chrome and Edge 111, Firefox 115, Safari 16.4), by MDN's data of 8
+October 2026; paging with the keys and the band's link clear the band
+in Chromium and WebKit. Not seen, for the owner's try: Firefox's undo
+in a number box and its paging under the band; whether Safari before
+26 keeps the heading clear of the band after the link is clicked; the
+band over a field typed into on a phone.
