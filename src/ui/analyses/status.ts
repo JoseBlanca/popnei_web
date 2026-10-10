@@ -5,7 +5,7 @@
  * analysis, the button that state offers, Run or its Calculate, Stop, or
  * none, its result once done, and the notice that stopped it.
  */
-import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
+import { pcaMethodOf, pcaOnPopgen2 } from "../../core/analyses/pca.ts";
 import type { AnalysisId } from "../../core/project.ts";
 import type { AnalysisStatus, AppState, Notice } from "../../core/store.ts";
 import type { JobResult, PcaMethod } from "../../worker/protocol.ts";
@@ -125,11 +125,13 @@ const RUNNING_PCA: Readonly<Record<PcaMethod, RunningAnalysis>> = Object.freeze(
 /** The calculation of popgen2.html running in `s` that locks the
     filters it reads, the PCA, named by the method of its project, which
     the lock keeps while it runs; `null` while none runs. Read on
-    popgen2.html alone, whose store runs the PCA of `pcaOnPopgen2`. */
+    popgen2.html alone, whose store runs the PCA of `pcaOnPopgen2`, and
+    above every boundary of errors of its page, so the method is read
+    alone, with `pcaMethodOf`, which never throws. */
 export function runningAnalysisOf(
   s: AppState<JobResult, unknown>,
 ): RunningAnalysis | null {
   return statusOf(s, pcaOnPopgen2.id).kind === "running"
-    ? RUNNING_PCA[pcaOptions(s.project, "popgen2").method]
+    ? RUNNING_PCA[pcaMethodOf(s.project, "popgen2")]
     : null;
 }

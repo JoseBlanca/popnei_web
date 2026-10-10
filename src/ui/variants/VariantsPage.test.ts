@@ -34,6 +34,7 @@ import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
 import { createAutoRuns } from "../autoRuns.ts";
 import { FilesProvider } from "../files.tsx";
 import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "../popgen2Store.ts";
+import { statusOf } from "../analyses/status.ts";
 import { startAnalysis } from "../runs.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
@@ -45,7 +46,7 @@ import type * as FileZoneModule from "../widgets/FileZone.tsx";
 import type { FileZoneProps } from "../widgets/FileZone.tsx";
 import type * as WordsModule from "./words.ts";
 import type * as Popgen2TabsModule from "../../core/popgen2Tabs.ts";
-import { pca } from "../../core/analyses/pca.ts";
+import { pca, pcaOnPopgen2 } from "../../core/analyses/pca.ts";
 import { setAnalysisOptions } from "../../core/project.ts";
 import type * as PcaModule from "../../core/analyses/pca.ts";
 import type * as PcaTabModule from "../analyses/pca/PcaTab.tsx";
@@ -674,5 +675,34 @@ describe("AP6 the boundary of the PCA tab", () => {
     expect(
       [...(panel?.querySelectorAll("h2") ?? [])].map((h) => h.textContent),
     ).toEqual(["PCA"]);
+  });
+
+  test("options of the PCA the project refuses while a PCA runs leave the page its two boxes and its row of tabs", async () => {
+    const { store } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+    await act(async () => {
+      store.apply("the LD filter of the PCA follows the Variants tab", (p) =>
+        setAnalysisOptions(p, pca, {
+          method: "pcoa",
+          missingData: { follow: true, maxAllowedMissingRate: 0.1 },
+          maf: { follow: true, maxAllowedMaf: 0.95 },
+          ld: { follow: true, maxAllowedR2: 0.1, maxDist: null },
+          colourBy: null,
+          axes: [1, 2, 3],
+          view: "3d",
+        }),
+      );
+      void startAnalysis(store, pcaOnPopgen2.id);
+      await Promise.resolve();
+    });
+    expect(statusOf(store.getState(), pcaOnPopgen2.id).kind).toBe("running");
+    inject.pcaOptionsThrow = true;
+    await act(async () => {
+      tabOf("Individuals").click();
+      await Promise.resolve();
+    });
+    expect(region("Variants file")).not.toBeNull();
+    expect(region("Individuals file")).not.toBeNull();
+    expect(container.querySelector('[role="tablist"]')).not.toBeNull();
   });
 });
