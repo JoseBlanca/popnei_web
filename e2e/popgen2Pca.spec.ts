@@ -400,8 +400,8 @@ test("AP6 D3 the PCA tab opened during the one pass, held: Run disabled with the
     "aria-valuetext",
     "0.1, as in the Variants tab",
   );
-  await expect(missingSlider).toHaveAttribute("aria-valuemax", "0.1");
-  await expect(missingSlider).toHaveAttribute("aria-valuemin", "0");
+  await expect(missingSlider).toHaveAttribute("max", "0.1");
+  await expect(missingSlider).toHaveAttribute("min", "0");
   await expect(
     shown(page).getByText("0.1, as in the Variants tab", { exact: true }),
   ).toBeVisible();
@@ -410,8 +410,8 @@ test("AP6 D3 the PCA tab opened during the one pass, held: Run disabled with the
     "aria-valuetext",
     "Off, as in the Variants tab",
   );
-  await expect(mafSlider).toHaveAttribute("aria-valuemin", "0.5");
-  await expect(mafSlider).toHaveAttribute("aria-valuemax", "1");
+  await expect(mafSlider).toHaveAttribute("min", "0.5");
+  await expect(mafSlider).toHaveAttribute("max", "1");
   await mafSlider.focus();
   await mafSlider.press("Home");
   await expect(mafSlider).toHaveAttribute("aria-valuetext", "0.5");
@@ -1200,7 +1200,7 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
       "aria-valuetext",
       "0.03, as in the Variants tab",
     );
-    await expect(missing).toHaveAttribute("aria-valuemax", "0.03");
+    await expect(missing).toHaveAttribute("max", "0.03");
     await expect(
       shown(page).getByText(
         "The Variants tab keeps at most 0.03, stricter than the 0.05 set here, so the PCA uses 0.03.",

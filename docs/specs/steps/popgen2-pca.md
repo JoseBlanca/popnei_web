@@ -365,7 +365,7 @@ Then three, in this order:
   It moves by the step of the Variants tab's box of that threshold,
   which rounds to the step of its axis (`popgen2-filters.md`, "A number
   with many decimals"), and by 0.01 at the most: 0.001 on the missing
-  rate of `panel.nei`, whose axis steps by 0.001, and 0.01 on its MAF.
+  rate of `panel.nei`, whose axis steps by 0.001.
   The arrow keys move it a step, Page Up and Page Down a tenth of its
   range, Home and End to its ends, as React Aria's slider does.
 
