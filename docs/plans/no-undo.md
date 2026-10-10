@@ -946,3 +946,44 @@ four findings held, fixed in a3ac6f92 (the specs of the plan not yet
 saying they are built, the row of `popgen2.tsx` saying the page left
 the keys to the browser, the list of what `band/` imports, a sentence
 of `popgen2-filters.md` on Ctrl+Z); the band spec's status in 97fcd8d8.
+
+### Task 5.4 and the whole check, 10 October 2026
+
+Task 5.4, commits 616f8c40 (the measurement `NU5 D6` of
+`e2e/measure.spec.ts`) and 93659177 (its numbers in the band spec and
+in section 11 of the architecture). Alone among this piece's agents,
+load averages 3.32 to 3.38; Apple M5 Pro with 64 GB, macOS 27.0.1,
+Playwright 1.63.0; the VCF of 300 variants and 9,381 individuals of
+`e2e/bigVcf.ts`, LD pruning off; the band's Stop pressed in the
+Variants tab 10.08 s into the PCA. From the press, in s:
+
+| | Chromium 153 | WebKit 26.6 |
+|---|---|---|
+| "Stopping the PCA…" shown | 0.005 | 0.006 |
+| the line gone, "Popnei" alone | 0.023 | 0.059 |
+| the new worker's popnei ready | 0.013 | 0.042 |
+
+Run was enabled once the line had gone, in both. The new worker found
+popnei's wasm in the engine's cache; a first visit with an empty cache
+was not measured.
+
+The checks at 93659177: typecheck, lint, format clean; Vitest 162
+files, 5,190 tests; the first load of `popgen2.html` 321.11 KB, the sum
+of Vite's gzip sizes of its 9 files (320.23 at 1110b46e). The flows in
+Chromium and WebKit, four workers, every spec file but `measure` and
+`screens`, none failed or flaky:
+
+| chunk | files | passed | time |
+|---|---|---|---|
+| `popgen2*` | 11 | 338 | 3.4 min |
+| the old page's PCA and analyses | 11 | 432 | 2.4 min |
+| `entry` to `shell` | 12 | 500 | 2.4 min |
+| `skeleton` to `xlsx` | 11 | 324 | 1.8 min |
+
+1,594 flows passed.
+
+The session's look at the screenshots (task 7.1) found that the
+screens of `popgen2.html` other than the band's were taken before the
+band was built (12:50 and 18:38, the band at 19:59), and show a page
+that no longer is; they are taken again at the last commit before the
+look goes on.
