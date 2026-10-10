@@ -5968,6 +5968,109 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-pca-running${at}-${theme}`);
       });
 
+      /** Opens panel.nei, shows the PCA tab, types the distance, presses
+          Run and waits for the result: the PCA is live. */
+      async function pcaLive(page: Page): Promise<Locator> {
+        await pickOnNewPage(page, "panel.nei");
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "PCA", exact: true })
+          .click();
+        const panel = page.getByRole("tabpanel");
+        const run = panel.getByRole("button", { name: "Run", exact: true });
+        await expect(run).toHaveAccessibleDescription(
+          /^Type the LD distance/u,
+          { timeout: 20_000 },
+        );
+        const field = panel.getByRole("textbox", {
+          name: /^Distance within which variants are compared/u,
+        });
+        await field.fill("50000");
+        await field.press("Enter");
+        await run.click();
+        await expect(
+          panel.getByText(/^The place of each of the 200 individuals/u),
+        ).toBeVisible({ timeout: 30_000 });
+        return panel;
+      }
+
+      for (const shot of ["about-to-start", "stopped"] as const) {
+        test(`NU4 D5 the PCA live, ${shot === "about-to-start" ? "about to start after a change" : "ready after a Stop during the quiet second"}`, async ({
+          page,
+        }) => {
+          const panel = await pcaLive(page);
+          // The page's timers stand still, so that the quiet second does
+          // not run out before the picture.
+          await page.clock.install();
+          await page.clock.pauseAt(Date.now() + 1000);
+          const missing = panel.getByRole("slider", {
+            name: /^Maximum proportion of missing genotypes for the PCA$/u,
+          });
+          await missing.focus();
+          await missing.press("ArrowLeft");
+          const stop = panel.getByRole("button", { name: "Stop", exact: true });
+          await expect(stop).toHaveAccessibleDescription(
+            /^The PCA starts again in a moment/u,
+          );
+          if (shot === "stopped") {
+            await stop.focus();
+            await page.keyboard.press("Enter");
+            await expect(
+              panel.getByRole("button", { name: "Run", exact: true }),
+            ).toHaveAccessibleDescription(/^Stopped: the PCA/u);
+          }
+          await page.mouse.move(0, 0);
+          await save(page, `popgen2-pca-${shot}${at}-${theme}`);
+        });
+      }
+
+      test("NU4 D5 the PCA started by itself, held running, with the Variants tab shown and a threshold greyed", async ({
+        page,
+      }) => {
+        await holdSummary(page, { holdPca: true });
+        await page.goto("popgen2.html");
+        await pickOnNewPage(page, "panel.nei");
+        await release(page, "allSoFar");
+        await release(page, "result");
+        const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+        await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+        const panel = page.getByRole("tabpanel");
+        const run = panel.getByRole("button", { name: "Run", exact: true });
+        await expect(run).toHaveAccessibleDescription(
+          /^Type the LD distance/u,
+          { timeout: 20_000 },
+        );
+        const field = panel.getByRole("textbox", {
+          name: /^Distance within which variants are compared/u,
+        });
+        await field.fill("50000");
+        await field.press("Enter");
+        await run.click();
+        // The held run crashed: the PCA stays live, and the worker made
+        // after it holds the next PCA, which a change starts by itself.
+        await release(page, "crash");
+        await expect(panel.getByRole("button", { name: "Run" })).toBeVisible({
+          timeout: 20_000,
+        });
+        await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
+        const missing = newPageStats(page)
+          .getByRole("group", {
+            name: "Proportion of missing genotypes",
+            exact: true,
+          })
+          .getByRole("textbox");
+        await missing.fill("0.05");
+        await missing.press("Enter");
+        await expect(missing).toHaveAttribute("aria-disabled", "true", {
+          timeout: 20_000,
+        });
+        await missing.hover();
+        await expect(page.getByRole("tooltip")).toHaveText(
+          "Stop the PCA to change the filters.",
+        );
+        await save(page, `popgen2-pca-live-locked${at}-${theme}`);
+      });
+
       for (const shot of ["3d", "2d", "pcoa", "menu"] as const) {
         test(`the PCA tab done: ${shot === "pcoa" ? "the PCoA with its warning" : shot === "menu" ? "the menu of the plot open" : `in ${shot.toUpperCase()}`}`, async ({
           page,
