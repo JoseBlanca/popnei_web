@@ -572,7 +572,17 @@ Tasks:
   "Accessibility", "The layout"). The rest
   of deliverable 2, and deliverables 3 to 5. Stands on 5.1 and 5.2. The
   band's height, the same in every state, is measured here and written
-  into the band spec.
+  into the band spec. Added on 10 October 2026 by the review of work
+  package 4: the band reads the PCA's live state from one snapshot of
+  `autoRuns` read with the store's subscription as well as its own
+  (the fix list of package 4 makes it), never `aboutToStart` with
+  `autoRuns.subscribe` alone, which misses the changes of the store;
+  its Stop of the PCA calls `pause`, never `stop([pca])`, which would
+  leave the PCA live; any Run it offers is refused while the filtered
+  variants are written; and while the PCA is live and nothing runs it
+  offers the tab's "Stop recalculating", so that the automatic runs can
+  be ended from any tab before the next change (WCAG 2.2.1, the
+  `accessibility` review of package 4).
 - [ ] 5.4 The measurement of "Stopping", alone on the machine
   (deliverable 6). Stands on 5.3.
 
