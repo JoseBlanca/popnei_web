@@ -7,7 +7,12 @@ approved that day has it: what the store puts in the cache from stage 3,
 and what it never puts; the functions do not change, and this revision
 is approved by the owner on 26 September 2026. Revised on 27 September
 2026 for stage 4, approved by the owner on 28 September 2026: the calculation worker keeps no
-intermediate result before the kinship of stage 7. The cache keeps the results of the analyses under their keys, on the
+intermediate result before the kinship of stage 7. Revised on 10
+October 2026 for `docs/designs/no-undo.md`, approved by the owner that
+day: a function `remove`, with which the store of `popgen2.html` throws
+away the result under a key an analysis leaves behind
+(`docs/specs/core/store.md`, `dropLeftBehind`); nothing else changes,
+and `popgen.html` does not call it. The cache keeps the results of the analyses under their keys, on the
 page, so that a result asked for again, by an undo, a value set back, or a
 step of the application visited again, is shown with no calculation. It is
 bounded in bytes, and drops first the result used longest ago
@@ -172,6 +177,14 @@ The value under a key, or `null`; it is not a use.
 export function get<V>(c: Cache<V>, key: Key): V | null;
 ```
 
+The cache without the value under `key`, its bytes taken from the
+total; `c` itself when it holds none, so that a store that removes
+nothing gives back the same state. From 10 October 2026.
+
+```ts
+export function remove<V>(c: Cache<V>, key: Key): Cache<V>;
+```
+
 ## The cases
 
 - **A result larger than the bound.** It is put, kept while the screen
@@ -213,6 +226,11 @@ With Vitest, at `resultBytes`, `put`, `use` and `get`.
   keeping `f` alone: `a` and `e` are dropped, and the total is 10.
 - `get` does not change the cache: the cache after it is the same object,
   and the order of the next drop is the same.
+- `remove`, from 10 October 2026: put `a` of 40 and `b` of 40, remove
+  `a`: `get(a)` is `null`, the total 40, and `b` is kept; remove `a`
+  again: the same object; the order of the next drop among the others
+  is the one before the remove. In the property below, a remove drawn
+  among the puts and the uses keeps the total the sum of the entries.
 - **Properties, with fast-check**, which draws random sequences of puts
   and uses of values of random sizes, and shrinks a failure to the
   smallest one. After each put, the total is the sum of the bytes of the
