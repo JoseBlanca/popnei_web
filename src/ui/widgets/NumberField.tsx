@@ -164,6 +164,22 @@ function moveCaret(input: HTMLInputElement, key: string, shift: boolean): void {
   else input.setSelectionRange(length, length);
 }
 
+/** Calls `handler`, a screen's handler of a commit, and throws what it
+    throws a moment later, to the page's handler of errors, as the gate
+    does with a listener's: React Aria calls the handler in the middle of
+    its commit, before it puts the text back, and a throw there would
+    leave the text, and the hold of the box, for good, with every later
+    commit throwing again. */
+function callScreen(handler: () => void): void {
+  try {
+    handler();
+  } catch (error) {
+    queueMicrotask(() => {
+      throw error;
+    });
+  }
+}
+
 /** What a number field is drawn with. */
 export interface NumberFieldProps {
   /** The name of the field, shown above it, with its range. */
@@ -462,7 +478,7 @@ export function NumberField({
             // the number it was given, which the screen may now change.
             if (!Number.isFinite(committed)) {
               if (Number.isNaN(committed) && onEmptied !== undefined) {
-                onEmptied();
+                callScreen(onEmptied);
               }
               return;
             }
@@ -477,7 +493,9 @@ export function NumberField({
             );
             if (checked.ok) {
               setRefused(null);
-              onChange(checked.value);
+              callScreen(() => {
+                onChange(checked.value);
+              });
               return;
             }
             // Nothing is sent, so React Aria shows the value it was given.

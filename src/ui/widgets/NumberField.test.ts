@@ -830,6 +830,41 @@ describe("NU3 D2 the number box holds from the first key to the commit", () => {
     expect(errors).toEqual([failure]);
   });
 
+  test("a screen whose handler of the number throws: the commit ends, the hold is let go, and the error reaches the page's handler", async () => {
+    const gate = createRunGate();
+    const failure = new Error("the screen failed");
+    const { input } = drawWith(gate, newCalls(), 0.5, {
+      onChange: () => {
+        throw failure;
+      },
+    });
+    typeOver(input, "0.2");
+    expect(gate.underWay()).toBe(1);
+    const errors = await uncaughtOf(() => {
+      blur(input);
+    });
+    expect(gate.underWay()).toBe(0);
+    expect(errors).toEqual([failure]);
+  });
+
+  test("a screen whose handler of an emptied box throws: the commit ends, the hold is let go, and the error reaches the page's handler", async () => {
+    const gate = createRunGate();
+    const failure = new Error("the screen failed");
+    const { input } = drawWith(gate, newCalls(), 0.5, {
+      onEmptied: () => {
+        throw failure;
+      },
+    });
+    focus(input);
+    empty(input);
+    expect(gate.underWay()).toBe(1);
+    const errors = await uncaughtOf(() => {
+      press(input, "Enter");
+    });
+    expect(gate.underWay()).toBe(0);
+    expect(errors).toEqual([failure]);
+  });
+
   test("let go at the loss of the focus, which commits the number", () => {
     const gate = createRunGate();
     const calls = newCalls();
