@@ -12,7 +12,9 @@ history, by the store's `open` and `applyAfresh`, which call
 individuals file is neither a step nor a new history: the store's
 event `populationColumnChosen` writes it into every project of the
 history that holds that read, as a read is recorded, with `mapProjects`.
-Nothing in this module changes. The code is in `src/core/history.ts`. The history keeps the projects the user has had, so that an undo
+Nothing in this module changes, and nothing changed in it when the
+branch `pca-tab` built Undo and Redo on that page on 9 October 2026
+(`docs/plans/analyses-pca.md`, work packages 3 and 4). The code is in `src/core/history.ts`. The history keeps the projects the user has had, so that an undo
 gives back the previous one and a redo the one after it. Because a result
 is found by the key that a project gives it (`docs/architecture.md`,
 section 3), an undo also brings back the results of the previous project,

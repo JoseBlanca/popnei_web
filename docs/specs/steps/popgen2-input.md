@@ -435,7 +435,9 @@ a step. The column the entry chooses at the end of a read is no step
 either, and goes through neither: the store's `populationColumnChosen`
 records it as the read is recorded (`docs/specs/entry.md`). The
 descriptions below remain, though only that one is shown, in the
-tooltip of Undo.
+tooltip of Undo. Built on the branch `pca-tab` on 9 October 2026, work
+package 3 of `docs/plans/analyses-pca.md`; its review moved the
+column the page chooses from `applyAfresh` to `populationColumnChosen`.
 
 It sends these commands, as the old step's
 (`src/ui/steps/individuals/commands.ts`), the column and None with

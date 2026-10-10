@@ -7,7 +7,11 @@ its words need. The words are the screen's
 (`docs/specs/steps/popgen2-pca.md`, "Its words"). It is a pure function
 of core, so that every case is tested in node with no browser
 (`docs/designs/analyses-pca.md`, "What WCAG 2.2 asks, and how (b) meets
-it", the last paragraph). Written on 9 October 2026; no code yet. It
+it", the last paragraph). Written on 9 October 2026, and built on the
+branch `pca-tab` that day in `src/core/popgen2Tabs.ts`, work package 1
+of `docs/plans/analyses-pca.md`, with the reason `noColumnToChoose`
+added by its review; the module also gives `PageTab`, the ids of all
+five tabs, which the screen uses. It
 develops section 7 of `docs/architecture.md`, as revised that day, and
 depends on `docs/specs/core/project.md` for the project and the reads of
 its files, and on `populationCounts` of `src/core/populations.ts`

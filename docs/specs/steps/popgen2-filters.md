@@ -155,12 +155,14 @@ opened; it goes back there when the page draws it again.
 ### Undo, Redo and their keys
 
 Revised on 9 October 2026: the owner brought Undo and Redo back, at the
-top right corner of the page, each drawn only while it has a step to
+right end of the line of the page's heading, each drawn only while it has a step to
 take, with their keys caught on the whole page whether or not a button
 is shown. What they do, where they are and how their keys live beside
 the number boxes is in `docs/specs/steps/popgen2-pca.md`, "Undo and
-Redo", which replaces this section where the two differ. The rest of
-this section is the state of 8 October 2026.
+Redo", which replaces this section where the two differ; built on the
+branch `pca-tab` that day, work package 4 of
+`docs/plans/analyses-pca.md`. The rest of this section is the state of
+8 October 2026.
 
 The page draws no Undo and no Redo, as the owner decided on 8 October
 2026 after trying the thresholds, until a later feature needs them. So

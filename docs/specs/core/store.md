@@ -130,7 +130,14 @@ plan `docs/plans/analyses-pca.md`: while a PCA runs, that page locks
 the filters it reads and makes the keys and buttons of Undo and Redo
 wait, so on that page no change the screen allows leaves a calculation
 behind, and the setting's stop is a guard; the store's rule is the same
-for every change. The store is the one object of core that
+for every change. Built on the branch `pca-tab` on 9 October 2026,
+work package 3 of `docs/plans/analyses-pca.md`; its review changed
+that the column the page chooses at the end of a read goes through a
+new event, `populationColumnChosen`, with no step, and not through
+`applyAfresh`; that `applyAfresh` is on the store of `popgen2.html`
+alone, a `Popgen2Store`; and, on 10 October 2026, that the gate of the
+page makes a waiting run of the arrow keys a change before `startRun`
+too. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.

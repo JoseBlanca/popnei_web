@@ -11,7 +11,13 @@ be downloaded"; `docs/functionality.md`, section 2). This spec gives the
 widget of the menu, what the components of the tables and the React
 wrappers of the plots take for it, `usePlot`, which gives a wrapper the
 handle of its plot, and the pure functions of core that write the CSV.
-Written on 9 October 2026; no code yet. It develops section 7 of
+Written on 9 October 2026, and built on the branch `pca-tab` on 9 and
+10 October 2026, work packages 5 and 6 of `docs/plans/analyses-pca.md`,
+in `src/core/csv.ts`, `src/core/fileNames.ts`,
+`src/ui/widgets/DownloadMenu.tsx` and `downloadItems.ts`; its reviews
+placed the menu on a line of its own, made a table's download able to
+wait, and put the PCA's menu beside the title of its plot, as the
+sections below now say. It develops section 7 of
 `docs/architecture.md`, as revised that day, and depends on
 `docs/specs/charts/plot2d.md`, "The export", for `toSVG` and `toPNG`,
 and on `docs/specs/analyses/pca.md`, "On popgen2.html", for the CSV of

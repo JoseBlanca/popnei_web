@@ -5,12 +5,24 @@ the row of five tabs under the two boxes, Variants, Individuals, PCA,
 Populations and Distances, with the tabs of the analyses greyed while
 they cannot run; the PCA tab, a PCA or a PCoA of the individuals of the
 variants file; a button "Download…" on every table and every plot of
-the page; and Undo and Redo at the top right corner of the page. It
+the page; and Undo and Redo at the right end of the line of the page's
+heading. It
 develops the design `docs/designs/analyses-pca.md`, approved by the
 owner on 9 October 2026 with its ten answers, and section 5 of
 `docs/functionality.md`, "The individuals". It covers case 3 of
 `docs/use-cases.md`, "Look for clusters of individuals". Written on 9
-October 2026, before any code. The owner is asked to approve it as a
+October 2026, before any code, and built on the branch `pca-tab` on 9
+and 10 October 2026, work packages 1 to 6 of
+`docs/plans/analyses-pca.md`; not yet tried by the owner. The rounds of
+review of that plan changed it where it now says so with its date:
+a running PCA locks only what it reads, not the column of the
+populations (the session's recommendation, pending the owner's answer);
+a locked control says its reason on the mouse, a press and the focus;
+the reason of an empty LD distance said once, under its field; Run
+ending a run of the arrow keys before it starts; the result's code
+downloaded when the tab is first shown, with Try again; the table of the
+individuals with no frozen first column; and the tab order of the
+result. The owner is asked to approve it as a
 whole: every question of the design was answered on 9 October 2026, so
 nothing is left open, and the choices the session made, listed at the
 end, are for the owner to change after trying the page.
@@ -113,8 +125,8 @@ the old page, given other filters (`docs/specs/worker/protocol.md`).
 - Every table and every plot of the page has a button "Download…",
   which offers the table as CSV, or the plot's image as SVG or PNG and
   its data as CSV.
-- Undo and Redo are back, at the top right corner of the page, each
-  shown only while it has a step to take. Ctrl+Z and Cmd+Z undo.
+- Undo and Redo are back, at the right end of the line of the page's
+  heading, each shown only while it has a step to take. Ctrl+Z and Cmd+Z undo.
 - Opening, removing or reading again the individuals file is no step of
   Undo, as opening the variants file already is not.
 
@@ -133,7 +145,9 @@ the tab shown.
 places of their own, Undo then Redo, Redo's at the right margin of the
 page. A place stays empty while its button is hidden, so neither button
 moves when the other comes or goes, and a second click lands where the
-first did. The line has the height of the heading whether or not a
+first did. The right margin is that of the page's column, at most 48
+rem wide, so at 1280 px the buttons stand about 528 px from the window's
+right edge, not in its corner. The line has the height of the heading whether or not a
 button is shown, so the page under it does not move when Undo appears.
 At 320 px the heading and both buttons stay on one line.
 
@@ -407,7 +421,10 @@ Then three, in this order:
   Run a short line points to it (below). Until 10 October 2026 the same
   words stood in red under the field and again beside Run, and a screen
   reader read them twice; the review of work package 6 of the plan
-  found it. Turning the switch off removes the fields and keeps their
+  found it. Under the two fields, and describing both, the old panel's
+  line of what the pruning keeps: "Of two variants closer than the
+  distance, and with an r² above the maximum, the first is kept."
+  Turning the switch off removes the fields and keeps their
   values for when it is turned on again.
 
 The number fields follow the rules of the fields of the old panel and
@@ -428,7 +445,7 @@ describes it, the first of these:
 | the PCA, of a file of more than 9,381 individuals, which the opening already tells | the old panel's, "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." |
 | the one pass is running, or is about to start | "Run once panel.nei is read to the end: the reading under way in the box Variants file and the PCA cannot run at once." |
 | the one pass was stopped by the user, or failed in a way its box offers Start again for | "Run once panel.nei is read to the end: Start again its reading in the box Variants file." |
-| the one pass refused by popnei, or the file could no longer be read, where the box offers no Start again (`resume` of `src/ui/autoRuns.ts`) | "Run once panel.nei is read to the end: it could not be read, as the box Variants file says. Open it again there, or open another." |
+| the one pass refused by popnei, or the file could no longer be read, where the box offers no Start again (`startAgainMends` of `src/ui/variants/chain.ts`) | "Run once panel.nei is read to the end: it could not be read, as the box Variants file says. Open it again there, or open another." |
 | more than 9,381 individuals kept, the PCoA | the old panel's, with "Keep at most 9,381 with the filters of individuals in the Variants tab" |
 | the filters of the individuals keep none | the store's, ending "Loosen them." |
 | the LD pruning on with no distance | "Type the LD distance above, or turn the LD pruning off."; the reason in full stands under the field of the distance ("Its filters") |
@@ -577,8 +594,10 @@ every negative number on the screen with "−", the minus sign.
 
 ### The downloads
 
-Every table and every plot of the page has one button, "Download…",
-above its top right corner, beside its caption or title, which opens a
+Every table and every plot of the page has one button, "Download…", at
+the right end of a line of its own above it, or beside the title of the
+PCA's plot, and under the row of the threshold's box for a histogram
+(`docs/specs/widgets/downloads.md`, "A plot"), which opens a
 menu, React Aria's `MenuTrigger` and `Menu`:
 
 | on | the menu |
@@ -804,8 +823,10 @@ by the widget, and its reason as its description, so a screen reader
 says "PCA, tab, dimmed, 3 of 5" and then the reason. Its tooltip shows
 on the focus, on the mouse and on a press, stays while the focus or the
 mouse is on it, and goes with Escape (1.4.13). It opens under the row,
-at its start, so that at 320 px the tooltip of a tab on the first line
-does not hide the second. The tab shown keeps "selected" for a screen
+under its own tab, so that at 320 px the tooltip of a tab on the first
+line does not hide the second (under its own tab since 9 October 2026,
+by the review of work package 1 of the plan; at the start of the row
+before). The tab shown keeps "selected" for a screen
 reader while the focus rests on a greyed one, so the user can tell
 which content is under the row. A greyed tab is not told by colour
 alone (1.4.1): it never has the weight of the tab shown, nor its bar
@@ -863,8 +884,9 @@ its reason; Undo read with its step; a menu of a download.
   `stricterCommand` sets `follow` and the value in one step.
 - `stricterBound(p, kind, stepDecimals)` of
   `src/ui/analyses/pca/stricter.ts`, the upper end and the decimals of
-  each field, and `stricterLines`, the line of a refusal and the line of
-  the Variants tab stricter: the Variants tab at 0.1, at 0.0035, off;
+  each field, and `stricterLines`, the line of a refusal, the line of
+  the Variants tab stricter and the line "1 keeps every variant: type a
+  lower value to filter.": the Variants tab at 0.1, at 0.0035, off;
   the decimals of the step of the Variants tab's box given and not
   given. (`stepDecimals` since 9 October 2026, by task 6.1 of the plan:
   the decimals of the box come from the axis of its histogram, which the

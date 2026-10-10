@@ -146,7 +146,14 @@ no individuals file locks, which names the individuals with no
 population "Unclassified", and which gives the CSV of the coordinates
 that vavilov-explorer imports (below, "On popgen2.html"). The old page
 keeps every rule above and below; the job, the result and the worker do
-not change. No code yet.
+not change. Built on the branch `pca-tab` on 9 and 10 October 2026,
+work packages 2 and 6 of `docs/plans/analyses-pca.md`; the rounds of
+review changed it where it now says so with its date: the commands
+given the page with its method, `CommandPage`; `followCommand` refused
+by type where `popgen2.html` has no step for it; `pcaPageOf`; an own
+value of 1 that is no filter while the Variants tab's is off; the
+reason of an empty LD distance said once, under its field; and the memory
+and the time of a PCA run after the one pass ("How it runs").
 
 The decisions of the owner and of the writers of the specs of stage 4,
 of 27 and 28 September 2026, that this spec takes are named where they
@@ -1993,7 +2000,7 @@ step", which the page does not have.
   filter that follows is no LD filter, and the screen shows `follow`
   true as the LD pruning off. The FILTER column and the observed
   heterozygosity are always the Variants tab's.
-- **The defaults**, `PCA_DEFAULTS` with `ld` `{ follow: false,
+- **The defaults**, `PCA2_DEFAULTS`, `PCA_DEFAULTS` with `ld` `{ follow: false,
   maxAllowedR2: 0.1, maxDist: null }`: the LD pruning on, at r² 0.1,
   with no distance, so the PCA is locked until the user types one or
   turns it off (the owner's numbers of 27 September 2026, and the rule
