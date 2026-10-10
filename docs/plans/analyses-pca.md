@@ -1416,3 +1416,28 @@ what a pass over a file of many more variants leaves in the worker
 before a PCA is not measured here. The times of 9,381 individuals are 10 to 38%
 longer than on 29 September, under a load the old measurement did not
 have.
+
+The review of work package 7, `spec` and `tests` on the test code: the
+measurement now checks that the PCA is posted to the worker that
+answered the one pass, and that its result is of the method chosen (a
+PCoA's result has no count of variants, so any result passed as one);
+its comments say the time runs from the run posted to the worker, as in
+`IP6 D6`. Commit 07270f14. The four runs of 1,000 individuals, run again
+alone in Chromium and WebKit, passed both checks, the pass and the run
+in worker 0. The runs of 4,000 and 9,381 individuals were not run again.
+
+### State of the plan, 10 October 2026, for the next session
+
+Work packages 1 to 8 are built, reviewed and fixed. Left: work package
+9 (the session's look at every screenshot, the whole browser check in
+chunks, the documents, the project's instructions, the report) and 10
+(the owner's try). One question to the owner is open: whether the
+population column is locked while a PCA runs (asked on 9 October; the
+code follows the session's recommendation, to lock only what the PCA
+reads). For the report, besides the answers: the PCoA's warning keeps
+the old page's words, for the owner to judge; Undo and Redo sit at the
+right edge of the column of 48 rem, not at the window's corner; a
+refused PNG's words cover the plot's corner until the next choice; three
+texts stack under an empty LD distance; the table of the individuals
+cannot freeze its first column; Safari, Firefox and VoiceOver not seen;
+the times of work package 7 taken under the load of a virtual machine.
