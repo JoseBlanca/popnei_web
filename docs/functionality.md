@@ -151,7 +151,9 @@ FILTER box, of the column of the populations the user chooses and of
 the options of the PCA; opening a variants file or an individuals
 file, removing the individuals file or reading it again with other
 options starts the history afresh, with nothing to undo. While a PCA
-runs they wait, greyed, as the filters it reads do (section 5). A
+runs, the buttons are greyed and the keys do nothing, as are the
+thresholds and the FILTER box, so that nothing the PCA reads changes
+under it. A
 threshold is on or off. It is
 turned off by emptying its box, or by giving it 1, the value at which a
 maximum keeps everything, however 1 is reached, typed or by the line
@@ -565,15 +567,17 @@ give the principal components that go into the GWAS as covariates.
   Variants, Individuals, Populations and Distances, greyed with its
   reason until a variants file is open (built on the branch `pca-tab` on
   9 and 10 October 2026, `docs/specs/steps/popgen2-pca.md`). The user
-  starts it with Run once the file has been read to the end. While it
+  starts it with the tab's button Run, which waits until the page has
+  read the variants file to the end for its plots. While it
   runs, the thresholds and the FILTER box of the Variants tab, the PCA's
   own options, Undo and Redo, and the download of the filtered variants
   wait, greyed with the reason, "Stop the PCA to change the filters.",
   so that no change of what it reads is made under it, as the owner
   decided on 9 October 2026; the individuals file and the column that
   colours the points stay open, since they only colour the points. A
-  later change of what the PCA reads takes its result off the screen,
-  and an Undo of the change brings it back without a calculation.
+  later change of what the PCA reads takes its result off the screen;
+  the page keeps the result in its memory while the tab is open, so an
+  Undo of the change brings it back without a calculation.
 
 ## 6. Each population
 

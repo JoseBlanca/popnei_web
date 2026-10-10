@@ -1004,7 +1004,8 @@ thresholds and the FILTER box of the Variants tab and the PCA's own
 options, greyed with "Stop the PCA to change the filters." ("the PCoA"
 under the PCoA), and the buttons and keys of Undo and Redo wait, as the
 download of the filtered variants waits, as the owner answered on 9
-October 2026 (answer 2 of `docs/plans/analyses-pca.md`). The box of the
+October 2026 to the question of `docs/plans/analyses-pca.md` on a
+change made while a PCA runs. The box of the
 individuals file, the column of the populations and the column that
 colours the points stay open, since the PCA's key holds none of them and
 they only colour its points: the session's recommendation of 9 October
@@ -1072,8 +1073,8 @@ individuals file the user makes go through `applyAfresh`, new in the
 store, rather than `apply`, whose steps an Undo would take back, or
 `open`, which would stop the one pass (`docs/designs/analyses-pca.md`,
 "Undo and Redo"), while the column the page chooses at a read is
-recorded as the read is, with no step. And, for the owner's answer 2 to
-the plan of that piece, a running PCA locks the filters it reads and
+recorded as the read is, with no step. And, for the owner's answer to
+the plan of that piece on a change made while a PCA runs, a running PCA locks the filters it reads and
 makes Undo and Redo wait, so the setting's stop is a guard (above, "No
 notice on `popgen2.html`").
 

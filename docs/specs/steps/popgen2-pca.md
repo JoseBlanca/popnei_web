@@ -104,8 +104,10 @@ the old page, given other filters (`docs/specs/worker/protocol.md`).
 - **React Aria** is the library of controls the page is built with,
   which gives each its keys and the words a screen reader reads.
 - **WebGL** is the part of the browser that draws the 3D view with the
-  graphics card; **three.js** the library that draws it, 134 KB
-  gzipped, downloaded the first time a 3D view is drawn.
+  graphics card; **three.js** the library that draws it, 139 KB
+  gzipped (139,369 bytes with `gzip -9` in the site built on 10 October
+  2026; 134 KB was an estimate), downloaded the first time a 3D view is
+  drawn.
 
 ## What changes for the user
 

@@ -160,7 +160,9 @@ The words of `docs/architecture.md`, as this design uses them:
 - **WebGL** is the part of the browser that draws with the graphics
   card, each drawing surface holding a **WebGL context**, of which a
   browser lets a page hold only a few at once, and **three.js** the library that draws the 3D view with it,
-  134 KB gzipped, downloaded the first time a 3D view is drawn
+  139 KB gzipped (139,369 bytes with `gzip -9` in the site built on 10
+  October 2026; 134 KB was an estimate), downloaded the first time a 3D
+  view is drawn
   (`docs/specs/analyses/pca.md`, "Its options").
 
 ## The problem, and what forces it
@@ -528,7 +530,11 @@ plan of the piece says which.
 
 ### The memory and the time
 
-Measured on the old page on 29 September 2026, with popnei
+The memory below is the memory of the browser's processes, summed:
+a browser runs a page in several programs of the operating system, and
+macOS counts the memory of each; what a calculation takes is the
+largest sum during it less the sum before it. Measured on the old page
+on 29 September 2026, with popnei
 `js-v0.1.0-dev.3`, in Chromium 153 and WebKit 26.6 on the owner's Apple
 M5 Pro (`docs/specs/analyses/pca.md`, "How it runs"): a PCA of 1,000
 individuals takes 0.31 s in Chromium and 1.21 s in WebKit; of 4,000, 16
@@ -537,19 +543,22 @@ in a tab, 205 s and 121 s, and 3.0 and 3.1 GB, WebKit the faster of the
 two from 2,000 individuals. The PCoA takes a sixth to three tenths more
 time than the PCA of the same individuals, and up to 3.4 GB. The LD pruning takes at least three fifths of a PCA
 that prunes. In a first run of that day the PCoA of 9,381 individuals
-grew WebKit by 4.10 GB. On this page the PCA runs in the worker that
-has just made the one pass, whose memory a wasm never gives back; so
-work package 7 of `docs/plans/analyses-pca.md` measured the PCA and the
-PCoA again on `popgen2.html` on 10 October 2026, with popnei 0.2.2, on
+took 4.10 GB in WebKit. On this page the PCA runs in the calculation
+worker that has just made the one pass, and popnei, compiled to run in
+the browser, never gives back the memory it once took there; so the
+plan measured the PCA and the PCoA again on `popgen2.html` on 10
+October 2026 (`docs/plans/analyses-pca.md`, work package 7, the
+measurement of a PCA after the one pass), with popnei 0.2.2, on
 the same Mac and the same VCFs of 300 variants, the LD pruning off, Run
 pressed after the pass, in Chromium 153 and WebKit 26.6, with load
 averages of 1.65 to 8.63 from a macOS virtual machine running beside
 them. Every run completed, as on the old page. At 9,381 individuals the
-PCA took 226 s and 134 s and grew the engine by 3.01 and 3.38 GB, and
-the PCoA 259 s and 215 s and 3.29 and 4.33 GB, WebKit's PCoA above the
-old page's 4.10 GB; the times are 8 to 38% longer than on 29 September,
-under that load. The pass over 300 variants left the engine 0.04 to 0.07
-GB larger in Chromium and 0.19 to 0.23 GB in WebKit, so the PCA stays in
+PCA took 226 s and 134 s and 3.01 and 3.38 GB of the memory of the
+browser's processes, in Chromium and WebKit, and the PCoA 259 s and 215
+s and 3.29 and 4.33 GB, WebKit's PCoA above the old page's 4.10 GB; the
+times are 8 to 38% longer than on 29 September, under that load. The
+pass over 300 variants left that memory 0.04 to 0.07 GB larger in
+Chromium and 0.19 to 0.23 GB in WebKit before the PCA, so the PCA stays in
 the worker of the one pass for a file of a few hundred variants; what a
 pass over many more leaves before a PCA was not measured
 (`docs/specs/analyses/pca.md`, "How it runs", has every size).
@@ -1162,33 +1171,42 @@ individuals file go through.
 
 ## The costs of the web
 
-- **Memory of the tab.** A PCA or a PCoA of 9,381 individuals grew the
-  tab by 3.01 to 4.33 GB while it ran after the one pass on this page,
-  the largest the PCoA in WebKit, measured on 10 October 2026 over a
-  file of 300 variants (above); on the old page, with no pass before it,
-  3.0 to 3.4 GB, and 4.10 GB once. The worker is started again after a PCA of more than 700
-  individuals, and the tab is then back to its size before the Run. The
+- **Memory.** A PCA or a PCoA of 9,381 individuals took 3.01 to 4.33 GB
+  of the memory of the browser's processes, summed, while it ran after
+  the one pass on this page, the most the PCoA in WebKit, measured on 10
+  October 2026 over a file of 300 variants (above); on the old page,
+  with no pass before it, 3.0 to 3.4 GB, and 4.10 GB once. After a PCA
+  of more than 700 individuals the page closes the calculation worker
+  and starts a new one, which opens the variants file again from its
+  header in at most 49 ms, so the memory falls back to what it was
+  before Run; the user sees nothing of it. The
   result holds at most 0.90 MB in the cache, and the 3D view about 0.15
   MB while its tab is hidden. The bound of 9,381 individuals is popnei's
   and locks the PCA beyond it, with its words.
-- **The page frozen.** A CSV of a table is written on the page from
-  the values it holds, all its rows. "Table as CSV" of the table of
-  10,000 rows of 20 columns, the largest of the tests, left the page
-  with no new frame for 10 ms in Chromium 153 and 17 ms in WebKit
-  26.6 at its longest gap, the medians of five saves, on the owner's Apple M5 Pro under a
-  load average near 11, on 9 October 2026 (`AP5 D5` of
-  `e2e/measure.spec.ts`), far under the 200 ms that would have moved it
-  to the light worker; so it stays on the page. Nothing else new
+- **The page frozen.** A CSV of a table is written by the page itself,
+  from the values it holds, all its rows, and while it writes the page
+  answers no click and no key. "Table as CSV" of the table of 10,000
+  rows of 20 columns, the largest of the tests, kept the page from
+  answering for 10 ms in Chromium 153 and 17 ms in WebKit 26.6, the
+  medians of five saves, on the owner's Apple M5 Pro under a load
+  average near 11, on 9 October 2026 (the plan's measurement of the CSV,
+  work package 5): too short for a user to notice. The plan had set 200
+  ms, about where a click starts to feel answered late, as the bound
+  above which the writing would move to the light worker, the third
+  thread of the tab, which reads the individuals file; so it stays on
+  the page. Nothing else new
   runs on the page but the colours of the points, a walk over the individuals once per result and colouring,
   and the table, which draws only its rows in view, as on the old page.
-- **Download size.** three.js, 139 KB gzipped (`gzip -9`, 29 September
-  2026), the first time a 3D view is drawn. The first load of
+- **Download size.** three.js, 139 KB gzipped (139,369 bytes with
+  `gzip -9` in the site built on 10 October 2026), the first time a 3D
+  view is drawn. The first load of
   `popgen2.html` went from 278.65 KB gzipped on `main` to 307.82 KB at
   the end of the piece, with the row of tabs, React Aria's menu, Undo
-  and Redo and the PCA tab's options and locks, as Vite 8.3.0 reported
-  the nine files the page loads, on 10 October 2026. The PCA tab's
-  result, its plots, tables and menus, would have added about 35 KB
-  more, under the bound of 50 KB the session set; its code is loaded
+  and Redo and the PCA tab's options and locks, as Vite 8.3.0, the tool
+  that builds the site, reported the nine files the page downloads
+  before it is drawn, on 10 October 2026. The PCA tab's result, its
+  plots, tables and menus, would have added about 35 KB more, under the
+  bound of 50 KB set above, about a fifth of the first load; its code is loaded
   apart all the same, when the PCA tab is first shown with a variants
   file open, 19.1 KB of its own and 15.6 KB it shares with the
   histograms (`docs/technology.md`, "D3 for the 2D plots"). React
@@ -1218,32 +1236,38 @@ The design was built on the branch `pca-tab` on 9 and 10 October 2026
 text above:
 
 - **Undo and Redo** stand at the right end of the line of the heading,
-  which is the right edge of the page's column, at most 48 rem wide, and
-  not the window's corner: at 1280 px some 528 px of window lie to their
-  right. The owner sees it when trying the page.
-- **A running PCA locks what it reads**, by the owner's answer 2 to the
-  plan: the thresholds and the FILTER box of the Variants tab and the
-  PCA's own options are greyed with "Stop the PCA to change the
+  which is the right edge of the page's column of text, about 770 px
+  wide, and not the window's corner: in a window 1280 px wide they stand
+  about 530 px from its right edge, where a user who looks for them in
+  the corner does not find them at once.
+- **A running PCA locks what it reads**, as the owner answered the
+  plan's second question on 9 October 2026, what a change made while a
+  PCA runs does: the thresholds and the FILTER box of the Variants tab
+  and the PCA's own options are greyed with "Stop the PCA to change the
   filters.", and Undo and Redo wait. So the case of "When a filter
   changes", a change that stops a running PCA, no longer arises from
-  the screen; the store's stop stays as a guard. The box of the
-  individuals file and the column of the populations stay open, the
-  session's recommendation, since the PCA's key holds neither; the
-  owner's answer on that is pending.
+  the screen. The store still stops a calculation whose filters change,
+  so that if a change ever got past the lock, the PCA would not run on
+  out of sight, holding the calculation worker and gigabytes of memory.
+  The box of the individuals file, its column of the populations and
+  "Colour the points by" stay open, since the PCA reads none of them and
+  they only colour its points: the session's recommendation, which the
+  page follows until the owner says otherwise.
 - **The result's code is downloaded apart**, when the PCA tab is first
   shown with a variants file open, with "Loading the result…" if a run
   ends before it arrives, and its words and Try again after a failure;
   the options and Run are in the page's first load.
-- **The table of the PCA's individuals** cannot hold its first column,
-  the names, in place while it scrolls sideways, as the review asked:
-  React Aria's virtualizer, which draws only the rows in view, gives
-  every cell a position CSS cannot pin. The table fades at its right
-  edge with "More columns: scroll sideways." until it is scrolled to
-  PC10.
-- **A greyed tab's reason**, its hidden text for a screen reader, sits
-  after the row of tabs and not in it, since inside it React Aria's list
-  stopped drawing the tabs after it; its tooltip opens under the row,
-  under its own tab.
+- **The table of the PCA's individuals**: when it is scrolled sideways
+  to see PC6 to PC10, the column of the names scrolls away with the
+  rest, where the review asked that it stay in place. The table draws
+  only the rows in view, so that 9,381 rows do not slow the page, and
+  the way it places them leaves no means to hold one column still. The
+  table fades at its right edge with "More columns: scroll sideways."
+  until it is scrolled to PC10.
+- **A greyed tab's reason**, the text a screen reader reads for it,
+  sits after the row of tabs and not in it: put in the row, it made the
+  tabs after the greyed one vanish from the screen. Its tooltip opens
+  under the row, under its own tab.
 
 ## The corrections made to the other documents
 

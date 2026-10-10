@@ -430,7 +430,10 @@ its place, with the words that say why, when the browser has no WebGL 2
 or three.js cannot be downloaded (below, "The panel"). The option not
 taken, which had been recommended, was to open on the 2D plot, which
 needs no WebGL and no download, and is what the export and the report
-carry. What it costs: three.js, 134 KB gzipped, is downloaded when the
+carry. What it costs: three.js, 139 KB gzipped (139,369 bytes with
+`gzip -9` in the site built on 10 October 2026 from commit fdddbbf3,
+139,304 on 29 September; the 134 KB written here before was an estimate
+from the classes alone), is downloaded when the
 first result of a PCA is drawn, and not only when the user asks for 3D.
 
 **The last three options change nothing that is calculated.** They are
@@ -1551,8 +1554,10 @@ the worker (below).
 
 On `popgen2.html` the PCA runs in the calculation worker that has just
 made the one pass over the file, with no restart between them, and a
-wasm never gives memory back; so the same runs were made there, by
-`AP7 D1` of `e2e/measure.spec.ts` on 10 October 2026, to see whether
+wasm never gives memory back; so the same runs were made there on 10
+October 2026, by the measurement of the plan of that tab
+(`docs/plans/analyses-pca.md`, work package 7; the test `AP7 D1` of
+`e2e/measure.spec.ts`), to see whether
 they still complete. Each run on a new page, on the same VCFs of 300
 variants, the LD pruning off, Run pressed 2 s after the pass ended,
 once each and alone on the machine; the same Mac and macOS 27.0.1,
@@ -1574,8 +1579,7 @@ the footprint before Run, beside the same run of 29 September on
 | 9,381 | WebKit 26.6 | 134 s, 3.38 GB | 121 s, 3.12 GB | 215 s, 4.33 GB | 156 s, 3.40 GB |
 
 Every run completed in both engines, as on 29 September, so nothing
-changes: the rule set before the runs (`docs/plans/analyses-pca.md`,
-work package 7) was that a run failing or closing the tab where the old
+changes: the rule the plan set before the runs was that a run failing or closing the tab where the old
 page completed it would restart the worker at the end of the one pass,
 or lower the limit of individuals on this page. WebKit's PCoA of 9,381
 individuals grew 4.33 GB, above the 4.10 GB of the old page's first run

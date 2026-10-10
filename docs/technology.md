@@ -320,8 +320,13 @@ of the Variants tab, which come when a file is opened, as `vite build`
 reported them with Vite 8.3.0 on the site built at commit fdddbbf3 on
 10 October 2026. With it in the first script the first load of
 `popgen2.html`, 307.82 KB without it by the same count, would grow by
-about 35 KB, under the 50 KB the design of the PCA tab allows it
-(`docs/plans/analyses-pca.md`, work package 6, deliverable 6); it was
+about 35 KB, under 50 KB, the most the design of the PCA tab
+(`docs/designs/analyses-pca.md`, "The costs of the web") let that tab
+add to the first load before its code had to be loaded apart: about a
+fifth of the 278.6 KB the page loaded then, so that a user who opens
+the page and never runs a PCA downloads at most about a fifth more
+before the page is drawn; the plan checked it (`docs/plans/analyses-pca.md`, work
+package 6, deliverable 6). It was
 moved out when its size was taken as about 58 KB, over that bound, and
 stays out so that a user who never runs a PCA downloads none of it, for
 a moment of waiting, "Loading the result…", only when a run ends before
@@ -363,7 +368,8 @@ above. The panel of the PCA opens on the 3D view, as the owner decided
 on 28 September 2026, so three.js, 139 KB gzipped (139,304 bytes with
 `gzip -9` in the built site, with `OrbitControls` and the plot, measured
 on 29 September 2026 on the owner's Mac, an Apple M5 Pro, where 134 KB
-had been estimated from the classes alone), is downloaded when
+had been estimated from the classes alone; 139,369 bytes in the site
+built on 10 October 2026 from commit fdddbbf3), is downloaded when
 the first result of a PCA is drawn, and not only when a user asks for
 the 3D view (`docs/specs/analyses/pca.md`, "Its options").
 
