@@ -12,7 +12,9 @@ October 2026 for `docs/designs/no-undo.md`, approved by the owner that
 day: a function `remove`, with which the store of `popgen2.html` throws
 away the result under a key an analysis leaves behind
 (`docs/specs/core/store.md`, `dropLeftBehind`); nothing else changes,
-and `popgen.html` does not call it. The cache keeps the results of the analyses under their keys, on the
+and `popgen.html` does not call it. Built on the branch `pca-tab` on
+10 October 2026, work package 1 of `docs/plans/no-undo.md`; not yet
+tried by the owner, and no review changed it. The cache keeps the results of the analyses under their keys, on the
 page, so that a result asked for again, by an undo, a value set back, or a
 step of the application visited again, is shown with no calculation. On
 `popgen2.html`, from 10 October 2026, a value set back is calculated

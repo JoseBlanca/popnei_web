@@ -64,6 +64,11 @@ its own: it is a block of the panel of the diversity, as the owner
 decided on 30 September 2026 (`docs/specs/analyses/sfs.md`, "Open
 points"). Approved
 by the owner on 30 September 2026.
+Revised on 10 October 2026 for `docs/designs/no-undo.md` and the band
+of `popgen2.html`: on that page the error bar is a line of the band,
+with the same words and buttons (below, "The error bar"). Built on the
+branch `pca-tab` on 10 October 2026, work package 5 of
+`docs/plans/no-undo.md`; not yet tried by the owner.
 The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),

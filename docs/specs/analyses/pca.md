@@ -153,7 +153,13 @@ given the page with its method, `CommandPage`; `followCommand` refused
 by type where `popgen2.html` has no step for it; `pcaPageOf`; an own
 value of 1 that is no filter while the Variants tab's is off; the
 reason of an empty LD distance said once, under its field; and the memory
-and the time of a PCA run after the one pass ("How it runs").
+and the time of a PCA run after the one pass ("How it runs"). Revised
+on 10 October 2026 for `docs/designs/no-undo.md`, approved by the owner
+that day: on `popgen2.html` a key left behind is calculated again, with
+no result brought back from the cache (below, "The cases"). Built on the
+branch `pca-tab` on 10 October 2026, work packages 1 and 2 of
+`docs/plans/no-undo.md`; not yet tried by the owner, and no review
+changed it.
 
 The decisions of the owner and of the writers of the specs of stage 4,
 of 27 and 28 September 2026, that this spec takes are named where they

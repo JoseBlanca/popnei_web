@@ -13,7 +13,11 @@ branch `pca-tab` on 9 October 2026 (`docs/plans/analyses-pca.md`, work
 package 3): the column the entry chooses goes to the store's event
 `populationColumnChosen`, with no step, after the review of that work
 package found that sending it through `applyAfresh` dropped the steps
-the user made while the file was read.
+the user made while the file was read. Revised on 10 October 2026 for
+the band of `popgen2.html` (`docs/designs/no-undo.md`): on that page
+`#defects` holds the band, of which the error bar is a line (below,
+"The page"). Built on the branch `pca-tab` on 10 October 2026, work
+package 5 of `docs/plans/no-undo.md`; not yet tried by the owner.
 
 25 September 2026, approved by the owner on 25 September 2026, and revised
 on 26 September 2026 with the owner's decisions at stop 9.6 of

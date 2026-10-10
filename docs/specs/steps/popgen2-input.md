@@ -10,7 +10,13 @@ with its five answers, and section 4 of `docs/functionality.md`, "The
 files of the individuals". Written on 9 October 2026, and built on the
 branch `individuals-file` the same day, work packages 3 to 6 of
 `docs/plans/input-page.md`; tried and accepted by the owner on 9
-October 2026, with no change asked. It
+October 2026, with no change asked. Revised on 10 October 2026 for
+`docs/designs/no-undo.md`, approved by the owner that day: the heading
+"Popnei" moves into the band at the top of the window, and the page has
+no Undo, so no description of a command is shown (below, "The order of
+the page" and the commands). Built on the branch `pca-tab` on 10
+October 2026, work packages 2 and 5 of `docs/plans/no-undo.md`; not yet
+tried by the owner. It
 covers step 2 of case 4 of `docs/use-cases.md`, how many individuals
 each population has, and the file of the populations that case 3 needs
 for the colours of its PCA.

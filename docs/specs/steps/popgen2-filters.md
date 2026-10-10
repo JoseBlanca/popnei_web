@@ -142,7 +142,7 @@ them and does not repeat them.
   typing its number or turning it off is a change of the project, with
   no notice.
 - The page has no Undo and no Redo, and Ctrl+Z changes nothing on it
-  but the text of a number box, as the owner decided on 8 October 2026
+  but the text of a number box or of a field of text, as the owner decided on 8 October 2026
   and again, for good, on 10 October 2026.
 - A threshold is on or off. Off, its box shows 1 and its line stands
   at the top of the axis, both in grey, with no shading.

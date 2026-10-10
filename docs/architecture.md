@@ -3180,8 +3180,10 @@ src/ui/
                     with the row of Undo and Redo and their keys, reused
                     from shell/ without the rest of the shell, a row the
                     owner hid on 8 October 2026, brought back on 9
-                    October 2026, and took away with their keys on 10
-                    October 2026; from 8 October 2026, no notice; and,
+                    October 2026, and took away on 10 October 2026,
+                    when the window came to refuse their keys
+                    (refuseUndoKeys of shell/shortcuts.ts); from 8
+                    October 2026, no notice; and,
                     from 10 October 2026, the band (band/) drawn in
                     #defects in the place of the error bar, the tab
                     shown (pageTab.ts) given to both roots
@@ -3450,12 +3452,17 @@ band of `popgen2.html` (section 7): the rows of `history.ts`,
 `store.ts`, `popgen2.tsx`, `popgen2Store.ts`, `autoRuns.ts`,
 `variants/`, `defects.ts`, `shell/` and `widgets/`, and two new rows of
 `src/ui`, `band/` and `pageTab.ts`. No rule of the imports changes:
-`band/` imports the store's types, `store.tsx`, `popgen2Store.ts`,
-`autoRuns.ts`, `defects.ts`, `pageTab.ts`, `runSeconds.ts`; of
+`band/` imports, of core, `analyses/pca.ts` (`pcaOnPopgen2`,
+`pcaOptions`), `fileNames.ts` (`writtenName`), `project.ts`
+(`escaped`), and the types of `store.ts`, `keys.ts` and
+`popgen2Tabs.ts`; the types of `src/worker/protocol.ts`; of `src/ui`,
+`store.tsx`, `popgen2Store.ts`, `autoRuns.ts`, `defects.ts`,
+`pageTab.ts`, `runSeconds.ts`, `classOf.ts`; of
 `variants/`, `chain.ts` and `words.ts`, for the one pass; of `shell/`,
 the words of the error bar, `barSave.ts`, its status region,
 `said.ts`, `ErrorBoundary.tsx`, `focusKept.ts` and `status.ts`; of
-`analyses/`, `words.ts`, `titles.ts`, `pca/words.ts`, and the
+`analyses/`, `words.ts`, `titles.ts`, `pca/words.ts`, the words of
+"Stop recalculating" of `AnalysisPanel.tsx`, and the
 attributes of the headings of `AnalysisPanel.tsx` and `Warnings.tsx`,
 which its link gives the focus to; and the widgets, as `variants/`
 does; nothing of core imports it. The
