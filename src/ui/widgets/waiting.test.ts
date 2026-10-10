@@ -535,6 +535,23 @@ describe("AP10 D1 the select of the method that waits while a PCA runs", () => {
     }
   });
 
+  test("its list open when it begins to wait is closed, and stays closed when the wait ends", () => {
+    const chosen: string[] = [];
+    drawMethodSelect(null, chosen);
+    act(() => {
+      selectButton().focus();
+      selectButton().dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+      );
+    });
+    expect(document.querySelector('[role="listbox"]')).not.toBeNull();
+    drawMethodSelect(REASON, chosen);
+    expect(document.querySelector('[role="listbox"]')).toBeNull();
+    drawMethodSelect(null, chosen);
+    expect(document.querySelector('[role="listbox"]')).toBeNull();
+    expect(chosen).toEqual([]);
+  });
+
   test("with no reason, its button is not marked, and Enter opens its list", () => {
     const chosen: string[] = [];
     drawMethodSelect(null, chosen);

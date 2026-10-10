@@ -106,6 +106,10 @@ export function Select<T extends string>({
   // Whether the list is open: held here, so that a select that waits
   // keeps it closed.
   const [open, setOpen] = useState(false);
+  // A list open when the wait begins is closed, and stays closed when the
+  // wait ends: set during the drawing, as React has a state that follows
+  // a prop set.
+  if (waits && open) setOpen(false);
   // The field, label and button, which the tooltip is placed under.
   const anchorRef = useRef<HTMLDivElement>(null);
   // Whether it waits, read when React Aria calls `chosen`, which may be
