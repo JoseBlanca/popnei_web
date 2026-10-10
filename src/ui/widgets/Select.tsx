@@ -35,6 +35,7 @@ import { classOf } from "../classOf.ts";
 import { ProblemIcon } from "./Problem.tsx";
 import styles from "./Select.module.css";
 import { WaitingTooltip } from "./WaitingTooltip.tsx";
+import { ariaDisabledRef } from "./waiting.ts";
 
 /** One choice of a select. */
 export interface SelectItem<T extends string> {
@@ -142,7 +143,7 @@ export function Select<T extends string>({
           <AriaSelect
             ref={(node) => {
               anchorRef.current = node;
-              markWaiting(node?.querySelector("button") ?? null, waits);
+              ariaDisabledRef(waits)(node?.querySelector("button") ?? null);
             }}
             className={classOf(styles, "field")}
             value={value}
@@ -245,15 +246,6 @@ export function Select<T extends string>({
       )}
     </WaitingTooltip>
   );
-}
-
-/** Marks the button `node` of a select that waits `aria-disabled`, and
-    takes the mark away from one that does not. React Aria never sets
-    it on the button, so it stays until this is called again. */
-function markWaiting(node: HTMLButtonElement | null, waits: boolean): void {
-  if (node === null) return;
-  if (waits) node.setAttribute("aria-disabled", "true");
-  else node.removeAttribute("aria-disabled");
 }
 
 /** Whether the key of `event` chooses an item of a closed select in

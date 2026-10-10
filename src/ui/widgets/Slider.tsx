@@ -39,7 +39,7 @@ import {
 import { classOf } from "../classOf.ts";
 import styles from "./Slider.module.css";
 import { WaitingTooltip } from "./WaitingTooltip.tsx";
-import { describedByOf } from "./waiting.ts";
+import { ariaDisabledRef, describedByOf } from "./waiting.ts";
 
 /** What a slider is drawn with. */
 export interface SliderProps {
@@ -105,8 +105,7 @@ export function Slider({
     const input = inputRef.current;
     if (input === null) return;
     input.setAttribute("aria-valuetext", text);
-    if (waits) input.setAttribute("aria-disabled", "true");
-    else input.removeAttribute("aria-disabled");
+    ariaDisabledRef(waits)(input);
   });
   return (
     <WaitingTooltip text={waiting} anchor={trackRef}>
