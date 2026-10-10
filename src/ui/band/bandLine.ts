@@ -134,26 +134,40 @@ export interface Band {
 /**
  * What the band shows, from what it reads of the page, `page`, or `null`
  * before the store is made, when it shows an error met as the page
- * started and nothing else; and from the log of the errors, `defects`.
- * Throws a defect when the store says a Stop waits for an analysis the
- * page does not have.
+ * started and nothing else; and from the log of the errors, `defects`:
+ * `lineOf` and `errorOf` together. Throws a defect when the store says a
+ * Stop waits for an analysis the page does not have.
  */
 export function bandOf(page: BandPage | null, defects: DefectsState): Band {
+  return {
+    line: page === null ? NOTHING : lineOf(page),
+    error: errorOf(defects, page !== null),
+  };
+}
+
+/** The line of an error of the application, from the log of the errors,
+    `defects`, alone, so that a defect of the line after the heading does
+    not take it with it; `started`, whether the store is made, else the
+    error was met as the page started. `null` while there is none. */
+export function errorOf(
+  defects: DefectsState,
+  started: boolean,
+): BandError | null {
   const first = defects.first;
-  const error: BandError | null =
-    first === null
-      ? null
-      : {
-          text: barText(first, page === null ? "starting" : "noSaving", false),
-          more: defects.more,
-        };
-  return { line: page === null ? NOTHING : lineOf(page), error };
+  return first === null
+    ? null
+    : {
+        text: barText(first, started ? "noSaving" : "starting", false),
+        more: defects.more,
+      };
 }
 
 const NOTHING: BandLine = Object.freeze({ kind: "nothing" });
 
-/** The line of `page`, the first that holds of "The line" of the spec. */
-function lineOf(page: BandPage): BandLine {
+/** The line after the heading of `page`, the first that holds of "The
+    line" of the spec. Throws a defect when the store says a Stop waits
+    for an analysis the page does not have. */
+export function lineOf(page: BandPage): BandLine {
   const { state } = page;
   const project = state.project;
   const variantsName = project.variants?.name ?? null;

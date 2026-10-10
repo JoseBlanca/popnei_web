@@ -19,7 +19,11 @@ import type { Root } from "react-dom/client";
 import { createClient } from "../worker/client.ts";
 import type { Client } from "../worker/client.ts";
 import { makeFilesWorker, makeRunnerWorker } from "../worker/start.ts";
-import { createDefects, isResizeObserverNoise } from "./defects.ts";
+import {
+  createDefects,
+  defectsRootOptions,
+  isResizeObserverNoise,
+} from "./defects.ts";
 import type { Defects } from "./defects.ts";
 import { createFiles } from "./files.tsx";
 import type { Files } from "./files.tsx";
@@ -139,7 +143,10 @@ export function startPage<B>(
   const defects = createDefects();
   listenForDefects(defects);
 
-  const defectsRoot = createRoot(pageElement("defects"));
+  const defectsRoot = createRoot(
+    pageElement("defects"),
+    defectsRootOptions(defects),
+  );
   const draw = (made: B | null): void => {
     defectsRoot.render(
       <StrictMode>

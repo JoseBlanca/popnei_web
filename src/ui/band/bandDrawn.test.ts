@@ -12,11 +12,15 @@ import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { setVariantFilter } from "../../core/project.ts";
+import type { AppState } from "../../core/store.ts";
 import { summaryResult } from "../../core/testSupport.ts";
+import type { JobResult } from "../../worker/protocol.ts";
+import { defectsRootOptions } from "../defects.ts";
 import { createPageTab } from "../pageTab.ts";
 import type { PageTabStore } from "../pageTab.ts";
 import { PCA_TAB_CONTENT_ID } from "../pageTab.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
+import type { PageStore } from "../store.tsx";
 import { createAnnouncer } from "../shell/status.ts";
 import type { Announcer } from "../shell/status.ts";
 import { Band } from "./Band.tsx";
@@ -62,8 +66,12 @@ afterEach(() => {
 });
 
 /** Draws the band over `testPage`, with a tab shown of its own and an
-    announcer, and gives them. */
-async function drawBand(testPage: TestPage): Promise<{
+    announcer, and gives them; with the store `store` in place of the
+    page's when given. */
+async function drawBand(
+  testPage: TestPage,
+  store: PageStore = testPage.store,
+): Promise<{
   readonly pageTab: PageTabStore;
   readonly announcer: Announcer;
 }> {
@@ -77,7 +85,7 @@ async function drawBand(testPage: TestPage): Promise<{
         createElement(Band, {
           defects: testPage.defects,
           page: {
-            store: testPage.store,
+            store,
             autoRuns: testPage.auto,
             pageTab,
             announcer,
@@ -265,5 +273,51 @@ describe("NU5 D2 the band drawn", () => {
     expect(pause).toHaveBeenCalledWith("pca");
     expect(container.textContent).toBe("Popnei");
     expect(document.activeElement).toBe(heading());
+  });
+
+  test("a defect while the band works out its line empties that line alone: the heading stays, and the defect, and an error after it, are in the line of an error", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    // The root of #defects as the entry makes it, which gives what a
+    // boundary caught to the log of the errors.
+    act(() => {
+      root.unmount();
+    });
+    root = createRoot(container, defectsRootOptions(testPage.defects));
+    const logged = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    // The store as the band reads it, saying that a Stop waits for an
+    // analysis the page does not run, the same object until it changes.
+    const real = testPage.store;
+    let read: AppState<JobResult, Blob> | null = null;
+    let given: AppState<JobResult, Blob> | null = null;
+    const store: PageStore = {
+      ...real,
+      getState: () => {
+        const now = real.getState();
+        if (now !== read || given === null) {
+          read = now;
+          given = { ...now, stoppedAwaitingWorker: "notOnThisPage" };
+        }
+        return given;
+      },
+    };
+
+    await drawBand(testPage, store);
+    await settled();
+
+    expect(heading()?.textContent).toBe("Popnei");
+    expect(container.querySelector('[role="alert"]')?.textContent).toMatch(
+      /^The application met an error of its own: popnei_web defect: .*notOnThisPage/u,
+    );
+    await act(async () => {
+      testPage.defects.report(new Error("later"), "event", null);
+      await Promise.resolve();
+    });
+    await press(button("Details"));
+    expect(container.textContent).toContain("1 more error followed it.");
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
   });
 });

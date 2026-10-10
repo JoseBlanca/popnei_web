@@ -136,7 +136,11 @@ top of the window is drawn over the band and not under it.
 
 It is drawn in the page's second root, `#defects`, where the error bar
 was, so that it stays, with the page's heading and what happened, when
-an error has emptied the application's root.
+an error has emptied the application's root. A defect of our code met
+while the band works out or draws its line after the heading empties
+that line alone: the heading stays, and the defect is shown in the line
+of an error, which is worked out from the log of the errors alone, as
+every later error is.
 
 It stays at the top of the window in every state but one: while the
 details of an error are shown it scrolls with the page, so that at

@@ -10,7 +10,11 @@
  * It is drawn in the page's second root, `#defects`, so that it stays,
  * with the heading and what happened, when an error has emptied the
  * application's root; before the store is made, it is drawn with no
- * page and shows the heading and an error met as the page started.
+ * page and shows the heading and an error met as the page started. Its
+ * line after the heading is drawn inside a boundary that shows nothing
+ * when it fails, and the line of an error is worked out from the log of
+ * the errors alone, so that a defect of the line leaves the heading and
+ * is shown as every later error is.
  *
  * It stays at the top of the window, over the page, which keeps room
  * under it as tall as it is: the band writes its height into the
@@ -38,7 +42,7 @@ import {
 } from "react";
 
 import { pcaOnPopgen2 } from "../../core/analyses/pca.ts";
-import type { AutoRuns, LiveState } from "../autoRuns.ts";
+import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
 import type { Defects } from "../defects.ts";
 import { PCA_TAB_CONTENT_ID } from "../pageTab.ts";
@@ -54,13 +58,14 @@ import {
   detailsText,
   moreText,
 } from "../shell/barSave.ts";
+import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { keepingFocus } from "../shell/focusKept.ts";
 import type { Announcer } from "../shell/status.ts";
 import type { PageStore } from "../store.tsx";
 import { stoppedText } from "../variants/words.ts";
 import { Button } from "../widgets/Button.tsx";
 import { Link } from "../widgets/Link.tsx";
-import { bandOf } from "./bandLine.ts";
+import { errorOf, lineOf } from "./bandLine.ts";
 import type { BandLine } from "./bandLine.ts";
 import styles from "./Band.module.css";
 import {
@@ -103,9 +108,6 @@ export interface BandProps {
 /** The property of the page that holds the room kept under the band. */
 const ROOM_PROPERTY = "--band-room";
 
-/** The live state of the PCA before the store is made. */
-const NOT_LIVE: LiveState = Object.freeze({ kind: "off" });
-
 /** The band: "Popnei", what the page is doing, and an error of the
     application. */
 export function Band({
@@ -116,45 +118,23 @@ export function Band({
   const defectsState = useSyncExternalStore(defects.subscribe, () =>
     defects.getState(),
   );
-  const state = useSyncExternalStore(
+  // Read at every change, for Copy the details.
+  const popneiVersion = useSyncExternalStore(
     page?.store.subscribe ?? subscribeToNothing,
-    () => page?.store.getState() ?? null,
+    () => page?.store.getState().popneiVersion ?? null,
   );
-  // The live state, which autoRuns tells of at each change, of the store
-  // and of the gate as well as its own; and what it knows of the one
-  // pass, a Stop with no pass running among it, which the store does not.
-  const pcaLive = useSyncExternalStore(
-    page?.autoRuns.subscribe ?? subscribeToNothing,
-    () => page?.autoRuns.liveState(PCA) ?? NOT_LIVE,
+  // The variants file open, whose change draws again a line that met a
+  // defect.
+  const fileId = useSyncExternalStore(
+    page?.store.subscribe ?? subscribeToNothing,
+    () => page?.store.getState().project.variants?.fileId ?? null,
   );
-  useSyncExternalStore(
-    page?.autoRuns.subscribe ?? subscribeToNothing,
-    () => page?.autoRuns.getVersion() ?? 0,
-  );
-  const tab = useSyncExternalStore(
-    page?.pageTab.subscribe ?? subscribeToNothing,
-    () => page?.pageTab.shown() ?? "variants",
-  );
-  const stopping = useStoppingTimes(state?.stoppedAwaitingWorker ?? null);
-  const band = bandOf(
-    page === null || state === null
-      ? null
-      : {
-          state,
-          startedUnder: (key) => page.autoRuns.startedUnder(key),
-          pcaLive,
-          tab,
-          now: stopping?.now ?? 0,
-          stoppingSince: stopping?.since ?? null,
-        },
-    defectsState,
-  );
+  const error = errorOf(defectsState, page !== null);
 
   // Whether the details of the error are shown, until it is closed.
   const [detailsShown, setDetailsShown] = useState(false);
   const [boxShown, setBoxShown] = useState(false);
   const { said, say, clear } = useSaid();
-  const error = band.error;
   if (error === null && detailsShown) setDetailsShown(false);
   const details = detailsShown && error !== null;
 
@@ -173,11 +153,7 @@ export function Band({
   }, [details]);
 
   async function copyDetails(): Promise<void> {
-    const text = detailsText(
-      defects.details(),
-      state?.popneiVersion ?? null,
-      appVersion,
-    );
+    const text = detailsText(defects.details(), popneiVersion, appVersion);
     try {
       // navigator.clipboard is missing on a page served over plain HTTP
       // from another machine, and the call then throws.
@@ -215,13 +191,16 @@ export function Band({
             {PAGE_HEADING}
           </h1>
           {page !== null && (
-            <Line
-              line={band.line}
-              page={page}
-              onLink={(warnings) => {
-                showPcaTab(page.pageTab, warnings);
-              }}
-            />
+            // A defect of the line empties it alone; the root's
+            // onCaughtError gives it to the line of an error.
+            <ErrorBoundary heading={null} resetOn={fileId ?? ""}>
+              <Activity
+                page={page}
+                onLink={(warnings) => {
+                  showPcaTab(page.pageTab, warnings);
+                }}
+              />
+            </ErrorBoundary>
           )}
         </div>
         <div role="alert" data-live-announcer="true">
@@ -262,7 +241,7 @@ export function Band({
                   rows={8}
                   value={detailsText(
                     defects.details(),
-                    state?.popneiVersion ?? null,
+                    popneiVersion,
                     appVersion,
                   )}
                 />
@@ -280,6 +259,44 @@ export function Band({
       </div>
     </header>
   );
+}
+
+/** What the line after "Popnei" works out its words from. */
+interface ActivityProps {
+  readonly page: BandWith;
+  /** The link to the PCA tab was followed: to its warnings, or, `false`,
+      to its error. */
+  readonly onLink: (warnings: boolean) => void;
+}
+
+/** The line after "Popnei", worked out from the store, the live state of
+    the PCA, the tab shown and the time a Stop was first seen waiting. */
+function Activity({ page, onLink }: ActivityProps): React.JSX.Element | null {
+  const state = useSyncExternalStore(page.store.subscribe, () =>
+    page.store.getState(),
+  );
+  // The live state, which autoRuns tells of at each change, of the store
+  // and of the gate as well as its own; and what it knows of the one
+  // pass, a Stop with no pass running among it, which the store does not.
+  const pcaLive = useSyncExternalStore(page.autoRuns.subscribe, () =>
+    page.autoRuns.liveState(PCA),
+  );
+  useSyncExternalStore(page.autoRuns.subscribe, () =>
+    page.autoRuns.getVersion(),
+  );
+  const tab = useSyncExternalStore(page.pageTab.subscribe, () =>
+    page.pageTab.shown(),
+  );
+  const stopping = useStoppingTimes(state.stoppedAwaitingWorker);
+  const line = lineOf({
+    state,
+    startedUnder: (key) => page.autoRuns.startedUnder(key),
+    pcaLive,
+    tab,
+    now: stopping?.now ?? 0,
+    stoppingSince: stopping?.since ?? null,
+  });
+  return <Line line={line} page={page} onLink={onLink} />;
 }
 
 /** What the line after "Popnei" is drawn with. */

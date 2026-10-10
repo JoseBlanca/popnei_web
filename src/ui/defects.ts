@@ -8,6 +8,8 @@
  * its own, which the bar reads with `useSyncExternalStore`, as the screens
  * read the store of core.
  */
+import type { RootOptions } from "react-dom/client";
+
 import { messageOf } from "../core/thrown.ts";
 
 /** One error, as the log keeps it. */
@@ -92,6 +94,19 @@ const ORIGIN_TEXT: Readonly<Record<DefectOrigin, string>> = {
   writeStopped:
     "the calculation worker stopped during the writing of the filtered variants, with these words",
 };
+
+/** The options of the root of `#defects`, where the error bar or the
+    band is drawn: what a boundary there caught, a defect of the band's
+    line among it, goes to the log of the errors `defects`, which the
+    same root shows, and to the console. */
+export function defectsRootOptions(defects: Defects): RootOptions {
+  return {
+    onCaughtError: (error, errorInfo) => {
+      defects.report(error, "boundary", errorInfo.componentStack ?? null);
+      console.error(error, errorInfo.componentStack);
+    },
+  };
+}
 
 const EMPTY: DefectsState = Object.freeze({ first: null, more: 0 });
 
