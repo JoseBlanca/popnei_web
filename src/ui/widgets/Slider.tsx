@@ -11,10 +11,11 @@
  * Keyboard, as React Aria gives it: the arrow keys move it a step, Page
  * Up and Page Down a tenth of its range, Home and End to its ends.
  *
- * It is controlled, and gives a value when a move ends: when the pointer
- * that dragged the thumb is released, and at each press of a key, React
- * Aria's `onChangeEnd`. While the thumb is dragged, it shows the value it
- * is dragged to, its own state until the move ends, so that a drag is one
+ * It is controlled, and gives a value when a drag ends, when the pointer
+ * that dragged the thumb is released, and at once for any other change,
+ * a press of a key or a change of its input that a screen reader of a
+ * phone makes. While the thumb is dragged, it shows the value it is
+ * dragged to, its own state until the drag ends, so that a drag is one
  * change of the screen's and not one at each pixel.
  *
  * It may wait, with its reason, as the filters a running PCA reads on
@@ -80,8 +81,13 @@ export function Slider({
   waiting = null,
 }: SliderProps): React.JSX.Element {
   const waits = waiting !== null;
-  // The value the thumb is dragged to, until the move ends.
+  // The value the thumb is dragged to, until the drag ends.
   const [moving, setMoving] = useState<number | null>(null);
+  // Whether a pointer pressed on the track or the thumb drags it, until
+  // React Aria ends the move: a change that comes otherwise, a key or the
+  // input's own change, which a screen reader of a phone makes and which
+  // React Aria ends with no `onChangeEnd`, is given at once.
+  const dragging = useRef(false);
   const shown = waits ? value : (moving ?? value);
   const text = valueText(shown);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -114,17 +120,35 @@ export function Slider({
             maxValue={maxValue}
             step={step}
             onChange={(moved) => {
-              if (!waits) setMoving(moved);
+              if (waits) return;
+              if (dragging.current) setMoving(moved);
+              else if (moved !== value) onChange(moved);
             }}
             onChangeEnd={(ended) => {
+              const dragged = dragging.current;
+              dragging.current = false;
               setMoving(null);
-              // A press with no move, or a key at an end, ends where it
-              // started, and changes nothing.
-              if (!waits && ended !== value) onChange(ended);
+              // A press with no move ends where it started, and changes
+              // nothing; a key was given at its change.
+              if (!waits && dragged && ended !== value) onChange(ended);
             }}
           >
             <Label className={classOf(styles, "label")}>{label}</Label>
-            <div className={classOf(styles, "row")}>
+            {/* The pointer pressed on the track or the thumb, before
+                React Aria's handler. The element is no widget. */}
+            <div
+              className={classOf(styles, "row")}
+              onPointerDownCapture={(event) => {
+                const target = event.target;
+                if (
+                  !waits &&
+                  target instanceof Node &&
+                  trackRef.current?.contains(target) === true
+                ) {
+                  dragging.current = true;
+                }
+              }}
+            >
               <SliderTrack ref={trackRef} className={classOf(styles, "track")}>
                 <SliderThumb
                   className={classOf(styles, "thumb")}

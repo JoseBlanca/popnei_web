@@ -621,6 +621,22 @@ describe("AP10 D2 the slider of a filter of the PCA's own", () => {
     expect(given).toEqual([]);
   });
 
+  test("a change of its input that comes with no drag and no key, as a screen reader of a phone makes, gives its value once, and the value shown is the one given", () => {
+    const given: number[] = [];
+    const input = drawSlider(null, given);
+    // React reads the value through the setter of the prototype, which
+    // the value written on the element itself would pass by.
+    const prototype = Object.getPrototypeOf(input) as object;
+    act(() => {
+      Reflect.set(prototype, "value", "0.06", input);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(given).toEqual([0.06]);
+    // The screen was not given the value back: it shows the one it has.
+    expect(container.querySelector("output")?.textContent).toBe("0.05");
+  });
+
   test("at its upper end, ArrowRight, End and Page Up give no value", () => {
     const given: number[] = [];
     const input = drawSlider(null, given, 0.1);

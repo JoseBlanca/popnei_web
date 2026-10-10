@@ -370,7 +370,9 @@ Then three, in this order:
   range, Home and End to its ends, as React Aria's slider does.
 
   A move becomes a command when it ends: when the pointer that dragged
-  the thumb is released, and at each press of a key. At the upper end
+  the thumb is released, at each press of a key, and at once for a
+  change that comes with neither, as the swipe of a screen reader of a
+  phone, VoiceOver on iOS or TalkBack, makes. At the upper end
   it sends `followCommand` with `follow` true, "set back to as in the
   Variants tab"; below it, from the upper end, `stricterCommand` of
   `src/ui/analyses/pca/commands.ts`, `follow` false and the value in
