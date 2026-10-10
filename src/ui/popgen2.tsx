@@ -21,6 +21,7 @@ import { LIVE_QUIET_MS, createAutoRuns } from "./autoRuns.ts";
 import type { AutoRuns } from "./autoRuns.ts";
 import type { Defects } from "./defects.ts";
 import { FilesProvider } from "./files.tsx";
+import { createPageTab } from "./pageTab.ts";
 import {
   connectStore,
   renderApplication,
@@ -73,6 +74,9 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
   const gate = createRunGate();
   const gated = gatedStore(store, gate);
   const autoRuns = startByThemselves(store, gated, gate);
+  // The tab shown, which the row of tabs and the band both read and
+  // change.
+  const pageTab = createPageTab();
   // The PCA started again by itself, and its Stop, said in the status
   // region wherever the focus is.
   announceLive(store, autoRuns, announcer);
@@ -98,6 +102,7 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
             <FilesProvider value={files}>
               <VariantsPage
                 autoRuns={autoRuns}
+                pageTab={pageTab}
                 onCountButton={(node) => {
                   countButton = node;
                 }}

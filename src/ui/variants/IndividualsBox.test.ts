@@ -30,6 +30,7 @@ import type {
 import { LIVE_QUIET_MS, createAutoRuns } from "../autoRuns.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { FilesProvider } from "../files.tsx";
+import { createPageTab } from "../pageTab.ts";
 import {
   POPGEN2_AUTO_GROUPS,
   POPGEN2_LIVE,
@@ -245,6 +246,7 @@ async function drawPage(): Promise<Drawn> {
               { value: files },
               createElement(VariantsPage, {
                 autoRuns,
+                pageTab: createPageTab(),
                 onCountButton: () => undefined,
                 onStatsShown: () => () => undefined,
               }),

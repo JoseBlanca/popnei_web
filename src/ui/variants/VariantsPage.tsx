@@ -26,17 +26,19 @@
  * shown. The tab "Individuals" is in a boundary made again for
  * each individuals file, as the statistics are for each variants file.
  * The page holds the words of the last file not opened, which the
- * opening says and the box shows, and the tab shown, which is the
- * screen's and not the project's.
+ * opening says and the box shows. The tab shown, the screen's and not
+ * the project's, is the page's store of it, `pageTab`, which the band at
+ * the top of the page reads and changes too.
  */
 import { useId, useRef, useState } from "react";
 
-import type { PageTab } from "../../core/popgen2Tabs.ts";
 import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { StatusRegion } from "../shell/StatusRegion.tsx";
 import { useAppState } from "../store.tsx";
+import { usePageTab } from "../pageTab.ts";
+import type { PageTabStore } from "../pageTab.ts";
 import { ANALYSES_TABS_LABEL } from "./analysisTabsWords.ts";
 import { IndividualsBox } from "./IndividualsBox.tsx";
 import { OpenVariants } from "./OpenVariants.tsx";
@@ -51,6 +53,8 @@ import { INFO_NAME, OPENING_NAME, OPENING_ZONE_NAME } from "./words.ts";
 export interface VariantsPageProps {
   /** The analyses the page starts by itself. */
   readonly autoRuns: AutoRuns;
+  /** The tab shown, which the row of tabs reads and changes. */
+  readonly pageTab: PageTabStore;
   /** Called with the element of Stop or Start again of the box while
       one is shown, and with `null` when it goes, for the entry to tell
       whether the focus is on it as the count ends. */
@@ -63,12 +67,13 @@ export interface VariantsPageProps {
 /** The page that opens a variants file and shows what it holds. */
 export function VariantsPage({
   autoRuns,
+  pageTab,
   onCountButton,
   onStatsShown,
 }: VariantsPageProps): React.JSX.Element {
   const openButton = useRef<HTMLButtonElement>(null);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
-  const [tab, setTab] = useState<PageTab>("variants");
+  const tab = usePageTab(pageTab);
   const variantsHeadingId = useId();
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
   return (
@@ -119,7 +124,9 @@ export function VariantsPage({
         <ErrorBoundary heading={ANALYSES_TABS_LABEL} level={2}>
           <PageTabs
             tab={tab}
-            onTabChange={setTab}
+            onTabChange={(next) => {
+              pageTab.show(next);
+            }}
             autoRuns={autoRuns}
             openButton={openButton}
             onStatsShown={onStatsShown}

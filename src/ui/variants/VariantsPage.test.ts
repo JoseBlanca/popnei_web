@@ -32,6 +32,8 @@ import { summaryResult } from "../../core/testSupport.ts";
 import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
 import { LIVE_QUIET_MS, createAutoRuns } from "../autoRuns.ts";
 import { FilesProvider } from "../files.tsx";
+import { createPageTab } from "../pageTab.ts";
+import type { PageTabStore } from "../pageTab.ts";
 import {
   POPGEN2_AUTO_GROUPS,
   POPGEN2_LIVE,
@@ -216,6 +218,7 @@ async function settled(): Promise<void> {
 async function drawPage(pickedId?: string): Promise<{
   readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly requests: Request[];
+  readonly pageTab: PageTabStore;
 }> {
   const requests: Request[] = [];
   const store = createPopgen2Store({
@@ -257,6 +260,7 @@ async function drawPage(pickedId?: string): Promise<{
     fileOf: (): File | null => null,
   };
   const gate = createRunGate();
+  const pageTab = createPageTab();
   const tree = createElement(
     StrictMode,
     null,
@@ -277,6 +281,7 @@ async function drawPage(pickedId?: string): Promise<{
               { value: files },
               createElement(VariantsPage, {
                 autoRuns,
+                pageTab,
                 onCountButton: () => undefined,
                 onStatsShown: () => () => undefined,
               }),
@@ -290,7 +295,7 @@ async function drawPage(pickedId?: string): Promise<{
     root.render(tree);
     await Promise.resolve();
   });
-  return { store, requests };
+  return { store, requests, pageTab };
 }
 
 /** Opens the `.nei` file `name` under `fileId` and records its read. */
@@ -643,6 +648,29 @@ describe("AP1 the row of five tabs on the page", () => {
     expect(region("Individuals file")).not.toBeNull();
     expect(buttonOf("Open variants file…")).not.toBeNull();
     expect(container.querySelector('[role="tablist"]')).toBeNull();
+  });
+});
+
+describe("NU5 D2 the tab shown, which the row of tabs and the band read and change", () => {
+  test("a tab shown from outside the page is the one the row selects, and a tab chosen in the row is the one the store gives", async () => {
+    const { store, pageTab } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+
+    await act(async () => {
+      pageTab.show("pca");
+      await Promise.resolve();
+    });
+    expect(tabOf("PCA").getAttribute("aria-selected")).toBe("true");
+    expect(
+      container.querySelector('[role="tabpanel"]:not([inert]) h2')?.textContent,
+    ).toBe("PCA");
+
+    await act(async () => {
+      tabOf("Individuals").click();
+      await Promise.resolve();
+    });
+    expect(pageTab.shown()).toBe("individuals");
+    expect(tabOf("Individuals").getAttribute("aria-selected")).toBe("true");
   });
 });
 
