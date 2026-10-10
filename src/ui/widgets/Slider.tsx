@@ -148,13 +148,21 @@ export function Slider({
           >
             <Label className={classOf(styles, "label")}>{label}</Label>
             {/* The pointer pressed on the track or the thumb, before
-                React Aria's handler. The element is no widget. */}
+                React Aria's handler, with the button and keys that start
+                its move, the main button and no Alt, Ctrl or Meta: a
+                right-click or a click with Ctrl starts none, and no
+                onChangeEnd would end the drag. The element is no
+                widget. */}
             <div
               className={classOf(styles, "row")}
               onPointerDownCapture={(event) => {
                 const target = event.target;
                 if (
                   !waits &&
+                  event.button === 0 &&
+                  !event.altKey &&
+                  !event.ctrlKey &&
+                  !event.metaKey &&
                   target instanceof Node &&
                   trackRef.current?.contains(target) === true
                 ) {

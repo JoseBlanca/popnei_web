@@ -688,6 +688,39 @@ describe("AP10 D2 the slider of a filter of the PCA's own", () => {
     expect(container.querySelector("output")?.textContent).toBe("0.05");
   });
 
+  test("after a press that starts no drag, a right-click or a click with Ctrl, a change of its input gives its value", () => {
+    for (const press of [
+      { button: 2, ctrlKey: false },
+      { button: 0, ctrlKey: true },
+    ]) {
+      const given: number[] = [];
+      const input = drawSlider(null, given);
+      const thumb = input.parentElement;
+      if (thumb === null) throw new Error("no thumb");
+      const pointer = {
+        bubbles: true,
+        pointerId: 3,
+        pointerType: "mouse",
+        clientX: 10,
+        clientY: 10,
+        ...press,
+      };
+      act(() => {
+        thumb.dispatchEvent(new PointerEvent("pointerdown", pointer));
+      });
+      act(() => {
+        thumb.dispatchEvent(new PointerEvent("pointerup", pointer));
+      });
+      const prototype = Object.getPrototypeOf(input) as object;
+      act(() => {
+        Reflect.set(prototype, "value", "0.06", input);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      expect(given).toEqual([0.06]);
+    }
+  });
+
   test("with its two ends the same, a key, a press on the track and a change of its input give no value that is not a number", () => {
     const given: number[] = [];
     draw(
