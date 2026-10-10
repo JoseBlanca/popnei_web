@@ -198,16 +198,55 @@ control under the second press, which does nothing. A user who types a
 number in one box and tabs to the next finds the next one greyed. On a
 file of 9,381 individuals the user must then press Stop to go on.
 
-**(b) After one second with no change of the project and no run of the
-arrow keys held by the gate.** Each change, of any control, puts the
+**(b) After one second with no change of the project and no control
+in the middle of a change.** Each change, of any control, puts the
 start a second later, so the user can press, drag and type from one
-control to the next while the second has not passed; the controls stay
-open during that second. The arrow keys on a threshold of the Variants
-tab start it about two seconds after the last press, the gate's second
-and this one; everything else one second after the last change. The
-PCA's sliders and the list of the method need no gate: each press is a
-change of the project, which costs a new key and a drawing of the
-screen, and none starts a calculation until the presses stop.
+control to the next while the second has not passed. A change of the
+project is not the only sign that the user is at work: three states of
+a control are not changes yet, and if the second ran out during one of
+them the lock would fall under the user's hand. A drag held still on a
+PCA slider for more than a second would be dropped at its release,
+since `Slider.tsx` ignores the value its `onChangeEnd` gives while it
+waits, and the thumb would jump back; an open list of the method would
+close, since `Select.tsx` draws it open only while it does not wait; a
+number box of r² or of the distance typed in for more than a second
+would become read-only before Enter, since `NumberField` is read-only
+while it waits. So the second does not run while one of these, or a
+run of the arrow keys, is held, and starts again from the release:
+
+- **a run of the arrow keys on a threshold of the Variants tab**, held
+  by the gate as today (`hold` of `src/ui/variants/thresholdRun.ts`);
+- **a drag held on a slider**, the PCA's or a threshold's: the slider
+  takes a hold of the gate at the first move of the pointer, React
+  Aria's `onChange` before any `onChangeEnd`, and lets it go at
+  `onChangeEnd`, or when the slider leaves the page;
+- **an open list**, the method's: the `Select` takes a hold when its
+  list opens and lets it go when it closes, from React Aria's
+  `onOpenChange`;
+- **a box with text not yet given to the project**, any number box the
+  PCA reads, the Variants tab's and the PCA tab's: the box takes a hold
+  while its text differs from the project's value, which `NumberField`
+  already knows to put the number back at Ctrl+Z, and lets it go when
+  the text is given at Enter, Tab or a click elsewhere, or put back.
+  The gate's `typing` today registers the boxes of the thresholds so
+  that `commitTyped` can give their text before an opening or a Run;
+  the hold adds whether one has text waiting.
+
+All four live in the gate, in `src/ui`, which the page already gives
+every screen through `RunGateProvider`; the gate gains one count of
+the holds and a `subscribe` that tells `autoRuns.ts` when it falls to
+zero. Core knows none of it, as it knows nothing of the gate today.
+When the second runs out, `autoRuns.ts` reads the PCA's key from the
+store at that moment, not the key it had when the second began, so a
+change that came during the second is the one calculated.
+
+The arrow keys on a threshold of the Variants tab start the PCA about
+two seconds after the last press, the gate's second and this one;
+everything else one second after the last change or release. The PCA's
+sliders and the list of the method need no run of the gate for their
+keys: each press is a change of the project, which costs a new key and
+a drawing of the screen, and none starts a calculation until the
+presses stop.
 
 **Recommended: (b).** It is what the owner asked, and the only one under
 which the lock does not fall on a control the user is still using. (a)
@@ -413,7 +452,10 @@ guard of invariant 5.
 - In node, on the real store, `autoRuns.ts`, with a timer the test
   moves: the PCA does not start before Run; after Run, a change of a
   threshold starts it under the new key one second later, and a second
-  change within that second puts it off again; nothing starts while a
+  change within that second puts it off again; the second does not run
+  while the gate holds a drag, an open list or a box with text waiting,
+  and runs again from the release; the PCA starts under the key the
+  project gives when the second runs out; nothing starts while a
   PCA runs; a filter set back calculates again, the cache holding
   nothing under the old key; a change of the colour of the points
   starts nothing; another variants file ends the live state; the PCA
@@ -425,8 +467,13 @@ guard of invariant 5.
 - In Chromium and WebKit: ten presses of an arrow key on a threshold,
   on a slider of the PCA and on the closed list of the method, less
   than a second apart, start one PCA, after the last press, and no
-  control greys before it; the tab never shows the old result after a
-  change, nor Run between the change and the bar. Firefox, which is in
+  control greys before it; after a change of a threshold, a drag held
+  still for 3 s on a PCA slider is kept at its release, the list of the
+  method held open for 3 s stays open and its choice is taken, and a
+  number typed slowly over 3 s in the box of the distance stays
+  editable and is given at Enter, each before any PCA starts; the tab
+  never shows the old result after a change, nor Run between the
+  change and the bar. Firefox, which is in
   the floor of the applications, is left out: Playwright cannot start
   it on the owner's Mac, so it is seen only on GitHub's CI, which runs
   the flows, or by the owner by hand.
