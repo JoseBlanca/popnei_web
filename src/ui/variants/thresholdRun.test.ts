@@ -557,3 +557,65 @@ describe("NU1 the listeners of the gate see the change a run of the keys made", 
     expect(seen).toEqual([0.05]);
   });
 });
+
+describe("NU1 the gate when a listener or an end throws", () => {
+  test("a listener that throws when a hold is taken: the release is given all the same, the error thrown after, and the count falls back to 0", () => {
+    const gate = createRunGate();
+    const thrown: (() => void)[] = [];
+    const queued = vi
+      .spyOn(globalThis, "queueMicrotask")
+      .mockImplementation((callback) => {
+        thrown.push(callback);
+      });
+    const failure = new Error("a listener failed");
+    let throws = true;
+    let others = 0;
+    gate.subscribe(() => {
+      if (throws) throw failure;
+    });
+    gate.subscribe(() => {
+      others += 1;
+    });
+    const release = gate.holdChange();
+    expect(gate.underWay()).toBe(1);
+    expect(others).toBe(1);
+    expect(thrown).toHaveLength(1);
+    expect(() => {
+      thrown[0]?.();
+    }).toThrow(failure);
+    throws = false;
+    release();
+    expect(gate.underWay()).toBe(0);
+    expect(others).toBe(2);
+    queued.mockRestore();
+  });
+
+  test("the first of two runs whose end throws: both runs let go, the second ended, the listeners told, and the error thrown", () => {
+    const gate = createRunGate();
+    const failure = new Error("an end failed");
+    const ended: string[] = [];
+    gate.hold(
+      () => {
+        ended.push("first");
+        throw failure;
+      },
+      () => null,
+    );
+    gate.hold(
+      () => {
+        ended.push("second");
+      },
+      () => null,
+    );
+    let told = 0;
+    gate.subscribe(() => {
+      told += 1;
+    });
+    expect(() => {
+      gate.endAll();
+    }).toThrow(failure);
+    expect(ended).toEqual(["first", "second"]);
+    expect(gate.underWay()).toBe(0);
+    expect(told).toBe(1);
+  });
+});

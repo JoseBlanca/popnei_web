@@ -40,7 +40,9 @@ export interface RunGate {
       `null` when it would make none. Gives the functions that tell the
       gate the run moved, and that let it go once it ended. */
   readonly hold: (end: () => void, pending: () => string | null) => HeldRun;
-  /** Ends every run held, each made a change if it moved. */
+  /** Ends every run held, each made a change if it moved. Every run is let
+      go and every end called also when one throws, and the listeners are
+      told; then the first error is thrown. */
   readonly endAll: () => void;
   /** The description of the change of the project that the run held last
       would make now, "the MAF filter changed", which Undo names while the
@@ -62,7 +64,9 @@ export interface RunGate {
       download open (docs/specs/steps/popgen2-pca.md, "The PCA calculated
       again by itself"). Gives the function that lets it go, at its
       release or when its control leaves the page; a second call of it
-      changes nothing. */
+      changes nothing. A listener that throws when the hold is taken does
+      not keep the release from being given: its error is thrown a moment
+      later, to the page's handler of errors. */
   readonly holdChange: () => () => void;
   /** The number of changes under way now: the holds of `holdChange` not
       let go, and the runs of the keys held. 0 when the user is in the
@@ -91,8 +95,18 @@ export function createRunGate(): RunGate {
   // release counts once.
   const holds = new Set<object>();
   const listeners = new Set<() => void>();
+  // Calls every listener, also when one throws, and then throws the
+  // first error, as the store tells its own.
   const tell = (): void => {
-    for (const listener of [...listeners]) listener();
+    const thrown: unknown[] = [];
+    for (const listener of [...listeners]) {
+      try {
+        listener();
+      } catch (error) {
+        thrown.push(error);
+      }
+    }
+    if (thrown.length > 0) throw thrown[0];
   };
   return {
     hold: (end, pending) => {
@@ -107,21 +121,35 @@ export function createRunGate(): RunGate {
         moved: tell,
         release: (made) => {
           const wasHeld = runs.delete(held);
-          made?.();
-          if (wasHeld) tell();
+          try {
+            made?.();
+          } finally {
+            if (wasHeld) tell();
+          }
         },
       };
     },
     endAll: () => {
-      // Each end lets its run go, and its change passes the gate again,
-      // which then holds nothing of it. The listeners are told once,
-      // after every change was made.
+      // Every run is let go before any end is called, so that an end that
+      // throws leaves none held; each end's change passes the gate again,
+      // which then holds nothing of it. Every end is called, also after
+      // one throws, and the listeners are told once, after every change
+      // was made; then the first error is thrown.
       const ended = [...runs.keys()];
-      for (const end of ended) {
-        runs.delete(end);
-        end();
+      runs.clear();
+      const thrown: unknown[] = [];
+      try {
+        for (const end of ended) {
+          try {
+            end();
+          } catch (error) {
+            thrown.push(error);
+          }
+        }
+      } finally {
+        if (ended.length > 0) tell();
       }
-      if (ended.length > 0) tell();
+      if (thrown.length > 0) throw thrown[0];
     },
     pending: () => {
       const last = [...runs.values()].at(-1);
@@ -149,10 +177,22 @@ export function createRunGate(): RunGate {
       const hold = {};
       const wasFree = runs.size + holds.size === 0;
       holds.add(hold);
-      if (wasFree) tell();
-      return () => {
+      const release = (): void => {
         if (holds.delete(hold) && runs.size + holds.size === 0) tell();
       };
+      if (wasFree) {
+        try {
+          tell();
+        } catch (error) {
+          // The release is given all the same, or the count would stay
+          // above 0 for the session; the error is thrown a moment later,
+          // to the page's handler of errors.
+          queueMicrotask(() => {
+            throw error;
+          });
+        }
+      }
+      return release;
     },
     underWay: () => runs.size + holds.size,
   };
