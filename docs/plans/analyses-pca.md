@@ -1369,3 +1369,43 @@ px). The first load of `popgen2.html` 307.82 KB by the sum of Vite's
 gzip sizes of the nine files the page loads (306.71 KB before the
 second round); the figures of 303 to 306 KB above were taken with gzip
 -9 of the files, a different count.
+
+### Work package 7, 10 October 2026
+
+Commit 9f17754a, `AP7 D1` of `e2e/measure.spec.ts`: a PCA and a PCoA
+run on `popgen2.html` after the one pass, the LD pruning off, on the
+VCFs of 300 variants of `e2e/bigVcf.ts`, each run once and alone, Run
+pressed 2 s after the pass ended. Apple M5 Pro with 64 GB, macOS
+27.0.1, Playwright 1.63.0, Chromium 153.0.8010.12 and WebKit 26.6. The
+load averages rose from 1.65 to 8.63 through the session: a macOS
+virtual machine outside this work used 80 to 537% of a core, and two
+services of macOS up to 92% and 70%; the times are read with that in
+mind. Memory in GB, the engine's processes summed: before the file /
+at the end of the pass / at the peak of the run / 3 s after; "grown"
+is the peak less the memory before Run, the one figure `IP6 D6`
+recorded, beside it.
+
+| engine | size | method | time | memory | grown | `IP6 D6` (29 September) |
+|---|---|---|---|---|---|---|
+| Chromium | 1,000 | PCA | 0.32 s | 0.11 / 0.15 / 0.20 / 0.27 | 0.05 | 0.31 s, 0.049 |
+| Chromium | 1,000 | PCoA | 0.37 s | 0.106 / 0.151 / 0.194 / 0.268 | 0.044 | 0.36 s, 0.046 |
+| Chromium | 4,000 | PCA | 16.7 s | 0.107 / 0.157 / 0.775 / 0.367 | 0.618 | 16.0 s, 0.613 |
+| Chromium | 4,000 | PCoA | 19.9 s | 0.104 / 0.159 / 0.783 / 0.369 | 0.624 | 18.9 s, 0.620 |
+| Chromium | 9,381 | PCA | 226 s | 0.107 / 0.172 / 3.185 / 0.440 | 3.013 | 205 s, 3.03 |
+| Chromium | 9,381 | PCoA | 259 s | 0.107 / 0.174 / 3.458 / 0.444 | 3.285 | 240 s, 3.30 |
+| WebKit | 1,000 | PCA | 0.26 s | 0.155 / 0.343 / 0.534 / 0.377 | 0.191 | 1.21 s, 0.143 |
+| WebKit | 1,000 | PCoA | 0.31 s | 0.157 / 0.347 / 0.429 / 0.395 | 0.082 | 1.26 s, 0.145 |
+| WebKit | 4,000 | PCA | 11.1 s | 0.157 / 0.349 / 1.162 / 0.507 | 0.813 | 10.2 s, 0.745 |
+| WebKit | 4,000 | PCoA | 14.7 s | 0.158 / 0.353 / 0.964 / 0.492 | 0.611 | 12.9 s, 0.724 |
+| WebKit | 9,381 | PCA | 134 s | 0.157 / 0.377 / 3.759 / 0.639 | 3.382 | 121 s, 3.12 |
+| WebKit | 9,381 | PCoA | 215 s | 0.156 / 0.389 / 4.714 / 0.621 | 4.325 | 156 s, 3.40 (4.10 on its first run) |
+
+The decision by the rule set before the run: every run `IP6 D6`
+completed completed here too, in both engines, so nothing changes. No
+stop. The WebKit PCoA of 9,381 individuals grew 4.33 GB, above the old
+page's 4.10 GB, and completed: it goes into the report and into the
+PCA spec's "How it runs" (task 9.3). Each run started the calculation
+worker again, which is why the memory at the end of the pass stays
+near that before the file. The times of 9,381 individuals are 10 to 38%
+longer than on 29 September, under a load the old measurement did not
+have.
