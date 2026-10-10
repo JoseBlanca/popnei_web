@@ -657,3 +657,40 @@ package that changes code, with:
 Each work package adds its entry here: its commits, the counts of its
 checks, its review with the findings not taken, and the decisions made
 along the way.
+
+### Before the first task, 10 October 2026
+
+At 4ecab7a2: typecheck, lint and format clean; Vitest 152 files, 4,990
+tests; no test named `NU` and a digit (`npx vitest list`, `npx
+playwright test --list`). The flows of `popgen2.html` and the rest,
+1,552 in Chromium and WebKit, passed at e322e9cb, the last commit before
+this plan that changed code or flows.
+
+### Work package 1 and task 3.1, 10 October 2026
+
+Commits c9edd9ef (1.1, `remove`), e6437007 (1.2, `dropLeftBehind`),
+90a60308 (1.3, the state's field of a Stop waiting for the worker),
+1753b956 (3.1, the gate's count). The builder of 3.1 added `holdChange`
+and `underWay` and kept `hold` for the arrow keys; the specs now say so.
+
+The review, `spec`, `tests`, `stale`, `errors`, `api` and
+`architecture`: every finding held, fixed in 96f94c24 to bff843b1, test
+first where a behaviour changed. The ones that would have reached a
+user once work packages 3 and 4 are built: the gate told "nothing under
+way" before the change of a run of the arrow keys reached the store, so
+a PCA started from that signal would have read the old project (a run
+now makes its change before it tells); a listener or an end that threw
+left a change counted under way for the rest of the session, so the PCA
+would never have started again by itself; the PCA spec told the widgets
+to take the arrow keys' `hold`, which any change of another control
+ends, so the PCA could have started in the middle of a drag; a defect
+from an abandoned request was kept as the PCA's error. Also: the
+state's field renamed `stoppedAwaitingWorker`, apart from a run's
+`stopping`; `dropLeftBehind` without `stopLeftBehind` no longer
+compiles; the failures of a request left behind (popnei's and the
+worker's dropped, `reopenFailed` kept) in the spec and tested; the
+gate's telling pinned by tests. Task 2.2 gained the removal of what
+the gate kept only for Undo.
+
+Checks at bff843b1: typecheck, lint, format clean; Vitest 152 files,
+5,030 tests. No browser in this package.
