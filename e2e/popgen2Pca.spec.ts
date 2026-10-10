@@ -820,9 +820,9 @@ test("AP6 D3 a PCA that fails: its words in the tab and in the status region, St
   await expect(stopLive).toBeEnabled();
   await expect(stop(page)).toHaveCount(0);
   await expectAxeBothSchemes(page, makeAxeBuilder);
-  await expectUnlocked(page);
   await stopLive.click();
   await expect(run(page)).toBeEnabled();
+  await expectUnlocked(page);
 });
 
 test("AP6 D3 the download of the filtered variants waits while a PCA is held, with its words, and comes back after Stop; the PCoA's words; the text after a download stays during a run; axe light and dark", async ({
