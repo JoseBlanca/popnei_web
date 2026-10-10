@@ -579,10 +579,14 @@ Tasks:
   `autoRuns.subscribe` alone, which misses the changes of the store;
   its Stop of the PCA calls `pause`, never `stop([pca])`, which would
   leave the PCA live; any Run it offers is refused while the filtered
-  variants are written; and while the PCA is live and nothing runs it
-  offers the tab's "Stop recalculating", so that the automatic runs can
-  be ended from any tab before the next change (WCAG 2.2.1, the
-  `accessibility` review of package 4).
+  variants are written; and while the PCA is about to start by itself
+  it offers the tab's "Stop recalculating", so that the automatic runs can
+  be ended from any tab within the quiet second (WCAG 2.2.1, the
+  `accessibility` review of package 4). Corrected on 10 October 2026,
+  after the review of package 5: while nothing runs, the band shows
+  "Popnei" alone, as the owner decided; the PCA tab's own "Stop
+  recalculating" lets the automatic runs be ended there before any
+  change, with no time limit.
 - [ ] 5.4 The measurement of "Stopping", alone on the machine
   (deliverable 6). Stands on 5.3.
 
