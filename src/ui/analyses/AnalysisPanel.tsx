@@ -60,6 +60,7 @@ import { useAppState, useStore } from "../store.tsx";
 import styles from "./AnalysisPanel.module.css";
 import { Failed } from "./Failed.tsx";
 import type { AnalysisUi } from "./panels.ts";
+import { Button } from "../widgets/Button.tsx";
 import { RunButton } from "./RunButton.tsx";
 import { Running } from "./Running.tsx";
 import { buttonOf, statusOf, stoppedNotice } from "./status.ts";
@@ -102,8 +103,15 @@ export type PanelLive =
       the page, so that the user can end it before the lock lifts; and,
       while it is about to start, `aboutToStartLine`, the line of the
       quiet second, under it in the place of the bar, `null` while it is
-      not about to start. */
-  | { readonly kind: "live"; readonly aboutToStartLine: string | null };
+      not about to start; with its result shown, `resultLine`, which says
+      what the button stops, there. After a failure that leaves it live
+      and that Run may mend, Run stands first, which tries again under the
+      same key, and "Stop recalculating" beside it. */
+  | {
+      readonly kind: "live";
+      readonly aboutToStartLine: string | null;
+      readonly resultLine: string;
+    };
 
 /** The words of the button that ends the automatic runs of a live
     analysis while none runs. */
@@ -151,7 +159,7 @@ export function AnalysisPanel({
     );
   });
 
-  const { button, line, stopLabel, under } = pageButton(
+  const { button, line, stopLabel, under, stopBeside } = pageButton(
     lockedBy(buttonOf(status), page?.lock ?? null),
     status,
     page,
@@ -164,6 +172,48 @@ export function AnalysisPanel({
     (status.kind === "ready" ||
       status.kind === "removed" ||
       status.kind === "locked");
+
+  const runButton =
+    button === null ? null : (
+      <RunButton
+        button={button}
+        runLabel="Run"
+        {...(line === null ? {} : { line })}
+        {...(stopLabel === null ? {} : { stopLabel })}
+        onRun={() => {
+          if (page === undefined) void startAnalysis(store, id);
+          else page.onRun();
+        }}
+        onStop={() => {
+          if (page === undefined) store.cancelRun(id);
+          else page.onStop();
+        }}
+        onGone={() => {
+          if (page === undefined) heading.current?.focus();
+          else lost();
+        }}
+        {...(page === undefined
+          ? {}
+          : {
+              reasonRef: reason,
+              onButton: (node: HTMLButtonElement | null) => {
+                shownButton.current = node;
+              },
+            })}
+      />
+    );
+  const stopButton =
+    !stopBeside || page === undefined ? null : (
+      // Beside Run, after it in the order of the Tab key; when it goes,
+      // the focus it had goes to Run.
+      <Button
+        label={STOP_RECALCULATING}
+        onPress={() => {
+          lost();
+          page.onStop();
+        }}
+      />
+    );
 
   return (
     <section aria-labelledby={headingId} className={classOf(styles, "panel")}>
@@ -185,33 +235,13 @@ export function AnalysisPanel({
       {ui.Options !== null && <ui.Options />}
       {linesFirst && <Ready ui={ui} />}
       <Above ui={ui} status={status} />
-      {button !== null && (
-        <RunButton
-          button={button}
-          runLabel="Run"
-          {...(line === null ? {} : { line })}
-          {...(stopLabel === null ? {} : { stopLabel })}
-          onRun={() => {
-            if (page === undefined) void startAnalysis(store, id);
-            else page.onRun();
-          }}
-          onStop={() => {
-            if (page === undefined) store.cancelRun(id);
-            else page.onStop();
-          }}
-          onGone={() => {
-            if (page === undefined) heading.current?.focus();
-            else lost();
-          }}
-          {...(page === undefined
-            ? {}
-            : {
-                reasonRef: reason,
-                onButton: (node: HTMLButtonElement | null) => {
-                  shownButton.current = node;
-                },
-              })}
-        />
+      {stopButton === null ? (
+        runButton
+      ) : (
+        <div className={classOf(styles, "buttons")}>
+          {runButton}
+          {stopButton}
+        </div>
       )}
       {/* The line of the quiet second or of a Stop, in the place of the
           bar, in the words of the page: not the button's description,
@@ -249,8 +279,9 @@ function pageButton(
   readonly line: string | null;
   readonly stopLabel: string | null;
   readonly under: string | null;
+  readonly stopBeside: boolean;
 } {
-  const none = { line: null, stopLabel: null, under: null };
+  const none = { line: null, stopLabel: null, under: null, stopBeside: false };
   if (page === undefined || status.kind === "running") {
     return { button, ...none };
   }
@@ -260,11 +291,24 @@ function pageButton(
     case "stopped":
       return { button, ...none, under: page.live.line };
     case "live":
+      // A failure Run may mend: Run, which tries again, and Stop
+      // recalculating beside it.
+      if (
+        status.kind === "error" &&
+        button?.kind === "run" &&
+        button.reason === null
+      ) {
+        return { button, ...none, stopBeside: true };
+      }
       return {
         button: { kind: "stop" },
         line: button?.kind === "run" ? button.reason : null,
         stopLabel: STOP_RECALCULATING,
-        under: page.live.aboutToStartLine,
+        under:
+          status.kind === "done"
+            ? page.live.resultLine
+            : page.live.aboutToStartLine,
+        stopBeside: false,
       };
   }
 }

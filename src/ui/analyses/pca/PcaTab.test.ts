@@ -56,6 +56,8 @@ const ABOUT_DIALOG =
   "The PCA starts again when the download is written or closed.";
 const STOPPED =
   "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change.";
+const LIVE_DONE =
+  "The PCA is calculated again after each change of the filters or of its options.";
 const NO_DISTANCE = "Type the LD distance above, or turn the LD pruning off.";
 
 let container: HTMLDivElement;
@@ -323,8 +325,10 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
     expect(document.activeElement).toBe(stop);
     expect(button("Stop")).toBeNull();
     expect(descriptionOf(stop)).toBe("");
+    expect(lineShown(LIVE_DONE)).toBe(true);
 
     await press(stop);
+    expect(lineShown(LIVE_DONE)).toBe(false);
     expect(page.autoRuns.isLive("pca")).toBe(false);
     expect(button("Run")).toBeNull();
     expect(button("Stop recalculating")).toBeNull();
@@ -433,19 +437,47 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
     );
   });
 
-  test("a crash of the worker that leaves the PCA live: its words, and Stop recalculating", async () => {
+  test("a crash of the worker that leaves the PCA live: its words, Run and Stop recalculating side by side, Run first; Run tries again under the same key, live; Stop recalculating ends it and gives the focus to Run", async () => {
     const page = await drawTab();
     await press(button("Run"));
-    const last = page.pcaRequests().at(-1);
-    last?.end({
-      kind: "failed",
-      error: { kind: "workerFailed", message: "out of memory" },
-    });
-    await settle();
+    const crash = async (): Promise<void> => {
+      page
+        .pcaRequests()
+        .at(-1)
+        ?.end({
+          kind: "failed",
+          error: { kind: "workerFailed", message: "out of memory" },
+        });
+      await settle();
+    };
+    await crash();
     expect(page.autoRuns.isLive("pca")).toBe(true);
     expect(container.textContent).toContain("stopped unexpectedly");
-    expect(button("Run")).toBeNull();
-    expect(button("Stop recalculating")).not.toBeNull();
+    const run = button("Run");
+    const stop = button("Stop recalculating");
+    expect(run).not.toBeNull();
+    expect(stop).not.toBeNull();
+    const labels = [...container.querySelectorAll("button")].map(
+      (b) => b.textContent,
+    );
+    expect(labels.indexOf("Run")).toBeLessThan(
+      labels.indexOf("Stop recalculating"),
+    );
+    expect(lineShown(LIVE_DONE)).toBe(false);
+
+    await press(run);
+    expect(page.pcaRequests()).toHaveLength(2);
+    expect(page.pcaRequests()[1]?.key).toBe(page.pcaRequests()[0]?.key);
+    expect(page.autoRuns.isLive("pca")).toBe(true);
+    await crash();
+
+    const again = button("Stop recalculating");
+    again?.focus();
+    await press(again);
+    expect(page.autoRuns.isLive("pca")).toBe(false);
+    expect(button("Stop recalculating")).toBeNull();
+    expect(document.activeElement).toBe(button("Run"));
+    expect(lineShown(STOPPED)).toBe(true);
   });
 
   test("Stop during a run started by itself: Run with the line of a Stop", async () => {

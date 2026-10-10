@@ -16,6 +16,15 @@
   overflow-wrap: anywhere;
 }
 
+/* Run and "Stop recalculating" side by side, after a failure that leaves
+   a live analysis live; on two lines when the column is too narrow. */
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
 .running {
   display: grid;
   gap: var(--space-2);

@@ -221,6 +221,14 @@ export function liveStoppedText(
     : stopped;
 }
 
+/** The line under "Stop recalculating" while the PCA is live and its
+    result is shown, which says what the button stops: "The PCA is
+    calculated again after each change of the filters or of its
+    options."; "The PCoA …" under the PCoA. */
+export function liveResultLine(method: PcaMethod): string {
+  return `The ${methodName(method)} is calculated again after each change of the filters or of its options.`;
+}
+
 /** The line after a Stop, until Run or another variants file, which
     says what Run does again: "Stopped: the PCA no longer starts by
     itself after a change. Run calculates it and starts it again after

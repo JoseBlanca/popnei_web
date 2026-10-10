@@ -6038,8 +6038,42 @@ for (const theme of ["light", "dark"] as const) {
             exact: true,
           }),
         ).toBeVisible();
+        await expect(
+          panel.getByText(/^The PCA is calculated again after each change/u),
+        ).toBeVisible();
         await page.mouse.move(0, 0);
         await save(page, `popgen2-pca-live-done${at}-${theme}`);
+      });
+
+      test("NU4 D5 the PCA live after a crash, Run and Stop recalculating side by side", async ({
+        page,
+      }) => {
+        await holdSummary(page, { holdPca: true });
+        await page.goto("popgen2.html");
+        await pickOnNewPage(page, "panel.nei");
+        await release(page, "allSoFar");
+        await release(page, "result");
+        const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+        await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+        const panel = page.getByRole("tabpanel");
+        const run = panel.getByRole("button", { name: "Run", exact: true });
+        await expect(run).toHaveAccessibleDescription(
+          /^Type the LD distance/u,
+          { timeout: 20_000 },
+        );
+        const field = panel.getByRole("textbox", {
+          name: /^Distance within which variants are compared/u,
+        });
+        await field.fill("50000");
+        await field.press("Enter");
+        await run.click();
+        await release(page, "crash");
+        await expect(
+          panel.getByRole("button", { name: "Stop recalculating" }),
+        ).toBeVisible({ timeout: 20_000 });
+        await expect(run).toBeEnabled();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-pca-live-failed${at}-${theme}`);
       });
 
       test("NU4 D5 the PCA started by itself, held running, with the Variants tab shown and a threshold greyed", async ({
