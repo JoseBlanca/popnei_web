@@ -77,7 +77,6 @@ export function UndoRedoButtons(): React.JSX.Element {
       const action = keysAction({
         handled: event.defaultPrevented,
         owner: ownerOfKeys(event.target),
-        waits: false,
       });
       if (action === "leave") return;
       event.preventDefault();

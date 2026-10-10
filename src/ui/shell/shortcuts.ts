@@ -133,17 +133,13 @@ export function undoesAnotherField(
 }
 
 /** What the page knows of a key of Undo or Redo when it reaches the
-    window: whether it was taken, who the focus gives it to, and whether
-    Undo and Redo wait. */
+    window: whether it was taken, and who the focus gives it to. */
 export interface KeyContext {
   /** Whether a part of the page took the key first: a number box with
       something typed, which put back its number. */
   readonly handled: boolean;
   /** Who the element of the focus gives the keys to. */
   readonly owner: KeysOwner;
-  /** Whether the page's Undo and Redo wait, as while a PCA runs on
-      popgen2.html. */
-  readonly waits: boolean;
 }
 
 /** What the window's listener does with a key of Undo or Redo: leaves it
@@ -156,8 +152,8 @@ export type KeysAction = "leave" | "swallow" | "take";
     in `context`. */
 export function keysAction(context: KeyContext): KeysAction {
   if (context.handled || context.owner === "text") return "leave";
-  // Also in a dialog, and while they wait, where they do nothing: WebKit
-  // would otherwise undo the typing of the last field edited before.
-  if (context.waits || context.owner === "dialog") return "swallow";
+  // Also in a dialog, where they do nothing: WebKit would otherwise undo
+  // the typing of the last field edited before.
+  if (context.owner === "dialog") return "swallow";
   return "take";
 }
