@@ -306,11 +306,24 @@ the band, so that the line of the error, Details and Close are in the
 window: the screens of 10 October 2026 showed such an error out of
 sight at 320 px and cut at its first line at 1280 px, and a user of the
 mouse saw nothing change on a page that must be reloaded. The page
-moves at once and not smoothly, which would ignore a user who asks for
-less motion. The focus stays where it was: the alert reads the error,
-and taking the focus from the control the user works with would be
-worse. A second error while the first is shown, Details and Close
-scroll nothing. Details pressed with the page scrolled shows the
+moves at once, as the scroll "auto" does on a page that asks for no
+smooth scrolling, which would ignore a user who asks for less motion;
+not "instant", which Safari 16.4 does not know and throws on. The focus
+stays where it was, on the page or in the band, while the control that
+has it is still whole in the window; when the jump leaves it out of the
+window, the focus goes to the heading "Popnei", as Close gives it. The
+review of the first version of this, on 10 October 2026, found a slider
+with the focus left at 690 px, below a window 600 px high, and moved by
+the arrow keys with nothing seen. The alert has read the error, and the Tab key
+from the heading reaches Details and Close. While a dialog is open, as
+that of "Download filtered variants…", the page does not move and the
+focus stays in the dialog: the same review saw the page jump behind
+it, and the focus given back by Escape land 1,739 px down, out of
+sight. Once the dialog has gone and has given the focus back to the
+control that opened it, the page is brought to the band, and the focus
+goes to the heading when that control is then out of the window. A
+second error while the first is shown, Details and Close scroll
+nothing. Details pressed with the page scrolled shows the
 details under it, in the window.
 
 ### What stays elsewhere
@@ -576,7 +589,13 @@ gone 10 s after the band first saw it, on a clock of the test, while
 the store still waits for the worker. An error that comes with the band above
 the window scrolls the page to the band's top, once, at once, and a
 second error, Details and Close scroll nothing; an error after Close
-scrolls again; none with the band's top in the window.
+scrolls again; none with the band's top in the window. The focus goes to
+the heading when the control that had it is then below the window or
+cut by its bottom edge, and stays on a control still in it. With a
+dialog open, an error scrolls nothing and leaves the focus in it; once
+the dialog has gone and the focus is given back a frame later, the
+page is scrolled and the focus, out of the window, goes to the
+heading.
 
 **In Playwright, on the built site, in Chromium and WebKit**, the two
 engines that start on the owner's Mac, on `panel.nei`,
@@ -606,10 +625,18 @@ pass held by `e2e/holdWorker.ts`:
   with the page; Details reached by the keyboard with the page scrolled
   to its end, the details in the window; a PCA held running at the same
   time shows both lines;
-- an error thrown with the page scrolled to its end, at 1280 and at
-  320 px: the page scrolled to the band, whose top is at 0 of the window
-  or below it, the line of the error, Details and Close whole in the
-  window, and the focus where it was;
+- an error thrown with the page scrolled down, at 1280 and at 320 px,
+  in a window 600 px high: the page scrolled to the band, whose top is
+  at 0 of the window or below it, the line of the error, Details and
+  Close whole in the window; with the focus on the page, the focus
+  where it was; with the focus on the slider of the missing genotypes,
+  which the jump leaves out of the window, the focus on the heading
+  "Popnei", in the window;
+- an error thrown with the dialog of the download open on a page
+  scrolled down: the page does not move, the focus stays in the dialog;
+  Escape, and the band in the window with the focus on the heading;
+  the crash of a write closed with the dialog's Close does the same
+  (`e2e/popgen2Download.spec.ts`);
 - the page scrolled to its end with a PCA held running: the band at the
   top of the window; each control reached by the Tab key from the end
   of the page back to the top, in WebKit as in Chromium, below the
