@@ -25,16 +25,32 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* As high as a target, so that a press near the line reaches it, and
-   at most 20 rem long; set in by half a thumb at each end, so that the
-   thumb at an end stays within the column. React Aria makes it the box
-   the thumb is placed in. */
+/* The track and the words of its ends under it; the track at most 20 rem
+   long. */
+.trackColumn {
+  display: grid;
+  flex: 1 1 12rem;
+  max-inline-size: calc(20rem + var(--target-min));
+}
+
+/* As high as a target, so that a press near the line reaches it; set in
+   by half a thumb at each end, so that the thumb at an end stays within
+   the column. React Aria makes it the box the thumb is placed in. */
 .track {
   position: relative;
-  flex: 1 1 12rem;
-  max-inline-size: 20rem;
   block-size: var(--target-min);
   margin-inline: calc(var(--target-min) / 2);
+}
+
+/* The words of the ends, each from its end of the track inwards. */
+.ends {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-inline: calc(var(--target-min) / 2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
 }
 
 .track::before {
@@ -72,7 +88,8 @@
    control that cannot be used, and no cursor of a drag, while it keeps
    the focus and the tooltip of its reason. */
 .waiting .label,
-.waiting .output {
+.waiting .output,
+.waiting .ends {
   color: var(--color-text-disabled);
 }
 

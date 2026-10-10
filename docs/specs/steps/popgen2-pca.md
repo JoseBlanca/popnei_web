@@ -358,9 +358,14 @@ Then three, in this order:
   keeps them, `follow` true. Its value then reads "0.1, as in the
   Variants tab", or "Off, as in the Variants tab" while that threshold
   is off; below the end, the PCA's own value, "0.05". A screen reader
-  reads the same words as the slider's value. Under the slider, the line
-  of the Variants step that says what popnei filters on, as on the old
-  panel.
+  reads the same words as the slider's value. Under the track, at each
+  of its ends, the value of that end, in the colour of the lines of
+  help, so that the range is seen: "0" and "0.1" for the missing data,
+  "0.5" and "Off" for the MAF while the Variants tab has it off, "0.5"
+  and "0.95" while it is at 0.95. A screen reader is not given them,
+  since it reads the ends of a slider from the slider itself. Under the
+  slider, the line of the Variants step that says what popnei filters
+  on, as on the old panel.
 
   It moves by the step of the Variants tab's box of that threshold,
   which rounds to the step of its axis (`popgen2-filters.md`, "A number
@@ -765,6 +770,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | the heading of the tab | "PCA"; "PCoA" |
 | the filters | "Filters of the variants for the PCA"; "The PCA reads the variants the Variants tab keeps. Its own missing data and MAF filters can only be stricter."; "Maximum proportion of missing genotypes for the PCA"; "Maximum major allele frequency for the PCA"; "Prune the variants by linkage disequilibrium (LD)" |
 | the value of a slider | "0.1, as in the Variants tab"; "Off, as in the Variants tab"; "0.05" |
+| the ends of a slider, under its track | "0" and "0.1"; "0.5" and "Off" |
 | a filter whose slider would have no range | "0, as in the Variants tab. The PCA cannot be stricter than the Variants tab here." |
 | the Variants tab stricter than the PCA's own | "The Variants tab keeps at most 0.03, stricter than the 0.05 set here, so the PCA uses 0.03." |
 | the lock and the help of the one pass | the table of "Run and Stop" |

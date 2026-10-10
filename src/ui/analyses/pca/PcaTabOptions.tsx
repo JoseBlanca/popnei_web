@@ -62,6 +62,7 @@ import {
   emptyRangeLine,
   stepDecimalsOf,
   stricterBound,
+  stricterEnds,
   stricterLines,
   stricterMoveCommand,
   stricterValueText,
@@ -277,6 +278,7 @@ function StricterFilter({
         step={bound.step}
         value={bound.shown}
         valueText={(value) => stricterValueText(bound, value)}
+        ends={stricterEnds(bound)}
         describedBy={[
           ...(lines.tabStricter === null ? [] : [tabStricterId]),
           lineId,

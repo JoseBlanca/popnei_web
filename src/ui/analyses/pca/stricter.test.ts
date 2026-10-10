@@ -25,6 +25,7 @@ import {
 import type { OptionCommand } from "../optionCommand.ts";
 import {
   emptyRangeLine,
+  stricterEnds,
   stepDecimalsOf,
   stricterBound,
   stricterLines,
@@ -392,5 +393,25 @@ describe("AP10 D2 stricterMoveCommand given a value that is no number", () => {
         stricterMoveCommand(p, "missing_data", value, 3, page),
       ).toThrow(/^popnei_web defect:/u);
     }
+  });
+});
+
+describe("AP10 D2 stricterEnds, the words of the ends of a slider", () => {
+  test("the missing data at 0.1: 0 and 0.1; the MAF off: 0.5 and Off; at 0.95: 0.5 and 0.95; at 0.0035: 0 and 0.0035", () => {
+    expect(
+      stricterEnds(stricterBound(project([missing(0.1)]), "missing_data", 3)),
+    ).toEqual({ min: "0", max: "0.1" });
+    expect(stricterEnds(stricterBound(project([]), "maf", 2))).toEqual({
+      min: "0.5",
+      max: "Off",
+    });
+    expect(stricterEnds(stricterBound(project([maf(0.95)]), "maf", 2))).toEqual(
+      { min: "0.5", max: "0.95" },
+    );
+    expect(
+      stricterEnds(
+        stricterBound(project([missing(0.0035)]), "missing_data", 3),
+      ),
+    ).toEqual({ min: "0", max: "0.0035" });
   });
 });

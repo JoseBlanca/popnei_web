@@ -4,9 +4,10 @@
  * look (react.md, "Widgets: React Aria, wrapped once"), for a number
  * between two ends that the user moves to, as the PCA's own missing data
  * and MAF filters of popgen2.html (docs/specs/steps/popgen2-pca.md, "Its
- * filters"). The name stands above the track and the value at the end of
- * the name's line, in the words the screen gives, which a screen reader
- * reads as the slider's value too.
+ * filters"). The name stands above the track, the value after the track,
+ * under it on a narrow column, in the words the screen gives, which a
+ * screen reader reads as the slider's value too, and the words of the two
+ * ends under the ends of the track.
  *
  * Keyboard, as React Aria gives it: the arrow keys move it a step, Page
  * Up and Page Down a tenth of its range, Home and End to its ends.
@@ -56,6 +57,8 @@ export interface SliderProps {
   /** The words of a value, shown beside the name and read by a screen
       reader: "0.05", "0.1, as in the Variants tab". */
   readonly valueText: (value: number) => string;
+  /** The words of its two ends, drawn under them: "0" and "0.1". */
+  readonly ends: { readonly min: string; readonly max: string };
   /** The id of an element elsewhere on the page that describes the
       slider, the line under it. */
   readonly describedBy?: string;
@@ -76,6 +79,7 @@ export function Slider({
   step,
   value,
   valueText,
+  ends,
   describedBy,
   onChange,
   waiting = null,
@@ -158,15 +162,26 @@ export function Slider({
                 }
               }}
             >
-              <SliderTrack ref={trackRef} className={classOf(styles, "track")}>
-                <SliderThumb
-                  className={classOf(styles, "thumb")}
-                  inputRef={inputRef}
-                  {...(description !== undefined && {
-                    "aria-describedby": description,
-                  })}
-                />
-              </SliderTrack>
+              <div className={classOf(styles, "trackColumn")}>
+                <SliderTrack
+                  ref={trackRef}
+                  className={classOf(styles, "track")}
+                >
+                  <SliderThumb
+                    className={classOf(styles, "thumb")}
+                    inputRef={inputRef}
+                    {...(description !== undefined && {
+                      "aria-describedby": description,
+                    })}
+                  />
+                </SliderTrack>
+                {/* The ends, for the eye: a screen reader reads them from
+                    the slider's input. */}
+                <div className={classOf(styles, "ends")} aria-hidden="true">
+                  <span>{ends.min}</span>
+                  <span>{ends.max}</span>
+                </div>
+              </div>
               <SliderOutput className={classOf(styles, "output")}>
                 {text}
               </SliderOutput>

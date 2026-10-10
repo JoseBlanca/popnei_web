@@ -337,6 +337,7 @@ const CONTROLS: readonly {
         step: 0.01,
         value: 0.9,
         valueText: String,
+        ends: { min: "0.5", max: "0.95" },
         waiting,
         onChange: () => undefined,
       }),
@@ -584,6 +585,7 @@ function drawSlider(
       value,
       valueText: (value) =>
         value >= 0.1 ? "0.1, as in the Variants tab" : String(value),
+      ends: { min: "0", max: "0.1" },
       waiting,
       onChange: (value) => given.push(value),
     }),
@@ -614,6 +616,16 @@ describe("AP10 D2 the slider of a filter of the PCA's own", () => {
     });
     expect(given).toHaveLength(1);
     expect(given[0]).toBeCloseTo(0.051, 10);
+  });
+
+  test("the words of its two ends drawn under its track, hidden from a screen reader", () => {
+    drawSlider(null, []);
+    const ends = container.querySelector('[aria-hidden="true"]');
+    expect(ends?.textContent).toBe("00.1");
+    expect([...(ends?.children ?? [])].map((end) => end.textContent)).toEqual([
+      "0",
+      "0.1",
+    ]);
   });
 
   test("a press on the thumb with no move gives no value", () => {
@@ -664,6 +676,7 @@ describe("AP10 D2 the slider of a filter of the PCA's own", () => {
         step: 0.001,
         value: 0,
         valueText: String,
+        ends: { min: "0", max: "0" },
         onChange: (value) => given.push(value),
       }),
     );

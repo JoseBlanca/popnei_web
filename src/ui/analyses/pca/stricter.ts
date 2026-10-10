@@ -129,6 +129,25 @@ export function emptyRangeLine(
   return `${numberText(bound.max)}, ${AS_IN_THE_TAB}. The ${methodName(method)} cannot be stricter than the Variants tab here.`;
 }
 
+/** The words of the two ends of a slider, under its track. */
+export interface StricterEnds {
+  /** The lower end: "0", "0.5". */
+  readonly min: string;
+  /** The upper end: the Variants tab's value, "0.1", or "Off" while it
+      has that threshold off. */
+  readonly max: string;
+}
+
+/** The words of the two ends of the slider `bound`, under its track:
+    "0" and "0.1"; "0.5" and "Off" while the Variants tab has the
+    threshold off. */
+export function stricterEnds(bound: StricterBound): StricterEnds {
+  return {
+    min: numberText(bound.min),
+    max: bound.tab === null ? "Off" : numberText(bound.max),
+  };
+}
+
 /** The words of a slider at its upper end, after its value. */
 const AS_IN_THE_TAB = "as in the Variants tab";
 
