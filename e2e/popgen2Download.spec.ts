@@ -363,7 +363,16 @@ test("DL6 D4 a crash of the worker during a write gives its words in the dialog,
 
   await close.click();
   await expect(dialog(page)).toHaveCount(0);
-  await expect(button(page)).toBeFocused();
+  // The crash is an error of the application too, which came while the
+  // dialog was open: once it has gone, the page is brought to the band,
+  // and the focus, given back to Download, now out of the window, goes
+  // to the band's heading (docs/specs/steps/popgen2-band.md).
+  const band = page.getByRole("banner", { name: "What the page is doing" });
+  await expect(band.getByRole("alert")).toBeInViewport({ ratio: 1 });
+  await expect(button(page)).not.toBeInViewport({ ratio: 1 });
+  await expect(
+    band.getByRole("heading", { level: 1, name: "Popnei" }),
+  ).toBeFocused();
   // The band's line of an error has what the worker said, for a report,
   // with the dialog's way to put it right and no reload.
   await expect(

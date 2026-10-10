@@ -26,7 +26,9 @@
  * an error of the application is shown it scrolls with the page, at its
  * top, and the room is 0: fixed, its error covered half the window at
  * 200% zoom and all of it at 400%, Close out of reach. When the error
- * comes with the band above the window, the page is scrolled to it.
+ * comes with the band above the window, the page is scrolled to it,
+ * once no dialog is open, and the focus goes to the heading when the
+ * control that had it is then out of the window.
  *
  * Its line is not a live region: its percentage and its clock change
  * every second. What starts and ends is said by the page's status
@@ -72,6 +74,7 @@ import { stoppedText } from "../variants/words.ts";
 import { Button } from "../widgets/Button.tsx";
 import { Link } from "../widgets/Link.tsx";
 import { WideShort } from "../widgets/WideShort.tsx";
+import { isDialogOnPage, whenNoDialog } from "../widgets/dialogMark.ts";
 import { errorOf, lineOf } from "./bandLine.ts";
 import type { BandLine } from "./bandLine.ts";
 import styles from "./Band.module.css";
@@ -158,8 +161,11 @@ export function Band({
     if (scrolls) {
       // Run when the error comes, and not at a second error, Details or
       // Close, which leave `scrolls` as it was.
-      bringIntoView(header);
-      return giveBack;
+      const stopBringing = bringIntoView(header, headingRef);
+      return () => {
+        stopBringing();
+        giveBack();
+      };
     }
     const stopClearing = keepFocusClear(header);
     return () => {
@@ -603,14 +609,62 @@ function keepRoom(header: HTMLElement, scrolls: boolean): () => void {
  * the window: an error that came with the page scrolled down was out of
  * sight at 320 pixels and cut at its first line at 1280, and a user of
  * the mouse saw nothing change (the screens of work package 5, 10
- * October 2026). Not smooth, which would ignore a user who asks for
- * less motion; and the focus stays where it is, since the alert reads
- * the error.
+ * October 2026). Then, when the control with the focus is no longer
+ * whole in the window, the focus goes to the band's heading, `heading`,
+ * as Close gives it: a slider left out of sight was moved by the arrow
+ * keys with nothing seen (the review of 20af8575, 10 October 2026). The
+ * alert has read the error, and the Tab key from the heading reaches
+ * Details and Close.
+ *
+ * While a dialog is open nothing moves, since the focus cannot leave it
+ * and the page would jump behind it; this is done once it has gone and
+ * React Aria, a frame later, has given the focus back to the control
+ * that opened it. Gives the function that cancels what waits.
  */
-function bringIntoView(header: HTMLElement): void {
+function bringIntoView(
+  header: HTMLElement,
+  heading: React.RefObject<HTMLHeadingElement | null>,
+): () => void {
+  if (!isDialogOnPage(document)) {
+    scrollToBand(header, heading.current);
+    return () => undefined;
+  }
+  let waiting = true;
+  let frame = 0;
+  void whenNoDialog(document).then(() => {
+    if (!waiting) return;
+    frame = requestAnimationFrame(() => {
+      if (waiting) scrollToBand(header, heading.current);
+    });
+  });
+  return () => {
+    waiting = false;
+    cancelAnimationFrame(frame);
+  };
+}
+
+/** Scrolls the page to the top of the band `header` when it is above the
+    window, and then gives the focus to `heading` when the control of
+    the page that has it is no longer whole in the window. "auto" and
+    not "smooth", which would ignore a user who asks for less motion;
+    nor "instant", which Safari 16.4 does not know and throws on. */
+function scrollToBand(
+  header: HTMLElement,
+  heading: HTMLHeadingElement | null,
+): void {
   const top = header.getBoundingClientRect().top;
-  if (top < 0)
-    window.scrollTo({ top: window.scrollY + top, behavior: "instant" });
+  if (top >= 0) return;
+  window.scrollTo({ top: window.scrollY + top, behavior: "auto" });
+  const focused = document.activeElement;
+  if (
+    focused === null ||
+    focused === document.body ||
+    header.contains(focused)
+  ) {
+    return;
+  }
+  const place = focused.getBoundingClientRect();
+  if (place.top < 0 || place.bottom > window.innerHeight) heading?.focus();
 }
 
 /**

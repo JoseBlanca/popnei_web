@@ -10,6 +10,7 @@ import { StrictMode, act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { MockInstance } from "vitest";
 
 import { setVariantFilter } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
@@ -25,6 +26,7 @@ import { createAnnouncer } from "../shell/status.ts";
 import type { Announcer } from "../shell/status.ts";
 import { PANEL_HEADING_ATTRIBUTE } from "../analyses/AnalysisPanel.tsx";
 import { WARNINGS_HEADING_ATTRIBUTE } from "../analyses/Warnings.tsx";
+import { DIALOG_MARK } from "../widgets/dialogMark.ts";
 import { Band } from "./Band.tsx";
 import { flush, page, pcaDone, pcaResult } from "./testSupport.ts";
 import type { TestPage } from "./testSupport.ts";
@@ -543,7 +545,7 @@ describe("NU5 D2 the band drawn", () => {
         await Promise.resolve();
       });
       expect(scrollTo).toHaveBeenCalledTimes(1);
-      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "instant" });
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "auto" });
 
       await act(async () => {
         testPage.defects.report(new Error("second"), "event", null);
@@ -582,6 +584,108 @@ describe("NU5 D2 the band drawn", () => {
       expect(scrollTo).not.toHaveBeenCalled();
     } finally {
       scrollTo.mockRestore();
+    }
+  });
+
+  /** The band drawn above the window, 800 px scrolled: scrollTo asked
+      for nothing, and the band's top at -800. Gives the spy of scrollTo
+      and the function that puts the window back. */
+  function bandAbove(): {
+    readonly scrollTo: MockInstance<typeof window.scrollTo>;
+    readonly restore: () => void;
+  } {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {
+      // Nothing is laid out in jsdom.
+    });
+    const scrollY = vi.spyOn(window, "scrollY", "get").mockReturnValue(800);
+    const header = container.querySelector("header");
+    if (header === null) throw new Error("no band");
+    vi.spyOn(header, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({ x: 0, y: -800, width: 1280, height: 120 }),
+    );
+    return {
+      scrollTo,
+      restore: () => {
+        scrollTo.mockRestore();
+        scrollY.mockRestore();
+      },
+    };
+  }
+
+  /** A control of the page with the focus, at `top` of the window once
+      the page is brought to the band. */
+  function focusedControl(top: number): HTMLButtonElement {
+    const control = document.createElement("button");
+    document.body.append(control);
+    vi.spyOn(control, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({ x: 0, y: top, width: 100, height: 30 }),
+    );
+    control.focus();
+    return control;
+  }
+
+  test("an error that brings the band into view gives the focus to the heading Popnei when the control that had it is no longer whole in the window, and leaves it on a control still in the window", async () => {
+    for (const [top, toHeading] of [
+      [window.innerHeight + 100, true],
+      [window.innerHeight - 20, true],
+      [200, false],
+    ] as const) {
+      const testPage = page(SUMMARY);
+      await drawBand(testPage);
+      const { restore } = bandAbove();
+      const control = focusedControl(top);
+      try {
+        await act(async () => {
+          testPage.defects.report(new Error("test"), "event", null);
+          await Promise.resolve();
+        });
+        expect(document.activeElement).toBe(toHeading ? heading() : control);
+      } finally {
+        restore();
+        control.remove();
+        await act(async () => {
+          testPage.defects.dismiss();
+          await Promise.resolve();
+        });
+      }
+    }
+  });
+
+  test("an error that comes while a dialog is open neither scrolls the page nor moves the focus; once the dialog has gone and React Aria has given the focus back, the band is brought into view and the focus, out of the window, goes to the heading", async () => {
+    const testPage = page(SUMMARY);
+    await drawBand(testPage);
+    const { scrollTo, restore } = bandAbove();
+    const dialog = document.createElement("div");
+    dialog.setAttribute(DIALOG_MARK, "");
+    const inDialog = document.createElement("button");
+    dialog.append(inDialog);
+    document.body.append(dialog);
+    inDialog.focus();
+    const control = focusedControl(window.innerHeight + 900);
+    inDialog.focus();
+    try {
+      await act(async () => {
+        testPage.defects.report(new Error("test"), "event", null);
+        await Promise.resolve();
+      });
+      expect(scrollTo).not.toHaveBeenCalled();
+      expect(document.activeElement).toBe(inDialog);
+
+      // The dialog goes, and React Aria gives the focus back to the
+      // control that opened it, a frame later.
+      await act(async () => {
+        dialog.remove();
+        requestAnimationFrame(() => {
+          control.focus();
+        });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+      expect(document.activeElement).toBe(heading());
+    } finally {
+      restore();
+      control.remove();
+      dialog.remove();
     }
   });
 });

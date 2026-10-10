@@ -11,8 +11,10 @@
  * and Close, beside a PCA held running; the page scrolled to its end,
  * each control the Tab key reaches below the band; the dialog of the
  * download open and an error, the band's alert not inert; an error with
- * the page scrolled to its end, the page scrolled at once to the band,
- * at 1280 and at 320 pixels; the band's
+ * the page scrolled down, the page scrolled at once to the band, at 1280
+ * and at 320 pixels, and the focus on the heading when the control that
+ * had it is left out of the window; the same with the dialog of the
+ * download open, the page still until it closes; the band's
  * height the same whatever it says, at 1280 and at 320 pixels, the
  * short forms on one line, and the one `<h1>`; and axe in each state,
  * light and dark.
@@ -553,45 +555,115 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
   });
 
   for (const width of [1280, 320]) {
-    test(`NU5 D3 at ${String(width)} px an error of the application with the page scrolled to its end: the page is scrolled at once to the band's top, its error line, Details and Close in the window, and the focus stays where it was`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width, height: 600 });
-      await page.goto("popgen2.html");
-      await pick(page, "panel.nei");
-      await expect(variantsBox(page)).toContainText("Variants: 1,200", {
-        timeout: RESULT_TIMEOUT,
-      });
-      await page.evaluate(() => {
-        window.scrollTo(0, document.documentElement.scrollHeight);
-      });
-      expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-      await page.evaluate(() => {
-        Reflect.set(window, "focusedBefore", document.activeElement);
-      });
-
-      await page.evaluate(() => {
-        setTimeout(() => {
-          throw new Error("test");
+    for (const focus of ["page", "slider"] as const) {
+      test(`NU5 D3 at ${String(width)} px an error of the application with the page scrolled down and the focus ${focus === "slider" ? "on the slider of the missing genotypes, which the jump leaves out of the window" : "on the page"}: the page is scrolled at once to the band's top, its error line, Details and Close in the window, and the focus ${focus === "slider" ? "on the heading Popnei, in the window" : "where it was"}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 600 });
+        await page.goto("popgen2.html");
+        await pick(page, "panel.nei");
+        await expect(variantsBox(page)).toContainText("Variants: 1,200", {
+          timeout: RESULT_TIMEOUT,
         });
-      });
+        if (focus === "slider") {
+          await missingSlider(page).focus();
+          await missingSlider(page).evaluate((element) => {
+            element.scrollIntoView({ block: "center" });
+          });
+        } else {
+          await page.evaluate(() => {
+            (document.activeElement as HTMLElement | null)?.blur();
+            window.scrollTo(0, document.documentElement.scrollHeight);
+          });
+        }
+        expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 
-      const alert = band(page).getByRole("alert");
-      await expect(alert).toHaveText(ERROR_TEXT);
-      const top = await band(page).evaluate(
-        (element) => element.getBoundingClientRect().top,
-      );
-      expect(top).toBeGreaterThanOrEqual(0);
-      await expect(alert).toBeInViewport({ ratio: 1 });
-      await expect(bandButton(page, "Details")).toBeInViewport({ ratio: 1 });
-      await expect(bandButton(page, "Close")).toBeInViewport({ ratio: 1 });
-      expect(
-        await page.evaluate(
-          () => document.activeElement === Reflect.get(window, "focusedBefore"),
-        ),
-      ).toBe(true);
-    });
+        await page.evaluate(() => {
+          setTimeout(() => {
+            throw new Error("test");
+          });
+        });
+
+        const alert = band(page).getByRole("alert");
+        await expect(alert).toHaveText(ERROR_TEXT);
+        const top = await band(page).evaluate(
+          (element) => element.getBoundingClientRect().top,
+        );
+        expect(top).toBeGreaterThanOrEqual(0);
+        await expect(alert).toBeInViewport({ ratio: 1 });
+        await expect(bandButton(page, "Details")).toBeInViewport({ ratio: 1 });
+        await expect(bandButton(page, "Close")).toBeInViewport({ ratio: 1 });
+        if (focus === "slider") {
+          await expect(missingSlider(page)).not.toBeInViewport({ ratio: 1 });
+          await expect(heading(page)).toBeFocused();
+          await expect(heading(page)).toBeInViewport({ ratio: 1 });
+        } else {
+          expect(
+            await page.evaluate(() => document.activeElement === document.body),
+          ).toBe(true);
+        }
+      });
+    }
   }
+
+  test("NU5 D3 an error of the application with the dialog of the download open on a page scrolled down: the page does not jump and the focus stays in the dialog; Escape, and the band is brought into view, the focus on a control in the window", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 600 });
+    await page.goto("popgen2.html");
+    await pick(page, "panel.nei");
+    await expect(variantsBox(page)).toContainText("Variants: 1,200", {
+      timeout: RESULT_TIMEOUT,
+    });
+    const download = page
+      .getByRole("region", { name: "Statistics of the file" })
+      .getByRole("button", {
+        name: "Download filtered variants…",
+        exact: true,
+      });
+    await download.evaluate((element) => {
+      element.scrollIntoView({ block: "end" });
+    });
+    const scrolled = await page.evaluate(() => window.scrollY);
+    expect(scrolled).toBeGreaterThan(0);
+    await download.click();
+    const dialog = page.getByRole("dialog", {
+      name: "Download filtered variants",
+    });
+    await expect(dialog).toBeVisible();
+
+    await page.evaluate(() => {
+      setTimeout(() => {
+        throw new Error("test");
+      });
+    });
+
+    await expect(band(page).getByRole("alert")).toHaveText(ERROR_TEXT);
+    // Two frames, in which a jump would have been made.
+    await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        }),
+    );
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+    expect(
+      await dialog.evaluate((element) =>
+        element.contains(document.activeElement),
+      ),
+    ).toBe(true);
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect
+      .poll(() =>
+        band(page).evaluate((element) => element.getBoundingClientRect().top),
+      )
+      .toBeGreaterThanOrEqual(0);
+    await expect(band(page).getByRole("alert")).toBeInViewport({ ratio: 1 });
+    await expect(page.locator(":focus")).toBeInViewport({ ratio: 1 });
+    await expect(heading(page)).toBeFocused();
+  });
 
   for (const running of [true, false]) {
     test(`NU5 D3 the page scrolled to its end${running ? " with a PCA held running" : ", nothing running"}: the band at the top of the window, and each control the Tab key reaches back to the top below the band`, async ({
