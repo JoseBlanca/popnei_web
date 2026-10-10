@@ -114,8 +114,9 @@ export function Select<T extends string>({
   // The field, label and button, which the tooltip is placed under.
   const anchorRef = useRef<HTMLDivElement>(null);
   // Whether it waits, read when React Aria calls `chosen`, which may be
-  // the handler of an earlier drawing: seen in Chromium and WebKit, where
-  // ArrowRight on a select that waited chose the next item.
+  // the handler of an earlier drawing: a guard, with the keys stopped
+  // below, against a key of React Aria's on a closed select choosing an
+  // item while the select waits.
   const waitsRef = useRef(waits);
   useLayoutEffect(() => {
     waitsRef.current = waits;
@@ -131,7 +132,9 @@ export function Select<T extends string>({
       {(hintId) => (
         // The keys that choose an item of a closed list, the arrows to the
         // side and a letter typed, stopped before React Aria's handler
-        // while it waits. The element is no widget.
+        // while it waits, which would also keep a letter for a second in
+        // its search, joined to the next one typed. The element is no
+        // widget.
         <div
           onKeyDownCapture={(event) => {
             if (waits && choosesWhenClosed(event)) {

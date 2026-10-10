@@ -536,6 +536,45 @@ describe("AP10 D1 the select of the method that waits while a PCA runs", () => {
     }
   });
 
+  test("a letter typed while it waits reaches no search of React Aria, so the same letter typed once the wait ends chooses the item it starts", () => {
+    const chosen: string[] = [];
+    const drawLetters = (waiting: string | null): void => {
+      draw(
+        createElement(Select<"alpha" | "beta">, {
+          label: "Letters",
+          items: [
+            { id: "alpha", label: "Alpha" },
+            { id: "beta", label: "Beta" },
+          ],
+          value: "alpha",
+          waiting,
+          onChange: (id) => chosen.push(id),
+        }),
+      );
+    };
+    const type = (key: string): void => {
+      act(() => {
+        selectButton().dispatchEvent(
+          new KeyboardEvent("keydown", { key, bubbles: true }),
+        );
+        selectButton().dispatchEvent(
+          new KeyboardEvent("keyup", { key, bubbles: true }),
+        );
+      });
+    };
+    drawLetters(REASON);
+    act(() => {
+      selectButton().focus();
+    });
+    type("b");
+    expect(chosen).toEqual([]);
+    // Within the second React Aria keeps the letters typed: had it been
+    // given the first "b", it would search for "bb", which starts no item.
+    drawLetters(null);
+    type("b");
+    expect(chosen).toEqual(["beta"]);
+  });
+
   test("with a description, waiting: its button described by the description and the reason", () => {
     draw(
       createElement(Select<"pca" | "pcoa">, {
