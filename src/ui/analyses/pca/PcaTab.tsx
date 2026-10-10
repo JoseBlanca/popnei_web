@@ -16,7 +16,8 @@
  * state, `autoRuns.pause` (docs/specs/steps/popgen2-pca.md, "The PCA
  * calculated again by itself"): while the PCA is about to start by
  * itself, Stop stands in the place of Run beside the line of the quiet
- * second, which names the download when its dialog is open; while it is
+ * second, which names the download when its dialog holds the start, as
+ * autoRuns says; while it is
  * live and locked, Stop stands beside the lock; after a Stop, Run stands
  * beside the line that says why nothing starts by itself.
  */
@@ -25,10 +26,6 @@ import { useEffect, useSyncExternalStore } from "react";
 import { pcaOnPopgen2, pcaOptions } from "../../../core/analyses/pca.ts";
 import type { AutoRuns } from "../../autoRuns.ts";
 import { useAppState } from "../../store.tsx";
-import {
-  isDownloadOpen,
-  subscribeDownloadOpen,
-} from "../../variants/downloadOpen.ts";
 import { summaryStatus } from "../../variants/words.ts";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
 import { passLock } from "./passLock.ts";
@@ -69,24 +66,21 @@ export function PcaTab({ autoRuns, shown }: PcaTabProps): React.JSX.Element {
       passLock(summaryStatus(s), (key) => autoRuns.startedUnder(key)),
     ),
   );
-  // Read for each state of the store, and drawn again at each change of
-  // the live state, which `subscribe` above tells.
-  const live = useAppState(() => autoRuns.isLive(PCA));
-  const about = useAppState(() => autoRuns.aboutToStart(PCA));
-  const stopped = useAppState(() => autoRuns.stoppedByUser(PCA));
-  const dialogOpen = useSyncExternalStore(
-    subscribeDownloadOpen,
-    isDownloadOpen,
+  // The live state, which autoRuns tells of at each change, of the store
+  // and of the gate as well as its own.
+  const state = useSyncExternalStore(autoRuns.subscribe, () =>
+    autoRuns.liveState(PCA),
   );
+  const about = state.kind === "live" ? state.aboutToStart : null;
   return (
     <AnalysisPanel
       id={PCA}
       ui={pcaTabPanel(method)}
       page={{
         lock,
-        live,
-        aboutToStart: about ? aboutToStartLine(method, dialogOpen) : null,
-        stoppedLine: stopped ? stoppedLine(method) : null,
+        live: state.kind === "live",
+        aboutToStart: about === null ? null : aboutToStartLine(method, about),
+        stoppedLine: state.kind === "stopped" ? stoppedLine(method) : null,
         onRun: () => {
           autoRuns.run(PCA);
         },

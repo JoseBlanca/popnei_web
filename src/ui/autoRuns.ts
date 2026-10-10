@@ -70,8 +70,34 @@ export const LIVE_QUIET_MS = 1000;
 /** What the analyses that start again by themselves read of the changes
     the user has under way: the gate of the page, `createRunGate` of
     variants/thresholdRun.ts, whose listeners are told when the count
-    rises from 0 or falls to 0. */
-export type ChangesUnderWay = Pick<RunGate, "underWay" | "subscribe">;
+    rises from 0 or falls to 0, and when a kind of hold, a control in use
+    or the dialog of the download, comes to be held or no longer is. */
+export type ChangesUnderWay = Pick<
+  RunGate,
+  "underWay" | "subscribe" | "heldBy"
+>;
+
+/** What the start by itself of a live analysis about to start waits
+    for: "download", the dialog of the download of the filtered variants
+    open, or the write it started running; "changes", the quiet second
+    after the last change, or a change under way of a control. */
+export type AboutToStart = "changes" | "download";
+
+/** The live state of an analysis that starts again by itself, for the
+    load of the variants file open, as the page draws it. */
+export type LiveState =
+  /** Not live, and not stopped by the user: before its first Run for
+      the load. */
+  | { readonly kind: "off" }
+  /** The user's Stop ended its live state, and no Run since. */
+  | { readonly kind: "stopped" }
+  /** Live: what its start by itself waits for while it is about to
+      start, `null` while it is not; and whether it runs. */
+  | {
+      readonly kind: "live";
+      readonly aboutToStart: AboutToStart | null;
+      readonly running: boolean;
+    };
 
 /** The analyses a page starts again by itself once the user's Run made
     them live, and what their start reads. */
@@ -128,9 +154,12 @@ export interface AutoRuns {
       is in error from anything but a crash of the worker. */
   resume(group: readonly AnalysisId[]): boolean;
   /** Calls `listener` after every change of what this knows beyond the
-      store, which keys were started and which were given back; returns
-      the function that stops it. A property made once, so that React
-      keeps it. */
+      store, which keys were started and which were given back, and after
+      every change of the `liveState` of a live analysis, also one that a
+      change of the store or of the gate made, a filter changed, a new
+      load, the dialog of the download opened; returns the function that
+      stops it. So a screen reads `liveState` with this subscription
+      alone. A property made once, so that React keeps it. */
   readonly subscribe: (listener: () => void) => () => void;
   /** A number that changes at every such change, for React's
       `useSyncExternalStore`, with `subscribe`. A property made once, as
@@ -151,11 +180,17 @@ export interface AutoRuns {
   pause(id: AnalysisId): void;
   /** Whether `id` is live for the load of the variants file open. */
   isLive(id: AnalysisId): boolean;
-  /** Whether `id` is about to start by itself: live, ready under a key
-      it was not started under, every analysis before it done; during the
-      quiet second and for as long as a change under way, or a write,
-      holds it. */
-  aboutToStart(id: AnalysisId): boolean;
+  /** What `id` waits for while it is about to start by itself, live,
+      ready under a key it was not started under, and every analysis
+      before it done or locked: during the quiet second and for as long
+      as a change under way, or a write, holds it; "download" while the
+      dialog of the download is open or its write runs, "changes"
+      otherwise. `null` while it is not about to start. */
+  aboutToStart(id: AnalysisId): AboutToStart | null;
+  /** The live state of `id` now, the same object for as long as it does
+      not change, so that React's `useSyncExternalStore` reads it with
+      `subscribe`. */
+  liveState(id: AnalysisId): LiveState;
   /** Whether the user's Stop ended the live state of `id` for the load
       open, and no Run since. */
   stoppedByUser(id: AnalysisId): boolean;
@@ -256,6 +291,9 @@ export function createAutoRuns(deps: {
   let version = 0;
 
   function changed(): void {
+    // The live state is told with every change, so a change that
+    // `tellLiveChanges` compares next is with what was told now.
+    for (const id of liveIds) toldLive.set(id, liveStateNow(id));
     version += 1;
     for (const listener of [...listeners]) listener();
   }
@@ -364,6 +402,10 @@ export function createAutoRuns(deps: {
       store gives it that key. */
   const liveStarted = new Map<AnalysisId, Key>();
   const liveListeners = new Set<(event: LiveEvent) => void>();
+  /** The live state last told to the listeners of `subscribe`, and the
+      one last given by `liveState`, by analysis. */
+  const toldLive = new Map<AnalysisId, LiveState>();
+  const givenLive = new Map<AnalysisId, LiveState>();
   /** Whether the quiet second has run out since the last change of the
       project and the end of the last change under way. */
   let quiet = true;
@@ -423,7 +465,61 @@ export function createAutoRuns(deps: {
     return holderOf(id, index) === null ? key : null;
   }
 
+  /** What the start of `id` about to start waits for; `null` when it is
+      not about to start. */
+  function aboutToStart(id: AnalysisId): AboutToStart | null {
+    if (live === null || liveKey(id, ids.indexOf(id), statusOf(id)) === null) {
+      return null;
+    }
+    return live.changes.heldBy("download") || writeRunning()
+      ? "download"
+      : "changes";
+  }
+
+  function stoppedByUser(id: AnalysisId): boolean {
+    const fileId = fileIdNow();
+    return fileId !== null && pausedFor.get(id) === fileId && !isLive(id);
+  }
+
+  /** The live state of `id` now, a new object. */
+  function liveStateNow(id: AnalysisId): LiveState {
+    if (isLive(id)) {
+      return {
+        kind: "live",
+        aboutToStart: aboutToStart(id),
+        running: statusOf(id).kind === "running",
+      };
+    }
+    return stoppedByUser(id) ? { kind: "stopped" } : { kind: "off" };
+  }
+
+  function sameLiveState(a: LiveState, b: LiveState): boolean {
+    return (
+      a.kind === b.kind &&
+      (a.kind !== "live" ||
+        b.kind !== "live" ||
+        (a.aboutToStart === b.aboutToStart && a.running === b.running))
+    );
+  }
+
+  /** Tells the listeners of `subscribe` when the live state of a live
+      analysis changed since they were last told, by a change of the
+      store or of the gate. */
+  function tellLiveChanges(): void {
+    let differs = false;
+    for (const id of liveIds) {
+      const now = liveStateNow(id);
+      const told = toldLive.get(id);
+      if (told === undefined || !sameLiveState(told, now)) {
+        toldLive.set(id, now);
+        differs = true;
+      }
+    }
+    if (differs) changed();
+  }
+
   if (live !== null) {
+    for (const id of liveIds) toldLive.set(id, liveStateNow(id));
     store.subscribe(() => {
       const state = store.getState();
       for (const id of liveIds) {
@@ -437,6 +533,7 @@ export function createAutoRuns(deps: {
         lastProject = state.project;
         quietAgain();
       }
+      tellLiveChanges();
     });
     live.changes.subscribe(() => {
       // Read on each call: the gate tells when its count rises from 0 or
@@ -448,6 +545,7 @@ export function createAutoRuns(deps: {
         quietTimer = null;
         quiet = false;
       }
+      tellLiveChanges();
     });
   }
 
@@ -467,10 +565,11 @@ export function createAutoRuns(deps: {
           !writeRunning()
         ) {
           liveStarted.set(id, key);
+          // Told after the start, so that no listener reads the moment
+          // between, neither about to start nor running.
+          const sent = start(id);
           changed();
-          if (start(id) !== null) {
-            tellLive({ kind: "startedByItself", id });
-          }
+          if (sent !== null) tellLive({ kind: "startedByItself", id });
           return;
         }
         continue;
@@ -545,12 +644,19 @@ export function createAutoRuns(deps: {
     },
     aboutToStart: (id) => {
       liveDefect(id);
-      return liveKey(id, ids.indexOf(id), statusOf(id)) !== null;
+      return aboutToStart(id);
+    },
+    liveState: (id) => {
+      liveDefect(id);
+      const now = liveStateNow(id);
+      const given = givenLive.get(id);
+      if (given !== undefined && sameLiveState(given, now)) return given;
+      givenLive.set(id, now);
+      return now;
     },
     stoppedByUser: (id) => {
       liveDefect(id);
-      const fileId = fileIdNow();
-      return fileId !== null && pausedFor.get(id) === fileId && !isLive(id);
+      return stoppedByUser(id);
     },
     onLive: (listener) => {
       liveListeners.add(listener);

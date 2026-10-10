@@ -305,8 +305,12 @@ It reads:
   name of the variants file and the method of the PCA;
 - the clock of a run, `useRunSeconds` of `src/ui/runSeconds.ts`, as the
   PCA tab reads it;
-- from `src/ui/autoRuns.ts`: whether the PCA is about to start,
-  `aboutToStart`, and its `subscribe`;
+- from `src/ui/autoRuns.ts`: the PCA's live state, `liveState("pca")`,
+  whether it is live, about to start and what its start waits for, or
+  stopped by the user, read with its `subscribe` alone, which tells
+  every change of it, those a change of the store makes among them (the
+  review of work package 4 of `docs/plans/no-undo.md`, 10 October 2026;
+  `aboutToStart` with `subscribe` missed the changes of the store);
 - the log of the errors, `src/ui/defects.ts`;
 - the tab shown, from `src/ui/pageTab.ts`;
 - `stoppedAwaitingWorker` of the store's state, for "Stopping".

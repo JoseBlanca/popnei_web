@@ -32,9 +32,9 @@ import { startAnalysis } from "../../runs.ts";
 import { AnnouncerProvider } from "../../shell/announcer.tsx";
 import { createAnnouncer } from "../../shell/status.ts";
 import { StoreProvider } from "../../store.tsx";
-import { markDownloadOpen } from "../../variants/downloadOpen.ts";
 import { RunGateProvider } from "../../variants/runGate.tsx";
 import { createRunGate, gatedStore } from "../../variants/thresholdRun.ts";
+import type { RunGate } from "../../variants/thresholdRun.ts";
 import { ChangeHoldsProvider } from "../../widgets/changeHold.ts";
 import { PcaTab } from "./PcaTab.tsx";
 
@@ -89,6 +89,7 @@ interface Request {
 interface Page {
   readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly autoRuns: AutoRuns;
+  readonly gate: RunGate;
   readonly pcaRequests: () => readonly Request[];
   readonly endPca: () => Promise<void>;
 }
@@ -222,6 +223,7 @@ async function drawTab(): Promise<Page> {
   return {
     store,
     autoRuns,
+    gate,
     pcaRequests,
     endPca: async () => {
       const last = pcaRequests().at(-1);
@@ -353,7 +355,7 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
     await setMissing(page, 0.05);
     let unmark = (): void => undefined;
     await act(async () => {
-      unmark = markDownloadOpen();
+      unmark = page.gate.holdChange("download");
       await Promise.resolve();
     });
     expect(descriptionOf(button("Stop"))).toBe(ABOUT_DIALOG);

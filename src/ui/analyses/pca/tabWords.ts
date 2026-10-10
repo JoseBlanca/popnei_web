@@ -28,6 +28,7 @@ import type {
   AppState,
 } from "../../../core/store.ts";
 import type { JobResult, PcaMethod } from "../../../worker/protocol.ts";
+import type { AboutToStart } from "../../autoRuns.ts";
 import { statusOf } from "../status.ts";
 import {
   WAITS_FOR_STATISTICS_TEXT,
@@ -178,19 +179,22 @@ export function pcaTabResultFailed(
 }
 
 /** The line in the place of the bar while the PCA is about to start by
-    itself (docs/specs/steps/popgen2-pca.md, "About to start"): "The PCA
-    starts again in a moment, once the filters and its options stop
-    changing."; while the dialog of the download of the filtered
-    variants is open, `dialogOpen`, "The PCA starts again when the
-    download is written or closed."; "The PCoA …" under the PCoA. */
+    itself, waiting for `waits` (docs/specs/steps/popgen2-pca.md, "About
+    to start"): "The PCA starts again in a moment, once the filters and
+    its options stop changing."; while the dialog of the download of the
+    filtered variants holds it, "download", "The PCA starts again when
+    the download is written or closed."; "The PCoA …" under the PCoA. */
 export function aboutToStartLine(
   method: PcaMethod,
-  dialogOpen: boolean,
+  waits: AboutToStart,
 ): string {
   const name = methodName(method);
-  return dialogOpen
-    ? `The ${name} starts again when the download is written or closed.`
-    : `The ${name} starts again in a moment, once the filters and its options stop changing.`;
+  switch (waits) {
+    case "download":
+      return `The ${name} starts again when the download is written or closed.`;
+    case "changes":
+      return `The ${name} starts again in a moment, once the filters and its options stop changing.`;
+  }
 }
 
 /** What the status region says when the PCA starts again by itself:

@@ -11,6 +11,7 @@ import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { createRunGate } from "../variants/thresholdRun.ts";
+import type { HoldKind } from "../variants/thresholdRun.ts";
 import {
   ChangeHoldsProvider,
   HOLDS_NOTHING,
@@ -46,9 +47,16 @@ afterEach(() => {
   container.remove();
 });
 
-/** A widget that holds while `held`. */
-function HoldsWhile({ held }: { readonly held: boolean }): null {
-  useHoldWhile(held);
+/** A widget that holds while `held`, a hold of the kind `kind` when
+    given. */
+function HoldsWhile({
+  held,
+  kind,
+}: {
+  readonly held: boolean;
+  readonly kind?: HoldKind;
+}): null {
+  useHoldWhile(held, kind);
   return null;
 }
 
@@ -85,6 +93,22 @@ describe("NU3 the holder of the changes under way", () => {
     const gate = createRunGate();
     draw(createElement(HoldsWhile, { held: true }), gate);
     expect(gate.underWay()).toBe(1);
+    draw(createElement(HoldsWhile, { held: false }), gate);
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("a hold of the download held through the holder is of its kind, and a widget's with no kind a control's", () => {
+    const gate = createRunGate();
+    draw(createElement(HoldsWhile, { held: true, kind: "download" }), gate);
+    expect([gate.heldBy("download"), gate.heldBy("control")]).toEqual([
+      true,
+      false,
+    ]);
+    draw(createElement(HoldsWhile, { held: true }), gate);
+    expect([gate.heldBy("download"), gate.heldBy("control")]).toEqual([
+      false,
+      true,
+    ]);
     draw(createElement(HoldsWhile, { held: false }), gate);
     expect(gate.underWay()).toBe(0);
   });

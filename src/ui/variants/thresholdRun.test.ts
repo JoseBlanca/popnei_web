@@ -14,6 +14,7 @@ import {
 import type { Project } from "../../core/project.ts";
 import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
 import {
+  HOLD_KINDS,
   RUN_QUIET_MS,
   createRunGate,
   createThresholdRun,
@@ -722,5 +723,75 @@ describe("NU2 D2 the gate tells only when the count of the changes under way ris
     expect(told).toBe(0);
     release();
     expect(told).toBe(1);
+  });
+});
+
+describe("NU4 D1 the holds of the gate carry their kind: a control in use, or the dialog of the download", () => {
+  test("the kinds are a control and the download, and a hold with no kind is a control's", () => {
+    expect(HOLD_KINDS).toEqual(["control", "download"]);
+    const gate = createRunGate();
+    const release = gate.holdChange();
+    expect([gate.heldBy("control"), gate.heldBy("download")]).toEqual([
+      true,
+      false,
+    ]);
+    release();
+    expect(gate.heldBy("control")).toBe(false);
+  });
+
+  test("a hold of the download is a change under way, and heldBy says it until its release", () => {
+    const gate = createRunGate();
+    const release = gate.holdChange("download");
+    expect([gate.underWay(), gate.busy()]).toEqual([1, true]);
+    expect([gate.heldBy("control"), gate.heldBy("download")]).toEqual([
+      false,
+      true,
+    ]);
+    release();
+    expect([gate.underWay(), gate.heldBy("download")]).toEqual([0, false]);
+  });
+
+  test("the listeners are told when heldBy changes for a kind, also while another hold keeps the count above 0", () => {
+    const gate = createRunGate();
+    const releaseControl = gate.holdChange();
+    const seen: string[] = [];
+    gate.subscribe(() => {
+      seen.push(
+        `${String(gate.underWay())} ${String(gate.heldBy("download"))}`,
+      );
+    });
+    const releaseDownload = gate.holdChange("download");
+    expect(seen).toEqual(["2 true"]);
+    // A second hold of the same kind changes no heldBy, and tells nothing.
+    const releaseSecond = gate.holdChange("download");
+    expect(seen).toEqual(["2 true"]);
+    releaseSecond();
+    expect(seen).toEqual(["2 true"]);
+    releaseDownload();
+    expect(seen).toEqual(["2 true", "1 false"]);
+    releaseControl();
+    expect(seen).toEqual(["2 true", "1 false", "0 false"]);
+  });
+
+  test("a run of the arrow keys is a control in use: a hold of a control taken and let go while it is held tells nothing", () => {
+    const gate = createRunGate();
+    const { run } = runOf(gate);
+    run.press(0.5, 0.49);
+    expect([gate.heldBy("control"), gate.heldBy("download")]).toEqual([
+      true,
+      false,
+    ]);
+    let told = 0;
+    gate.subscribe(() => {
+      told += 1;
+    });
+    gate.holdChange()();
+    expect(told).toBe(0);
+    vi.advanceTimersByTime(RUN_QUIET_MS);
+    expect([gate.underWay(), gate.heldBy("control"), told]).toEqual([
+      0,
+      false,
+      1,
+    ]);
   });
 });

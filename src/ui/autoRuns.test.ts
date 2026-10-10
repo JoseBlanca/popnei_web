@@ -1109,7 +1109,7 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     await wait(5000);
     expect(page.pcaRequests()).toHaveLength(0);
     expect(page.auto.isLive("pca")).toBe(false);
-    expect(page.auto.aboutToStart("pca")).toBe(false);
+    expect(page.auto.aboutToStart("pca")).toBeNull();
   });
 
   test("Run makes the PCA live and starts it at once, through the gate", async () => {
@@ -1183,7 +1183,7 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     const release = page.gate.holdChange();
     await wait(3000);
     expect(page.pcaRequests()).toHaveLength(1);
-    expect(page.auto.aboutToStart("pca")).toBe(true);
+    expect(page.auto.aboutToStart("pca")).toBe("changes");
     release();
     await wait(999);
     expect(page.pcaRequests()).toHaveLength(1);
@@ -1237,7 +1237,7 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     expect(page.writes).toHaveLength(1);
     await wait(3000);
     expect(page.pcaRequests()).toHaveLength(1);
-    expect(page.auto.aboutToStart("pca")).toBe(true);
+    expect(page.auto.aboutToStart("pca")).toBe("download");
     const write = page.writes[0];
     write?.end({ kind: "cancelled" });
     page.raw.cancelWrite();
@@ -1309,7 +1309,7 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     await wait(3000);
     expect(page.pcaRequests()).toHaveLength(1);
     expect(page.pca().kind).toBe("done");
-    expect(page.auto.aboutToStart("pca")).toBe(false);
+    expect(page.auto.aboutToStart("pca")).toBeNull();
   });
 
   test("a Stop during a run ends the live state: the PCA ready, and a change then starts nothing until Run", async () => {
@@ -1338,9 +1338,9 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     const page = await liveDone();
     page.setMissing(0.05);
     await wait(500);
-    expect(page.auto.aboutToStart("pca")).toBe(true);
+    expect(page.auto.aboutToStart("pca")).toBe("changes");
     page.auto.pause("pca");
-    expect(page.auto.aboutToStart("pca")).toBe(false);
+    expect(page.auto.aboutToStart("pca")).toBeNull();
     await wait(5000);
     expect(page.pcaRequests()).toHaveLength(1);
     expect(page.pca().kind).toBe("ready");
@@ -1377,7 +1377,7 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     page.setDistance(null);
     expect(page.pca().kind).toBe("locked");
     expect(page.auto.isLive("pca")).toBe(true);
-    expect(page.auto.aboutToStart("pca")).toBe(false);
+    expect(page.auto.aboutToStart("pca")).toBeNull();
     await wait(2000);
     page.setDistance(50_000);
     expect(page.pca().kind).toBe("done");
@@ -1390,7 +1390,7 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     page.setDistance(null);
     await wait(2000);
     page.setDistance(40_000);
-    expect(page.auto.aboutToStart("pca")).toBe(true);
+    expect(page.auto.aboutToStart("pca")).toBe("changes");
     await wait(1000);
     expect(page.pcaRequests()).toHaveLength(2);
   });
@@ -1429,24 +1429,101 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     expect(page.pcaRequests()[2]?.key).toBe(page.pcaRequests()[1]?.key);
   });
 
-  test("aboutToStart: false before Run, while running and done; true during the quiet second and while a hold holds it; false after a Stop", async () => {
+  test('aboutToStart: null before Run, while running and done; "changes" during the quiet second and while a hold of a control holds it; null after a Stop', async () => {
     const page = await livePage();
-    expect(page.auto.aboutToStart("pca")).toBe(false);
+    expect(page.auto.aboutToStart("pca")).toBeNull();
     page.auto.run("pca");
-    expect(page.auto.aboutToStart("pca")).toBe(false);
+    expect(page.auto.aboutToStart("pca")).toBeNull();
     await page.endPca();
-    expect(page.auto.aboutToStart("pca")).toBe(false);
+    expect(page.auto.aboutToStart("pca")).toBeNull();
     const release = page.gate.holdChange();
     page.setMissing(0.05);
-    expect(page.auto.aboutToStart("pca")).toBe(true);
+    expect(page.auto.aboutToStart("pca")).toBe("changes");
     await wait(3000);
-    expect(page.auto.aboutToStart("pca")).toBe(true);
+    expect(page.auto.aboutToStart("pca")).toBe("changes");
     release();
     await wait(500);
-    expect(page.auto.aboutToStart("pca")).toBe(true);
+    expect(page.auto.aboutToStart("pca")).toBe("changes");
     await wait(500);
-    expect(page.auto.aboutToStart("pca")).toBe(false);
+    expect(page.auto.aboutToStart("pca")).toBeNull();
     expect(page.pca().kind).toBe("running");
+  });
+
+  test('aboutToStart is "download" while the dialog of the download holds the second, and "changes" again once it closes', async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    const closeDialog = page.gate.holdChange("download");
+    expect(page.auto.aboutToStart("pca")).toBe("download");
+    const releaseList = page.gate.holdChange();
+    expect(page.auto.aboutToStart("pca")).toBe("download");
+    releaseList();
+    closeDialog();
+    expect(page.auto.aboutToStart("pca")).toBe("changes");
+    await wait(1000);
+    expect(page.auto.aboutToStart("pca")).toBeNull();
+    expect(page.pcaRequests()).toHaveLength(2);
+  });
+
+  test("liveState: off, live and running, live and done, about to start, stopped; the same object while nothing of it changes", async () => {
+    const page = await livePage();
+    expect(page.auto.liveState("pca")).toEqual({ kind: "off" });
+    page.auto.run("pca");
+    expect(page.auto.liveState("pca")).toEqual({
+      kind: "live",
+      aboutToStart: null,
+      running: true,
+    });
+    await page.endPca();
+    const done = page.auto.liveState("pca");
+    expect(done).toEqual({ kind: "live", aboutToStart: null, running: false });
+    expect(page.auto.liveState("pca")).toBe(done);
+    page.setMissing(0.05);
+    expect(page.auto.liveState("pca")).toEqual({
+      kind: "live",
+      aboutToStart: "changes",
+      running: false,
+    });
+    const closeDialog = page.gate.holdChange("download");
+    expect(page.auto.liveState("pca")).toEqual({
+      kind: "live",
+      aboutToStart: "download",
+      running: false,
+    });
+    closeDialog();
+    page.auto.pause("pca");
+    expect(page.auto.liveState("pca")).toEqual({ kind: "stopped" });
+  });
+
+  test("a reader subscribed to autoRuns alone is told of every change of liveState: a change of a filter, a hold of the download, its end, a Run and a new load", async () => {
+    const page = await liveDone();
+    const seen: unknown[] = [];
+    let last = page.auto.liveState("pca");
+    let version = page.auto.getVersion();
+    page.auto.subscribe(() => {
+      const now = page.auto.liveState("pca");
+      if (now !== last) seen.push(now);
+      last = now;
+      expect(page.auto.getVersion()).not.toBe(version);
+      version = page.auto.getVersion();
+    });
+    page.setMissing(0.05);
+    expect(seen).toEqual([
+      { kind: "live", aboutToStart: "changes", running: false },
+    ]);
+    const closeDialog = page.gate.holdChange("download");
+    closeDialog();
+    await wait(1000);
+    expect(seen.slice(1)).toEqual([
+      { kind: "live", aboutToStart: "download", running: false },
+      { kind: "live", aboutToStart: "changes", running: false },
+      { kind: "live", aboutToStart: null, running: true },
+    ]);
+    await page.endPca();
+    openVariantsFile(page.store, panelLoad(SECOND));
+    expect(seen.slice(4)).toEqual([
+      { kind: "live", aboutToStart: null, running: false },
+      { kind: "off" },
+    ]);
   });
 
   test("the page is told when the live state changes, at Run and at a Stop, which no change of the store tells", async () => {

@@ -22,10 +22,13 @@
  * The gate also counts the changes under way, a change the user is
  * making that has not reached the project yet: a run of the keys, and
  * the holds the widgets take while a slider is held, a list is open,
- * digits wait or the dialog of the download is open; and tells its
- * listeners when the count rises from 0 and when it falls to 0, from
- * which the PCA's quiet second runs (docs/specs/steps/popgen2-pca.md,
- * "The PCA calculated again by itself").
+ * digits wait or the dialog of the download is open, each hold tagged
+ * with its kind, a control in use or the dialog of the download; and
+ * tells its listeners when the count rises from 0 and when it falls to
+ * 0, from which the PCA's quiet second runs, and when a kind comes to be
+ * held or no longer is, from which the PCA tab says what its start waits
+ * for (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by
+ * itself").
  */
 import { withoutUndo } from "../popgen2Store.ts";
 import type { Popgen2PageStore } from "../popgen2Store.ts";
@@ -33,6 +36,16 @@ import type { Popgen2PageStore } from "../popgen2Store.ts";
 /** The quiet time after the last press of a run that ends it, in
     milliseconds. */
 export const RUN_QUIET_MS = 1000;
+
+/** The kinds of the holds of `holdChange`: a control in use, a slider
+    held, a list open, digits not confirmed; and the dialog of the
+    download of the filtered variants open, whose hold the PCA tab names
+    in its line of the quiet second ("The PCA starts again when the
+    download is written or closed."). */
+export const HOLD_KINDS = ["control", "download"] as const;
+
+/** The kind of a hold of `holdChange`, one of `HOLD_KINDS`. */
+export type HoldKind = (typeof HOLD_KINDS)[number];
 
 /** The gate of the page. */
 export interface RunGate {
@@ -53,9 +66,11 @@ export interface RunGate {
   readonly endAll: () => void;
   /** Calls `listener` when the count of the changes under way,
       `underWay`, rises from 0 or falls to 0, which is when `busy`
-      changes, and at nothing else;
-      returns the function that stops it. A property made once, so React
-      keeps it. */
+      changes, and when `heldBy` of a kind changes, a hold of a kind
+      taken while none of it was held or the last of it let go, and at
+      nothing else; so a listener may be told with the count above 0
+      before and after. Returns the function that stops it. A property
+      made once, so React keeps it. */
   readonly subscribe: (listener: () => void) => () => void;
   /** Registers the commit of the box of a threshold, which commits a
       number typed in it as Enter would, for `commitTyped`; gives the
@@ -68,15 +83,21 @@ export interface RunGate {
   /** Commits what is typed in every box registered, before an
       opening. */
   readonly commitTyped: () => void;
-  /** Holds a change under way that is not a run of the keys, a slider
-      held, a list open, digits typed and not confirmed, the dialog of the
+  /** Holds a change under way that is not a run of the keys, of the
+      kind `kind`, "control" when absent: a slider held, a list open,
+      digits typed and not confirmed; or "download", the dialog of the
       download open (docs/specs/steps/popgen2-pca.md, "The PCA calculated
       again by itself"). Gives the function that lets it go, at its
       release or when its control leaves the page; a second call of it
       changes nothing. A listener that throws when the hold is taken does
       not keep the release from being given: its error is thrown a moment
       later, to the page's handler of errors. */
-  readonly holdChange: () => () => void;
+  readonly holdChange: (kind?: HoldKind) => () => void;
+  /** Whether a change under way of the kind `kind` is held now: a hold
+      of `holdChange` of that kind, or, for "control", a run of the keys
+      as well. It changes only when the listeners of `subscribe` are
+      told, so a screen may read it with them. */
+  readonly heldBy: (kind: HoldKind) => boolean;
   /** The number of changes under way now: the holds of `holdChange` not
       let go, and the runs of the keys held. 0 when the user is in the
       middle of none. It changes from 1 to 2 and back with no listener
@@ -85,8 +106,8 @@ export interface RunGate {
       0; the count itself is for the tests. */
   readonly underWay: () => number;
   /** Whether any change is under way now, `underWay() > 0`: it changes
-      exactly when the listeners of `subscribe` are told, so a screen
-      may read it with them. */
+      only when the listeners of `subscribe` are told, so a screen may
+      read it with them. */
   readonly busy: () => boolean;
 }
 
@@ -106,8 +127,12 @@ export function createRunGate(): RunGate {
   const runs = new Set<() => void>();
   const boxes = new Set<() => void>();
   // The holds of `holdChange`, each an object of its own, so that a
-  // release counts once.
-  const holds = new Set<object>();
+  // release counts once, with its kind.
+  const holds = new Map<object, HoldKind>();
+  // The runs of the keys are a control in use, so a hold of a control
+  // taken or let go while a run is held changes no `heldBy`.
+  const heldBy = (kind: HoldKind): boolean =>
+    (kind === "control" && runs.size > 0) || [...holds.values()].includes(kind);
   const listeners = new Set<() => void>();
   const count = (): number => runs.size + holds.size;
   // Calls every listener, also when one throws, and then throws the
@@ -197,16 +222,18 @@ export function createRunGate(): RunGate {
     commitTyped: () => {
       for (const commit of [...boxes]) commit();
     },
-    holdChange: () => {
+    holdChange: (kind = "control") => {
       const hold = {};
       const wasFree = count() === 0;
-      holds.add(hold);
+      const kindWasHeld = heldBy(kind);
+      holds.set(hold, kind);
       const release = (): void => {
-        if (holds.delete(hold) && count() === 0) tell();
+        if (holds.delete(hold) && (count() === 0 || !heldBy(kind))) tell();
       };
-      if (wasFree) tellTaken();
+      if (wasFree || !kindWasHeld) tellTaken();
       return release;
     },
+    heldBy,
     underWay: count,
     busy: () => count() > 0,
   };

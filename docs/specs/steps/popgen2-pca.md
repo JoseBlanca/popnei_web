@@ -312,8 +312,8 @@ its distance starts the second as a threshold does (task 4.2 of
 `docs/plans/no-undo.md`, from the review of its work package 2; "once
 the filters stop changing" until 10 October 2026). While the dialog of the download holds it, the line is "The PCA
 starts again when the download is written or closed." ("The PCoA …"),
-which the tab reads from the dialog's own state, since the count of the
-changes under way does not say which control holds it. Stop there ends
+which the tab reads from what `autoRuns` says the start waits for, the
+dialog's hold being of a kind of its own on the gate (below). Stop there ends
 the live state before the PCA starts: the tab shows
 Run, and nothing starts until it is pressed. (Stop during the second is
 the session's decision of 10 October 2026, from the owner's choice that
@@ -399,15 +399,21 @@ under once the store leaves that key behind; it starts nothing while
 `anyRunning` of its groups, a write of the store, or a change under way
 holds; and it reads the PCA's key from the store when the second runs
 out. The changes under way are counted by the gate of the page,
-`createRunGate` of `src/ui/variants/thresholdRun.ts`: `holdChange()`
-holds a change under way of a widget and gives the function that lets
-it go; `underWay()` is the count, the holds of `holdChange` and the
-runs of the arrow keys held; `busy()` is whether the count is above 0;
-and `subscribe` tells its listeners when the count rises from 0 or
-falls to 0, which is when `busy()` changes, and at nothing else (from
-task 2.2 of the plan; until then also at each move of a run of the
-arrow keys), so that `autoRuns`'s listener, and any screen, reads
-`busy()`. The count goes from 1 to 2 and back with nobody told, so no
+`createRunGate` of `src/ui/variants/thresholdRun.ts`: `holdChange(kind)`
+holds a change under way of a widget, of the kind `"control"`, the
+default, or `"download"`, the dialog of the download
+(`HOLD_KINDS`), and gives the function that lets it go; `heldBy(kind)`
+says whether a hold of that kind is held, a run of the arrow keys
+being a control's; `underWay()` is the count, the holds of
+`holdChange` and the runs of the arrow keys held; `busy()` is whether
+the count is above 0; and `subscribe` tells its listeners when the
+count rises from 0 or falls to 0, which is when `busy()` changes, and
+when `heldBy` of a kind changes, and at nothing else (from task 2.2 of
+the plan, until then also at each move of a run of the arrow keys; the
+kinds from the review of work package 4, 10 October 2026, which
+replaced a record of the dialog kept apart from the gate,
+`downloadOpen.ts`), so that `autoRuns`'s listener, and any screen,
+reads `busy()` and `heldBy`. The count goes from 1 to 2 and back with nobody told, so no
 screen reads it with the subscription; it is for the tests. `Slider.tsx`,
 `ThresholdSlider.tsx`, `Select.tsx`, `NumberField.tsx` and
 `DownloadMenu.tsx` of `src/ui/widgets/`, and the dialog of
@@ -423,9 +429,15 @@ drag. The box of a threshold registers its commit with
 `registerTyped`, which `commitTyped` calls before an opening; that is
 no change under way. The state about to
 start is the PCA `ready` in the store, live, its key not started under,
-the one pass read to the end; `autoRuns` gives the page a function that
-says it, `aboutToStart`, and its `subscribe` tells the page when it
-changes with no change of the store. The live state is not in the
+the one pass read to the end; `autoRuns` gives the page what its start
+waits for then, `aboutToStart(id)`, `"download"` while the dialog of
+the download holds it or its write runs, `"changes"` otherwise, `null`
+when it is not about to start; and one snapshot of the live state,
+`liveState(id)`, `{ kind: "off" }`, `{ kind: "stopped" }` or `{ kind:
+"live", aboutToStart, running }`, the same object while it does not
+change, whose every change, by the store, by the gate or by `run` and
+`pause`, its `subscribe` tells, so that a screen reads it with that
+subscription alone. The live state is not in the
 project: the project is shared with `popgen.html`, and a field of it
 would have to be kept out of the PCA's key by hand (the design, choice
 3).
@@ -1178,9 +1190,12 @@ once while the focus is on a threshold of the Variants tab.
   emptied and typed again with the same value shows the result kept,
   with no request; a PCA refused by popnei under a key does not start
   again under it, a change to another key starts it, and the PCA is
-  still live after the failure; `aboutToStart` true during the quiet
-  second and while a change under way holds it, a slider held, a list
-  open, the dialog of the download open, and false otherwise; a
+  still live after the failure; `aboutToStart` `"changes"` during the
+  quiet second and while a change under way of a control holds it, a
+  slider held, a list open, `"download"` while the dialog of the
+  download is open or its write runs, and `null` otherwise; `liveState`
+  in each state, and a reader subscribed to `autoRuns` alone told of a
+  change of a filter, of the dialog's hold and of a new load; a
   control removed while it holds lets its hold go.
 - No Undo: the page's store has no `undo` nor `redo` in its type; a
   press of Ctrl+Z on the page sends no command.

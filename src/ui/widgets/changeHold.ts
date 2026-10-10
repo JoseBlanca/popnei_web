@@ -9,7 +9,8 @@
  * which any change by another control ends. A hold is let go at its
  * release and when its widget leaves the page, so that none is left to
  * keep the PCA from starting for good. A widget sees of the gate only
- * `holdChange`, through the narrow holder of this file, which
+ * `holdChange`, with the kind of its hold, a control in use or the dialog
+ * of the download, through the narrow holder of this file, which
  * popgen2.html gives as the gate and popgen.html as a holder that holds
  * nothing; a widget drawn with neither is a defect, so that a holder
  * forgotten is not a PCA that starts in the middle of a drag.
@@ -23,12 +24,16 @@ import {
   useState,
 } from "react";
 
+import type { HoldKind } from "../variants/thresholdRun.ts";
+
 /** What a widget holds its change under way on: the gate of
     popgen2.html, which fits this, or a holder that holds nothing. */
 export interface ChangeHolds {
-  /** Holds a change under way, and gives the function that lets it go;
-      a second call of that function changes nothing. */
-  readonly holdChange: () => () => void;
+  /** Holds a change under way of the kind `kind`, "control" when
+      absent, "download" for the dialog of the download, and gives the
+      function that lets it go; a second call of that function changes
+      nothing. */
+  readonly holdChange: (kind?: HoldKind) => () => void;
 }
 
 /** The holder of popgen.html, whose PCA waits for no quiet second:
@@ -69,20 +74,21 @@ function releaseNow(release: () => void): void {
   }
 }
 
-/** Holds a change under way while `held` is true, and lets it go once it
-    is false, or when the component leaves the page. The hold is taken
+/** Holds a change under way of the kind `kind`, "control" when absent,
+    while `held` is true, and lets it go once it is false, or when the
+    component leaves the page. The hold is taken
     and let go as React draws the change, after the handler that made it,
     so a change the release ends with, a choice of a list, has reached
     the project when the gate tells its listeners. */
-export function useHoldWhile(held: boolean): void {
+export function useHoldWhile(held: boolean, kind: HoldKind = "control"): void {
   const holds = useChangeHolds();
   useLayoutEffect(() => {
     if (!held) return undefined;
-    const release = holds.holdChange();
+    const release = holds.holdChange(kind);
     return () => {
       releaseNow(release);
     };
-  }, [held, holds]);
+  }, [held, kind, holds]);
 }
 
 /** A hold taken and let go by the handlers of a widget, for a change

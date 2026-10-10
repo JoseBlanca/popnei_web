@@ -1697,7 +1697,14 @@ The page and each worker talk through typed messages
   it started the PCA under once the store leaves that key behind, so
   that a value set back starts it again. The waits of the second are
   counted by the gate of the page, `src/ui/variants/thresholdRun.ts`,
-  which the controls tell when a change begins and ends. Not taken: the
+  which the controls tell when a change begins and ends, each hold
+  tagged with its kind, a control in use or the dialog of the download
+  of the filtered variants; `autoRuns.ts` reads the kind to say what the
+  start waits for, and gives the page one snapshot of the PCA's live
+  state, whose every change its `subscribe` tells, so that the PCA tab
+  and the band read it from one place (from the review of work package
+  4 of `docs/plans/no-undo.md`, 10 October 2026, which replaced a record
+  of the open dialog kept apart from the gate). Not taken: the
   store starting the PCA itself, which would move the awaiting of each
   outcome and the handling of its failures out of `src/ui/runs.ts`,
   several hundred lines and a design of their own, for a behaviour no
@@ -3192,8 +3199,10 @@ src/ui/
                     and the menus "Download…" of the histograms and of
                     the tables; from 10 October 2026 the gate counts
                     the changes under way, a slider held, a list open,
-                    digits not confirmed, a run of the arrow keys, and
-                    tells autoRuns.ts when none is left
+                    digits not confirmed, a run of the arrow keys, the
+                    dialog of the download open, each tagged a control
+                    or the download, and tells autoRuns.ts when none is
+                    left and when a kind comes or goes
   codeDownload.ts   from 10 October 2026, a download of code apart from
                     the page's first load, asked for the first time it
                     is needed, kept once it arrives, and asked again at

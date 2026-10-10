@@ -344,19 +344,19 @@ describe("AP6 D2 the status region at the end of a run of the PCA, over the stor
 
 describe("NU4 D2 the words of the PCA started again by itself, by the method", () => {
   test("the line of the quiet second names the filters and the options", () => {
-    expect(aboutToStartLine("pca", false)).toBe(
+    expect(aboutToStartLine("pca", "changes")).toBe(
       "The PCA starts again in a moment, once the filters and its options stop changing.",
     );
-    expect(aboutToStartLine("pcoa", false)).toBe(
+    expect(aboutToStartLine("pcoa", "changes")).toBe(
       "The PCoA starts again in a moment, once the filters and its options stop changing.",
     );
   });
 
   test("while the dialog of the download holds it, the line says the download goes first", () => {
-    expect(aboutToStartLine("pca", true)).toBe(
+    expect(aboutToStartLine("pca", "download")).toBe(
       "The PCA starts again when the download is written or closed.",
     );
-    expect(aboutToStartLine("pcoa", true)).toBe(
+    expect(aboutToStartLine("pcoa", "download")).toBe(
       "The PCoA starts again when the download is written or closed.",
     );
   });

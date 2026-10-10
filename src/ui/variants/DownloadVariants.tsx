@@ -27,8 +27,8 @@
  * can leave nothing to download.
  *
  * The dialog open is a change under way (src/ui/widgets/changeHold.ts),
- * so that the PCA does not start by itself while the user chooses, and
- * is marked open for the PCA tab (downloadOpen.ts).
+ * so that the PCA does not start by itself while the user chooses, held
+ * as a hold of the download, which the PCA tab names.
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -51,7 +51,6 @@ import { whenNoDialog } from "../widgets/dialogMark.ts";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import { RadioGroup } from "../widgets/RadioGroup.tsx";
 import styles from "./DownloadVariants.module.css";
-import { markDownloadOpen } from "./downloadOpen.ts";
 import { downloadPlace, endOfWrite, saveAgain } from "./downloadState.ts";
 import { useRunGate } from "./runGate.tsx";
 import type { DownloadPlace, WriteEnd } from "./downloadState.ts";
@@ -106,11 +105,9 @@ export function DownloadVariants(): React.JSX.Element {
   const project = useAppState((s) => s.project);
   const kept = useAppState((s) => s.individualsKept);
   const [phase, setPhase] = useState<DialogPhase | null>(null);
-  useHoldWhile(phase !== null);
-  // And says so to the PCA tab, whose line of the quiet second names the
-  // download while the dialog holds it.
-  const open = phase !== null;
-  useLayoutEffect(() => (open ? markDownloadOpen() : undefined), [open]);
+  // A hold of its own kind, which the PCA tab's line of the quiet second
+  // names while the dialog holds it.
+  useHoldWhile(phase !== null, "download");
   // The text or the sentence that takes the place of the button, which
   // takes the focus after a write.
   const placeRef = useRef<HTMLParagraphElement>(null);
