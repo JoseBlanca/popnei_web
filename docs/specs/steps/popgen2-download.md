@@ -28,7 +28,16 @@ after a change of the filters, so the button waits after such a change
 for as long as the PCA takes, with the words it has, and a download
 pressed in that second goes first (below, "While a PCA runs"). The
 writing of the file is also said in the band of the page
-(`docs/specs/steps/popgen2-band.md`). Nothing else changes.
+(`docs/specs/steps/popgen2-band.md`). Nothing else changes. Built on
+the branch `pca-tab` on 10 October 2026, work packages 3 to 5 of
+`docs/plans/no-undo.md`; not yet tried by the owner. Its reviews changed
+what is written here: the PCA starts a second after the dialog closes,
+the dialog being a change under way while it is open; "Stop
+recalculating" in the PCA tab keeps the PCA from starting before a
+download, as Stop does while it runs; a failure of the worker during
+the write goes to the line of an error of the band, where the error bar
+of the page was, with the dialog's way to put it right and not the
+reload the band says of other errors.
 
 The module specs it reads, revised for it the same day: the write
 itself, its request, its file name, the check of a filtering that keeps

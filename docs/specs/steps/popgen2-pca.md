@@ -40,7 +40,25 @@ keeps no result for values left behind; the lock of the filters while
 a PCA runs stays, and the column of the populations stays open, now by
 the owner's answer; and the band at the top of the page says what is
 running, with its own spec, `docs/specs/steps/popgen2-band.md`. The
-parts that named Undo say so where they changed. Not yet built.
+parts that named Undo say so where they changed. Built on the branch
+`pca-tab` on 10 October 2026, work packages 2 to 5 of
+`docs/plans/no-undo.md`; not yet tried by the owner. Its reviews changed
+what is written here: whenever the PCA is live and none runs, the tab
+offers "Stop recalculating" in Run's place, so that the automatic runs
+can be ended from the keyboard before the next change (WCAG 2.2.1),
+with a line under it while the result shows, and Run beside it after a
+crash that keeps the PCA live; the lines of the quiet second, of the
+dialog of the download and after a Stop are drawn in the place of the
+bar, in normal text, and the first names the options as well as the
+filters; a crash for lack of memory, and a failure that only a reload
+mends, end the live state as a Stop does; the lock of the filters, the
+status region's words of a start by itself and the line after a Stop
+name the PCA tab and what Run does again; Run is refused while the
+filtered variants are written; a number box holds the change under way
+from its first key to its commit, and a slider's thumb from its press,
+moved or held still; the holds carry their kind, the dialog of the
+download among them; and `autoRuns.ts` gives the live state in one
+snapshot that the tab and the band read.
 
 The PCA tab is the panel of the old page, `popgen.html`, which is built
 and which the owner approved on 28 September 2026: its screen spec is
@@ -442,8 +460,11 @@ back within 3 s in both engines: 3 s after the result of a PCA of
 9,381 individuals the engine held 0.44 GB in Chromium 153 and 0.64 GB
 in WebKit 26.6, against 3.19 and 3.76 GB at the peak (measured on 10
 October 2026, `docs/plans/analyses-pca.md`, work package 7). So a PCA
-started a second after a finished one does not pile up on it; the
-plan checks it in WebKit. The status
+started a second after a finished one does not pile up on it: measured
+on 10 October 2026 on the owner's Mac, the peak of the PCA started by
+itself was 0.019 GB above the first's in WebKit 26.6 and 0.063 GB in
+Chromium 153 (`docs/plans/no-undo.md`, "What was done", work package
+4; `docs/architecture.md`, section 11). The status
 region says "PCA stopped. Press Run in the PCA tab to calculate it
 again." ("PCoA"), whichever Stop was pressed, since a Stop in the band
 leaves the tab out of sight; and "PCA stopped." alone when the tab then

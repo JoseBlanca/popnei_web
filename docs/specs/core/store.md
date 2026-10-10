@@ -149,7 +149,19 @@ page keeps one past project, and the page's type of it has no `undo`
 nor `redo`; and the gate of the page no longer wraps them (below, "On
 popgen2.html: no notice, no Undo, and no result kept for values left
 behind"). What this spec says of Undo, the notice and the cache holds
-for `popgen.html` unchanged. The store is the one object of core that
+for `popgen.html` unchanged. Built on the branch `pca-tab` on 10
+October 2026, work packages 1 and 2 of `docs/plans/no-undo.md`, with
+the state's `stoppedAwaitingWorker` for the band of the page (work
+package 5); not yet tried by the owner. Its reviews changed what is
+written here: a late result is not cached when its key was ever left
+behind, also when the key comes back before the result arrives;
+`dropLeftBehind` without `stopLeftBehind` does not compile; of the
+failures of a request left behind, popnei's and the worker's are
+dropped and `reopenFailed` kept, and a defect in taking such a result is
+not kept as the analysis's error; the state's field of a Stop that
+waits for the worker is named `stoppedAwaitingWorker`, apart from a
+run's `stopping`; and the store of `popgen2.html` has no `undo` nor
+`redo` when it runs, and not only in its type. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.

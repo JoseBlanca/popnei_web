@@ -25,7 +25,10 @@ and Redo, the header, the keys and the notice is of `popgen.html`
 alone. Nothing in this module changes; the bound of one step is a
 value it already takes, and its tests of a short bound cover it. The
 module goes whole when `popgen.html` is deleted, as the owner decided
-on 9 October 2026. The code is in `src/core/history.ts`. The history keeps the projects the user has had, so that an undo
+on 9 October 2026. Built on the branch `pca-tab` on 10 October 2026,
+work package 2 of `docs/plans/no-undo.md`, with no change to this
+module; not yet tried by the owner. Its review changed only the name
+of the section of the store spec cited above. The code is in `src/core/history.ts`. The history keeps the projects the user has had, so that an undo
 gives back the previous one and a redo the one after it. Because a result
 is found by the key that a project gives it (`docs/architecture.md`,
 section 3), an undo also brings back the results of the previous project,

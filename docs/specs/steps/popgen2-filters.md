@@ -49,14 +49,25 @@ which waits for the tools section.
 Revised on 10 October 2026 for `docs/designs/no-undo.md`, approved by
 the owner that day: the page has no Undo and no Redo for good, where
 from 9 October 2026 it had them again at the right end of the line of
-its heading; it catches none of their keys; and a change of a threshold
+its heading; its window takes their keys from the browser and does
+nothing with them, but in a field of free text and in a number box
+with something typed; and a change of a threshold
 or of the FILTER box starts the PCA again by itself a second later once
 its Run has been pressed for the file (`docs/specs/steps/popgen2-pca.md`,
 "The PCA calculated again by itself"). The sections "Undo, Redo and
 their keys", "When a threshold changes the project", "What it sends and
 reads", "Its words" and "Accessibility" say so; the descriptions of the
 commands, which named the steps of Undo, stay in the code and are shown
-nowhere on this page. The rest is unchanged.
+nowhere on this page. The rest is unchanged. Built on the branch
+`pca-tab` on 10 October 2026, work packages 2 and 3 of
+`docs/plans/no-undo.md`; not yet tried by the owner. Its review changed
+what is written here: the page takes the keys of Undo and Redo from the
+browser, where the design had left them to it, since Ctrl+Y in Chromium
+on macOS emptied a number box reached by Tab and a screen reader said
+"Empty"; Ctrl+Shift+Z, Cmd+Shift+Z and Ctrl+Y leave the digits typed in
+a box, where this spec had said they put its number back; and the lock
+of the filters while a PCA runs names the PCA tab and what Run does
+again.
 
 The commands of the project, the kind `passed`, the opening of a file
 as a new history, the failures that
