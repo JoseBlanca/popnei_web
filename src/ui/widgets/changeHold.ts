@@ -87,7 +87,7 @@ export function useHoldWhile(held: boolean): void {
 
 /** A hold taken and let go by the handlers of a widget, for a change
     under way that its drawing does not show, a drag of the line of a
-    threshold. */
+    threshold, the typing in a number box. */
 export interface ChangeHold {
   /** Takes the hold, when none is held. */
   readonly take: () => void;

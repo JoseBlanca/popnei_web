@@ -270,9 +270,10 @@ has not reached the project yet:
   the points by", the column of the populations in the box of the
   individuals file, and every menu "Download…": from its opening to its
   closing, since a user with a popover open is still choosing;
-- a number box with text that differs from the project's value, those
-  of the thresholds and the PCA's r² and distance: from the first digit
-  to Enter, Tab, a click elsewhere or Escape;
+- a number box typed in, those of the thresholds and the PCA's r² and
+  distance: from the first key to the commit, by Enter, Tab or a click
+  elsewhere, Escape or the box leaving the page, also while the text
+  typed so far reads as the box's own number, 0.1 on the way to 0.15;
 - a run of the arrow keys on a threshold, which becomes one change a
   second after its last press (`popgen2-filters.md`, "When a threshold
   changes the project");

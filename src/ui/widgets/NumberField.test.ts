@@ -621,12 +621,22 @@ describe("SF6 the browser's own undo of the box's text, done with no beforeinput
   });
 });
 
-describe("NU3 D2 the number box holds while its text differs from its number", () => {
-  /** Draws a threshold at 0.5 under `gate`, as popgen2.html does, or
-      under the holder of popgen.html, which holds nothing; each number
-      committed is kept in `calls` and given back, as the store gives
-      it. */
-  const drawUnder = (gate: RunGate | null, calls: Calls): HTMLInputElement => {
+describe("NU3 D2 the number box holds from the first key to the commit", () => {
+  /** Draws a threshold at `start`, 0.5 when absent, under `gate`, as
+      popgen2.html does, or under the holder of popgen.html, which holds
+      nothing; each number committed is kept in `calls` and given back,
+      as the store gives it, and `extra` goes over the props. Gives the
+      input, and the function that draws the box at another value, as a
+      change from outside would. */
+  const drawWith = (
+    gate: RunGate | null,
+    calls: Calls,
+    start = 0.5,
+    extra: Partial<NumberFieldProps> = {},
+  ): {
+    readonly input: HTMLInputElement;
+    readonly redraw: (value: number) => void;
+  } => {
     const render = (value: number): void => {
       const box = createElement(
         NumberField,
@@ -635,6 +645,7 @@ describe("NU3 D2 the number box holds while its text differs from its number", (
             calls.changes.push(changed);
             render(changed);
           },
+          ...extra,
         }),
       );
       root.render(
@@ -650,11 +661,47 @@ describe("NU3 D2 the number box holds while its text differs from its number", (
       );
     };
     act(() => {
-      render(0.5);
+      render(start);
     });
     const input = container.querySelector("input");
     if (input === null) throw new Error("no input drawn");
-    return input;
+    return {
+      input,
+      redraw: (value) => {
+        act(() => {
+          render(value);
+        });
+      },
+    };
+  };
+  const drawUnder = (gate: RunGate | null, calls: Calls): HTMLInputElement =>
+    drawWith(gate, calls).input;
+
+  /** Deletes the last character of the text of `input`, as Backspace
+      would with the caret at its end. */
+  const backspace = (input: HTMLInputElement): void => {
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with the input, by call
+    const setValue = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )?.set;
+    act(() => {
+      const offered = input.dispatchEvent(
+        new InputEvent("beforeinput", {
+          inputType: "deleteContentBackward",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      if (!offered) return;
+      setValue?.call(input, input.value.slice(0, -1));
+      input.dispatchEvent(
+        new InputEvent("input", {
+          inputType: "deleteContentBackward",
+          bubbles: true,
+        }),
+      );
+    });
   };
 
   /** Puts the focus in the box and types `text` over all it holds. */
@@ -683,6 +730,77 @@ describe("NU3 D2 the number box holds while its text differs from its number", (
     expect(calls.changes).toEqual([0.2]);
     expect(gate.underWay()).toBe(0);
     expect(seen).toEqual([[0.2]]);
+  });
+
+  test("held while the text typed so far reads as the box's number, 0.1 on the way to 0.15 over 0.1", () => {
+    const gate = createRunGate();
+    const calls = newCalls();
+    const { input } = drawWith(gate, calls, 0.1);
+    typeOver(input, "0");
+    expect(gate.underWay()).toBe(1);
+    typeKeys(input, ".1");
+    expect(input.value).toBe("0.1");
+    expect(gate.underWay()).toBe(1);
+    typeKeys(input, "5");
+    expect(gate.underWay()).toBe(1);
+    press(input, "Enter");
+    expect(calls.changes).toEqual([0.15]);
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("held after Backspace takes the text back to the box's number", () => {
+    const gate = createRunGate();
+    const input = drawUnder(gate, newCalls());
+    typeOver(input, "0.55");
+    expect(gate.underWay()).toBe(1);
+    backspace(input);
+    expect(input.value).toBe("0.5");
+    expect(gate.underWay()).toBe(1);
+  });
+
+  test("let go at Ctrl+Z, which puts the number back", () => {
+    const gate = createRunGate();
+    const input = drawUnder(gate, newCalls());
+    typeOver(input, "0.2");
+    expect(gate.underWay()).toBe(1);
+    press(input, "z", { ctrlKey: true });
+    expect(input.value).toBe("0.5");
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("let go at the browser's own undo, which puts the number back", () => {
+    const gate = createRunGate();
+    const input = drawUnder(gate, newCalls());
+    typeOver(input, "0.2");
+    expect(gate.underWay()).toBe(1);
+    historyDone(input, "historyUndo", "0.");
+    expect(input.value).toBe("0.5");
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("let go at an arrow key of a box whose page steps its number, which puts the number back", () => {
+    const gate = createRunGate();
+    const calls = newCalls();
+    const { input } = drawWith(gate, calls, 0.5, {
+      onSteps: (steps) => {
+        calls.steps.push(steps);
+      },
+    });
+    typeOver(input, "0.2");
+    expect(gate.underWay()).toBe(1);
+    press(input, "ArrowUp");
+    expect(calls.steps).toEqual([1]);
+    expect(input.value).toBe("0.5");
+    expect(gate.underWay()).toBe(0);
+  });
+
+  test("let go when the box's number changes from outside", () => {
+    const gate = createRunGate();
+    const { input, redraw } = drawWith(gate, newCalls());
+    typeOver(input, "0.2");
+    expect(gate.underWay()).toBe(1);
+    redraw(0.3);
+    expect(gate.underWay()).toBe(0);
   });
 
   test("let go at Escape, which puts the number back", () => {

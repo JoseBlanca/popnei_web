@@ -61,9 +61,9 @@ export interface RunGate {
       number typed in it as Enter would, for `commitTyped`; gives the
       function that takes it away, when the box goes. A box registered
       here is not a change under way, and
-      `underWay` does not count it: a box also takes `holdChange` while
-      its text differs from the project's value (task 3.2 of
-      docs/plans/no-undo.md). */
+      `underWay` does not count it: a box also takes `holdChange` from
+      the first key to the commit, Escape or the box leaving the page
+      (task 3.2 of docs/plans/no-undo.md). */
   readonly registerTyped: (commit: () => void) => () => void;
   /** Commits what is typed in every box registered, before an
       opening. */

@@ -67,10 +67,14 @@
  * field is as on the old page: an emptied field gives nothing and shows
  * its number again.
  *
- * On popgen2.html a text that holds another number than the field's, or
- * none, is a change under way (changeHold.ts), from the first key that
- * makes it so to Enter, Tab, the loss of the focus or Escape, or until
- * the field leaves the page.
+ * On popgen2.html a field typed in is a change under way (changeHold.ts),
+ * from the first key, or a paste, to the commit, by Enter, Tab or the
+ * loss of the focus, to Escape, Ctrl+Z or the browser's undo, to an
+ * arrow key that puts its number back, to its number changed from
+ * outside, or until the field leaves the page; also while the text
+ * typed reads as the field's own number, 0.1 on the way to 0.15, so
+ * that a pause there does not let the PCA start and make the field read
+ * only before the next key.
  */
 import {
   useContext,
@@ -90,7 +94,7 @@ import {
 
 import { classOf } from "../classOf.ts";
 import { shortcutOf } from "../shell/shortcuts.ts";
-import { useHoldWhile } from "./changeHold.ts";
+import { useChangeHold } from "./changeHold.ts";
 import {
   NUMBER_FIELD_ATTRIBUTE,
   checkCommitted,
@@ -289,6 +293,11 @@ export function NumberField({
   // at the next commit, and when the value changes otherwise, by an undo
   // of popgen.html or a new load, since it names the value kept.
   const [refused, setRefused] = useState<string | null>(null);
+  // The change under way of the user typing in the field, taken at the
+  // first key, or a paste, and let go at the end of the commit, after
+  // its number reached the screen, at a revert, or when the number
+  // changes from outside.
+  const hold = useChangeHold();
   const [refusedFor, setRefusedFor] = useState(value);
   if (!Object.is(value, refusedFor)) {
     setRefusedFor(value);
@@ -334,8 +343,9 @@ export function NumberField({
   useEffect(() => {
     notTaken.current = false;
     typed.current = false;
+    hold.release();
     typedTo.current?.(null);
-  }, [value]);
+  }, [value, hold]);
   // The field gone, by its switch turned off, an Undo of popgen.html or a
   // Clear: a
   // number typed in it is typed no longer, and the screen, which may
@@ -383,6 +393,7 @@ export function NumberField({
     stepping.current = false;
     pasted.current = false;
     typed.current = false;
+    hold.release();
     onTyped?.(null);
   };
   /** Ctrl+Z with something typed: the number of the field back, as
@@ -391,6 +402,7 @@ export function NumberField({
   const revert = (): void => {
     notTaken.current = false;
     typed.current = false;
+    hold.release();
     setRefused(null);
     onTyped?.(null);
   };
@@ -491,6 +503,7 @@ export function NumberField({
             onNotTakenPending={() => {
               notTaken.current = true;
               typed.current = true;
+              hold.take();
               // What the field shows from now on is not what was typed.
               onTyped?.(null);
             }}
@@ -515,6 +528,7 @@ export function NumberField({
             onPasted={(text) => {
               lastText.current = text;
               pasted.current = true;
+              hold.take();
             }}
             onStepKey={() => {
               stepping.current = true;
@@ -523,6 +537,7 @@ export function NumberField({
             onText={(text) => {
               lastText.current = text;
               typed.current = true;
+              hold.take();
               // After a character thrown away, and until a deletion mends the
               // text, what it holds is not what was typed: 0,1 shows as 01.
               onTyped?.(
@@ -644,12 +659,6 @@ function FieldInput({
 }: FieldInputProps): React.JSX.Element {
   const state = useContext(NumberFieldStateContext);
   const inputRef = useRef<HTMLInputElement>(null);
-  // A text that holds another number than the field's, or no number in
-  // a field that holds one, is a change under way. React Aria's
-  // `numberValue` is the number of the text, read in the language of the
-  // browser, so 0,05 in Spanish is the field's 0.05; and the empty text
-  // of an empty field, NaN, is the field's NaN.
-  useHoldWhile(state !== null && !Object.is(state.numberValue, value));
 
   // React Aria throws a character away in the browser's `beforeinput`,
   // before the text changes, so no change of the input follows: the same
