@@ -215,37 +215,33 @@ async function expectTooltipUnder(page: Page, anchor: Locator): Promise<void> {
   expect(tipBox.x + tipBox.width).toBeGreaterThan(anchorBox.x);
 }
 
-/** Scrolls what holds `control` and scrolls, the page or a frame, by a
-    pixel and back, and waits for the browser to send the events of the
-    scroll, as it does when the Tab key brings a control into view. */
-async function scrollByAPixel(control: Locator): Promise<void> {
-  await control.evaluate(
-    (element) =>
-      new Promise<void>((resolve) => {
-        let holder: Element | null = element.parentElement;
-        while (
-          holder !== null &&
-          !(
-            holder.scrollHeight > holder.clientHeight &&
-            /auto|scroll/u.test(getComputedStyle(holder).overflowY)
-          )
-        ) {
-          holder = holder.parentElement;
-        }
-        const scrolled = holder ?? document.scrollingElement;
-        if (scrolled === null) throw new Error("nothing scrolls");
-        const step = scrolled.scrollTop > 0 ? -1 : 1;
-        scrolled.scrollBy(0, step);
+/** Sends a scroll event from the document, which holds every control,
+    as the browser sends one when the Tab key scrolls the page to bring a
+    control into view, and waits two frames for the page to answer it. A
+    real scroll by a pixel does not do: at the viewport of the flows,
+    1280 by 3000 pixels, nothing scrolls and the browser sends no event.
+    React Aria closes a tooltip on a scroll of anything that holds its
+    trigger, which it hears on the window as the event goes down to its
+    target; the step fails when the event did not reach the window. */
+async function sendAScroll(page: Page): Promise<void> {
+  const heard = await page.evaluate(
+    () =>
+      new Promise<boolean>((resolve) => {
+        let seen = false;
+        const listener = (event: Event): void => {
+          if (event.target === document) seen = true;
+        };
+        window.addEventListener("scroll", listener, true);
+        document.dispatchEvent(new Event("scroll"));
+        window.removeEventListener("scroll", listener, true);
         requestAnimationFrame(() => {
-          scrolled.scrollBy(0, -step);
           requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              resolve();
-            });
+            resolve(seen);
           });
         });
       }),
   );
+  expect(heard).toBe(true);
 }
 
 /** Expects `control` to wait with the reason of the lock: marked
@@ -268,7 +264,7 @@ async function expectWaiting(
   await page.keyboard.press("Tab");
   await expect(control).toBeFocused();
   await expectTooltipUnder(page, anchor);
-  await scrollByAPixel(control);
+  await sendAScroll(page);
   await expectTooltipUnder(page, anchor);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("tooltip")).toHaveCount(0);
