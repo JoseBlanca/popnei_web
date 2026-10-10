@@ -183,6 +183,15 @@ describe("AP4 D1 popgen.html's Undo and Redo, unchanged", () => {
     expect(document.activeElement).toBe(drawn("Redo"));
   });
 
+  test("Undo, with the focus, pressed at the last step: the focus on Redo", async () => {
+    const store = await draw();
+    await changeMaf(store, 0.9);
+    drawn("Undo").focus();
+    await press(drawn("Undo"));
+    expect(drawn("Undo").disabled).toBe(true);
+    expect(document.activeElement).toBe(drawn("Redo"));
+  });
+
   test("Redo, with the focus, pressed at the last step: the focus on Undo", async () => {
     const store = await draw();
     await changeMaf(store, 0.9);
