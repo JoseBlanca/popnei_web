@@ -30,7 +30,8 @@ export function methodName(method: PcaMethod): string {
 /** The name of the group of the method. */
 export const METHOD_LABEL = "Method";
 
-/** The two methods, as their radio buttons say them. */
+/** The two methods, as their radio buttons on the old page, and the
+    items of the drop-down list on popgen2.html, say them. */
 export const METHOD_ITEMS: readonly {
   readonly id: PcaMethod;
   readonly label: string;

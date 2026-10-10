@@ -327,9 +327,13 @@ project. Under it, as in the old panel, in this order: the options, the
 line of the individuals it will run on, Run or Stop with the lock, and,
 once calculated, the result.
 
-**The method**, as the old panel: two radio buttons, "PCA of the
-genotypes" and "PCoA of the Kosman distances, for data with many
-missing genotypes"; PCA by default.
+**The method**, a drop-down list named "Method", React Aria's
+`Select`, as the components on the axes and "Colour the points by"
+are, with the old panel's two items, "PCA of the genotypes" and "PCoA
+of the Kosman distances, for data with many missing genotypes"; PCA by
+default. A drop-down list since 10 October 2026, as the owner asked on
+trying the page (`docs/plans/analyses-pca.md`, work package 10, round
+1); two radio buttons before, as on the old panel, which keeps them.
 
 **Its filters**, under the heading "Filters of the variants for the
 PCA", an `<h3>`, with the line "The PCA reads the variants the Variants
@@ -487,9 +491,9 @@ package 6 of the plan read the code. The gate of the page, `gatedStore` of
 **While a PCA runs**, what it reads is locked, so that no change leaves
 it behind (the owner's answer 2 to `docs/plans/analyses-pca.md`, 9
 October 2026): the five thresholds of the Variants tab, their lines and
-their boxes, the FILTER box, and the PCA's own options, the method, the
-two groups of the missing data and the MAF with their fields, the LD
-switch and its two fields. Each is drawn greyed, carries
+their boxes, the FILTER box, and the PCA's own options, the method, whose
+list does not open, the two groups of the missing data and the MAF
+with their fields, the LD switch and its two fields. Each is drawn greyed, carries
 `aria-disabled`, and is still reached by the Tab key, so that a user of
 the keyboard learns why; its tooltip, on the mouse, the focus and a
 press, and its description for a screen reader, are "Stop the PCA to

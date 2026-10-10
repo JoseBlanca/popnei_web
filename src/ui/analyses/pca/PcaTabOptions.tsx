@@ -1,7 +1,7 @@
 /**
  * The options of the PCA tab of popgen2.html, above its Run button in
  * every state (docs/specs/steps/popgen2-pca.md, "The PCA tab" and "Its
- * filters"): the method; under the heading "Filters of the variants for
+ * filters"): the method, a drop-down list; under the heading "Filters of the variants for
  * the PCA", the missing data and the MAF, each two radio buttons, "As in
  * the Variants tab: 0.1" and "Stricter for the PCA", the second with its
  * field under it, whose upper end is the Variants tab's value, or 1
@@ -58,6 +58,7 @@ import {
 import { useAppState, useStore } from "../../store.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
 import { RadioGroup } from "../../widgets/RadioGroup.tsx";
+import { Select } from "../../widgets/Select.tsx";
 import { Switch } from "../../widgets/Switch.tsx";
 import type { OptionCommand } from "../optionCommand.ts";
 import { useFiltersLock } from "../../variants/filtersLock.ts";
@@ -116,7 +117,7 @@ export function PcaTabOptions(): React.JSX.Element {
 
   return (
     <div className={classOf(styles, "options")}>
-      <RadioGroup
+      <Select
         label={METHOD_LABEL}
         items={METHOD_ITEMS}
         value={options.method}

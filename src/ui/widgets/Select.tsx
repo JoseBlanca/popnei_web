@@ -8,6 +8,13 @@
  *
  * It is controlled: the screen gives the id of the item chosen, from the
  * store, and is told the id the user chooses, one of those it gave.
+ *
+ * It may wait, with its reason, as the method of the PCA on popgen2.html
+ * does while a PCA runs (waiting.ts): its list does not open and no key
+ * chooses an item, its button keeps the Tab key, is drawn greyed and is
+ * marked `aria-disabled`, with the reason as its tooltip, on the mouse, a
+ * press and the focus (WaitingTooltip.tsx), and as its description, in
+ * the place of the select's own description and problem.
  */
 import {
   Select as AriaSelect,
@@ -22,9 +29,12 @@ import {
 } from "react-aria-components";
 import type { Key } from "react-aria-components";
 
+import { useRef, useState } from "react";
+
 import { classOf } from "../classOf.ts";
 import { ProblemIcon } from "./Problem.tsx";
 import styles from "./Select.module.css";
+import { WaitingTooltip } from "./WaitingTooltip.tsx";
 
 /** One choice of a select. */
 export interface SelectItem<T extends string> {
@@ -73,6 +83,10 @@ export interface SelectProps<T extends string> {
   /** The element of the button, for a screen that moves the focus to
       it. */
   readonly buttonRef?: React.Ref<HTMLButtonElement>;
+  /** The reason the select waits, its tooltip and its description, while
+      its list does not open; or `null`, when it does not wait. `null`
+      when absent. */
+  readonly waiting?: string | null;
 }
 
 /** A select with its label. */
@@ -86,94 +100,135 @@ export function Select<T extends string>({
   problem,
   onChange,
   buttonRef,
+  waiting = null,
 }: SelectProps<T>): React.JSX.Element {
+  const waits = waiting !== null;
+  // Whether the list is open: held here, so that a select that waits
+  // keeps it closed.
+  const [open, setOpen] = useState(false);
+  // The field, label and button, which the tooltip is placed under.
+  const anchorRef = useRef<HTMLDivElement>(null);
   const chosen = (key: Key | null): void => {
+    if (waits) return;
     const item = items.find((one) => one.id === key);
     if (item !== undefined) onChange(item.id);
   };
   const start = typeof labelShown === "object" ? labelShown.start : null;
   return (
-    <AriaSelect
-      className={classOf(styles, "field")}
-      value={value}
-      onChange={chosen}
-      isInvalid={problem !== undefined}
-      // The problem is said, and the value is not refused by the browser's
-      // own validation of a form.
-      validationBehavior="aria"
-      {...(placeholder !== undefined && { placeholder })}
-    >
-      {start !== null && (
-        // The words the eye sees, hidden from a screen reader, which reads
-        // the name. A click on them focuses the select, as a click on the
-        // label of another select does; the keyboard reaches the select
-        // by the Tab key.
-        <span
-          aria-hidden="true"
-          className={classOf(styles, "label")}
-          onClick={(event) => {
-            // The button of the select, beside these words in its field.
-            event.currentTarget.parentElement?.querySelector("button")?.focus();
+    <WaitingTooltip text={waiting} anchor={anchorRef}>
+      {(hintId) => (
+        <AriaSelect
+          ref={(node) => {
+            anchorRef.current = node;
+            markWaiting(node?.querySelector("button") ?? null, waits);
           }}
+          className={classOf(styles, "field")}
+          value={value}
+          onChange={chosen}
+          isOpen={open && !waits}
+          onOpenChange={(isOpen) => {
+            setOpen(isOpen && !waits);
+          }}
+          isInvalid={problem !== undefined}
+          // The problem is said, and the value is not refused by the browser's
+          // own validation of a form.
+          validationBehavior="aria"
+          {...(placeholder !== undefined && { placeholder })}
         >
-          {start}
-        </span>
-      )}
-      {/* The name as one text, and not the words shown with the rest
+          {start !== null && (
+            // The words the eye sees, hidden from a screen reader, which reads
+            // the name. A click on them focuses the select, as a click on the
+            // label of another select does; the keyboard reaches the select
+            // by the Tab key.
+            <span
+              aria-hidden="true"
+              className={classOf(styles, "label")}
+              onClick={(event) => {
+                // The button of the select, beside these words in its field.
+                event.currentTarget.parentElement
+                  ?.querySelector("button")
+                  ?.focus();
+              }}
+            >
+              {start}
+            </span>
+          )}
+          {/* The name as one text, and not the words shown with the rest
           hidden beside them, since a browser may put a space before a
           part hidden from the eye as it makes the name. */}
-      <Label
-        className={
-          labelShown === "whole"
-            ? classOf(styles, "label")
-            : classOf(styles, "visuallyHidden")
-        }
-      >
-        {start === null ? label : `${start}${label}`}
-      </Label>
-      <Button
-        className={classOf(styles, "button")}
-        {...(buttonRef !== undefined && { ref: buttonRef })}
-      >
-        <SelectValue className={classOf(styles, "value")} />
-        <svg
-          className={classOf(styles, "chevron")}
-          viewBox="0 0 16 16"
-          aria-hidden="true"
-        >
-          <polyline points="4 6 8 10 12 6" />
-        </svg>
-      </Button>
-      {description !== undefined && (
-        <Text slot="description" className={classOf(styles, "description")}>
-          {description}
-        </Text>
-      )}
-      <FieldError className={classOf(styles, "problem")}>
-        <ProblemIcon />
-        <span>{problem}</span>
-      </FieldError>
-      <Popover className={classOf(styles, "popover")}>
-        <ListBox className={classOf(styles, "list")}>
-          {items.map((item) => (
-            <ListBoxItem
-              key={item.id}
-              id={item.id}
-              textValue={item.label}
-              className={classOf(styles, "item")}
+          <Label
+            className={
+              labelShown === "whole"
+                ? classOf(styles, "label")
+                : classOf(styles, "visuallyHidden")
+            }
+          >
+            {start === null ? label : `${start}${label}`}
+          </Label>
+          <Button
+            className={
+              waits
+                ? `${classOf(styles, "button")} ${classOf(styles, "waiting")}`
+                : classOf(styles, "button")
+            }
+            // Waiting, the reason alone describes the button: React Aria
+            // sets the ids of its description and of its problem on the
+            // button, and takes away those it does not draw after drawing
+            // it, which would take away a reason added to them on the
+            // element. No select that waits has a description or a problem.
+            {...(hintId !== undefined && { "aria-describedby": hintId })}
+            {...(buttonRef !== undefined && { ref: buttonRef })}
+          >
+            <SelectValue className={classOf(styles, "value")} />
+            <svg
+              className={classOf(styles, "chevron")}
+              viewBox="0 0 16 16"
+              aria-hidden="true"
             >
-              <svg
-                className={classOf(styles, "mark")}
-                viewBox="0 0 16 16"
-                aria-hidden="true"
-              >
-                <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
-              </svg>
-              {item.label}
-            </ListBoxItem>
-          ))}
-        </ListBox>
-      </Popover>
-    </AriaSelect>
+              <polyline points="4 6 8 10 12 6" />
+            </svg>
+          </Button>
+          {description !== undefined && (
+            <Text slot="description" className={classOf(styles, "description")}>
+              {description}
+            </Text>
+          )}
+          <FieldError className={classOf(styles, "problem")}>
+            <ProblemIcon />
+            <span>{problem}</span>
+          </FieldError>
+          <Popover className={classOf(styles, "popover")}>
+            <ListBox className={classOf(styles, "list")}>
+              {items.map((item) => (
+                <ListBoxItem
+                  key={item.id}
+                  id={item.id}
+                  textValue={item.label}
+                  className={classOf(styles, "item")}
+                >
+                  <svg
+                    className={classOf(styles, "mark")}
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                  >
+                    <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
+                  </svg>
+                  {item.label}
+                </ListBoxItem>
+              ))}
+            </ListBox>
+          </Popover>
+        </AriaSelect>
+      )}
+    </WaitingTooltip>
   );
+}
+
+/** Marks the button `node` of a select that waits `aria-disabled`, and
+    takes the mark away from one that does not. React Aria never sets
+    it on the button, so it stays until this is called again. */
+function markWaiting(node: HTMLButtonElement | null, waits: boolean): void {
+  if (node === null) return;
+  if (waits) node.setAttribute("aria-disabled", "true");
+  else node.removeAttribute("aria-disabled");
 }

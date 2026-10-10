@@ -5948,10 +5948,9 @@ for (const theme of ["light", "dark"] as const) {
             },
           );
           if (shot === "pcoa") {
-            await panel
-              .getByRole("radiogroup", { name: "Method" })
-              .locator("label")
-              .filter({ hasText: "PCoA" })
+            await panel.getByRole("button", { name: /Method$/u }).click();
+            await page
+              .getByRole("option", { name: /^PCoA of the Kosman/u })
               .click();
           }
           const field = panel.getByRole("textbox", {

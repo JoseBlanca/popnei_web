@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Checkbox } from "./Checkbox.tsx";
 import { NumberField } from "./NumberField.tsx";
 import { RadioGroup } from "./RadioGroup.tsx";
+import { Select } from "./Select.tsx";
 import { Switch } from "./Switch.tsx";
 import { ThresholdSlider } from "./ThresholdSlider.tsx";
 
@@ -427,6 +428,76 @@ describe("AP6 D3 the reason of a control that waits, on the mouse, a press and t
       expect(tooltipShown()).toBeNull();
     });
   }
+});
+
+/** The button of the select drawn. */
+function selectButton(): HTMLButtonElement {
+  const button = container.querySelector("button");
+  if (button === null) throw new Error("no button");
+  return button;
+}
+
+/** Draws the select of the method, given the reason or not, and keeps
+    the ids it gives. */
+function drawMethodSelect(waiting: string | null, chosen: string[]): void {
+  draw(
+    createElement(Select<"pca" | "pcoa">, {
+      label: "Method",
+      items: [
+        { id: "pca", label: "PCA of the genotypes" },
+        { id: "pcoa", label: "PCoA" },
+      ],
+      value: "pca",
+      waiting,
+      onChange: (id) => chosen.push(id),
+    }),
+  );
+}
+
+describe("AP10 D1 the select of the method that waits while a PCA runs", () => {
+  test("its button aria-disabled and in the order of the Tab key, described by the reason; a press opens no list and a key chooses nothing", () => {
+    const chosen: string[] = [];
+    drawMethodSelect(REASON, chosen);
+    const button = selectButton();
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.disabled).toBe(false);
+    expect(describedWords(button)).toBe(REASON);
+    act(() => {
+      button.focus();
+    });
+    expect(tooltipShown()).toBe(REASON);
+    for (const key of ["Enter", " ", "ArrowDown", "ArrowUp", "p"]) {
+      act(() => {
+        button.dispatchEvent(
+          new KeyboardEvent("keydown", { key, bubbles: true }),
+        );
+        button.dispatchEvent(
+          new KeyboardEvent("keyup", { key, bubbles: true }),
+        );
+      });
+    }
+    act(() => {
+      button.click();
+    });
+    expect(document.querySelector('[role="listbox"]')).toBeNull();
+    expect(chosen).toEqual([]);
+    expect(tooltipShown()).toBe(REASON);
+  });
+
+  test("with no reason, its button is not marked, and Enter opens its list", () => {
+    const chosen: string[] = [];
+    drawMethodSelect(null, chosen);
+    const button = selectButton();
+    expect(button.hasAttribute("aria-disabled")).toBe(false);
+    expect(describedWords(button)).toBe("");
+    act(() => {
+      button.focus();
+      button.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+      );
+    });
+    expect(document.querySelector('[role="listbox"]')).not.toBeNull();
+  });
 });
 
 describe("AP6 D3 the label of a number field that waits", () => {

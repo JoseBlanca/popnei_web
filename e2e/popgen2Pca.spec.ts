@@ -144,6 +144,21 @@ function group(page: Page, name: string): Locator {
   return shown(page).getByRole("radiogroup", { name, exact: true });
 }
 
+/** The drop-down list of the method in the PCA tab, its button, named
+    by the item chosen and its label. */
+function methodButton(page: Page): Locator {
+  return shown(page).getByRole("button", { name: /Method$/u });
+}
+
+/** Chooses the PCoA in the drop-down list of the method. */
+async function choosePcoa(page: Page): Promise<void> {
+  await methodButton(page).click();
+  await page.getByRole("option", { name: /^PCoA of the Kosman/u }).click();
+  await expect(methodButton(page)).toHaveAccessibleName(
+    "PCoA of the Kosman distances, for data with many missing genotypes Method",
+  );
+}
+
 /** The section of the statistics of the file, in the Variants tab. */
 function stats(page: Page): Locator {
   return page.getByRole("region", { name: "Statistics of the file" });
@@ -277,14 +292,17 @@ function labelOf(control: Locator): Locator {
 }
 
 /** The controls of the PCA tab that wait while a PCA runs, each with its
-    visible part, the tooltip's anchor: the radio buttons (anchored on
+    visible part, the tooltip's anchor: the drop-down list of the method
+    (anchored on its label and button), the radio buttons (anchored on
     their group), the switch (on its label) and the number boxes (on
     themselves). The missing data and the MAF made stricter, so that
     their boxes are drawn. */
 async function pcaTabControls(
   page: Page,
 ): Promise<readonly { readonly control: Locator; readonly anchor: Locator }[]> {
-  const controls: { control: Locator; anchor: Locator }[] = [];
+  const controls: { control: Locator; anchor: Locator }[] = [
+    { control: methodButton(page), anchor: methodButton(page).locator("..") },
+  ];
   for (const radioGroup of await shown(page).getByRole("radiogroup").all()) {
     for (const radio of await radioGroup.getByRole("radio").all()) {
       controls.push({ control: radio, anchor: radioGroup });
@@ -409,10 +427,10 @@ test.describe("AP6 D3 the locks while a PCA runs", () => {
     await runHeld(page);
     await expectAxeBothSchemes(page, makeAxeBuilder);
 
-    // Every option of the PCA tab: 6 radio buttons, the switch and 4
-    // boxes.
+    // Every option of the PCA tab: the method's drop-down list, 4 radio
+    // buttons, the switch and 4 boxes.
     const controls = await pcaTabControls(page);
-    expect(controls).toHaveLength(11);
+    expect(controls).toHaveLength(10);
     for (const radioGroup of await shown(page).getByRole("radiogroup").all()) {
       await expect(radioGroup).toHaveAccessibleDescription(
         new RegExp(`${LOCKED.replace(/[.]/gu, "\\.")}$`, "u"),
@@ -436,19 +454,17 @@ test.describe("AP6 D3 the locks while a PCA runs", () => {
 
     // Pressed though they say they wait, as a user may: Playwright would
     // not press a control marked aria-disabled.
-    const method = group(page, "Method");
-    const pcaRadio = method.getByRole("radio", {
-      name: "PCA of the genotypes",
-    });
     const missing = group(page, "Filter the variants by missing data");
     const ld = shown(page).getByRole("switch", {
       name: "Prune the variants by linkage disequilibrium (LD)",
     });
-    await method
-      .locator("label")
-      .filter({ hasText: "PCoA" })
-      .click({ force: true });
-    await expect(pcaRadio).toBeChecked();
+    await methodButton(page).click({ force: true });
+    await methodButton(page).press("ArrowDown");
+    await methodButton(page).press("Enter");
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+    await expect(methodButton(page)).toHaveAccessibleName(
+      "PCA of the genotypes Method",
+    );
     await missing
       .locator("label")
       .filter({ hasText: "As in the Variants tab" })
@@ -842,10 +858,7 @@ test("AP6 D3 the download of the filtered variants waits while a PCA is held, wi
   await expect(downloadButton(page)).toBeEnabled();
 
   await tab(page, "PCA").click();
-  await group(page, "Method")
-    .locator("label")
-    .filter({ hasText: "PCoA" })
-    .click();
+  await choosePcoa(page);
   await expect(
     shown(page).getByRole("heading", { level: 2, name: "PCoA" }),
   ).toBeVisible();
@@ -1280,10 +1293,7 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
   }) => {
     test.setTimeout(90_000);
     await openReady(page);
-    await group(page, "Method")
-      .locator("label")
-      .filter({ hasText: "PCoA" })
-      .click();
+    await choosePcoa(page);
     await runToResult(page);
     await expect(
       shown(page).getByRole("heading", {
