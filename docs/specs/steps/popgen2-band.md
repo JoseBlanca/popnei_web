@@ -300,10 +300,18 @@ application is rare, and the page must be reloaded after it. Fixed at
 the top of the window, an error band covered half the window at 200%
 zoom and all of it at 400%, with Close out of reach, in Chromium and
 WebKit (the review of work package 5 of `docs/plans/no-undo.md`, 10
-October 2026). An error that comes while the page is scrolled down is
-therefore above what the window shows; the alert reads it, and the
-Tab key from the top of the page reaches it first. Details pressed with
-the page scrolled shows the details under it, in the window.
+October 2026). An error that comes while the page is scrolled down, and
+finds the band above the window, scrolls the page at once to the top of
+the band, so that the line of the error, Details and Close are in the
+window: the screens of 10 October 2026 showed such an error out of
+sight at 320 px and cut at its first line at 1280 px, and a user of the
+mouse saw nothing change on a page that must be reloaded. The page
+moves at once and not smoothly, which would ignore a user who asks for
+less motion. The focus stays where it was: the alert reads the error,
+and taking the focus from the control the user works with would be
+worse. A second error while the first is shown, Details and Close
+scroll nothing. Details pressed with the page scrolled shows the
+details under it, in the window.
 
 ### What stays elsewhere
 
@@ -565,7 +573,10 @@ message with `aria-expanded`; Close calls `defects.dismiss` and gives
 the focus to the heading, empties the band's status region and hides
 the details and their box for the next error; "Stopping the PCA…"
 gone 10 s after the band first saw it, on a clock of the test, while
-the store still waits for the worker.
+the store still waits for the worker. An error that comes with the band above
+the window scrolls the page to the band's top, once, at once, and a
+second error, Details and Close scroll nothing; an error after Close
+scrolls again; none with the band's top in the window.
 
 **In Playwright, on the built site, in Chromium and WebKit**, the two
 engines that start on the owner's Mac, on `panel.nei`,
@@ -595,6 +606,10 @@ pass held by `e2e/holdWorker.ts`:
   with the page; Details reached by the keyboard with the page scrolled
   to its end, the details in the window; a PCA held running at the same
   time shows both lines;
+- an error thrown with the page scrolled to its end, at 1280 and at
+  320 px: the page scrolled to the band, whose top is at 0 of the window
+  or below it, the line of the error, Details and Close whole in the
+  window, and the focus where it was;
 - the page scrolled to its end with a PCA held running: the band at the
   top of the window; each control reached by the Tab key from the end
   of the page back to the top, in WebKit as in Chromium, below the
