@@ -48,7 +48,8 @@ export interface RunGate {
       first error is thrown. */
   readonly endAll: () => void;
   /** Calls `listener` when the count of the changes under way,
-      `underWay`, rises from 0 or falls to 0, and at nothing else;
+      `underWay`, rises from 0 or falls to 0, which is when `busy`
+      changes, and at nothing else;
       returns the function that stops it. A property made once, so React
       keeps it. */
   readonly subscribe: (listener: () => void) => () => void;
@@ -72,8 +73,15 @@ export interface RunGate {
   readonly holdChange: () => () => void;
   /** The number of changes under way now: the holds of `holdChange` not
       let go, and the runs of the keys held. 0 when the user is in the
-      middle of none. */
+      middle of none. It changes from 1 to 2 and back with no listener
+      told, so a screen that reads it with `subscribe`, as React's
+      `useSyncExternalStore` does, reads only `busy()`, or whether it is
+      0; the count itself is for the tests. */
   readonly underWay: () => number;
+  /** Whether any change is under way now, `underWay() > 0`: it changes
+      exactly when the listeners of `subscribe` are told, so a screen
+      may read it with them. */
+  readonly busy: () => boolean;
 }
 
 /** A run held by the gate. */
@@ -194,6 +202,7 @@ export function createRunGate(): RunGate {
       return release;
     },
     underWay: count,
+    busy: () => count() > 0,
   };
 }
 

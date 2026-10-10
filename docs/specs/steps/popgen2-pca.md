@@ -390,10 +390,13 @@ out. The changes under way are counted by the gate of the page,
 `createRunGate` of `src/ui/variants/thresholdRun.ts`: `holdChange()`
 holds a change under way of a widget and gives the function that lets
 it go; `underWay()` is the count, the holds of `holdChange` and the
-runs of the arrow keys held; and `subscribe` tells its listeners when
-the count rises from 0 or falls to 0 (after task 2.2 of the plan only
-then; until then also at each move of a run of the arrow keys), so
-that `autoRuns`'s listener reads `underWay() === 0`. `Slider.tsx`,
+runs of the arrow keys held; `busy()` is whether the count is above 0;
+and `subscribe` tells its listeners when the count rises from 0 or
+falls to 0, which is when `busy()` changes, and at nothing else (from
+task 2.2 of the plan; until then also at each move of a run of the
+arrow keys), so that `autoRuns`'s listener, and any screen, reads
+`busy()`. The count goes from 1 to 2 and back with nobody told, so no
+screen reads it with the subscription; it is for the tests. `Slider.tsx`,
 `ThresholdSlider.tsx`, `Select.tsx` and `NumberField.tsx` of
 `src/ui/widgets/`, and the dialog of the download, take and release a
 `holdChange` through `RunGateProvider`. `hold` is left to the runs of

@@ -656,6 +656,30 @@ describe("NU1 when the gate tells its listeners", () => {
   });
 });
 
+describe("NU2 the gate's busy changes exactly when its listeners are told", () => {
+  test("a hold, a run of the keys, the hold let go and the run ended: busy read at each tell, and unchanged between", () => {
+    const gate = createRunGate();
+    const seen: boolean[] = [];
+    gate.subscribe(() => {
+      seen.push(gate.busy());
+    });
+    expect(gate.busy()).toBe(false);
+    const release = gate.holdChange();
+    expect([gate.busy(), seen]).toEqual([true, [true]]);
+    const { run } = runOf(gate);
+    run.press(0.5, 0.49);
+    expect([gate.underWay(), gate.busy(), seen]).toEqual([2, true, [true]]);
+    release();
+    expect([gate.underWay(), gate.busy(), seen]).toEqual([1, true, [true]]);
+    vi.advanceTimersByTime(RUN_QUIET_MS);
+    expect([gate.underWay(), gate.busy(), seen]).toEqual([
+      0,
+      false,
+      [true, false],
+    ]);
+  });
+});
+
 describe("NU2 D2 the gate tells only when the count of the changes under way rises from 0 or falls to 0", () => {
   test("a press of a run held, a second run held, and the first let go tell nothing; the count falling to 0 tells once", () => {
     const gate = createRunGate();
