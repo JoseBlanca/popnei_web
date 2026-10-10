@@ -189,19 +189,45 @@ describe("NU3 D2 the slider holds a drag under way", () => {
 
   test.each(["mouse", "touch"] as const)(
     "a press by %s cancelled by the browser lets its hold go",
-    (pointerType) => {
+    async (pointerType) => {
       const gate = createRunGate();
       draw(gate, []);
       act(() => {
         thumbOf().dispatchEvent(pointer("pointerdown", 50, pointerType));
       });
       expect(gate.underWay()).toBe(1);
-      act(() => {
+      await act(async () => {
         window.dispatchEvent(pointer("pointercancel", 50, pointerType));
+        await Promise.resolve();
       });
       expect(gate.underWay()).toBe(0);
     },
   );
+
+  test("a drag by touch cancelled by the browser gives its value before the hold goes", async () => {
+    const gate = createRunGate();
+    const ends: number[] = [];
+    draw(gate, ends);
+    act(() => {
+      thumbOf().dispatchEvent(pointer("pointerdown", 50, "touch"));
+    });
+    act(() => {
+      window.dispatchEvent(pointer("pointermove", 40, "touch"));
+    });
+    expect(gate.underWay()).toBe(1);
+    // The values given when the gate tells that nothing is under way.
+    const seen: number[][] = [];
+    gate.subscribe(() => {
+      if (!gate.busy()) seen.push([...ends]);
+    });
+    await act(async () => {
+      window.dispatchEvent(pointer("pointercancel", 40, "touch"));
+      await Promise.resolve();
+    });
+    expect(gate.underWay()).toBe(0);
+    expect(ends).toHaveLength(1);
+    expect(seen).toEqual([ends]);
+  });
 
   test("a press of a key takes no hold", () => {
     const gate = createRunGate();

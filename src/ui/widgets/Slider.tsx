@@ -203,8 +203,11 @@ export function Slider({
                   const ownerWindow =
                     event.currentTarget.ownerDocument.defaultView;
                   if (stopCancel.current === null && ownerWindow !== null) {
+                    // One step later, so that React Aria's own listener
+                    // of the cancel, added after this one, ends the drag
+                    // and gives its value before the gate is told free.
                     const cancelled = (): void => {
-                      endPress();
+                      queueMicrotask(endPress);
                     };
                     ownerWindow.addEventListener("pointercancel", cancelled);
                     stopCancel.current = () => {
