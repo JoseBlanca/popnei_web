@@ -5,6 +5,7 @@ import {
   emptyCache,
   get,
   put,
+  remove,
   resultBytes,
   use,
 } from "./cache.ts";
@@ -355,6 +356,94 @@ describe("WP3 D2 the cache", () => {
             expect(after.totalBytes).toBeLessThanOrEqual(after.maxBytes);
           }
         });
+      }),
+    );
+  });
+});
+
+/** One step of a drawn sequence with removes: a step of `Step`, or a
+    remove of the key of index `key`. */
+type StepWithRemove = Step | { readonly kind: "remove"; readonly key: number };
+
+const stepsWithRemove = fc.array(
+  fc.oneof(
+    step,
+    fc.record({ kind: fc.constant("remove" as const), key: keyIndex }),
+  ),
+  { maxLength: 40 },
+);
+
+describe("NU1 D1 the remove of the cache", () => {
+  test("remove takes the value and its bytes away, keeps the others, and a second remove gives the same object", () => {
+    const c = put(
+      put(emptyCache<Uint8Array>(BOUND), A, resultOf(40), new Set()),
+      B,
+      resultOf(40),
+      new Set(),
+    );
+    const before = snapshot(c);
+    const removed = remove(c, A);
+    expect(get(removed, A)).toBeNull();
+    expect(removed.totalBytes).toBe(40);
+    expect(keysOf(removed)).toEqual([B]);
+    expect(get(removed, B)).toBe(get(c, B));
+    expect(snapshot(c)).toEqual(before);
+    expect(remove(removed, A)).toBe(removed);
+  });
+
+  test("a remove leaves the order of the next drop among the others as it was", () => {
+    // a used at 1, b at 2, c at 3, then a used again at 4: b is the
+    // oldest, then c. Removing d, the newest, leaves b dropped first.
+    let c = emptyCache<Uint8Array>(BOUND);
+    c = put(c, A, resultOf(25), new Set());
+    c = put(c, B, resultOf(25), new Set());
+    c = put(c, C, resultOf(25), new Set());
+    c = use(c, [A]);
+    c = put(c, D, resultOf(25), new Set());
+    const removed = remove(c, D);
+    expect(removed.entries.get(A)?.lastUse).toBe(c.entries.get(A)?.lastUse);
+    expect(removed.entries.get(B)?.lastUse).toBe(c.entries.get(B)?.lastUse);
+    expect(removed.entries.get(C)?.lastUse).toBe(c.entries.get(C)?.lastUse);
+    const withE = put(removed, E, resultOf(50), new Set());
+    expect(keysOf(withE)).toEqual([A, C, E]);
+    const withF = put(withE, F, resultOf(25), new Set());
+    expect(keysOf(withF)).toEqual([A, E, F]);
+  });
+
+  test("property: a remove drawn among the puts and the uses keeps the total the sum of the entries", () => {
+    fc.assert(
+      fc.property(stepsWithRemove, (sequence: readonly StepWithRemove[]) => {
+        let c = emptyCache<Uint8Array>(BOUND);
+        for (const s of sequence) {
+          switch (s.kind) {
+            case "put":
+              c = put(
+                c,
+                poolKey(s.key),
+                resultOf(s.bytes),
+                new Set(s.keep.map(poolKey)),
+              );
+              break;
+            case "use":
+              c = use(c, s.keys.map(poolKey));
+              break;
+            case "remove": {
+              const key = poolKey(s.key);
+              const next = remove(c, key);
+              expect(next.entries.has(key)).toBe(false);
+              if (!c.entries.has(key)) {
+                expect(next).toBe(c);
+              }
+              c = next;
+              break;
+            }
+          }
+          let sum = 0;
+          for (const entry of c.entries.values()) {
+            sum += entry.bytes;
+          }
+          expect(c.totalBytes).toBe(sum);
+        }
       }),
     );
   });

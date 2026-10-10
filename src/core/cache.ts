@@ -165,3 +165,24 @@ export function get<V>(c: Cache<V>, key: Key): V | null {
   const entry = c.entries.get(key);
   return entry === undefined ? null : entry.value;
 }
+
+/**
+ * The cache without the value under `key`, its bytes taken from the
+ * total; `c` itself when it holds none, so that a store that removes
+ * nothing gives back the same state. The last uses of the others are
+ * kept, and so the order in which they would be dropped.
+ */
+export function remove<V>(c: Cache<V>, key: Key): Cache<V> {
+  const removed = c.entries.get(key);
+  if (removed === undefined) {
+    return c;
+  }
+  const entries = new Map(c.entries);
+  entries.delete(key);
+  return {
+    entries,
+    totalBytes: c.totalBytes - removed.bytes,
+    maxBytes: c.maxBytes,
+    clock: c.clock,
+  };
+}
