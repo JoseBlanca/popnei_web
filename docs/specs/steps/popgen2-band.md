@@ -57,6 +57,15 @@ it:
   alert** is the same for words that interrupt the user.
 - **The focus** is the control the keys act on; **the Tab key** moves
   it from one control to the next.
+- **A root** is a part of the page that React draws on its own; the
+  page has two, `#root`, the application, and `#defects`, a strip above
+  it that the error bar of `popgen.html` is drawn in, so that it stays
+  when an error empties the first. **The worker client** is the code of
+  the page that talks to the two workers (`src/worker/client.ts`); it
+  calls `onPopneiReady` each time the calculation worker has started and
+  loaded popnei. **`runs`** is the list of the calculations under way
+  that the store gives the screens, each marked `stopping` from a Stop
+  until it has ended.
 - **The tab shown** is the one of the five tabs under the boxes,
   Variants, Individuals, PCA, Populations or Distances, whose content
   is on the screen.
@@ -79,8 +88,13 @@ the page's background and a border under it while it has words, so
 that what scrolls under it does not show through them.
 
 It is drawn in the page's second root, `#defects`, where the error bar
-was, outside the application's root, so that it stays, and says what
-happened, when an error has emptied the application's root.
+was, so that it stays, and says what happened, when an error has
+emptied the application's root.
+
+The band is fixed at the top of the window in every state but one:
+while the details of an error are shown it scrolls with the page, so
+that at 320 px it never covers more than a few lines ("An error of the
+application", below).
 
 ### The line
 
@@ -126,9 +140,12 @@ Press Run in the PCA tab to calculate it again."
 started again has loaded popnei and opened the variants file again,
 which the worker client tells the page by calling its `onPopneiReady`
 again (`docs/specs/worker/client.md`); until then a Run waits. The band
-counts a Stop from the store: a request of the PCA or of the one pass
+learns of a Stop from the store: a request of the PCA or of the one pass
 that was running and is in `runs` with `stopping` true, whichever Stop
-the user pressed. The line goes when the worker is ready, when another
+the user pressed; it notes then the time and the count of the worker's
+starts, a number the entry raises by one at each `onPopneiReady`. The
+line goes when that count is higher than the one noted, the worker
+started again, when another
 calculation starts, whose line replaces it, or after 10 s, so that a
 worker that cannot start leaves no line that never ends; such a worker
 is said at the next request, as today. How long the line stays has not
@@ -203,7 +220,7 @@ screen that cannot happen says why.
 | results removed | cannot happen: the band shows no result | |
 | error | the line of an error of the application above whatever the line says, with Details and Close | Details, Copy the details, Close |
 
-Several at once, from the table above: the line says one thing, the
+Several at once, from the table of "The line": the line says one thing, the
 first that holds; an error of the application stands above it. So a PCA
 running when an error of the application comes shows both lines, the
 error and "PCA running · 1:20" with its Stop, since the user may want
@@ -284,9 +301,10 @@ and to clash with a screen reader's.
 
 When the control with the focus goes from the band, the focus does not
 fall on nothing: after its Stop, whose line then changes to "Stopping
-…" with no button, the focus goes to the band itself, which can take
-the focus from the code and is not a stop of the Tab key; the same when
-the link goes because the line now says something else. After "Close"
+…" with no button, the focus goes to the band itself, so that the next press of
+the Tab key goes on from the band and a screen reader reads its new
+line; the band is not itself a stop of the Tab key. The same when the
+link goes because the line now says something else. After "Close"
 the focus goes to the heading "Popnei", as the error bar's Close does.
 After the link, the focus is on the heading of the warnings or of the
 tab, as above.
@@ -423,7 +441,8 @@ the region, the Stop and the link.
 
 ## Choices made by the session
 
-Open to the owner's change once they try the page: the band's line
+Approved with the spec, and open to the owner's change once they try
+the page: the band's line
 kept from the first drawing, empty when it has nothing to say; the
 order of the lines when several hold; the clock and no percentage for
 the PCA, whose bar stands full while popnei decomposes the matrix and
@@ -445,14 +464,19 @@ thin border while it is empty.
    the top of the page from the first drawing, empty while it has
    nothing to say, so that the page never moves when a PCA starts by
    itself. That line costs about 40 px of the window at every width,
-   44 px at 320 px, above the heading "Popnei". The other way is a band
+   an estimate from the height of a button of the page, 24 px, and its
+   margins, not yet measured in a browser: on a phone of 320 by 568 px,
+   about one fourteenth of the screen, above the heading "Popnei". The other way is a band
    that appears over the top of the page when it has something to say,
    covering the heading line and the top of what is scrolled under it,
    with no room kept: the page never moves either, but the band hides
-   what is under it while it shows. Recommended: the room kept, since
+   what is under it while it shows, for as long as something runs, up
+   to the minutes of a PCA of thousands of individuals. Recommended: the room kept, since
    the band then covers nothing at the top of the page, and the cost is
    a line of margin. Meanwhile: the room kept; the other way changes
-   task 5.3 of the plan and the screenshots.
+   the drawing of the band and its screenshots, task 5.3 of
+   `docs/plans/no-undo.md`. The screenshot `popgen2-band-empty` of the
+   plan shows the cost before the owner accepts the screen.
 
 ## Not in this spec
 
