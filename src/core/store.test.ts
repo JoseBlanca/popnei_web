@@ -8929,6 +8929,37 @@ describe("NU1 D2 dropLeftBehind on the store of popgen2.html", () => {
     expect(pcaOf(made.store.getState()).kind).toBe("ready");
   });
 
+  test("a PCA in flight, the threshold moved and set back, then a failure of the worker: ready, not error", () => {
+    const made = popgen2Store(true, true);
+    passDone(made);
+    made.store.startRun("pca");
+    moveMissing(made.store, 0.2);
+    moveMissing(made.store, 0.1);
+    made.store.runEnded(2, {
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+  });
+
+  test("a PCA in flight, the threshold moved, then the variants file could not be read again: the PCA in error with it", () => {
+    const made = popgen2Store(true, true);
+    passDone(made);
+    made.store.startRun("pca");
+    moveMissing(made.store, 0.2);
+    const error = {
+      kind: "reopenFailed",
+      name: "panel.vcf",
+      message: "a range refused",
+    } as const;
+    made.store.runEnded(2, { kind: "failed", error });
+    const status = pcaOf(made.store.getState());
+    expect(status.kind === "error" ? status.error : null).toEqual({
+      kind: "failed",
+      error,
+    });
+  });
+
   test("a PCA done, its LD distance emptied: locked; typed again with the same value: done, the same result object, no request", () => {
     const made = popgen2Store(true, true);
     passDone(made);

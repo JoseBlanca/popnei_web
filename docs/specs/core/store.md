@@ -508,7 +508,13 @@ its analysis has, or had when it was last not locked:
   store marks the request at the change that leaves its key behind,
   and keeps the mark until its outcome. The same holds for the
   statistics' request of a Run that waited. A refusal that ends so is
-  not kept either, and the number of variants the result read,
+  not kept either. Nor is a failure that is not popnei's, of the worker,
+  out of memory or any other: a value set back shows the analysis
+  `ready`, not in error over a calculation the user left, and a second
+  try can succeed. A variants file that could not be read again,
+  `reopenFailed`, is kept all the same, since it is of the load, which a
+  change of a key does not leave: every analysis of that load shows it.
+  The number of variants the result read,
   `numVarsRead` of its `countsOf`, is not recorded into the project,
   since the result it came with is dropped and the next calculation
   records it again. The outcome is otherwise taken in as before: the
@@ -2207,6 +2213,9 @@ by `createPopgen2Store` with the same fake `send`, from 10 October
   not compile, and, past the type, throws.
 - A PCA refused by popnei, `error`, the threshold moved and set back:
   `ready`, not `error`.
+- A PCA in flight, the threshold moved and set back, then a failure of
+  the worker, `workerFailed`: `ready`, not `error`. A PCA in flight, the
+  threshold moved, then `reopenFailed`: the PCA `error` with it.
 - A PCA done, its LD distance emptied: `locked`; typed again with the
   same value: `done`, the same result object, no request; emptied
   again and typed with another value: `ready`, and the old result no
