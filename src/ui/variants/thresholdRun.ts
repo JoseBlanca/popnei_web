@@ -55,7 +55,10 @@ export interface RunGate {
   readonly subscribe: (listener: () => void) => () => void;
   /** Holds the commit of the box of a threshold, which commits a number
       typed in it as Enter would; gives the function that lets it go,
-      when the box goes. */
+      when the box goes. A box held here is not a change under way, and
+      `underWay` does not count it: a box also takes `holdChange` while
+      its text differs from the project's value (task 3.2 of
+      docs/plans/no-undo.md). */
   readonly typing: (commit: () => void) => () => void;
   /** Commits what is typed in every box held, before an opening. */
   readonly commitTyped: () => void;
