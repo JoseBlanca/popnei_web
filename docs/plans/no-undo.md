@@ -899,3 +899,50 @@ error into view when it comes, or take the screens at the top); at
 whole "Stop recalculating" fits. Then task 5.4, work package 6
 (the instructions, by the session, and the documents), work package 7
 and the report, and work package 8, the owner's try.
+
+### The two screens left, and work package 6, 10 October 2026
+
+The error band out of view, settled by the session: an error of the
+application that comes while the band is above the window brings the
+page to the band at once (behavior "auto": nothing asks for smooth
+scrolling, and "instant" may be unknown to Safari 16.4, where it would
+throw while the error is shown); a second error, Details and Close move
+nothing. Commits 20af8575 and 4d79de88. Its review, `react` and `ux`:
+the `react` reviewer found nothing; the `ux` reviewer measured, at
+1280 by 600 in Chromium and WebKit, the focus of a slider left at 690
+px, below the window, and moved there by the arrow keys out of sight,
+and the page jumping behind the open download dialog, whose Escape gave
+the focus back to a button at 1,739 px. Fixed in 77a05b48 and
+cbf00404: when the jump leaves the focused control outside the window,
+the focus goes to the heading "Popnei", as Close does; while a dialog
+is open the page does not move, and the same happens when it closes.
+The flow DL6 D4 of `e2e/popgen2Download.spec.ts`, a crash of the
+worker during a write, now expects the focus on the heading after the
+dialog's Close, since that crash is an error of the application too.
+Checks at cbf00404: typecheck, lint, format clean; Vitest 162 files,
+5,190 tests; in Chromium and WebKit the flows of the band, the download
+and `openVariants`, 124; the band's error screens, 12.
+
+The band at 320 px with quarter-rem gaps stays: nothing overlaps and
+every word reads; the owner judges the short forms in work package 8.
+
+Task 6.1, by the session, 8a6c5360: the `coding` skill's `SKILL.md`,
+`react.md` (the page's notice, its store's three hooks, the PCA started
+by itself and its holds, the band, the refused keys, the states, the
+file map), `worker.md`, `css.md` and `testing.md`; the `code-review`
+skill's `categories.md` (`stale`); `writing-specs`'s row "results
+removed". The lessons of the reviews carried into them: the traps of a
+hold (a thumb held still, a cancelled touch drag, a right-click, typed
+text, a release in `finally`), the focus of a control that goes by
+itself, a click lost under a fixed band, a fixed element that grows
+with its text or is printed, and keys checked one at a time.
+
+Task 6.2, by a subagent: 05c33c2d and 80510b38. The first-reader on the
+paragraphs of `popgen2.html` in `docs/functionality.md` could not tell
+what Ctrl+Y does, whether the quiet second starts over, what the band
+shows while nothing runs, nor what "up to 4 minutes" was measured on;
+fixed by the session in 6e530d4c. The `stale` review of 6.1 and 6.2:
+four findings held, fixed in a3ac6f92 (the specs of the plan not yet
+saying they are built, the row of `popgen2.tsx` saying the page left
+the keys to the browser, the list of what `band/` imports, a sentence
+of `popgen2-filters.md` on Ctrl+Z); the band spec's status in 97fcd8d8.
