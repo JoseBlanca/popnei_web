@@ -104,8 +104,10 @@ export const CLOSE_LABEL = "Close";
 export const DETAILS_BOX_LABEL = "The details of the errors";
 
 /** What the status region of the bar, or of the band, says after Copy
-    the details. */
+    the details copied them. */
 export const COPIED = "The details were copied.";
+/** What it says when they could not be copied, and the box of the
+    details is shown in their place. */
 export const NOT_COPIED =
   "The details could not be copied. Select them in the box below and copy them.";
 

@@ -55,7 +55,9 @@ export interface BandPage {
   readonly pcaLive: LiveState;
   /** The tab shown. */
   readonly tab: PageTab;
-  /** The time now, in the milliseconds of `performance.now()`. */
+  /** The time of the band's last look at a Stop waiting, in the
+      milliseconds of `performance.now()`, read only while
+      `stoppingSince` is set. */
   readonly now: number;
   /** When the band first saw the store's `stoppedAwaitingWorker` set, in
       the same milliseconds; `null` while it has not. */
@@ -129,13 +131,17 @@ export type BandLine =
     heading: the words of the error bar for the first error, and the count
     of those after it. */
 export interface BandError {
+  /** The words of the error bar for the first error, with its message. */
   readonly text: string;
+  /** How many errors came after it. */
   readonly more: number;
 }
 
 /** What the band shows: its line, and the line of an error or `null`. */
 export interface Band {
+  /** The line after the heading "Popnei". */
   readonly line: BandLine;
+  /** The line of an error of the application under it, or `null`. */
   readonly error: BandError | null;
 }
 

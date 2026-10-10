@@ -39,6 +39,7 @@ import type { RunGate } from "../variants/thresholdRun.ts";
 import { bandOf } from "./bandLine.ts";
 import type { Band, BandPage } from "./bandLine.ts";
 
+/** The id of the load of `panel.nei` the test page opens. */
 export const FILE = "0123456789abcdef0123456789abcdef";
 
 /** A request the fake worker was given, of the job `J` whose outcome
@@ -107,23 +108,42 @@ export function pcaResult(method: PcaMethod, numVarsUsed: number): JobResult {
     shown, with a fake worker; `panel.nei` open and read, and the PCA's
     LD distance typed, 50,000. The one pass is not ended. */
 export interface TestPage {
+  /** The store of the page, over the fake worker. */
   readonly store: Popgen2PageStore<JobResult, Blob>;
+  /** The analyses the page starts by itself, the one pass and the PCA
+      live. */
   readonly auto: AutoRuns;
   /** The gate the screens pass, whose holds the test takes. */
   readonly gate: RunGate;
+  /** The log of the errors of the application. */
   readonly defects: Defects;
+  /** The calculations the fake worker was given, in their order. */
   readonly requests: Request[];
+  /** The writes of the filtered variants it was given, in their order. */
   readonly writes: WriteRequest[];
+  /** The tab shown, which the test sets; the Variants tab first. */
   tab: PageTab;
+  /** The time now that the band is given, which the test sets; 0 first. */
   now: number;
+  /** When the band first saw a Stop waiting, which the test sets; `null`
+      first. */
   stoppingSince: number | null;
+  /** The method of the PCA when the band first saw a Stop waiting,
+      which the test sets; `null` first. */
   stoppedMethod: PcaMethod | null;
+  /** What the band shows of the page now. */
   readonly band: () => Band;
+  /** Ends the one pass with the summary the page was made with, after
+      letting it start. */
   readonly endPass: () => Promise<void>;
+  /** The last request of a PCA the fake worker was given. */
   readonly lastPca: () => Request;
+  /** Changes the options of the PCA, through the gate, as the PCA tab
+      does. */
   readonly setPca: (options: Partial<PcaOptions>) => void;
 }
 
+/** Makes the test page, whose one pass ends with `summary`. */
 export function page(summary: JobResult): TestPage {
   const requests: Request[] = [];
   const writes: WriteRequest[] = [];
