@@ -228,6 +228,21 @@ export function pcaOptions(p: Project, page: PcaPage): PcaOptions {
   return read.value;
 }
 
+/** The method of the PCA the project holds, read alone, or that of the
+    defaults of the page `page` when the project holds none it knows.
+    Never throws, unlike `pcaOptions`, so that the words that name the
+    PCA outside its tab, the heading its boundary of errors keeps and the
+    lock of the filters, stand when the rest of the options would be
+    refused. */
+export function pcaMethodOf(p: Project, page: PcaPage): PcaMethod {
+  const stored = p.analyses.find((a) => a.analysis === ID)?.options;
+  const method = stored?.["method"];
+  if (method === "pca" || method === "pcoa") {
+    return method;
+  }
+  return (page === "popgen" ? PCA_DEFAULTS : PCA2_DEFAULTS).method;
+}
+
 /**
  * Checks the options of the PCA read from a project file, or sent by the
  * panel, and gives them back as an object of exactly the seven fields of

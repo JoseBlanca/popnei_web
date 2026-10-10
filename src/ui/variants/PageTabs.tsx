@@ -25,7 +25,7 @@ import type {
   PageTab,
   TabGreyed,
 } from "../../core/popgen2Tabs.ts";
-import { pcaOptions } from "../../core/analyses/pca.ts";
+import { pcaMethodOf } from "../../core/analyses/pca.ts";
 import { PcaTab } from "../analyses/pca/PcaTab.tsx";
 import { pcaTabTitle } from "../analyses/pca/tabWords.ts";
 import { classOf } from "../classOf.ts";
@@ -81,8 +81,9 @@ export function PageTabs({
     analysisTabs(s.project, s.individualsKept),
   );
   // The heading the PCA tab keeps after a defect: its own, "PCA" or
-  // "PCoA" by the method chosen.
-  const pcaMethod = useAppState((s) => pcaOptions(s.project, "popgen2").method);
+  // "PCoA" by the method chosen, read alone, so that options of the PCA
+  // that would be refused cost the PCA tab, and not the row.
+  const pcaMethod = useAppState((s) => pcaMethodOf(s.project, "popgen2"));
   return (
     <Tabs<PageTab>
       label={ANALYSES_TABS_LABEL}

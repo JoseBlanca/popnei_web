@@ -47,6 +47,7 @@ import type * as WordsModule from "./words.ts";
 import type * as Popgen2TabsModule from "../../core/popgen2Tabs.ts";
 import { pca } from "../../core/analyses/pca.ts";
 import { setAnalysisOptions } from "../../core/project.ts";
+import type * as PcaModule from "../../core/analyses/pca.ts";
 import type * as PcaTabModule from "../analyses/pca/PcaTab.tsx";
 import type { PcaTabProps } from "../analyses/pca/PcaTab.tsx";
 
@@ -61,7 +62,25 @@ const inject = vi.hoisted(() => ({
   zoneThrows: false,
   tabsThrow: false,
   pcaTabThrows: false,
+  pcaOptionsThrow: false,
 }));
+
+vi.mock("../../core/analyses/pca.ts", async (importOriginal) => {
+  const real = await importOriginal<typeof PcaModule>();
+  return {
+    ...real,
+    pcaOptions: (
+      ...args: Parameters<typeof real.pcaOptions>
+    ): ReturnType<typeof real.pcaOptions> => {
+      if (inject.pcaOptionsThrow) {
+        throw new Error(
+          "popnei_web defect: the project holds options of the PCA it refuses.",
+        );
+      }
+      return real.pcaOptions(...args);
+    },
+  };
+});
 
 vi.mock("../analyses/pca/PcaTab.tsx", async (importOriginal) => {
   const real = await importOriginal<typeof PcaTabModule>();
@@ -159,6 +178,7 @@ beforeEach(() => {
   inject.zoneThrows = false;
   inject.tabsThrow = false;
   inject.pcaTabThrows = false;
+  inject.pcaOptionsThrow = false;
   container = document.createElement("div");
   document.body.append(container);
   caught = [];
@@ -634,5 +654,25 @@ describe("AP6 the boundary of the PCA tab", () => {
     expect(
       [...(panel?.querySelectorAll("h2") ?? [])].map((h) => h.textContent),
     ).toEqual(["PCoA"]);
+  });
+
+  test("options of the PCA the project refuses cost the PCA tab alone: the row of tabs stays, and the tab shows its boundary under PCA", async () => {
+    const { store } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+    inject.pcaOptionsThrow = true;
+    await act(async () => {
+      tabOf("PCA").click();
+      await Promise.resolve();
+    });
+    expect(caught).toContainEqual(
+      new Error(
+        "popnei_web defect: the project holds options of the PCA it refuses.",
+      ),
+    );
+    expect(container.querySelector('[role="tablist"]')).not.toBeNull();
+    const panel = container.querySelector('[role="tabpanel"]:not([inert])');
+    expect(
+      [...(panel?.querySelectorAll("h2") ?? [])].map((h) => h.textContent),
+    ).toEqual(["PCA"]);
   });
 });

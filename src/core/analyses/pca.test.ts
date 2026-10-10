@@ -8,6 +8,7 @@ import {
   pca,
   pcaFilters,
   pcaOnPopgen2,
+  pcaMethodOf,
   pcaOptions,
   pcaPageOf,
   pruningDistanceReason,
@@ -533,6 +534,32 @@ describe("AP2 D1 pcaFilters on popgen2.html, the table of 'On popgen2.html'", ()
     expect(pcaOptions(project(), "popgen")).toBe(PCA_DEFAULTS);
     const p = project({ options: ownLd(50_000) });
     expect(pcaOptions(p, "popgen2")).toBe(pcaOptions(p, "popgen"));
+  });
+});
+
+describe("AP6 pcaMethodOf, the method read alone", () => {
+  test("gives the method the project holds, the PCoA, on either page", () => {
+    const p = project({ options: { method: "pcoa" } });
+    expect(pcaMethodOf(p, "popgen2")).toBe("pcoa");
+    expect(pcaMethodOf(p, "popgen")).toBe("pcoa");
+  });
+
+  test("gives the method of the defaults of the page when the project holds no options", () => {
+    expect(pcaMethodOf(project(), "popgen2")).toBe(PCA2_DEFAULTS.method);
+    expect(pcaMethodOf(project(), "popgen")).toBe(PCA_DEFAULTS.method);
+  });
+
+  test("does not throw on options pcaOptions refuses: their method when it is one, the default's when it is not", () => {
+    const refused = (options: JsonObject): Project =>
+      changed(project(), { analyses: [{ analysis: "pca", options }] });
+    const badAxes = refused({ ...optionsJson({ method: "pcoa" }), axes: [] });
+    expect(() => pcaOptions(badAxes, "popgen2")).toThrow(
+      "popnei_web defect: the project holds options of the PCA it refuses.",
+    );
+    expect(pcaMethodOf(badAxes, "popgen2")).toBe("pcoa");
+    expect(
+      pcaMethodOf(refused({ ...optionsJson({}), method: "tsne" }), "popgen2"),
+    ).toBe("pca");
   });
 });
 
