@@ -493,12 +493,20 @@ export interface StoreConfig<J, R, F = never> {
 export interface StopLeftBehindConfig {
   readonly stopLeftBehind: true;
   /** Whether the store keeps a result, and popnei's refusal, only under
-      the key its analysis has, or had when it was last not locked: after
-      a change that gives an analysis another key, what the cache and the
-      refusals hold under the key before is removed, and a request whose
-      key a change left behind gives nothing to the cache nor to the
-      refusals when it ends, even when the key came back since
-      (docs/specs/core/store.md, "dropLeftBehind"). True on popgen2.html,
+      the key its analysis has, or had when it was last not locked
+      (docs/specs/core/store.md, "dropLeftBehind"):
+      - after a change that gives an analysis another key, what the cache
+        and the refusals hold under the key before is removed;
+      - a locked analysis has no key, and the store remembers the last key
+        it had, `lastKeys`, through any number of changes in which it is
+        locked, so that a lock is not a change of its key;
+      - a request whose key a change left behind, even when the key came
+        back since, when it ends gives nothing to the cache nor to the
+        refusals, records no number of variants into the project (the
+        result is not taken in), keeps no other failure, nor a defect met
+        in taking in its outcome, but a variants file that could not be
+        read again, `reopenFailed`, which is of the load.
+      True on popgen2.html,
       which calculates the PCA again by itself and shows no result of
       values left behind; false when absent. Only with `stopLeftBehind`,
       or a calculation left behind would run on out of sight, its result
@@ -1027,10 +1035,14 @@ export function createStore<J, R, F = never>(
       the two changed since the last keys made; the results of the new
       keys are used in the cache, so that those on screen are the last
       dropped. A change makes the keys of its new project and version
-      with this before it changes anything, so that a defect while they
-      are made leaves the store as it was. The format of the writing is
-      the store's, `writeFormat`, and a change of it makes the keys again
-      too. */
+      with this before it changes anything else, so that a defect while
+      they are made leaves the store as it was. Once they are made, under
+      `dropLeftBehind`, it also calls `dropBehind`, which removes from the
+      cache and the refusals what is kept under the keys left behind,
+      moves `lastKeys` and marks the requests left behind: so it is
+      called only for a project the store then adopts, as every caller
+      does. The format of the writing is the store's, `writeFormat`, and
+      a change of it makes the keys again too. */
   const keysFor = (
     project: Project,
     version: string | null,
