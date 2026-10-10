@@ -165,8 +165,8 @@ heading and the box of the file, there before any file was opened, both
 disabled, so that the page did not move down when the first file was
 opened. From 9 to 10 October 2026 Undo and Redo stood at the right end
 of the line of the heading; since 10 October 2026 there are none, and
-the band of the page stands above the heading
-(`docs/specs/steps/popgen2-band.md`).
+the heading is in the band at the top of the window, with what the page
+is doing after it (`docs/specs/steps/popgen2-band.md`).
 
 ### Undo, Redo and their keys
 

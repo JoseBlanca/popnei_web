@@ -117,7 +117,9 @@ moved under the tab and otherwise unchanged; their terms are used here.
 
 ### The order of the page
 
-From the top: the heading "Popnei"; the two boxes, the variants file's
+From the top: the heading "Popnei", from 10 October 2026 at the left of
+the band at the top of the window (`docs/specs/steps/popgen2-band.md`);
+the two boxes, the variants file's
 first; the row of the two tabs, "Variants" and "Individuals";
 the part of the tab shown. From a width of 720 px the two boxes stand
 side by side, each half the width; below it, one above the other, each

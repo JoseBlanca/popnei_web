@@ -14,8 +14,11 @@ that starts by itself, `docs/designs/no-undo.md`, can start while the
 user is in another tab and does not see the PCA's own bar. It adds a
 part to the screen and changes no invariant of `docs/architecture.md`,
 whose section 7 gives it its place ("The band of `popgen2.html`").
-Written on 10 October 2026, before any code; not yet approved by the
-owner. Its plan is `docs/plans/no-undo.md`.
+Written on 10 October 2026, before any code, and approved by the owner
+the same day, with its open point answered otherwise than recommended:
+the band is always at the top of the window and carries the page's
+name, "Popnei", the heading of the page, with what is running after it
+(below, "Open points"). Its plan is `docs/plans/no-undo.md`.
 
 It reads what the other specs of the page give, and repeats none of
 it:
@@ -76,44 +79,64 @@ it:
 
 ### Its place
 
-The band is the first thing of the page, above the line of the heading
-"Popnei", the width of the window, its words in the column of the page,
-48 rem at most and aligned with it. Its room, one line of the height of
-a button with its margins, is kept in the page at the top from the
-first drawing, whether or not the band has anything to say, so that
-nothing under it moves when it starts or stops saying something: a PCA
-that starts by itself a second after the user let go of a slider would
-otherwise push the slider from under the pointer. While it has nothing
-to say its line is empty, has no background and no border, takes no
-click, and scrolls away with the page, so it reads as the margin above
-the heading and covers nothing. While it has words it stays at the top
-of the window while the page scrolls, with the page's background and a
-border under it, so that what scrolls under it does not show through
-them. This is the third option of the open point below, recommended
-and followed meanwhile. The one exception to "nothing moves" is an
-error of the application, whose line takes more than the kept room and
-pushes the page down when it comes ("An error of the application",
-below): the room is kept for the line the band shows every few
-seconds, and an error is rare and asks the user to reload.
+The band is the line of the page's heading, and stays at the top of
+the window always, as the owner decided on 10 October 2026: "Popnei",
+the page's heading, an `<h1>`, at its left, and after it, on the same
+line, what the page is doing, with its Stop or its link, when there is
+something to say; while nothing runs it shows "Popnei" alone, and reads
+as the page's heading. With Undo and Redo gone, nothing else sits on
+that line. The heading moves into the band from the line above the two
+boxes, where it stood until 10 October 2026, so the page has one line
+at its top and not two. The band spans the width of the window, its
+words in the column of the page, 48 rem at most and aligned with it,
+with the page's background and a border under it. Its height is that
+of the heading with its margins, the same whether or not it has
+anything to say, so that nothing under it moves when it starts or stops
+saying something: a PCA that starts by itself a second after the user
+let go of a slider would otherwise push the slider from under the
+pointer. That height is measured in work package 5 of
+`docs/plans/no-undo.md`; about 40 px is the estimate. The one exception
+to "nothing moves" is an error of the application, whose line takes a
+second line of the band under the heading and pushes the page down when
+it comes ("An error of the application", below): an error is rare and
+asks the user to reload.
+
+At 320 px, "Popnei" and one line of status share the line: the heading
+keeps its words whole at its left, and the status takes the rest, its
+words in a short form that fits with its button, the whole words given
+to a screen reader:
+
+| the words at 1280 px | the short form, under 30 rem wide |
+|---|---|
+| "Reading panel.vcf.gz · 45%" | "Reading · 45%" |
+| "PCA running · 1:20" | "PCA · 1:20" |
+| "Writing panel.filtered.vcf.gz · 45%" | "Writing · 45%" |
+| "Stopping the PCA…" | "Stopping…" |
+| "The PCA starts again in a moment" | "PCA in a moment" |
+| "PCA: 2 warnings, in the PCA tab" | "PCA: 2 warnings" |
+| "PCA: could not be calculated, in the PCA tab" | "PCA: failed" |
+
+"PCoA" in place of "PCA" under the PCoA. The flows check that each fits
+one line at 320 px with "Popnei" and its button.
 
 It stands below the page's popovers, tooltips and dialogs in the order
 in which they cover one another, so that a menu or a tooltip near the
 top of the window is drawn over the band and not under it.
 
 It is drawn in the page's second root, `#defects`, where the error bar
-was, so that it stays, and says what happened, when an error has
-emptied the application's root.
+was, so that it stays, with the page's heading and what happened, when
+an error has emptied the application's root.
 
-It stays at the top of the window while it has words, but for one
-state: while the details of an error are shown it scrolls with the
-page, so that at 320 px it never covers more than a few lines ("An
-error of the application", below).
+It stays at the top of the window in every state but one: while the
+details of an error are shown it scrolls with the page, so that at
+320 px it never covers more than a few lines ("An error of the
+application", below).
 
 ### The line
 
-The line says one thing, the first of this list that holds; an error of
-the application, when there is one, stands above it as a second line
-(below, "An error of the application").
+After "Popnei", the line says one thing, the first of this list that
+holds; an error of the application, when there is one, takes a second
+line of the band under it (below, "An error of the application").
 
 | what holds | the words | the control after them |
 |---|---|---|
@@ -125,7 +148,7 @@ the application, when there is one, stands above it as a second line
 | the PCA is about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment" | Stop |
 | the PCA has a result with warnings, and the PCA tab is not the tab shown | "PCA: 1 warning, in the PCA tab"; "PCA: 2 warnings, in the PCA tab"; "PCoA: …" under the PCoA; the words are a link | none |
 | the PCA could not be calculated, and the PCA tab is not the tab shown | "PCA: could not be calculated, in the PCA tab"; "PCoA: …"; a link | none |
-| none of these | nothing | none |
+| none of these | nothing after "Popnei" | none |
 
 Only one calculation runs at a time in the calculation worker, so at
 most one of the first three holds. A running calculation wins over a
@@ -187,7 +210,8 @@ repeat their words.
 ### An error of the application
 
 An error of the application takes the place of the error bar of
-`popgen.html`, in a line of its own above the line of the table, in
+`popgen.html`, in a second line of the band, under the line of the
+heading, in
 the colour of danger and with the word "error" or "stopped" in its
 words, so that it is not told by colour alone. Its words are the error
 bar's on a page that saves no project, `barText` of
@@ -245,16 +269,17 @@ screen that cannot happen says why.
 
 | state | what the user sees | what they can do |
 |---|---|---|
-| empty | the line kept, with no words, no background and no border: nothing runs, nothing to point to, no error | nothing in the band |
+| empty | "Popnei" alone: nothing runs, nothing to point to, no error | nothing in the band |
 | locked | cannot happen: the band has no action that can be refused; a Stop is shown only while there is something to stop | |
 | ready | as empty: nothing runs | |
 | running | "Reading panel.vcf.gz · 45%" or "PCA running · 1:20" with Stop; "Writing …" with nothing to press; "Stopping …"; "The PCA starts again in a moment" with Stop | Stop, where there is one |
 | done | the link to the warnings or the error of the PCA while another tab is shown; otherwise as empty | follow the link |
 | results removed | cannot happen: the band shows no result | |
-| error | the line of an error of the application above whatever the line says, with Details and Close | Details, Copy the details, Close |
+| error | the line of an error of the application under the line of the heading, whatever that line says, with Details and Close | Details, Copy the details, Close |
 
 Several at once, from the table of "The line": the line says one thing, the
-first that holds; an error of the application stands above it. So a PCA
+first that holds; an error of the application takes a second line under
+it. So a PCA
 running when an error of the application comes shows both lines, the
 error and "PCA running · 1:20" with its Stop, since the user may want
 to stop a run of minutes before reloading.
@@ -334,8 +359,8 @@ and to clash with a screen reader's.
 
 When the control with the focus goes from the band, the focus does not
 fall on nothing: after its Stop, whose line then changes to "Stopping
-…" with no button, the focus goes to the heading "Popnei", which is not
-a stop of the Tab key, so the next press of the Tab key goes on to the
+…" with no button, the focus goes to the heading "Popnei" at the
+band's left, which is not a stop of the Tab key, so the next press of the Tab key goes on to the
 box of the variants file. A screen reader then says the heading's name
 and the status region's words of the Stop, "PCA stopped. Press Run in
 the PCA tab to calculate it again.", once; the band's own line is not
@@ -349,8 +374,12 @@ Every button and the link are at least 24 by 24 px (2.5.8).
 
 ### What a screen reader hears
 
-The band is a region named "What the page is doing", so that a screen
-reader lists it among the parts of the page and its user can go to it.
+The band is the page's banner, a `<header>` named "What the page is
+doing", so that a screen reader lists it among the parts of the page
+and its user can go to it. The heading "Popnei" in it stays the page's
+`<h1>`, and a screen reader lists it among the headings as before. The
+status parts are as before: the band's line is not live, its error is
+an alert, and its details have their own status region.
 
 Its line is not a status region: its percentage and its clock change
 every second, and a status region would read each change aloud. So
@@ -399,33 +428,32 @@ error has the border and the word of danger, `--color-danger`; the link
 to warnings says "warning" in its words and is drawn as a link, not by
 colour alone (1.4.1).
 
-While it has words the band covers the top of the window, so a control
-reached by the Tab key must not be hidden under it (2.4.11, "Focus Not
+The band covers the top of the window always, so a control reached by
+the Tab key must not be hidden under it (2.4.11, "Focus Not
 Obscured"): the page scrolls a control into view below the band, by a
 padding at the top of the scroll of the page equal to the band's
-height, set only while the band stays at the top. It is set in
-`src/ui/base.css` beside the padding at the bottom that keeps a control
-clear of the notices, `scroll-padding-block-end: var(--toast-room)`, as
+height, always. It is set in `src/ui/base.css` beside the padding at
+the bottom that keeps a control clear of the notices,
+`scroll-padding-block-end: var(--toast-room)`, as
 `scroll-padding-block-start: var(--band-room)`, a token the band sets
-while it has words and leaves at 0 otherwise. While the band is empty,
-or the details of an error are shown, it scrolls with the page and
-covers nothing.
+to its height. While the details of an error are shown it scrolls with
+the page and covers nothing, and the token is 0.
 
-At 320 px wide (1.4.10) the line is one line, the name of a file cut
-with "…", and the page under it does not scroll sideways; the line of
-an error may take two.
+At 320 px wide (1.4.10) "Popnei" and the status share one line, the
+status in its short form, and the page under it does not scroll
+sideways; the line of an error may take two more.
 
 ## The layout, 1280 and 320 px, light and dark
 
-At 1280 px the band spans the window, its words and its button within
-the 48 rem of the page's column, the words at its start and the control
-after them, on one line. At 320 px the same, within the 16 px margins
-of the page; its words in the small text of the page, `--text-sm`, so
-that the longest line with a button, "The PCoA starts again in a
-moment" and Stop, fits one line; the flows check that it does. In light
-and dark it takes the page's background and the colour of its text,
-with the border of the page under it while it has words; its error, the
-colour of danger of each theme.
+At 1280 px the band spans the window, "Popnei", the words and the
+button within the 48 rem of the page's column, the heading at its start,
+the words after it and the control after them, on one line. At 320 px
+the same, within the 16 px margins of the page, the status in its short
+form and in the small text of the page, `--text-sm`, so that the
+longest, "PCoA in a moment" with Stop, fits beside "Popnei"; the flows
+check that it does. In light and dark it takes the page's background
+and the colour of its text, with the border of the page under it
+always; its error, the colour of danger of each theme.
 
 ## How it is checked
 
@@ -479,17 +507,20 @@ pass held by `e2e/holdWorker.ts`:
 - the page scrolled to its end with a PCA held running: the band at the
   top of the window; each control reached by the Tab key from the end
   of the page back to the top, in WebKit as in Chromium, below the
-  band's rectangle, not under it; with nothing running, the band
-  scrolled away with the page and nothing under it taking a click;
+  band's rectangle, not under it; the same with nothing running, the
+  band then showing "Popnei" alone at the top of the window;
 - after the band's Stop, the focus on the heading "Popnei";
 - the one pass about to start, its start held: "Reading panel.nei" with
   Stop, which keeps it from starting;
 - with the download's dialog open and an error thrown: the band's alert
   heard, its element not inert;
-- the band's height the same with nothing, with a line and with a
-  Stop, at 1280 and at 320 px, and the top of the heading "Popnei" at
-  the same place in each; at 320 px no sideways scroll, and the line of
-  "The PCoA starts again in a moment" with Stop on one line;
+- the band's height the same with "Popnei" alone, with a line and with
+  a Stop, at 1280 and at 320 px, measured and written into this spec,
+  and the top of the two boxes at the same place in each; at 320 px no
+  sideways scroll, and each short form with its button on one line
+  beside "Popnei"; a screen reader's text of the status the whole
+  words; the `<h1>` "Popnei" inside the band, the only `<h1>` of the
+  page;
 - the time from a Stop of a PCA of 9,381 individuals to the end of
   "Stopping the PCA…", in Chromium and WebKit, measured once and
   written into this spec;
@@ -497,7 +528,7 @@ pass held by `e2e/holdWorker.ts`:
   light and in dark.
 
 **The screens**, `--project=screens`, at 1280 and 320 px, light and
-dark: `popgen2-band-empty`, `popgen2-band-reading`,
+dark: `popgen2-band-empty`, "Popnei" alone, `popgen2-band-reading`,
 `popgen2-band-pca-running`, `popgen2-band-stopping`,
 `popgen2-band-about-to-start`, `popgen2-band-writing` (behind the
 dialog), `popgen2-band-warning`, `popgen2-band-error` and
@@ -512,8 +543,7 @@ the Stop and the link, and after the band's Stop the stop said once.
 ## Choices made by the session
 
 Approved with the spec, and open to the owner's change once they try
-the page: the band's line
-kept from the first drawing, empty when it has nothing to say; the
+the page: the short forms at 320 px; the band as the page's banner; the
 order of the lines when several hold; the clock and no percentage for
 the PCA, whose bar stands full while popnei decomposes the matrix and
 would say 100% for minutes; the write said with no Stop; the link to an
@@ -525,35 +555,25 @@ words.
 ## Left for the running application
 
 The spacing of the line, the size of its button beside the words, the
-look of the link, the shade of the border, and whether the band keeps a
-thin border while it is empty.
+look of the link, the shade of the border, and the size of "Popnei"
+in the band, which the heading line had at `--text-xl`.
 
 ## Open points
 
-1. **The band's room while nothing runs.** The band is about 40 px
-   high, an estimate from the 24 px of a button and its margins, to be
-   measured in work package 5 of `docs/plans/no-undo.md`; on a phone of
-   320 by 568 px that is about one fourteenth of the screen. The
-   screenshot `popgen2-band-empty` of that package is where the owner
-   sees it. Three ways, each said by what the user sees:
-   (a) the band stays at the top of the window always, its line empty
-   while it has nothing to say: the page never moves, but while the
-   page is scrolled the empty band hides the top 40 px of what is under
-   it, at every moment;
-   (b) the band appears over the top of the page only while it has
-   something to say, with no room kept: the page is 40 px shorter at
-   the top, but while the band shows it hides the heading "Popnei" and
-   the top of the page under it, for as long as something runs, up to
-   the minutes of a PCA of thousands of individuals; (c) its room kept
-   in the page at the top, a margin of 40 px above the heading, the band
-   staying at the top of the window only while it has words, and
-   scrolling away with the page while empty: nothing moves when it
-   starts or stops, an empty band hides nothing, and a band with words
-   on a scrolled page hides the top 40 px under it, as (a). Recommended: (c), which covers only while there is
-   something to read. Meanwhile: (c), which "Its place" describes; (a)
-   or (b) changes the drawing of the band and its screenshots, task 5.3
-   of `docs/plans/no-undo.md`. The screenshot `popgen2-band-empty` shows
-   the cost before the owner accepts the screen.
+1. **The band's room while nothing runs.** Answered by the owner on 10
+   October 2026, otherwise than recommended: the band is always at the
+   top of the window, and "disguises" itself by carrying the page's
+   name: while nothing runs it shows "Popnei", and the information is
+   added after it when there is some. So the band is the page's heading
+   line ("Its place"). The options were (a) the band always at the top,
+   empty while it had nothing to say; (b) the band over the top of the
+   page only while it had something to say; (c), recommended, its room
+   kept in the page and the band at the top only while it had words.
+   The owner's answer is (a) with the heading in the band, which leaves
+   no empty strip: the band costs nothing the heading did not already
+   take, and covers the top of what scrolls under it always, which the
+   padding of the scroll keeps clear of a control reached by the Tab
+   key.
 
 ## Not in this spec
 

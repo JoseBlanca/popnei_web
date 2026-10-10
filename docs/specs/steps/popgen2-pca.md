@@ -174,9 +174,10 @@ the old page, given other filters (`docs/specs/worker/protocol.md`).
 
 ### The order of the page
 
-From the top: the band (`docs/specs/steps/popgen2-band.md`); the line
-of the heading "Popnei", alone since 10 October 2026, when Undo and
-Redo left its right end; the two boxes, "Variants file" and "Individuals file", as
+From the top: the band (`docs/specs/steps/popgen2-band.md`), always at
+the top of the window, which from 10 October 2026 carries the heading
+"Popnei" at its left, with what the page is doing after it, Undo and
+Redo having left the right end of the heading's line; the two boxes, "Variants file" and "Individuals file", as
 `popgen2-input.md` gives them; the row of the five tabs; the content of
 the tab shown.
 
@@ -1313,7 +1314,7 @@ download that waits for a running PCA (the open points of
 
 ## Left for the running application
 
-The spacing of the line of the heading, the look of
+The look of
 a greyed tab, the layout of the options and of the bar of controls, the
 size of the plot, where each "Download…" sits beside its caption, and
 whether the options fold away once there is a result.

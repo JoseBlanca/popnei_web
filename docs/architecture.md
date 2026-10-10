@@ -2757,8 +2757,9 @@ for the smallest part of it.
   variants and from popnei's value of each individual; no count of what
   it keeps is shown.
 - **The band of `popgen2.html`**, from 10 October 2026, is one line at
-  the top of the window that says what the application is doing, and
-  stays there while the page scrolls: the reading of the variants file
+  the top of the window that stays there while the page scrolls and
+  carries the page's heading, "Popnei", at its left, as the owner
+  decided that day, with what the application is doing after it: the reading of the variants file
   with its percentage and its Stop, the PCA running with its clock and
   its Stop, the PCA about to start again by itself, a Stop under way,
   the writing of the filtered variants; a link to a warning or an error
@@ -2842,8 +2843,8 @@ band the owner agreed to the same day (`docs/plans/analyses-pca.md`, its
 last paragraph): the bullet of the thresholds said that the owner brought
 Undo and Redo back on 9 October 2026 at the right end of the line of the
 heading of `popgen2.html`, with their keys caught on the whole page; the
-page has neither from 10 October 2026, and the line of the heading holds
-the heading alone. The bullet "The band of `popgen2.html`" is new. Not
+page has neither from 10 October 2026, and the heading moves into the
+band at the top of the window. The bullet "The band of `popgen2.html`" is new. Not
 taken for the band: a line that pushes the page down when it appears,
 which would move a slider from under the pointer a second after the
 user let it go, when the PCA starts by itself; the band in the
@@ -3209,7 +3210,8 @@ src/ui/
   defects.ts        the log of the errors the bar at the top of the page shows,
                     and, from 10 October 2026, the band of popgen2.html
   band/             from 10 October 2026, the band of popgen2.html
-                    (section 7; docs/specs/steps/popgen2-band.md): what
+                    (section 7; docs/specs/steps/popgen2-band.md), which
+                    carries the page's heading: what
                     it shows, worked out from the store, autoRuns.ts,
                     the log of the errors and the tab shown, by a pure
                     function tested

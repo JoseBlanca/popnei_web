@@ -36,10 +36,10 @@ values than those on the screen; or a package fails three times. Each
 of these would mean the design does not hold as approved.
 
 What is asked of you now: to approve this plan and the specs it builds
-from, before any code is written. The band's spec has one open point,
-how much room the band keeps at the top of the page; you can answer it
-now or when you try the page in package 8, and meanwhile the
-recommendation is followed.
+from, before any code is written. You approved them on 10 October
+2026, and answered the band's open point: the band is always at the top
+of the window and carries the page's name, "Popnei", with what is
+running after it.
 
 You can stop reading here. The rest is for the sessions that build it.
 
@@ -150,14 +150,12 @@ Out, each with where it goes:
 
 ## The open point of the specs
 
-The band spec has one open point, "The band's room while nothing runs",
-with three ways: (a) the band always at the top of the window, empty
-while it has nothing to say; (b) the band over the top of the page only
-while it has something to say, with no room kept; (c) its room kept in
-the page, the band at the top of the window only while it has words,
-and scrolling away, taking no click, while empty. Meanwhile: (c), as
-recommended. Another answer changes task 5.3 and the screenshots of
-deliverable 5.5.
+The plan and its specs were approved by the owner on 10 October 2026.
+The band spec's one open point, "The band's room while nothing runs",
+was answered the same day otherwise than recommended: the band is
+always at the top of the window and carries the page's heading
+"Popnei", with what is running after it; the band spec's "Its place"
+says so, and task 5.3 builds it.
 
 ## The stops
 
@@ -512,7 +510,8 @@ Deliverables:
    other flows of `popgen.html`.
 4. Axe with the band in each state, light and dark.
 5. The screens of the band spec's "How it is checked", "The screens",
-   ten states at 1280 and 320 px, light and dark.
+   ten states at 1280 and 320 px, light and dark, `popgen2-band-empty`
+   being the page with "Popnei" alone in the band.
 6. The time from a Stop of a PCA of 9,381 individuals, on the same
    VCF of 300 variants written by `e2e/bigVcf.ts`, on the owner's Mac,
    to the end of
@@ -532,14 +531,20 @@ Tasks:
   in place of the error bar, with the words and buttons of the error
   bar reused from `src/ui/shell/` and not copied, `barText`'s three
   sentences, the one drawn with no store among them, `stopping` of the
-  store, the room kept, the band at the top while it has words, below
+  store, the band always at the top of the window with the page's
+  `<h1>` "Popnei" moved into it from `VariantsPage.tsx`, every code
+  that finds that heading to give it the focus (the search of `"#root
+  h1"` and `"main h1"`, in `ErrorBar.tsx` and `StatsHistogram.tsx` among
+  them) finding it in the band on `popgen2.html` and unchanged on
+  `popgen.html`, the short forms of the status at under 30 rem, below
   the popovers and dialogs, its alert and status region marked as live
   announcers, the padding of the scroll in `src/ui/base.css` beside the
   toasts', and the focus on the heading after its Stop (the band spec,
   "Its place", "Stopping", "An error of the application",
   "Accessibility", "The layout"). The rest
   of deliverable 2, and deliverables 3 to 5. Stands on 5.1 and 5.2. The
-  answer to the band spec's open point changes this task.
+  band's height, the same in every state, is measured here and written
+  into the band spec.
 - [ ] 5.4 The measurement of "Stopping", alone on the machine
   (deliverable 6). Stands on 5.3.
 
@@ -581,8 +586,7 @@ line carries no live role.
   each chunk recorded below; a flaky test run again three times and
   named.
 - [ ] 7.3 The report to the owner, as the `building` skill says: the
-  stops met, if any; the answer to the band spec's open point, or what
-  the plan followed; the time of "Stopping"; what the review found and
+  stops met, if any; the band's height; the time of "Stopping"; what the review found and
   fixed and what it did not take; the browsers the screens were seen
   in, Chromium in the screenshots and Chromium and WebKit in the flows,
   and those not seen, Safari, Firefox and Chrome; the instructions
@@ -597,8 +601,8 @@ line carries no live role.
   accepted; whether the quiet second is long enough to go from one
   control to the next, and the two seconds after the arrow keys on a
   threshold; the choices of the band spec's and the screen spec's
-  "Choices made by the session"; the band spec's open point, if not
-  answered before; whether Safari and Firefox show the band at the top
+  "Choices made by the session", the short forms of the band at 320 px
+  among them; whether Safari and Firefox show the band at the top
   with no control reached by Tab under it, what Cmd+Z does in Safari,
   and what VoiceOver says after the band's Stop.
 - [ ] 8.2 The rounds. Two are expected. Each change the owner asks for
