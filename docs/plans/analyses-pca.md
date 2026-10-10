@@ -1596,3 +1596,37 @@ moving its text away from the result it qualifies; it is the visible
 form of the status region. It adds a part to the screen and changes no
 invariant of the architecture, so the approved design stands; its
 states and words go into the specs of that piece.
+
+Round 1 built, 10 October 2026: items 1 to 3 in 8c5e5bdd, 4bbda3d1,
+ea47717f, deec55bd and 51cec74d (each in the screen spec first). The
+review, every category of a screen change (`spec`, `tests`, `stale`,
+`errors`, `api`, `react`, `accessibility`, `ux`): the findings that
+held were fixed in ad796698 to dedacd01, test first, and those of a
+second reading by `react` and `accessibility` in 1a944e78 and
+e322e9cb. The ones a user would meet: a press on a slider's thumb at
+its end, in the state where the Variants tab is stricter than the
+PCA's own value, dropped that value, so the PCA would later run on a
+looser one; a change made by a screen reader through the slider's input
+was shown and never saved, also after a right-click or a Ctrl+click; a
+slider whose two ends are equal (the Variants tab's missing data at 0,
+or its MAF at or below 0.5) showed "NaN" on a drag and put a defect in
+the error bar, and now draws its value as a line, "0, as in the
+Variants tab. The PCA cannot be stricter than the Variants tab here.";
+a value kept with more decimals than the step showed rounded; the range
+of a slider was not shown, and now its two ends are written under it;
+the method list could reopen by itself when a lock ended; the long PCoA
+item wrapped, and is now "PCoA of the Kosman distances" with "The PCoA
+suits data with many missing genotypes." under the list. Not taken: the
+`accessibility` reviewer's report that ArrowRight on the locked method
+list switched it to PCoA, which neither the fixer nor a second reviewer
+could see in Chromium or WebKit at the same commit, six ways of
+focusing it; its guards stay, as guards. Accepted by the owner and
+recorded in the specs: with no buttons, a user of the keyboard alone
+(WCAG 2.1.1), of a pointer that cannot drag (2.5.7) or of a touch screen
+who cannot pinch (2.5.1) cannot turn or zoom the 3D view; the 2D plot
+of any two components and the table of coordinates remain.
+
+Checks at e322e9cb: Vitest 152 files, 4,990 tests (a test of the write
+of the filtered variants, older than this round, timed out at 5,082 ms
+against its 5,000 ms once in six runs under load); in Chromium and
+WebKit all 1,552 flows, in three chunks, 506, 686 and 360.
