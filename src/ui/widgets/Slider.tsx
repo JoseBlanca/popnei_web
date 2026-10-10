@@ -58,7 +58,8 @@ export interface SliderProps {
   /** The id of an element elsewhere on the page that describes the
       slider, the line under it. */
   readonly describedBy?: string;
-  /** Called with the value a move ended at. */
+  /** Called with the value a move ended at, when it is not the value
+      the move started from. */
   readonly onChange: (value: number) => void;
   /** The reason the slider waits, its tooltip and its description, while
       a key or a drag moves it nowhere; or `null`, when it does not wait.
@@ -117,7 +118,9 @@ export function Slider({
             }}
             onChangeEnd={(ended) => {
               setMoving(null);
-              if (!waits) onChange(ended);
+              // A press with no move, or a key at an end, ends where it
+              // started, and changes nothing.
+              if (!waits && ended !== value) onChange(ended);
             }}
           >
             <Label className={classOf(styles, "label")}>{label}</Label>

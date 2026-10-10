@@ -120,8 +120,10 @@ const AS_IN_THE_TAB = "as in the Variants tab";
  * Variants tab, `follow` true, which stays so whatever the Variants tab
  * becomes; below it, from the upper end, `stricterCommand`, `follow`
  * false and the value in one step; from a value of the PCA's own, the
- * value alone. The value is rounded to the slider's decimals. A command
- * that changes nothing gives the project it was given.
+ * value alone. The value is rounded to the slider's decimals. A move
+ * that ends at the value the slider shows gives no command, `null`: so a
+ * press on the thumb at the upper end, while the Variants tab is stricter
+ * than the PCA's own value, keeps that value.
  */
 export function stricterMoveCommand(
   p: Project,
@@ -129,10 +131,14 @@ export function stricterMoveCommand(
   value: number,
   stepDecimals: number | null,
   page: Popgen2CommandPage,
-): OptionCommand {
+): OptionCommand | null {
   const bound = stricterBound(p, kind, stepDecimals);
+  const given = value >= bound.max ? bound.max : rounded(value, bound.decimals);
+  // A move that ends at the value shown changes nothing: at the upper end
+  // while the Variants tab is stricter, a command would drop the PCA's own
+  // value, which the project keeps for when the Variants tab goes back.
+  if (given === bound.shown) return null;
   if (value >= bound.max) return followCommand(kind, true, page);
-  const given = rounded(value, bound.decimals);
   if (ownOf(p, kind).follow) return stricterCommand(kind, given, page);
   return ownValueCommand(
     kind === "missing_data"

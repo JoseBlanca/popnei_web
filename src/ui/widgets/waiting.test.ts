@@ -518,14 +518,18 @@ describe("AP10 D1 the select of the method that waits while a PCA runs", () => {
 
 /** Draws the slider of the PCA's own missing data, given the reason or
     not, and keeps the values it gives at the end of a move. */
-function drawSlider(waiting: string | null, given: number[]): HTMLInputElement {
+function drawSlider(
+  waiting: string | null,
+  given: number[],
+  value = 0.05,
+): HTMLInputElement {
   draw(
     createElement(Slider, {
       label: "Maximum proportion of missing genotypes for the PCA",
       minValue: 0,
       maxValue: 0.1,
       step: 0.001,
-      value: 0.05,
+      value,
       valueText: (value) =>
         value >= 0.1 ? "0.1, as in the Variants tab" : String(value),
       waiting,
@@ -558,6 +562,45 @@ describe("AP10 D2 the slider of a filter of the PCA's own", () => {
     });
     expect(given).toHaveLength(1);
     expect(given[0]).toBeCloseTo(0.051, 10);
+  });
+
+  test("a press on the thumb with no move gives no value", () => {
+    const given: number[] = [];
+    const input = drawSlider(null, given);
+    const thumb = input.parentElement;
+    if (thumb === null) throw new Error("no thumb");
+    const pointer = {
+      bubbles: true,
+      pointerId: 1,
+      pointerType: "mouse",
+      button: 0,
+      clientX: 10,
+      clientY: 10,
+    };
+    act(() => {
+      thumb.dispatchEvent(new PointerEvent("pointerdown", pointer));
+    });
+    act(() => {
+      thumb.dispatchEvent(new PointerEvent("pointerup", pointer));
+    });
+    expect(given).toEqual([]);
+  });
+
+  test("at its upper end, ArrowRight, End and Page Up give no value", () => {
+    const given: number[] = [];
+    const input = drawSlider(null, given, 0.1);
+    act(() => {
+      input.focus();
+    });
+    for (const key of ["ArrowRight", "End", "PageUp"]) {
+      act(() => {
+        input.dispatchEvent(
+          new KeyboardEvent("keydown", { key, bubbles: true }),
+        );
+        input.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
+      });
+    }
+    expect(given).toEqual([]);
   });
 
   test("waiting: its input aria-disabled and in the order of the Tab key, described by the reason; no key gives a value", () => {

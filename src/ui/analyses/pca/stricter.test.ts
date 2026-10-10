@@ -177,7 +177,8 @@ describe("AP10 D2 stricterValueText, the words of the value of a slider", () => 
 });
 
 /** The options of the PCA after `step` on `p`. */
-function optionsAfter(p: Project, step: OptionCommand): PcaOptions {
+function optionsAfter(p: Project, step: OptionCommand | null): PcaOptions {
+  if (step === null) throw new Error("no command");
   return pcaOptions(step.command(p), "popgen2");
 }
 
@@ -187,7 +188,7 @@ describe("AP10 D2 stricterMoveCommand, the command of a move of a slider", () =>
   test("from the upper end to 0.05: the missing data made stricter, follow false and 0.05 in one step", () => {
     const p = project([missing(0.1)]);
     const step = stricterMoveCommand(p, "missing_data", 0.05, 3, page);
-    expect(step.description).toBe(
+    expect(step?.description).toBe(
       "the missing data filter of the PCA was made stricter",
     );
     expect(optionsAfter(p, step).missingData).toEqual({
@@ -202,7 +203,7 @@ describe("AP10 D2 stricterMoveCommand, the command of a move of a slider", () =>
       page: "popgen2",
       method: "pcoa",
     });
-    expect(step.description).toBe(
+    expect(step?.description).toBe(
       "the missing data filter of the PCoA changed",
     );
     expect(optionsAfter(p, step).missingData).toEqual({
@@ -214,7 +215,7 @@ describe("AP10 D2 stricterMoveCommand, the command of a move of a slider", () =>
   test("to the upper end, from the PCA's own 0.9: set back to as in the Variants tab, the 0.9 kept", () => {
     const p = project([missing(0.1), maf(0.95)], ownMaf(0.9));
     const step = stricterMoveCommand(p, "maf", 0.95, 2, page);
-    expect(step.description).toBe(
+    expect(step?.description).toBe(
       "the MAF filter of the PCA was set back to as in the Variants tab",
     );
     expect(optionsAfter(p, step).maf.follow).toBe(true);
@@ -227,11 +228,19 @@ describe("AP10 D2 stricterMoveCommand, the command of a move of a slider", () =>
     ).toBe(true);
   });
 
-  test("at the upper end already, following: the same project, no step", () => {
+  test("at the upper end already, following: no command", () => {
     const p = project([missing(0.1)]);
-    expect(
-      stricterMoveCommand(p, "missing_data", 0.1, 3, page).command(p),
-    ).toBe(p);
+    expect(stricterMoveCommand(p, "missing_data", 0.1, 3, page)).toBeNull();
+  });
+
+  test("the Variants tab at 0.03 stricter than the PCA's own 0.05, the thumb at the end: a move that ends there, a press with no move or a key at the end, sends no command, so the 0.05 is kept", () => {
+    const p = project([missing(0.03)], ownMissing(0.05));
+    expect(stricterMoveCommand(p, "missing_data", 0.03, 3, page)).toBeNull();
+  });
+
+  test("the PCA's own 0.05, a move that ends at 0.05: no command", () => {
+    const p = project([missing(0.1)], ownMissing(0.05));
+    expect(stricterMoveCommand(p, "missing_data", 0.05, 3, page)).toBeNull();
   });
 
   test("a value of a step of 0.001 off its decimals is rounded to them", () => {

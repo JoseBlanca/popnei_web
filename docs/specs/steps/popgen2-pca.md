@@ -377,7 +377,10 @@ Then three, in this order:
   one step, "made stricter"; below it, from a value of the PCA's own,
   the value alone, "changed". So the upper end is always "as in the
   Variants tab", whatever the Variants tab later becomes, and a thumb
-  dragged there and back changes no key. While the Variants tab has the
+  dragged there and back changes no key. A move that ends at the value
+  the slider showed, a press on the thumb with no move or a key at an
+  end, sends nothing, so that a press on the thumb at the end while the
+  Variants tab is stricter keeps the PCA's own value (below). While the Variants tab has the
   threshold off, the end at 1 is no filter, as a threshold at 1 is off
   in the Variants tab (`THRESHOLD_OFF_AT` of `src/core/project.ts`, the
   owner's decision of 7 October 2026), and a PCA's own value of 1, left

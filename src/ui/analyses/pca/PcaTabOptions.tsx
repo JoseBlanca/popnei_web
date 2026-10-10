@@ -270,15 +270,14 @@ function StricterFilter({
         ].join(" ")}
         waiting={lock}
         onChange={(value) => {
-          onCommand(
-            stricterMoveCommand(
-              store.getState().project,
-              kind,
-              value,
-              stepDecimals,
-              page,
-            ),
+          const step = stricterMoveCommand(
+            store.getState().project,
+            kind,
+            value,
+            stepDecimals,
+            page,
           );
+          if (step !== null) onCommand(step);
         }}
       />
       {lines.tabStricter !== null && (
