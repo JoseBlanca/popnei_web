@@ -198,32 +198,24 @@ function rounded(value: number, decimals: number): number {
   return Math.round(value * scale) / scale;
 }
 
-/** The lines under a slider of the PCA's own. */
-export interface StricterLines {
-  /** The line of the Variants tab stricter than the PCA's own value,
-      which the PCA then uses; `null` otherwise. */
-  readonly tabStricter: string | null;
-}
-
 /**
- * The lines under the slider of the filter `kind` of the PCA in `p`, the
- * method `method` naming the PCA or the PCoA: while the Variants tab is
- * stricter than the PCA's own value, "The Variants tab keeps at most
- * 0.03, stricter than the 0.05 set here, so the PCA uses 0.03.".
+ * The line under the slider of the filter `kind` of the PCA in `p`, the
+ * method `method` naming the PCA or the PCoA, while the Variants tab is
+ * stricter than the PCA's own value, which the PCA then uses: "The
+ * Variants tab keeps at most 0.03, stricter than the 0.05 set here, so
+ * the PCA uses 0.03."; `null` otherwise.
  */
-export function stricterLines(
+export function tabStricterLine(
   p: Project,
   kind: StricterKind,
   method: PcaMethod,
-): StricterLines {
+): string | null {
   const tab = tabValue(p, kind);
   const { follow, value: own } = ownOf(p, kind);
   const name = methodName(method);
-  const tabStricter =
-    !follow && tab !== null && tab < own
-      ? `The Variants tab keeps at most ${numberText(tab)}, stricter than the ${numberText(own)} set here, so the ${name} uses ${numberText(tab)}.`
-      : null;
-  return { tabStricter };
+  return !follow && tab !== null && tab < own
+    ? `The Variants tab keeps at most ${numberText(tab)}, stricter than the ${numberText(own)} set here, so the ${name} uses ${numberText(tab)}.`
+    : null;
 }
 
 /** The Variants tab's value of the threshold `kind` in `p`, `null` while

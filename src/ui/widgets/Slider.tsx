@@ -64,7 +64,7 @@ export interface SliderProps {
   readonly describedBy?: string;
   /** Called with the value a move ended at, when it is not the value
       the move started from. */
-  readonly onChange: (value: number) => void;
+  readonly onChangeEnd: (value: number) => void;
   /** The reason the slider waits, its tooltip and its description, while
       a key or a drag moves it nowhere; or `null`, when it does not wait.
       `null` when absent. */
@@ -81,7 +81,7 @@ export function Slider({
   valueText,
   ends,
   describedBy,
-  onChange,
+  onChangeEnd,
   waiting = null,
 }: SliderProps): React.JSX.Element {
   const waits = waiting !== null;
@@ -127,7 +127,7 @@ export function Slider({
               // two ends are the same.
               if (waits || !Number.isFinite(moved)) return;
               if (dragging.current) setMoving(moved);
-              else if (moved !== value) onChange(moved);
+              else if (moved !== value) onChangeEnd(moved);
             }}
             onChangeEnd={(ended) => {
               const dragged = dragging.current;
@@ -141,7 +141,7 @@ export function Slider({
                 Number.isFinite(ended) &&
                 ended !== value
               ) {
-                onChange(ended);
+                onChangeEnd(ended);
               }
             }}
           >

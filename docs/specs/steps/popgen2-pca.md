@@ -421,7 +421,7 @@ Then three, in this order:
   the 0.05 set here, so the PCA uses 0.03." The project keeps 0.05, and
   when the Variants tab goes back above it, the thumb shows 0.05 again
   with no command. The thumb never shows a value looser than the one
-  used. These lines are `stricterLines` of the same module.
+  used. This line is `tabStricterLine` of the same module.
 
   **When the slider would have no range**, its two ends the same, with
   the Variants tab's missing rate at 0, or its MAF at or below 0.5, no
@@ -935,8 +935,10 @@ its reason; Undo read with its step; a menu of a download.
   `src/ui/analyses/pca/stricter.ts`, the ends, the step and the value
   shown of each slider, `stricterValueText`, the words of its value,
   `stricterMoveCommand`, the command of a move to the upper end, from
-  it and from a value of the PCA's own, and `stricterLines`, the line of
-  the Variants tab stricter: the Variants tab at 0.1, at 0.0035, off,
+  it and from a value of the PCA's own, and none for a move that ends
+  where it started, `stricterEnds`, the words of its ends,
+  `emptyRangeLine`, the line of a slider with no range, and
+  `tabStricterLine`, the line of the Variants tab stricter: the Variants tab at 0.1, at 0.0035, off,
   and a MAF below 0.5; the decimals of the step of the Variants tab's
   box given and not given; following and not. (`stepDecimals` since 9 October 2026, by task 6.1 of the plan:
   the decimals of the box come from the axis of its histogram, which the

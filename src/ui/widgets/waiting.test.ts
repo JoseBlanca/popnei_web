@@ -339,7 +339,7 @@ const CONTROLS: readonly {
         valueText: String,
         ends: { min: "0.5", max: "0.95" },
         waiting,
-        onChange: () => undefined,
+        onChangeEnd: () => undefined,
       }),
   },
   {
@@ -609,7 +609,7 @@ function drawSlider(
         value >= 0.1 ? "0.1, as in the Variants tab" : String(value),
       ends: { min: "0", max: "0.1" },
       waiting,
-      onChange: (value) => given.push(value),
+      onChangeEnd: (value) => given.push(value),
     }),
   );
   const [input] = inputs();
@@ -699,7 +699,7 @@ describe("AP10 D2 the slider of a filter of the PCA's own", () => {
         value: 0,
         valueText: String,
         ends: { min: "0", max: "0" },
-        onChange: (value) => given.push(value),
+        onChangeEnd: (value) => given.push(value),
       }),
     );
     const [input] = inputs();

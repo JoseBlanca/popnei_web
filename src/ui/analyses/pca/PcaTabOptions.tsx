@@ -63,7 +63,7 @@ import {
   stepDecimalsOf,
   stricterBound,
   stricterEnds,
-  stricterLines,
+  tabStricterLine,
   stricterMoveCommand,
   stricterValueText,
 } from "./stricter.ts";
@@ -255,7 +255,7 @@ function StricterFilter({
   const stepDecimals = useAppState((s) => stepDecimalsIn(s, kind));
   const project = useAppState((s) => s.project);
   const bound = stricterBound(project, kind, stepDecimals);
-  const lines = stricterLines(project, kind, page.method);
+  const tabStricter = tabStricterLine(project, kind, page.method);
   const lineId = useId();
   const tabStricterId = useId();
   const label = stricterSliderLabel(kind, page.method);
@@ -282,12 +282,12 @@ function StricterFilter({
         valueText={(value) => stricterValueText(bound, value)}
         ends={stricterEnds(bound)}
         describedBy={[
-          ...(lines.tabStricter === null ? [] : [tabStricterId]),
+          ...(tabStricter === null ? [] : [tabStricterId]),
           lineId,
           describedBy,
         ].join(" ")}
         waiting={lock}
-        onChange={(value) => {
+        onChangeEnd={(value) => {
           const step = stricterMoveCommand(
             store.getState().project,
             kind,
@@ -298,9 +298,9 @@ function StricterFilter({
           if (step !== null) onCommand(step);
         }}
       />
-      {lines.tabStricter !== null && (
+      {tabStricter !== null && (
         <p id={tabStricterId} className={classOf(styles, "line")}>
-          {lines.tabStricter}
+          {tabStricter}
         </p>
       )}
       <p id={lineId} className={classOf(styles, "muted")}>

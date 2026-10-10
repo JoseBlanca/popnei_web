@@ -3,8 +3,8 @@
  * (docs/specs/steps/popgen2-pca.md, "Its filters" and "How it is
  * checked"): `stricterBound`, the ends, the step and the value shown of
  * each slider; `stricterValueText`, the words of its value;
- * `stricterMoveCommand`, the command of a move; and `stricterLines`, the
- * line of the Variants tab stricter; with the Variants tab at 0.1, at
+ * `stricterMoveCommand`, the command of a move; and `tabStricterLine`,
+ * the line of the Variants tab stricter; with the Variants tab at 0.1, at
  * 0.0035 and off, and a MAF below 0.5.
  */
 import { describe, expect, test } from "vitest";
@@ -28,7 +28,7 @@ import {
   stricterEnds,
   stepDecimalsOf,
   stricterBound,
-  stricterLines,
+  tabStricterLine,
   stricterMoveCommand,
   stricterValueText,
 } from "./stricter.ts";
@@ -276,42 +276,45 @@ describe("AP10 D2 stricterMoveCommand, the command of a move of a slider", () =>
   });
 });
 
-describe("AP6 D1 stricterLines, the line of the Variants tab stricter", () => {
+describe("AP6 D1 tabStricterLine, the line of the Variants tab stricter", () => {
   test("the Variants tab stricter than the PCA's own: at 0.03 the line; at 0.1, at 0.05 and off, none", () => {
     expect(
-      stricterLines(
+      tabStricterLine(
         project([missing(0.03)], ownMissing(0.05)),
         "missing_data",
         "pca",
-      ).tabStricter,
+      ),
     ).toBe(
       "The Variants tab keeps at most 0.03, stricter than the 0.05 set here, so the PCA uses 0.03.",
     );
     // Following the Variants tab, the 0.05 kept is not used: no line.
     expect(
-      stricterLines(
+      tabStricterLine(
         project([missing(0.03)], {
           missingData: { follow: true, maxAllowedMissingRate: 0.05 },
         }),
         "missing_data",
         "pca",
-      ).tabStricter,
+      ),
     ).toBeNull();
     for (const filters of [[missing(0.1)], [missing(0.05)], []]) {
       expect(
-        stricterLines(project(filters, ownMissing(0.05)), "missing_data", "pca")
-          .tabStricter,
+        tabStricterLine(
+          project(filters, ownMissing(0.05)),
+          "missing_data",
+          "pca",
+        ),
       ).toBeNull();
     }
   });
 
   test("the Variants tab at 0.0035 stricter than the PCA's own 0.05, under the PCoA", () => {
     expect(
-      stricterLines(
+      tabStricterLine(
         project([missing(0.0035)], ownMissing(0.05)),
         "missing_data",
         "pcoa",
-      ).tabStricter,
+      ),
     ).toBe(
       "The Variants tab keeps at most 0.0035, stricter than the 0.05 set here, so the PCoA uses 0.0035.",
     );
