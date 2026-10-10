@@ -536,6 +536,28 @@ describe("AP10 D1 the select of the method that waits while a PCA runs", () => {
     }
   });
 
+  test("with a description, waiting: its button described by the description and the reason", () => {
+    draw(
+      createElement(Select<"pca" | "pcoa">, {
+        label: "Method",
+        items: [
+          { id: "pca", label: "PCA of the genotypes" },
+          { id: "pcoa", label: "PCoA of the Kosman distances" },
+        ],
+        value: "pca",
+        description: "The PCoA suits data with many missing genotypes.",
+        waiting: REASON,
+        onChange: () => undefined,
+      }),
+    );
+    act(() => {
+      selectButton().focus();
+    });
+    expect(describedWords(selectButton())).toBe(
+      `The PCoA suits data with many missing genotypes. ${REASON}`,
+    );
+  });
+
   test("its list open when it begins to wait is closed, and stays closed when the wait ends", () => {
     const chosen: string[] = [];
     drawMethodSelect(null, chosen);

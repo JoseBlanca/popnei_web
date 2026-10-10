@@ -13,8 +13,8 @@
  * does while a PCA runs (waiting.ts): its list does not open and no key
  * chooses an item, its button keeps the Tab key, is drawn greyed and is
  * marked `aria-disabled`, with the reason as its tooltip, on the mouse, a
- * press and the focus (WaitingTooltip.tsx), and as its description, in
- * the place of the select's own description and problem.
+ * press and the focus (WaitingTooltip.tsx), and as its description,
+ * after the select's own description and problem.
  */
 import {
   Select as AriaSelect,
@@ -151,6 +151,9 @@ export function Select<T extends string>({
             onOpenChange={(isOpen) => {
               setOpen(isOpen && !waits);
             }}
+            // The reason after the description and the problem: React Aria
+            // joins the ids it is given here to theirs on the button.
+            {...(hintId !== undefined && { "aria-describedby": hintId })}
             isInvalid={problem !== undefined}
             // The problem is said, and the value is not refused by the browser's
             // own validation of a form.
@@ -176,8 +179,8 @@ export function Select<T extends string>({
               </span>
             )}
             {/* The name as one text, and not the words shown with the rest
-          hidden beside them, since a browser may put a space before a
-          part hidden from the eye as it makes the name. */}
+                hidden beside them, since a browser may put a space before
+                a part hidden from the eye as it makes the name. */}
             <Label
               className={
                 labelShown === "whole"
@@ -193,12 +196,6 @@ export function Select<T extends string>({
                   ? `${classOf(styles, "button")} ${classOf(styles, "waiting")}`
                   : classOf(styles, "button")
               }
-              // Waiting, the reason alone describes the button: React Aria
-              // sets the ids of its description and of its problem on the
-              // button, and takes away those it does not draw after drawing
-              // it, which would take away a reason added to them on the
-              // element. No select that waits has a description or a problem.
-              {...(hintId !== undefined && { "aria-describedby": hintId })}
               {...(buttonRef !== undefined && { ref: buttonRef })}
             >
               <SelectValue className={classOf(styles, "value")} />
