@@ -524,4 +524,64 @@ describe("NU5 D2 the band drawn", () => {
     expect(container.querySelector("textarea")).toBeNull();
     Reflect.deleteProperty(navigator, "clipboard");
   });
+
+  test("an error that comes with the band above the window scrolls the page, at once, to the band's top; a second error, Details and Close do not; an error after Close does again", async () => {
+    const testPage = page(SUMMARY);
+    await drawBand(testPage);
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {
+      // Nothing is laid out in jsdom.
+    });
+    const scrollY = vi.spyOn(window, "scrollY", "get").mockReturnValue(800);
+    const header = container.querySelector("header");
+    if (header === null) throw new Error("no band");
+    vi.spyOn(header, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({ x: 0, y: -800, width: 1280, height: 120 }),
+    );
+    try {
+      await act(async () => {
+        testPage.defects.report(new Error("test"), "event", null);
+        await Promise.resolve();
+      });
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "instant" });
+
+      await act(async () => {
+        testPage.defects.report(new Error("second"), "event", null);
+        await Promise.resolve();
+      });
+      await press(button("Details"));
+      await press(button("Details"));
+      await press(button("Close"));
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        testPage.defects.report(new Error("next"), "event", null);
+        await Promise.resolve();
+      });
+      expect(scrollTo).toHaveBeenCalledTimes(2);
+    } finally {
+      scrollTo.mockRestore();
+      scrollY.mockRestore();
+    }
+  });
+
+  test("an error that comes with the band's top in the window does not scroll the page", async () => {
+    const testPage = page(SUMMARY);
+    await drawBand(testPage);
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {
+      // Nothing is laid out in jsdom.
+    });
+    try {
+      await act(async () => {
+        testPage.defects.report(new Error("test"), "event", null);
+        await Promise.resolve();
+      });
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+        "test",
+      );
+      expect(scrollTo).not.toHaveBeenCalled();
+    } finally {
+      scrollTo.mockRestore();
+    }
+  });
 });

@@ -25,7 +25,8 @@
  * nothing under it moves when it starts or stops saying something. While
  * an error of the application is shown it scrolls with the page, at its
  * top, and the room is 0: fixed, its error covered half the window at
- * 200% zoom and all of it at 400%, Close out of reach.
+ * 200% zoom and all of it at 400%, Close out of reach. When the error
+ * comes with the band above the window, the page is scrolled to it.
  *
  * Its line is not a live region: its percentage and its clock change
  * every second. What starts and ends is said by the page's status
@@ -154,7 +155,12 @@ export function Band({
     const header = headerRef.current;
     if (header === null) return;
     const giveBack = keepRoom(header, scrolls);
-    if (scrolls) return giveBack;
+    if (scrolls) {
+      // Run when the error comes, and not at a second error, Details or
+      // Close, which leave `scrolls` as it was.
+      bringIntoView(header);
+      return giveBack;
+    }
     const stopClearing = keepFocusClear(header);
     return () => {
       stopClearing();
@@ -589,6 +595,22 @@ function keepRoom(header: HTMLElement, scrolls: boolean): () => void {
     observer.disconnect();
     root.style.removeProperty(ROOM_PROPERTY);
   };
+}
+
+/**
+ * Scrolls the page, at once, to the top of the band `header`, in the
+ * flow of the page while an error is shown, when any part of it is above
+ * the window: an error that came with the page scrolled down was out of
+ * sight at 320 pixels and cut at its first line at 1280, and a user of
+ * the mouse saw nothing change (the screens of work package 5, 10
+ * October 2026). Not smooth, which would ignore a user who asks for
+ * less motion; and the focus stays where it is, since the alert reads
+ * the error.
+ */
+function bringIntoView(header: HTMLElement): void {
+  const top = header.getBoundingClientRect().top;
+  if (top < 0)
+    window.scrollTo({ top: window.scrollY + top, behavior: "instant" });
 }
 
 /**

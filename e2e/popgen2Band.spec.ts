@@ -10,7 +10,9 @@
  * warnings; an error of the application, its line in an alert, Details
  * and Close, beside a PCA held running; the page scrolled to its end,
  * each control the Tab key reaches below the band; the dialog of the
- * download open and an error, the band's alert not inert; the band's
+ * download open and an error, the band's alert not inert; an error with
+ * the page scrolled to its end, the page scrolled at once to the band,
+ * at 1280 and at 320 pixels; the band's
  * height the same whatever it says, at 1280 and at 320 pixels, the
  * short forms on one line, and the one `<h1>`; and axe in each state,
  * light and dark.
@@ -549,6 +551,47 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     await bandButton(page, "Stop the PCA").click();
     await workersListening(page);
   });
+
+  for (const width of [1280, 320]) {
+    test(`NU5 D3 at ${String(width)} px an error of the application with the page scrolled to its end: the page is scrolled at once to the band's top, its error line, Details and Close in the window, and the focus stays where it was`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 600 });
+      await page.goto("popgen2.html");
+      await pick(page, "panel.nei");
+      await expect(variantsBox(page)).toContainText("Variants: 1,200", {
+        timeout: RESULT_TIMEOUT,
+      });
+      await page.evaluate(() => {
+        window.scrollTo(0, document.documentElement.scrollHeight);
+      });
+      expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+      await page.evaluate(() => {
+        Reflect.set(window, "focusedBefore", document.activeElement);
+      });
+
+      await page.evaluate(() => {
+        setTimeout(() => {
+          throw new Error("test");
+        });
+      });
+
+      const alert = band(page).getByRole("alert");
+      await expect(alert).toHaveText(ERROR_TEXT);
+      const top = await band(page).evaluate(
+        (element) => element.getBoundingClientRect().top,
+      );
+      expect(top).toBeGreaterThanOrEqual(0);
+      await expect(alert).toBeInViewport({ ratio: 1 });
+      await expect(bandButton(page, "Details")).toBeInViewport({ ratio: 1 });
+      await expect(bandButton(page, "Close")).toBeInViewport({ ratio: 1 });
+      expect(
+        await page.evaluate(
+          () => document.activeElement === Reflect.get(window, "focusedBefore"),
+        ),
+      ).toBe(true);
+    });
+  }
 
   for (const running of [true, false]) {
     test(`NU5 D3 the page scrolled to its end${running ? " with a PCA held running" : ", nothing running"}: the band at the top of the window, and each control the Tab key reaches back to the top below the band`, async ({
