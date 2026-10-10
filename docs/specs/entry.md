@@ -150,7 +150,10 @@ does not exist, so the line comes with the page (`docs/specs/site.md`).
 The two elements are two React roots: `#defects` holds the error bar,
 with a status region of its own, and `#root` the application, so that
 the bar, and its Save, stay when the application's root is lost (below,
-"The errors nothing else shows").
+"The errors nothing else shows"). On `popgen2.html`, from 10 October
+2026, `#defects` holds the band of the page, of which the error bar is
+the first line (`docs/specs/steps/popgen2-band.md`), for the same
+reason.
 
 **The start guard** is a few lines of plain script in the `<head>`,
 written once in `src/ui/startGuard.js` and put inline where a page has
