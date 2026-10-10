@@ -2,16 +2,17 @@
 
 A design of 10 October 2026, a draft for the owner's approval. It
 decides how `popgen2.html` loses its Undo and Redo and calculates the
-PCA again by itself after a parameter it reads changes, "the marimo
-model" the owner asked for on 10 October 2026 (`docs/plans/analyses-pca.md`,
-"Work package 10, round 1", item 4, the owner's three answers after it,
-and their answer of the same day, after a measurement, to keep the lock
-of the filters while a PCA runs). It touches sections 2, 3, 5, 7, 9, 11
-and 12 of `docs/architecture.md`, and the specs `docs/specs/core/store.md`,
-`docs/specs/core/history.md`, `docs/specs/steps/popgen2-pca.md`,
-`popgen2-filters.md` and `popgen2-download.md`. The old page,
-`popgen.html`, which is to be deleted, keeps its Undo, its notice and
-its cache as they are.
+PCA again by itself after a parameter it reads changes. The owner asked
+for it on 10 October 2026 as "the marimo model": marimo, a notebook for
+Python, runs again every cell that depends on a value the user changed,
+and has no undo. The request is item 4 of the owner's changes after
+trying the PCA tab, recorded in `docs/plans/analyses-pca.md`, with the
+owner's three answers about it and their later answer of the same day,
+after a measurement, to keep the lock of the filters while a PCA runs.
+It touches sections 2, 3, 5, 7, 9, 11 and 12 of `docs/architecture.md`
+and five specs, listed in the last section. The old page, `popgen.html`,
+which is to be deleted, keeps its Undo, its notice and its cache as
+they are.
 
 ## The design in short, for the owner
 
@@ -19,21 +20,20 @@ its cache as they are.
   presses its Run for that file. From then on, once no PCA runs, a
   change of anything the PCA reads, a threshold or the FILTER box of
   the Variants tab, or an option of the PCA tab, starts it again by
-  itself one second after the last change. Opening another variants
-  file ends the live state.
+  itself one second after the user stops changing things. Opening
+  another variants file ends the live state.
 - While a PCA runs, what it reads stays greyed with "Stop the PCA to
   change the filters.", as built on 9 October 2026. A change never stops
   a run; only the user's Stop does. The measurement that decided this
   is below, "Why a change does not stop a run".
-- No result is kept for a parameter set back: a result leaves the page
-  when a parameter its analysis reads changes, and is kept while the
-  analysis is only locked, so that it comes back if the lock lifts with
-  nothing changed. While the PCA calculates again, its tab shows only
-  the progress.
+- A value set back is calculated again: no result is kept for the old
+  values. While the PCA calculates again, its tab shows only the
+  progress.
 - Undo and Redo, their buttons and their keys go from the page.
-- The code that already starts the one pass by itself, `src/ui/autoRuns.ts`,
-  starts the PCA too; the store of core gains one setting, and loses
-  nothing that `popgen.html` uses.
+- The page starts the PCA by itself with the same code that already
+  starts the reading of the file by itself. The part of the application
+  that keeps the results is changed in one way only on this page: it
+  throws away a result as soon as a parameter of its analysis changes.
 - Three questions are left for the owner, at the end; the first is
   whether Stop also pauses the automatic runs until Run is pressed
   again, which is recommended.
@@ -43,7 +43,7 @@ its cache as they are.
 - **The project** is the one value that holds what the user has chosen:
   the variants file, its filters, the individuals file, the options of
   each analysis (`docs/architecture.md`, section 2). Each change of the
-  user is a command that gives a new project.
+  user gives a new project.
 - **A key** is a hash of everything a result is calculated from, made
   from the project (section 3). A change of a threshold gives the PCA a
   new key; a change of the colour of its points does not.
@@ -51,10 +51,7 @@ its cache as they are.
   256 MB. The screen shows for an analysis the result under the key the
   current project gives it, and nothing when there is none.
 - **The history** is the list of past projects that Undo and Redo walk,
-  `src/core/history.ts`, at most 200 of them.
-- **The store** is the part of `src/core` that holds the project, the
-  history, the cache and the state of each calculation, and starts and
-  stops the calculations.
+  at most 200 of them.
 - **The calculation worker** is the second thread of the tab, a web
   worker, where popnei runs, so that the page does not freeze. It runs
   one calculation at a time. A calculation inside it cannot be told to
@@ -64,14 +61,10 @@ its cache as they are.
   when a variants file is opened, which reads the whole file once and
   gives its statistics and histograms. It reads no filter, and the PCA
   waits for its end.
-- **The gate** is the code of `src/ui/variants/thresholdRun.ts` that
-  turns a run of presses of the arrow keys on a threshold of the
-  Variants tab, less than a second apart, into one change of the
-  project, made one second after the last press, or at once when the
-  user does something else, Run among it.
-- **Live**: the PCA is live for a load of the variants file once its Run
-  has been pressed for that load. A load is one pick of the file, with
-  an id of its own, the same file picked again included (section 3).
+- **Locked**: an analysis that cannot run, for a reason the page gives
+  beside its Run, the LD pruning on with no distance for instance.
+- **Live**: the PCA is live for a variants file once its Run has been
+  pressed for that file. A file picked again counts as a new one.
 
 ## The problem, and what forces it
 
@@ -79,30 +72,26 @@ The user of `popgen2.html` looks for clusters of individuals
 (`docs/use-cases.md`, case 3): they set the filters of the variants and
 of the individuals, run the PCA, look, move a filter, and look again.
 With Undo, the page kept every past project, and every result in the
-cache for an undo to bring back. The owner asked on 10 October 2026 for
-the model of a marimo notebook instead: what is on the screen is always
-the result of the values shown, calculated again when they change, and
-nothing to undo.
+cache for an undo to bring back. The owner asked for the marimo model
+instead: what is on the screen is always the result of the values
+shown, calculated again when they change, and nothing to undo.
 
 It is more than a screen removed, for four reasons:
 
-1. **The PCA has never started by itself.** Only the one pass does,
-   through `src/ui/autoRuns.ts`, which starts each calculation once per
-   key and never again under a key it already started. A filter set
-   back to its old value gives back an old key, and under that rule the
-   PCA would not start.
+1. **The PCA has never started by itself.** Only the one pass does, and
+   the code that starts it starts each calculation once for a set of
+   values and never again. A filter set back to its old value gives back
+   the old values, and under that rule the PCA would not start.
 2. **The cache brings results back.** A filter set back gives the old
-   key, the cache still holds its result, and the store shows it with
-   no calculation. The owner asked that it be calculated again.
+   key, the cache still holds its result, and the page shows it with no
+   calculation. The owner asked that it be calculated again.
 3. **A run started by itself locks the controls.** While a PCA runs,
    what it reads is greyed. A PCA started at the first change would
    grey the slider the user is still pressing, or the box they are
    about to type in.
-4. **Undo is woven into the store and the screens**: the gate's wraps
-   of Undo and Redo, the buttons, the keys caught on the whole window,
-   the number box's handling of Ctrl+Z, the lock that makes Undo wait,
-   and `applyAfresh`, a command that exists only so that the changes of
-   the individuals file leave nothing to undo.
+4. **Undo is woven through the page**: its buttons, its keys, the way
+   the number boxes handle Ctrl+Z, the greying of Undo while a PCA runs,
+   and the way a new individuals file is made to leave nothing to undo.
 
 ## Why a change does not stop a run
 
@@ -113,10 +102,9 @@ whether the tab gives back the memory of the ended worker before the
 new one grows. It was measured on 10 October 2026 on `popgen2.html`: a
 PCA and a PCoA of 9,381 individuals of 300 variants, the LD pruning
 off, Run, Stop after 40 s, Run again at once, Stop after 40 s; the
-memory of the engine's processes summed, sampled every 250 ms; the
-owner's Apple M5 Pro with 64 GB, Chromium 153 and WebKit 26.6, one run
-each, under load averages of 21 to 48 from other runs on the machine
-(`docs/plans/analyses-pca.md`, the end of "Work package 10, round 1").
+memory of the browser's processes summed, read every 250 ms; the
+owner's Apple M5 Pro with 64 GB, Chromium 153 and WebKit 26.6, the
+engine of Safari.
 
 - Chromium held both runs for about 2 s after the Stop, at most 2.83 GB
   for the PCA and 3.96 GB for the PCoA, then one run's.
@@ -124,432 +112,388 @@ each, under load averages of 21 to 48 from other runs on the machine
   40 s: 4.22 GB for the PCA and 4.18 GB for the PCoA at the peak, and
   3.72 GB 29 s after the last Stop, with nothing running.
 
-So in Safari each stop of a large PCA leaves its 3 to 4 GB in the tab
-for tens of seconds, and a few changes in a row would pile them up
-until the browser closes the tab with the user's work. Asked again with
-these numbers, the owner chose the same day to keep the lock: a change
-waits for the PCA to end or to be stopped, and after it ends a change
-starts it again by itself. A stop happens only at the user's Stop or at
-the opening of another variants file, as before this design. The option
-not taken, a stop at each change, would come back if WebKit gave the
-memory of an ended worker back within a second or two, as Chromium
-does, or if popnei could stop a calculation without ending the worker.
+Each was a single run, made while other tests ran on the same Mac, at
+load averages of 21 to 48, so its times may be longer than on a quiet
+machine. The finding that matters does not depend on the load: in
+Safari each stop of a large PCA leaves its 3 to 4 GB in the tab for 40 s
+and more, and a few changes in a row would pile them up until the
+browser closes the tab with the user's work. Asked again with these
+numbers, the owner chose the same day to keep the lock: a change waits
+for the PCA to end or to be stopped, and after it ends a change starts
+it again by itself. A stop happens only at the user's Stop or at the
+opening of another variants file, as before this design. The option not
+taken, a stop at each change, would come back if WebKit gave the memory
+of an ended worker back within a second or two, as Chromium does, or if
+popnei could stop a calculation without ending the worker.
 
 ## The options and the choices
 
 ### 1. Where the automatic start lives
 
-**(a) In `src/ui/autoRuns.ts`, as a second group after the one pass.**
-That module already starts a calculation by itself, one at a time, only
-when nothing runs, and waits for the group before it, the one pass,
-to end: the PCA would get the wait for the one pass that its Run lock
-gives it today (`passLock.ts`) for free. It needs four things more: to
-start the PCA's group only while the PCA is live; to forget the key it
-started the PCA under once the store has left that key behind, the
-owner's choice of 6 October 2026 for the first analysis that starts by
-itself and reads a filter (section 5); the second of quiet of choice 2;
-and to be told when Run is pressed. About 80 lines of code and their
-tests in node, on the real store, as the module's tests are now.
+**(a) In the code of the page that already starts the one pass by
+itself.** It already starts one calculation at a time, only when
+nothing runs, and after the one pass has ended, which the PCA needs. It
+needs to learn four things: to start the PCA only while it is live, to
+start it again for values set back, to wait for the quiet second of
+choice 2, and to know when Run is pressed. About 80 lines of code to
+write and to keep working, with their tests.
 
-**(b) In the store of core, as a setting that names the analyses to
-start again after a change.** But the outcome of every calculation is
-awaited by `src/ui/runs.ts`, which shows a failure of ours in the error
-bar; a calculation started inside core would have nobody awaiting it,
-and moving that awaiting into core is a design of its own
-(`.claude/skills/designing/SKILL.md`, "The store and who awaits a
-run"). The live state, the timer of the second and the wait for the one
-pass, which only `autoRuns.ts` can tell from a pass about to start,
-would have to move into core too. Several hundred lines across core and
-its spec.
+**(b) In the part of the application that keeps the project and the
+results**, which knows nothing of the screens. It would have to take
+over, from the screens, the waiting for each calculation's end and the
+handling of its failures, which is a design of its own, and the live
+state and the wait for the one pass with them: several hundred lines to
+write and to keep working.
 
-**Recommended: (a).** It reuses the rule the page already follows for
-the one pass, and changes no interface between the layers. (b) would
-win if a second page needed the same behaviour with no `src/ui` of its
-own, which no plan has.
+**Recommended: (a)**, the smaller change, which reuses a rule the page
+already follows. (b) would win if a second page needed the same
+behaviour, which no plan has.
 
 ### 2. When the PCA starts after a change
 
 The owner asked for "about 1 s after the user stops moving the
-control". The controls the PCA reads give their value to the project
-at different moments:
+control".
 
-- a threshold of the Variants tab: a drag when the mouse button is
-  released; a run of the arrow keys one second after its last press,
-  through the gate; a number typed at Enter, Tab or a click elsewhere;
-- the PCA's own sliders of missing data and MAF (`src/ui/widgets/Slider.tsx`,
-  built in round 1 of the plan): a drag at its release, and each press
-  of an arrow key, Page Up, Page Down, Home or End at once, as React
-  Aria's `onChangeEnd` gives it;
-- the drop-down list of the method, PCA or PCoA, a React Aria `Select`
-  (`react-aria-components` 1.21.1, built in round 1): closed, it changes
-  its value at each press of the left or the right arrow key, a key held
-  repeating (`useSelect` of `react-aria` 3.52.1, its `ArrowLeft` and
-  `ArrowRight`, `allowRepeats: true`), and at each letter typed that
-  begins an option; open, at Enter;
-- the FILTER box and the switch of the LD pruning at a press of Space,
-  and the number boxes of r² and of the distance at Enter, Tab or a
-  click elsewhere.
+**(a) At once, at each change.** A drag starts the PCA at the release of
+the mouse button, a typed number at Enter. But a press of an arrow key
+on a slider of the PCA, or on the closed list of the method, which
+changes at each press of the left or the right arrow, starts the PCA at
+the first press, and the lock then greys the control under the second
+press, which does nothing. A user who types a number in one box and
+moves to the next finds the next one greyed, and on a file of 9,381
+individuals must press Stop to go on.
 
-**(a) At once, when a change reaches the project.** A drag or a typed
-number starts the PCA when the user lets go or confirms. But a press
-of an arrow key on the PCA's sliders or on the closed list of the
-method starts it at the first press, and the lock then greys the
-control under the second press, which does nothing. A user who types a
-number in one box and tabs to the next finds the next one greyed. On a
-file of 9,381 individuals the user must then press Stop to go on.
+**(b) One second after the user stops changing things.** Each change,
+of any control, puts the start a second later, so the user can go from
+one control to the next. The second also waits while the user is in the
+middle of a change that has not reached the project yet:
 
-**(b) After one second with no change of the project and no control
-in the middle of a change.** Each change, of any control, puts the
-start a second later, so the user can press, drag and type from one
-control to the next while the second has not passed. A change of the
-project is not the only sign that the user is at work: three states of
-a control are not changes yet, and if the second ran out during one of
-them the lock would fall under the user's hand. A drag held still on a
-PCA slider for more than a second would be dropped at its release,
-since `Slider.tsx` ignores the value its `onChangeEnd` gives while it
-waits, and the thumb would jump back; an open list of the method would
-close, since `Select.tsx` draws it open only while it does not wait; a
-number box of r² or of the distance typed in for more than a second
-would become read-only before Enter, since `NumberField` is read-only
-while it waits. So the second does not run while one of these, or a
-run of the arrow keys, is held, and starts again from the release:
+- while they hold the mouse button down on a slider;
+- while the list of the method is open;
+- while a number box holds digits not yet confirmed by Enter, Tab or a
+  click elsewhere;
+- while they press the arrow keys on a threshold of the Variants tab,
+  which already becomes one change a second after the last press.
 
-- **a run of the arrow keys on a threshold of the Variants tab**, held
-  by the gate as today (`hold` of `src/ui/variants/thresholdRun.ts`);
-- **a drag held on a slider**, the PCA's or a threshold's: the slider
-  takes a hold of the gate at the first move of the pointer, React
-  Aria's `onChange` before any `onChangeEnd`, and lets it go at
-  `onChangeEnd`, or when the slider leaves the page;
-- **an open list**, the method's: the `Select` takes a hold when its
-  list opens and lets it go when it closes, from React Aria's
-  `onOpenChange`;
-- **a box with text not yet given to the project**, any number box the
-  PCA reads, the Variants tab's and the PCA tab's: the box takes a hold
-  while its text differs from the project's value, which `NumberField`
-  already knows to put the number back at Ctrl+Z, and lets it go when
-  the text is given at Enter, Tab or a click elsewhere, or put back.
-  The gate's `typing` today registers the boxes of the thresholds so
-  that `commitTyped` can give their text before an opening or a Run;
-  the hold adds whether one has text waiting.
-
-All four live in the gate, in `src/ui`, which the page already gives
-every screen through `RunGateProvider`; the gate gains one count of
-the holds and a `subscribe` that tells `autoRuns.ts` when it falls to
-zero. Core knows none of it, as it knows nothing of the gate today.
-When the second runs out, `autoRuns.ts` reads the PCA's key from the
-store at that moment, not the key it had when the second began, so a
-change that came during the second is the one calculated.
+Without that, the lock could fall during a drag held still, and the
+thumb would jump back at the release; the open list would close; or a
+box would stop taking digits before Enter. When the second runs out,
+the PCA is calculated for the values on the screen at that moment.
 
 The arrow keys on a threshold of the Variants tab start the PCA about
-two seconds after the last press, the gate's second and this one;
-everything else one second after the last change or release. The PCA's
-sliders and the list of the method need no run of the gate for their
-keys: each press is a change of the project, which costs a new key and
-a drawing of the screen, and none starts a calculation until the
-presses stop.
+two seconds after the last press, the threshold's own second and this
+one; everything else one second after the last change or release.
 
 **Recommended: (b).** It is what the owner asked, and the only one under
 which the lock does not fall on a control the user is still using. (a)
 would win only if the lock were gone, which the measurement above
-closed. If the two seconds of the thresholds' arrow keys feel slow when
-the owner tries it, the gate's change can count as the end of the quiet
-second, a few lines more.
+closed. If the two seconds of the thresholds' arrow keys feel slow, the
+threshold's own second can count as this one.
 
-During the second, the tab shows the state about to start, the bar at
-its start and no Run, with the old result already gone, since its key is
-no longer the project's (the owner's answer 3; invariant 1, below).
+During the second, the PCA tab shows no result, since the values it was
+for are no longer those on the screen, and no Run, but a line in the
+place of the bar: "The PCA starts again in a moment, once the filters
+stop changing." ("The PCoA …" under the PCoA). The controls stay open.
 
 ### 3. Where "live" is recorded
 
-**(a) In `autoRuns.ts`, as the load id for which Run was pressed.** A
-new variants file is a new load, so it ends the live state with no code
-of its own; a reload of the page ends it too, as it ends everything on
-that page, which saves no project. It is a record of what the user
-asked to run, as the keys `autoRuns.ts` started are, and no input of
-any result.
+**(a) In the code of the page that starts the PCA, beside the file it
+was pressed for.** A new variants file ends the live state by itself; a
+reload of the page ends it too, as it ends everything on that page,
+which saves no project.
 
-**(b) In the project, as a field of the PCA's options.** It would be
-seen by core and by the tests of core, but the project's type is shared
-with `popgen.html` and its project file, whose validation would gain a
-field that page never sets; the command that opens a file would have to
-clear it; and a field of the options must be kept out of the PCA's key
-by hand, where a mistake would give the PCA a new key, and a new
-calculation, at the press of Run itself.
+**(b) In the project, as an option of the PCA.** The project is shared
+with `popgen.html`, whose project file would gain a field that page
+never sets; opening a file would have to clear it; and it would have to
+be kept out of the PCA's key by hand, where a mistake would calculate
+the PCA again at the press of Run itself.
 
-**Recommended: (a).** (b) would win if `popgen2.html` ever saves its
+**Recommended: (a).** (b) would win if `popgen2.html` ever saved its
 project to a file and the live state should come back with it.
-
-What a Stop does to the live state is the owner's to decide (open
-point 1).
 
 ### 4. The history
 
-**(a) Keep the history in the store, and give `popgen2.html` a store
-whose type has no `undo` and `redo`**, so that no screen of that page
-can call them, with at most one step kept instead of 200. The buttons,
-the keys, the gate's wraps of Undo and Redo and the waiting of Undo go;
-`applyAfresh` stays. It is not the same as `apply` there: it still
-counts one in `historyMoves`, the count of the store at which a screen
-that holds typed text beside a part of the project drops that text,
-which is why the gate commits a number typed in a box before it. A few
-lines in core, none in `history.ts`.
+**(a) Keep the history inside, but give this page no way to call Undo
+or Redo, and keep at most one past project instead of 200.** The
+buttons, the keys and the greying of Undo go. A few lines of change.
 
-Two ways for `historyMoves` on that page: (i) leave it counting, as
-now, with the gate's commit before `applyAfresh`; (ii) under the
-setting, have it count nothing, since there is no history to move.
-Recommended: (i). No screen of `popgen2.html` reads the count today,
-only the filters of individuals of `popgen.html`
-(`src/ui/steps/variants/IndividualFilters.tsx`), so (ii) changes
-nothing a user sees and adds a case to the store; the count goes with
-the history when `popgen.html` is deleted.
+**(b) Remove the history for this page**, as a second way through every
+change of the project, in code that `popgen.html` still needs the first
+way: a larger change, to code of about 3,000 lines that both pages use.
 
-**(b) A setting of the store with no history at all**, under which a
-command replaces the project and `applyAfresh` and the event that
-writes the chosen column into past projects lose their reason. Cleaner
-on that page, but a second way through every command of a store of
-2,971 lines, for a page whose old sibling still needs the first way.
-
-**Recommended: (a)**, and the history, the notice and `applyAfresh`
-removed from the store whole when `popgen.html` is deleted, as the owner
-decided it will be on 9 October 2026. (b) would win if `popgen.html`
-were to stay.
+**Recommended: (a)**, and the history removed whole when `popgen.html`
+is deleted, as the owner decided it will be on 9 October 2026. (b)
+would win if `popgen.html` were to stay.
 
 ### 5. The cache
 
-**(a) A setting of the store, true on `popgen2.html` only: after every
-change, the result of an analysis leaves the cache when the new project
-gives that analysis a different key, and a result that arrives under a
-key so replaced is not kept.** An analysis that is locked, that cannot
-run for a reason the store gives, has no key at all
-(`AnalysisKey` of `src/core/store.ts`), and its last result stays in
-the cache, not shown, until the analysis has a key again: the same key
-shows it again with no calculation, a different one drops it. Dropping
-every result whose key the project gives to no analysis would throw
-away the result of a PCA at every lock. On the old page that lock
-comes with the individuals file while it is read, so loading the
-individuals file after a PCA of 9,381 individuals would cost 2 to 4
-minutes of calculation under the same key. On `popgen2.html` the
-individuals file never locks the PCA (`docs/specs/analyses/pca.md`, "On
-popgen2.html", `needs`), and every lock there comes from a parameter the
-PCA reads: the LD pruning on with its distance emptied, the filters of
-individuals keeping none, or more than 9,381 kept under the PCoA. So
-the one departure from the owner's answer 2 is a parameter changed
-into a lock and set back to the same value, the distance emptied and
-typed again, which shows the old result rather than calculating it
-again; it is equal to what a calculation would give. The rule keeps a
-result through any lock a later piece adds. The one pass's result stays,
-since no filter changes its key, and so do its histograms and the
-statistics that the individuals kept are worked out from. A filter set
-back from another value gives a key with nothing under it, and the PCA
-starts again.
+**(a) On this page, a result is thrown away when a parameter of its
+analysis changes**, and a result that arrives after its parameters
+changed is not kept. A value set back is calculated again.
 
-**(b) Keep the cache, and have `autoRuns.ts` start the PCA again even
-when the cache holds its result.** The store shows the result in the
-cache the moment the key comes back, so the old result would show for
-the minutes of the new calculation, and then be replaced by an equal
-one: not what the owner asked, answer 3.
+One case is kept apart: an analysis that is locked has, while locked,
+no key, so a lock is not a change of its parameters, and its last result
+is kept, not shown, until the lock lifts. If it lifts with the same
+values, the result is shown again with no calculation; with other
+values, it is thrown away. On the old page the PCA is locked while the
+individuals file is read, so throwing results away at a lock would
+calculate a PCA of 9,381 individuals again, 2 to 4 minutes, each time an
+individuals file is loaded after it. On `popgen2.html` the individuals
+file never locks the PCA, and every lock comes from a parameter of the
+PCA: the LD pruning on with its distance emptied, the filters of
+individuals keeping none, or more than 9,381 kept under the PCoA. So the
+one departure from the owner's answer, "every change calculates", is
+the distance emptied and typed again with the same value, which shows
+the old result, equal to what a calculation would give.
 
-**(c) A cache bound of zero bytes on that page.** It would drop the
-one pass's result too, and with it every histogram and the download.
+The result of the one pass is kept, since no filter changes it, and so
+are its histograms.
+
+**(b) Keep the cache, and start the PCA again even when it holds the
+result.** The page would show the old result for the minutes of the new
+calculation: not what the owner asked.
+
+**(c) No cache at all on this page.** It would drop the one pass's
+result too, and with it every histogram and the download.
 
 **Recommended: (a).** The memory the page keeps for results falls from
-up to 256 MB, the bound, to the results of the values shown: the one
-pass's and at most one PCA, 0.90 MB at 9,381 individuals
-(`docs/specs/analyses/pca.md`, "How it runs"). `popgen.html` keeps its
-cache.
+up to 256 MB to the results of the values shown: the one pass's and
+at most one PCA, 0.90 MB at 9,381 individuals
+(`docs/specs/analyses/pca.md`, "How it runs").
 
 ### 6. Ctrl+Z and Cmd+Z
 
-With Undo gone, the page stops catching these keys. In a text field the
-browser's own undo of the typing works, as on any page. The number
-boxes keep what they do today: with a number typed and not yet
-confirmed, Ctrl+Z puts back the box's number; otherwise they refuse the
-browser's undo of their text, which on 9 October 2026 put back the old
-text and gave it to the project as a change, in Chromium and WebKit on
-macOS. Elsewhere the keys do nothing. Not taken: catching the keys on
-the whole page to do nothing, a listener on the window kept on that
-page for no action, and a key that a user presses out of habit and
-that silently does nothing either way. Safari is said to reopen the
-last closed tab at Cmd+Z when the page does not take the key; not
-tried.
+With Undo gone, the page stops catching these keys. In a text field
+they undo the typing, as on any page. In a number box with digits not
+yet confirmed they put back the box's number, as now; with none, they
+do nothing, since the box refuses the browser's own undo of its text,
+which on 9 October 2026 put back the old text and gave it to the
+project as a change, in Chromium and WebKit on macOS. Elsewhere on the
+page they do nothing. Not taken: catching the keys on the whole page to
+do nothing, which a user would see no differently. Safari is said to
+reopen the last closed tab at Cmd+Z when the page does not take the
+key; not tried.
 
 ### 7. The one pass, and the download of the filtered variants
 
 The one pass reads no filter, so no change stops it, and the PCA starts
-only once it has ended, as `autoRuns.ts` starts groups in order.
+only once it has ended.
 
-The download of the filtered variants runs in a modal dialog, a box
-over the page that keeps the rest of it out of reach until the file is
-written, so no filter changes during a write. Before the write, the
-download waits while a PCA runs, with "Waits for the PCA to end; or stop
-it in the PCA tab.", as built (open point 2). A write pressed during the
-second of choice 2 goes first, and the PCA starts after it, by the
-guard of invariant 5.
+The download of the filtered variants runs in a dialog over the page
+that keeps the rest of the page out of reach until the file is written,
+so no filter changes during a write. Before the write, the download
+waits while a PCA runs, as built (open point 2). A download pressed
+during the quiet second goes first, and the PCA starts after the file is
+written.
 
-## The invariants
+## What stays true of the architecture
 
-1. **A result is never shown stale: kept.** The screen still shows only
-   the result under the key of the current project. A change gives the
-   PCA a new key, under which there is nothing, so the old result leaves
-   the screen at once, the owner's answer 3. Between the change and the
-   start of the run, the second of choice 2, the store says the PCA is
-   ready with no result; the tab shows that state as about to start,
-   from `startedUnder` of `autoRuns.ts` and the live state, as the box of
-   the variants file already does for the one pass, and not as Run. A
-   result that arrives after its Stop is not shown, as now, and with
-   choice 5 not kept.
-2. **The layers: kept.** The automatic start is in `src/ui`; core gains
-   a setting.
-3. **The project, one immutable value changed by commands: kept.** The
-   live state is not part of the project, by choice 3, for the reasons
-   there; a screen holds nothing of the project.
-4. **Core with no DOM and no React: kept.**
-5. **Two workers, one request at a time: kept**, with one guard added.
-   `autoRuns.ts` starts nothing while one of its own analyses runs, but
-   it does not look at the write of the filtered variants, which runs on
-   the same calculation worker: a PCA it started during a write would
-   wait in the queue of the worker, while the store, which has no state
-   for a request waiting there, showed it as running with a bar that
-   does not move. A write started within the second of choice 2 is such
-   a case. So `autoRuns.ts` also starts nothing while the store's write
-   is running, one condition and its test.
-6. **A Stop ends the worker and starts another: kept, and no more often
-   than today**, at the user's Stop and at the opening of another
-   variants file (above, "Why a change does not stop a run").
+The six rules the rest of the code relies on (`.claude/skills/designing/SKILL.md`)
+all hold:
 
-## What changes, by module
-
-- `src/ui/autoRuns.ts`: the PCA's group, the live state, the keys left
-  behind forgotten, the second of quiet, the guard of the write;
-  `src/ui/popgen2Store.ts`: the group, the setting of the cache, the
-  type with no Undo; `src/ui/popgen2.tsx`.
-- `src/core/store.ts` and `docs/specs/core/store.md`: the setting that
-  drops results whose key was replaced; the section "On popgen2.html:
-  no notice, and a history of the filters", without the history.
-  `docs/specs/core/history.md`: a line that `popgen2.html` has no Undo.
-- Removed from `popgen2.html`: Undo and Redo of
-  `src/ui/variants/VariantsPage.tsx`, their keys, the wraps of Undo and
-  Redo of the gate, and the waiting of Undo in `src/ui/variants/filtersLock.ts`,
-  whose lock of the filters stays; `src/ui/shell/UndoRedoButtons.tsx`,
-  `undoRedo.ts` and `shortcuts.ts` stay for `popgen.html`. The comments
-  of `src/ui/widgets/NumberField.tsx` that name the page's Undo.
-- The PCA tab: Run once, then the bar after each change; its states
-  lose "results removed" and gain "about to start"; Stop as open point
-  1 decides (`docs/specs/steps/popgen2-pca.md`, "Undo and Redo", "Run
-  and Stop", "While a PCA runs", "The states").
-- `docs/architecture.md`: section 2, whose project is immutable "so that
-  undo is keeping the previous values", true now of `popgen.html` alone;
-  section 3, the paragraphs on `popgen2.html` and the cache there;
-  section 5, the PCA started by `autoRuns.ts`, with the measurement
-  above; section 7, Undo and Redo; section 9, the rows of these
-  modules; section 11, the memory; each with its paragraph "What was
-  revised on …". The skills that say the page has Undo (`coding`'s
-  `react.md`, `SKILL.md` and `worker.md`, the `writing-specs` skill's
-  states, the `stale` category of the review) are corrected with them.
-
-## How it will be tested, and what would prove it wrong
-
-- In node, on the real store, `autoRuns.ts`, with a timer the test
-  moves: the PCA does not start before Run; after Run, a change of a
-  threshold starts it under the new key one second later, and a second
-  change within that second puts it off again; the second does not run
-  while the gate holds a drag, an open list or a box with text waiting,
-  and runs again from the release; the PCA starts under the key the
-  project gives when the second runs out; nothing starts while a
-  PCA runs; a filter set back calculates again, the cache holding
-  nothing under the old key; a change of the colour of the points
-  starts nothing; another variants file ends the live state; the PCA
-  waits for the one pass; an individuals file opened after a PCA
-  calculates nothing again, the result staying on the screen; a PCA
-  locked by its distance emptied keeps its result in the cache, shown
-  again when the same distance is typed; and no PCA starts while a
-  write runs.
-- In Chromium and WebKit: ten presses of an arrow key on a threshold,
-  on a slider of the PCA and on the closed list of the method, less
-  than a second apart, start one PCA, after the last press, and no
-  control greys before it; after a change of a threshold, a drag held
-  still for 3 s on a PCA slider is kept at its release, the list of the
-  method held open for 3 s stays open and its choice is taken, and a
-  number typed slowly over 3 s in the box of the distance stays
-  editable and is given at Enter, each before any PCA starts; the tab
-  never shows the old result after a change, nor Run between the
-  change and the bar. Firefox, which is in
-  the floor of the applications, is left out: Playwright cannot start
-  it on the owner's Mac, so it is seen only on GitHub's CI, which runs
-  the flows, or by the owner by hand.
-- What would send the design back: a user, on trying it, who finds the
-  second of choice 2 too short to go from one control to the next
-  before the lock falls; the answer would be a longer quiet time, or an
-  "Apply" button, not a stop at each change.
+1. **A result is never shown for values other than those on the
+   screen.** The tab shows only the result for the PCA's current
+   parameters; after a change it shows the line of the quiet second,
+   then the bar, never the old result.
+2. **The code keeps its layers**: the automatic start is in the code of
+   the screens.
+3. **The project changes only by the user's changes**: the live state
+   is not in it (choice 3).
+4. **The part that keeps the project and the results stays free of
+   the browser**, tested without one.
+5. **One calculation at a time in the calculation worker**: no PCA
+   starts while the one pass or a download runs.
+6. **A Stop ends the worker and starts another**, no more often than
+   today: at the user's Stop and at the opening of another variants
+   file.
 
 ## What is hard to undo
 
-Little. `popgen2.html` saves no project file, so no format changes; no
-key changes, so no result anywhere is made unreachable; no URL changes.
-Undo can come back, since `history.ts` and the buttons stay for
+`popgen2.html` saves no project file, so no saved file depends on this
+design, and no key changes, so no result anywhere is made unreachable.
+Undo can come back, since the history and the buttons stay for
 `popgen.html` until it is deleted. What users will learn is that a
-change recalculates by itself, and taking that away later would be a
-change of habit for them.
+change calculates again by itself, and taking that away later would be
+a change of habit for them.
 
 ## The costs of the web
 
-- **Memory of a tab.** The history of the page holds two projects at
-  most, where it held up to 201. The cache holds the current results,
-  under 1 MB beside the one pass's, where it could hold 256 MB. A PCA
-  is stopped only by the user, as now, so the memory a stopped worker
-  keeps in WebKit, 3.7 to 4.2 GB for tens of seconds at 9,381
-  individuals (above), comes only after a Stop; open point 1 decides
+- **Memory of a tab.** The page keeps two projects at most, where it
+  kept up to 201, and the results of the values shown, under 1 MB beside
+  the one pass's, where it could keep 256 MB. The memory a stopped
+  worker keeps in Safari, 3.7 to 4.2 GB for 40 s and more at 9,381
+  individuals, comes only after the user's Stop; open point 1 decides
   whether a change right after a Stop can start a new PCA on top of it.
 - **The page frozen.** Nothing new runs on the page's own thread that
-  grows with the data: a change makes the keys, as it does now, and the
-  removal of results from the cache walks a handful of entries. Each
-  press on a PCA slider or on the list of the method is a change of the
-  project, as each press of a key on the slider already is.
-- **Download size.** None added; the code of Undo on that page goes.
-- **The browsers.** No new interface of the browser. Cmd+Z in Safari,
-  above, not tried.
-- **What GitHub Pages does not allow.** Nothing asked.
+  grows with the data. Each press of an arrow key on a slider of the PCA
+  or on the list of the method is a change of the project, as each
+  press on a slider already is.
+- **Download size.** The page gets slightly smaller, since the code of
+  Undo on it goes.
+- **The browsers.** Nothing in this design needs a newer browser than
+  the floor of the applications, Chrome 111, Firefox 115 and Safari
+  16.4. Cmd+Z in Safari, above, is not tried.
 - **Accessibility.** A user who changes a control and goes on to the
-  next one slowly, as with a screen reader, may find it greyed a second
-  later by a PCA that started by itself, with its reason, "Stop the PCA
-  to change the filters.", on the focus and in its description, as the
-  lock gives now. So the start of a PCA by itself is said once in the
-  status region, the part of the page a screen reader reads out without
-  moving the focus, "Calculating the PCA again.", and the focus is not
-  moved. A user who changes a threshold on the Variants tab starts a
-  PCA in a tab they do not see; that sentence and the greyed filters say
-  it.
-- **What is lost when the tab is closed or a worker restarts.** As now:
-  a Stop loses the PCA's time so far, and the new worker opens the
-  variants file again in at most 49 ms (`docs/architecture.md`, section
-  13, point 5); the one pass's result is in the page and is not lost.
-  A reload loses the live state with everything else of the page.
+  next slowly, as with a screen reader, may find it greyed by a PCA that
+  started by itself, with its reason, "Stop the PCA to change the
+  filters.", given when the control has the focus, as now. So the start
+  of a PCA by itself is said once in the status region, the part of the
+  page a screen reader reads out without moving the focus, "Calculating
+  the PCA again.", and the focus is not moved. A user who changes a
+  threshold on the Variants tab starts a PCA in a tab they do not see;
+  that sentence and the greyed filters tell them.
+- **What is lost when a worker restarts.** As now: a Stop loses the
+  PCA's time so far, and the new worker opens the variants file again in
+  at most 49 ms, measured on a `.nei` file of 19 MB and on its VCF in
+  Chromium 153 and WebKit 26.6 (`docs/architecture.md`, section 13,
+  point 5); the one pass's result is kept by the page. A reload loses
+  the live state with everything else of the page.
+
+## How it will be tested, and what would prove it wrong
+
+- Without a browser: the PCA does not start before Run; after Run, a
+  change of a threshold starts it a second later, and a second change
+  within that second puts it off; the second waits during a drag held,
+  an open list and digits not confirmed; the PCA is calculated for the
+  values when the second runs out; nothing starts while a PCA or a
+  download runs; a value set back is calculated again; the colour of
+  the points starts nothing; another variants file ends the live state;
+  an individuals file opened after a PCA calculates nothing again; a
+  distance emptied and typed again with the same value shows the old
+  result.
+- In Chromium and WebKit: ten presses of an arrow key on a threshold, on
+  a slider of the PCA and on the closed list of the method start one
+  PCA, after the last press, and no control greys before it; a drag held
+  still for 3 s, the list held open for 3 s and digits typed slowly over
+  3 s each keep working, before any PCA starts; the tab never shows the
+  old result after a change, nor Run between the change and the bar.
+  Firefox, in the floor of the applications, is left out: Playwright
+  cannot start it on the owner's Mac, so it is seen only on GitHub's
+  automatic checks or by the owner by hand.
+- What would send the design back: a user, on trying it, who finds the
+  quiet second too short to go from one control to the next; the answer
+  would be a longer second, or an Apply button, not a stop at each
+  change.
 
 ## Open points
 
 1. **Whether Stop pauses the automatic runs.** (a) Stop ends the live
-   state: the PCA waits for Run again, so a user can stop a long PCA,
-   change several filters at their pace and run once. (b) Stop stops
-   this run only, and the next change starts the PCA again a second
-   after it. Recommended: (a). Under (b) a user who stops a PCA of
-   9,381 individuals to change two filters, a few seconds apart, has a
-   new PCA start and grey the second filter before they reach it, and
-   must stop it again; and in WebKit each of those stops leaves 3.7 to
-   4.2 GB in the tab for tens of seconds, on which the next PCA grows.
-2. **The download while a live PCA runs.** With the PCA calculated
-   again after every change, "Download filtered variants…" is greyed
-   after each change of a filter for as long as the PCA takes: up to 4
-   minutes on a file of 9,381 individuals (134 to 259 s on the owner's
-   Mac, `docs/specs/analyses/pca.md`, "How it runs"), a second or less
-   up to 1,000. (a) It waits, as now, with "Waits for the PCA to end; or
-   stop it in the PCA tab."; the user waits or goes to the PCA tab to
-   stop it. (b) Pressing it stops the PCA, writes the file, and the PCA
-   starts again after the write; the download never waits, the PCA's
-   time so far is thrown away, and in WebKit the stopped PCA's memory
-   stays beside the write. Recommended: (a), as it is built, with open
-   point 1's (a), under which a Stop before the download keeps the PCA
-   from starting again until Run.
+   state: the PCA tab shows Run, as before the first run, and nothing
+   starts until it is pressed. (b) Stop stops this run only, and the
+   next change starts the PCA again a second after it, with the line
+   "The PCA starts again in a moment, once the filters stop changing."
+   Recommended: (a). Under (b) a user who stops a PCA of 9,381
+   individuals to change two filters, a few seconds apart, has a new PCA
+   start and grey the second filter before they reach it, and must stop
+   it again; and in Safari each of those stops leaves 3.7 to 4.2 GB in
+   the tab for 40 s and more, on which the next PCA grows.
+2. **The download while a live PCA runs.** With the PCA calculated again
+   after every change, "Download filtered variants…" is greyed after
+   each change of a filter for as long as the PCA takes: up to 4 minutes
+   on a file of 9,381 individuals (134 to 259 s on the owner's Mac), a
+   second or less up to 1,000. (a) It waits, as now, with "Waits for the
+   PCA to end; or stop it in the PCA tab."; the user waits, or goes to
+   the PCA tab to stop it. (b) The button stays usable during a PCA;
+   pressing it stops the PCA and opens the dialog of the download, and
+   the PCA tab says "Stopped for the download; the PCA starts again when
+   the file is written." and starts again after it; the PCA's time so
+   far is lost, and in Safari its memory stays beside the write.
+   Recommended: (a), as built, with open point 1's (a), under which a
+   Stop before the download keeps the PCA from starting again until
+   Run.
 3. **The column of the populations during a run.** The owner's question
    of 9 October 2026 stands, since the lock stays: the page locks only
    what the PCA reads, and the column only colours its points.
    Recommended: leave it open to change during a run, as built.
+
+## For the session that builds it
+
+The owner can stop reading here. What follows names the code.
+
+**Choice 1.** `src/ui/autoRuns.ts` gains the PCA as a second group
+after `POPGEN2_CHAIN`, which gives the wait for the one pass that
+`passLock.ts` gives Run today. It records the live state as the load id
+of the variants file Run was pressed for (choice 3); forgets the key it
+started the PCA under once the store leaves that key behind, the
+owner's choice of 6 October 2026 (`docs/architecture.md`, section 5);
+runs the quiet second; and starts nothing while the store's write
+runs, since `anyRunning` looks only at its groups, and a PCA started
+during a write would wait in the client's queue while shown as
+running. Option (b) was the store starting runs itself, which moves the
+awaiting of outcomes out of `src/ui/runs.ts`, the case "The store and
+who awaits a run" of the designing skill.
+
+**Choice 2.** The gate of `src/ui/variants/thresholdRun.ts` gains a
+count of holds and a `subscribe` that tells `autoRuns.ts` when it falls
+to zero; the second starts from that moment or from the last change of
+the store, whichever is later. The holds, all in `src/ui`, through
+`RunGateProvider`:
+
+- a run of the arrow keys on a threshold, `hold` as today;
+- a drag on a slider, `src/ui/widgets/Slider.tsx` and the thresholds'
+  `ThresholdSlider.tsx`: taken at the first `onChange` of React Aria
+  (the library of accessible controls the page is built on) before any
+  `onChangeEnd`, let go at `onChangeEnd` or when the slider leaves the
+  page. Without it, `Slider.tsx` ignores the value of `onChangeEnd`
+  while it waits;
+- an open list, `src/ui/widgets/Select.tsx`: taken and let go at
+  `onOpenChange`. Without it, the list closes, since it is drawn open
+  only while it does not wait. Closed, React Aria's `Select`
+  (`react-aria-components` 1.21.1) changes its value at each press of
+  the left or the right arrow, a key held repeating (`useSelect` of
+  `react-aria` 3.52.1, `ArrowLeft`, `ArrowRight`, `allowRepeats: true`),
+  and at each letter that begins an option;
+- a box with text not yet given, `NumberField`, the Variants tab's and
+  the PCA tab's: held while its text differs from the project's value,
+  which it already knows for Ctrl+Z. Without it, the box is read-only
+  while it waits. The gate's `typing` and `commitTyped` register the
+  boxes of the thresholds today; the hold adds whether one has text
+  waiting.
+
+When the second runs out, `autoRuns.ts` reads the PCA's key from the
+store then, not when the second began. The state about to start is
+`ready` in the store with the PCA live and its key not in
+`startedUnder`, as the box of the variants file tells a pass about to
+start.
+
+**Choice 4.** `createPopgen2Store` gives a type without `undo` and
+`redo`, `maxUndoSteps: 1`. `applyAfresh` stays: it still counts one in
+`historyMoves`, at which a screen that holds typed text drops it, which
+is why the gate commits typed text before it. Leave it counting; no
+screen of `popgen2.html` reads it, only `IndividualFilters.tsx` of
+`popgen.html`. Option (b) was a setting of no history through the
+store's 2,971 lines.
+
+**Choice 5.** A setting of `createStore`, true on `popgen2.html`: after
+each change, the result under a key an analysis had is removed when the
+analysis now has a different key, and a late result under such a key is
+not cached. A locked analysis, `{ kind: "locked" }` of `AnalysisKey` in
+`src/core/store.ts`, has no key and drops nothing; the PCA of
+`popgen2.html` has no `individualsNeeds` (`docs/specs/analyses/pca.md`,
+"On popgen2.html", `needs`).
+
+**What changes, by module.**
+
+- `src/ui/autoRuns.ts`, `src/ui/popgen2Store.ts`, `src/ui/popgen2.tsx`;
+  the gate and the widgets above.
+- `src/core/store.ts` and `docs/specs/core/store.md`: the setting of the
+  cache; the section "On popgen2.html: no notice, and a history of the
+  filters", without the history. `docs/specs/core/history.md`: a line
+  that `popgen2.html` has no Undo.
+- Removed from `popgen2.html`: Undo and Redo of
+  `src/ui/variants/VariantsPage.tsx`, their keys, the gate's wraps of
+  `undo` and `redo`, and the waiting of Undo in
+  `src/ui/variants/filtersLock.ts`, whose lock of the filters stays;
+  `src/ui/shell/UndoRedoButtons.tsx`, `undoRedo.ts` and `shortcuts.ts`
+  stay for `popgen.html`. The comments of `src/ui/widgets/NumberField.tsx`
+  that name the page's Undo.
+- `docs/specs/steps/popgen2-pca.md`, "Undo and Redo", "Run and Stop",
+  "While a PCA runs", "The states" (no "results removed"; a state about
+  to start); `popgen2-filters.md`, "Undo, Redo and their keys";
+  `popgen2-download.md`, as open point 2 decides.
+- `docs/architecture.md`: section 2 ("Immutable, so that undo…", now of
+  `popgen.html` alone), 3 (the paragraphs on `popgen2.html` and its
+  cache), 5 (the PCA started by `autoRuns.ts`, the measurement above),
+  7, 9, 11, each with its "What was revised on …". The skills that say
+  the page has Undo: `coding`'s `react.md`, `SKILL.md` and `worker.md`,
+  the states of `writing-specs`, the `stale` category of the review.
