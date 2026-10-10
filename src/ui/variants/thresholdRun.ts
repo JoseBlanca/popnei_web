@@ -18,6 +18,14 @@
  * opening, and a change of the individuals file, also commit a number
  * typed in the box of a threshold and not yet committed, as the old page
  * does before an opening.
+ *
+ * The gate also counts the changes under way, a change the user is
+ * making that has not reached the project yet: a run of the keys, and
+ * the holds the widgets take while a slider is held, a list is open,
+ * digits wait or the dialog of the download is open; and tells its
+ * listeners when the count falls to 0, from which the PCA's quiet second
+ * runs (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by
+ * itself").
  */
 import type { Popgen2Store } from "../../core/store.ts";
 
@@ -38,8 +46,10 @@ export interface RunGate {
       would make now, "the MAF filter changed", which Undo names while the
       run waits; `null` when no run is held or it would make none. */
   readonly pending: () => string | null;
-  /** Calls `listener` when a run is held, moves or is let go; returns the
-      function that stops it. A property made once, so React keeps it. */
+  /** Calls `listener` when a run is held, moves or is let go, and when
+      the count of the changes under way, `underWay`, rises from 0 or
+      falls to 0, once for a change that is both; returns the function
+      that stops it. A property made once, so React keeps it. */
   readonly subscribe: (listener: () => void) => () => void;
   /** Holds the commit of the box of a threshold, which commits a number
       typed in it as Enter would; gives the function that lets it go,
@@ -47,6 +57,17 @@ export interface RunGate {
   readonly typing: (commit: () => void) => () => void;
   /** Commits what is typed in every box held, before an opening. */
   readonly commitTyped: () => void;
+  /** Holds a change under way that is not a run of the keys, a slider
+      held, a list open, digits typed and not confirmed, the dialog of the
+      download open (docs/specs/steps/popgen2-pca.md, "The PCA calculated
+      again by itself"). Gives the function that lets it go, at its
+      release or when its control leaves the page; a second call of it
+      changes nothing. */
+  readonly holdChange: () => () => void;
+  /** The number of changes under way now: the holds of `holdChange` not
+      let go, and the runs of the keys held. 0 when the user is in the
+      middle of none. */
+  readonly underWay: () => number;
 }
 
 /** A run held by the gate. */
@@ -62,6 +83,9 @@ export function createRunGate(): RunGate {
   // In the order they were held: the last is the one Undo names.
   const runs = new Map<() => void, () => string | null>();
   const boxes = new Set<() => void>();
+  // The holds of `holdChange`, each an object of its own, so that a
+  // release counts once.
+  const holds = new Set<object>();
   const listeners = new Set<() => void>();
   const tell = (): void => {
     for (const listener of [...listeners]) listener();
@@ -84,11 +108,14 @@ export function createRunGate(): RunGate {
     },
     endAll: () => {
       // Each end lets its run go, and its change passes the gate again,
-      // which then holds nothing of it.
-      for (const end of [...runs.keys()]) {
+      // which then holds nothing of it. The listeners are told once,
+      // after every change was made.
+      const ended = [...runs.keys()];
+      for (const end of ended) {
         runs.delete(end);
         end();
       }
+      if (ended.length > 0) tell();
     },
     pending: () => {
       const last = [...runs.values()].at(-1);
@@ -112,6 +139,16 @@ export function createRunGate(): RunGate {
     commitTyped: () => {
       for (const commit of [...boxes]) commit();
     },
+    holdChange: () => {
+      const hold = {};
+      const wasFree = runs.size + holds.size === 0;
+      holds.add(hold);
+      if (wasFree) tell();
+      return () => {
+        if (holds.delete(hold) && runs.size + holds.size === 0) tell();
+      };
+    },
+    underWay: () => runs.size + holds.size,
   };
 }
 

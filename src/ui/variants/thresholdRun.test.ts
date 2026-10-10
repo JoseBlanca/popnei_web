@@ -373,6 +373,124 @@ describe("AP3 D2 the gate before applyAfresh", () => {
   });
 });
 
+describe("NU3 D1 the gate counts the changes under way", () => {
+  /** A gate, and the count of the calls of a listener subscribed now. */
+  const listened = (
+    gate = createRunGate(),
+  ): {
+    readonly gate: ReturnType<typeof createRunGate>;
+    readonly told: { count: number };
+  } => {
+    const told = { count: 0 };
+    gate.subscribe(() => {
+      told.count += 1;
+    });
+    return { gate, told };
+  };
+
+  test("two holds taken, one released: still held; the second released: one call of the listener", () => {
+    const gate = createRunGate();
+    expect(gate.underWay()).toBe(0);
+    const releaseSlider = gate.holdChange();
+    const releaseList = gate.holdChange();
+    expect(gate.underWay()).toBe(2);
+    const { told } = listened(gate);
+    releaseSlider();
+    expect(gate.underWay()).toBe(1);
+    expect(told.count).toBe(0);
+    releaseList();
+    expect(gate.underWay()).toBe(0);
+    expect(told.count).toBe(1);
+  });
+
+  test("the listener is told when the first hold is taken, and not when another is taken while one holds", () => {
+    const { gate, told } = listened();
+    const release = gate.holdChange();
+    expect(told.count).toBe(1);
+    gate.holdChange();
+    expect(told.count).toBe(1);
+    release();
+    expect(told.count).toBe(1);
+  });
+
+  test("a hold released twice counts once", () => {
+    const gate = createRunGate();
+    const releaseBox = gate.holdChange();
+    const releaseList = gate.holdChange();
+    const { told } = listened(gate);
+    releaseBox();
+    releaseBox();
+    expect(gate.underWay()).toBe(1);
+    expect(told.count).toBe(0);
+    releaseList();
+    releaseList();
+    expect(gate.underWay()).toBe(0);
+    expect(told.count).toBe(1);
+  });
+
+  test("a run of the arrow keys is a hold from its first press to its change", () => {
+    const { gate, told } = listened();
+    const { run, changes } = runOf(gate);
+    run.press(0.5, 0.49);
+    expect(gate.underWay()).toBe(1);
+    run.press(0.49, 0.48);
+    expect(gate.underWay()).toBe(1);
+    vi.advanceTimersByTime(RUN_QUIET_MS - 1);
+    expect(gate.underWay()).toBe(1);
+    const toldBefore = told.count;
+    vi.advanceTimersByTime(1);
+    expect(changes).toEqual([0.48]);
+    expect(gate.underWay()).toBe(0);
+    expect(told.count).toBe(toldBefore + 1);
+  });
+
+  test("a run made a change by another command lets its hold go, and the listener is told", () => {
+    const { gate, told } = listened();
+    const { run, changes } = runOf(gate);
+    const release = gate.holdChange();
+    run.press(0.5, 0.49);
+    expect(gate.underWay()).toBe(2);
+    const toldBefore = told.count;
+    gate.endAll();
+    expect(changes).toEqual([0.49]);
+    expect(gate.underWay()).toBe(1);
+    release();
+    expect(gate.underWay()).toBe(0);
+    expect(told.count).toBe(toldBefore + 2);
+  });
+
+  test("a hold whose control is removed, through the release the widget gives at its removal, brings the count back to 0", () => {
+    const { gate, told } = listened();
+    // A slider held, a list open, and a threshold with a run of the keys
+    // waiting, all removed at once, as by another variants file opened:
+    // each widget lets its hold go as it leaves the page.
+    const { run } = runOf(gate);
+    const removals = [gate.holdChange(), gate.holdChange(), run.end];
+    run.press(0.5, 0.49);
+    expect(gate.underWay()).toBe(3);
+    const toldBefore = told.count;
+    for (const removal of removals) removal();
+    expect(gate.underWay()).toBe(0);
+    expect(told.count).toBe(toldBefore + 1);
+    // A release given again after the removal changes nothing.
+    for (const removal of removals) removal();
+    expect(gate.underWay()).toBe(0);
+    expect(told.count).toBe(toldBefore + 1);
+  });
+
+  test("a listener stopped is told nothing more", () => {
+    const gate = createRunGate();
+    let told = 0;
+    const stop = gate.subscribe(() => {
+      told += 1;
+    });
+    const release = gate.holdChange();
+    stop();
+    release();
+    expect(told).toBe(1);
+  });
+});
+
 /** A send that is never called in these tests, which start no pass. */
 function unsent(): never {
   throw new Error("the test started a pass");
