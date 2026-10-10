@@ -226,6 +226,10 @@ shows the line for 10 s at most, so that a worker that does not start
 again, or did not need to, leaves no line that never ends; a worker that
 cannot start is said at the next request, as today. Another calculation
 that starts replaces the line, and the store clears `stoppedAwaitingWorker` then.
+The line names the PCA by the method of the run that was stopped, which
+the band keeps from the moment it first saw `stoppedAwaitingWorker`: a
+PCoA chosen while the line is shown, after a Stop of the PCA, does not
+turn it into "Stopping the PCoA…".
 How long the line stays has not been measured; the plan measures it in
 Chromium and WebKit after a Stop of a PCA of 9,381 individuals.
 
@@ -362,8 +366,9 @@ It reads:
 What the line says is a pure function of these, `bandOf` of
 `src/ui/band/band.ts`, tested in node, given beside them the time now
 and the time the band first saw `stoppedAwaitingWorker`, for the 10 s of
-"Stopping". The band holds of its own two things: whether its details
-are shown, and that time.
+"Stopping", and the method of the PCA then. The band holds of its own
+three things: whether its details are shown, that time, and that
+method.
 
 The tab shown was state of the page's component until this piece
 (`VariantsPage.tsx`). The band is drawn in another root and must show

@@ -167,6 +167,27 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     expect(testPage.band().line).toEqual({ kind: "nothing" });
   });
 
+  test("Stopping names the method of the run stopped, which the band kept when it first saw the Stop: the PCoA chosen after a Stop of the PCA leaves Stopping the PCA; and Stopping the PCoA after a Stop of the PCoA", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    testPage.auto.run("pca");
+    await flush();
+    testPage.auto.pause("pca");
+    testPage.stoppedMethod = "pca";
+    testPage.setPca({ method: "pcoa" });
+    expect(testPage.store.getState().stoppedAwaitingWorker).toBe("pca");
+    expect(words(testPage.band())).toBe("Stopping the PCA…");
+
+    const pcoa = page(SUMMARY);
+    await pcoa.endPass();
+    pcoa.setPca({ method: "pcoa" });
+    pcoa.auto.run("pca");
+    await flush();
+    pcoa.auto.pause("pca");
+    pcoa.stoppedMethod = "pcoa";
+    expect(words(pcoa.band())).toBe("Stopping the PCoA…");
+  });
+
   test("a Stop waiting for each analysis of the page says Stopping and what it stops; another analysis by its title", async () => {
     const testPage = page(SUMMARY);
     await testPage.endPass();

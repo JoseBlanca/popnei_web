@@ -60,6 +60,11 @@ export interface BandPage {
   /** When the band first saw the store's `stoppedAwaitingWorker` set, in
       the same milliseconds; `null` while it has not. */
   readonly stoppingSince: number | null;
+  /** The method of the PCA when the band first saw the store's
+      `stoppedAwaitingWorker` set, that of the run stopped, since a PCA
+      that runs locks its options; `null` while it has not, when the
+      project's is read. */
+  readonly stoppedMethod: PcaMethod | null;
 }
 
 /** What a Stop under way stops: the PCA, by its method; the one pass
@@ -219,7 +224,7 @@ export function lineOf(page: BandPage): BandLine {
   ) {
     return {
       kind: "stopping",
-      what: stoppingOf(stopped, method, variantsName),
+      what: stoppingOf(stopped, page.stoppedMethod ?? method, variantsName),
     };
   }
 

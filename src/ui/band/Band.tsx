@@ -41,7 +41,8 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { pcaOnPopgen2 } from "../../core/analyses/pca.ts";
+import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
+import type { PcaMethod } from "../../worker/protocol.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
 import type { Defects } from "../defects.ts";
@@ -288,6 +289,10 @@ function Activity({ page, onLink }: ActivityProps): React.JSX.Element | null {
     page.pageTab.shown(),
   );
   const stopping = useStoppingTimes(state.stoppedAwaitingWorker);
+  const stoppedMethod = useStoppedMethod(
+    state.stoppedAwaitingWorker,
+    pcaOptions(state.project, "popgen2").method,
+  );
   const line = lineOf({
     state,
     startedUnder: (key) => page.autoRuns.startedUnder(key),
@@ -295,6 +300,7 @@ function Activity({ page, onLink }: ActivityProps): React.JSX.Element | null {
     tab,
     now: stopping?.now ?? 0,
     stoppingSince: stopping?.since ?? null,
+    stoppedMethod,
   });
   return <Line line={line} page={page} onLink={onLink} />;
 }
@@ -442,6 +448,31 @@ function useStoppingTimes(
     };
   }, [stopped]);
   return times !== null && times.stopped === stopped ? times : null;
+}
+
+/** The method of the PCA, `method`, as it was when the band first saw a
+    Stop waiting for the calculation worker, `stopped`: that of the run
+    stopped, which a PCoA chosen after the Stop does not change; `null`
+    while no Stop waits. */
+function useStoppedMethod(
+  stopped: string | null,
+  method: PcaMethod,
+): PcaMethod | null {
+  const [seen, setSeen] = useState<{
+    readonly stopped: string;
+    readonly method: PcaMethod;
+  } | null>(null);
+  // Kept in the drawing that first sees the Stop, as react.dev's
+  // "adjusting some state when a prop changes" does.
+  if (stopped === null) {
+    if (seen !== null) setSeen(null);
+    return null;
+  }
+  if (seen?.stopped !== stopped) {
+    setSeen({ stopped, method });
+    return method;
+  }
+  return seen.method;
 }
 
 /** When the band looks again at a Stop waiting, after it first saw it:

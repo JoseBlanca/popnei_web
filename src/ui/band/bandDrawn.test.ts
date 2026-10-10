@@ -164,6 +164,24 @@ describe("NU5 D2 the band drawn", () => {
     expect(document.activeElement).toBe(heading());
   });
 
+  test("after its Stop of the PCA, the PCoA chosen leaves the line Stopping the PCA, the method of the run stopped", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    testPage.auto.run("pca");
+    await drawBand(testPage);
+    await settled();
+
+    await press(button("Stop the PCA"));
+    expect(container.textContent).toContain("Stopping the PCA…");
+    await act(async () => {
+      testPage.setPca({ method: "pcoa" });
+      await flush();
+    });
+
+    expect(testPage.store.getState().stoppedAwaitingWorker).toBe("pca");
+    expect(container.textContent).toContain("Stopping the PCA…");
+  });
+
   test("while the PCA is live and nothing runs nor is about to start, the band shows Popnei alone", async () => {
     const testPage = await pcaDone(SUMMARY, "pca", 548);
     await drawBand(testPage);

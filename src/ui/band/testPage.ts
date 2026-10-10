@@ -14,6 +14,7 @@ import type {
   Job,
   JobResult,
   Outcome,
+  PcaMethod,
   Progress,
   Run,
   WriteJob,
@@ -87,6 +88,7 @@ export interface TestPage {
   tab: PageTab;
   now: number;
   stoppingSince: number | null;
+  stoppedMethod: PcaMethod | null;
   readonly band: () => Band;
   readonly endPass: () => Promise<void>;
   readonly lastPca: () => Request;
@@ -174,6 +176,7 @@ export function page(summary: JobResult): TestPage {
     tab: "variants",
     now: 0,
     stoppingSince: null,
+    stoppedMethod: null,
     band: () => bandOf(pageOf(testPage), defects.getState()),
     endPass: async () => {
       await flush();
@@ -210,6 +213,7 @@ export function pageOf(testPage: TestPage): BandPage {
     tab: testPage.tab,
     now: testPage.now,
     stoppingSince: testPage.stoppingSince,
+    stoppedMethod: testPage.stoppedMethod,
   };
 }
 
