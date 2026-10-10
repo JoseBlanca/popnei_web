@@ -356,10 +356,11 @@ It sends:
 
 It reads:
 
-- from the store: the state of the one pass, `variantsSummary`, and of
-  the PCA, with its result's warnings; `runs`, with the progress, the
-  `stopping` and the id of each request; `write`; the project, for the
-  name of the variants file and the method of the PCA;
+- from the store: the statuses of its analyses, that of the one pass,
+  `variantsSummary`, with the progress of its run, and that of the PCA,
+  with the id of its run, for the clock, and its result's warnings;
+  `write`, with its progress; the project, for the name of the variants
+  file and the method of the PCA;
 - the clock of a run, `useRunSeconds` of `src/ui/runSeconds.ts`, as the
   PCA tab reads it;
 - from `src/ui/autoRuns.ts`: the PCA's live state, `liveState("pca")`,
@@ -372,8 +373,10 @@ It reads:
 - the tab shown, from `src/ui/pageTab.ts`;
 - `stoppedAwaitingWorker` of the store's state, for "Stopping".
 
-What the line says is a pure function of these, `bandOf` of
-`src/ui/band/band.ts`, tested in node, given beside them the time now
+What the band says is worked out by pure functions of these, of
+`src/ui/band/bandLine.ts`, tested in node: `lineOf`, the line after
+the heading, and `errorOf`, the line of an error, from the log of the
+errors alone; `bandOf` gives the two together. `lineOf` is given beside them the time now
 and the time the band first saw `stoppedAwaitingWorker`, for the 10 s of
 "Stopping", and the method of the PCA then. The band holds of its own
 three things: whether its details are shown, that time, and that
@@ -534,7 +537,7 @@ always; its error, the colour of danger of each theme.
 
 ## How it is checked
 
-**In Vitest, in node**, at `bandOf` of `src/ui/band/band.ts`, from
+**In Vitest, in node**, at `bandOf` of `src/ui/band/bandLine.ts`, from
 states of the real store of the page made with a fake worker: each row
 of the table of "The line", with its words under the PCA and the PCoA,
 the PCA about to start in the quiet second and while the dialog of the

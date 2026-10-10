@@ -3235,7 +3235,7 @@ src/ui/
                     it shows, worked out from the store, autoRuns.ts,
                     the log of the errors and the tab shown, by a pure
                     function tested
-                    in node (band.ts), its words (bandWords.ts), and the
+                    in node (bandLine.ts), its words (bandWords.ts), and the
                     band drawn (Band.tsx), which reuses the words and
                     buttons of the error bar
   pageTab.ts        from 10 October 2026, the tab shown on popgen2.html,
@@ -3262,7 +3262,9 @@ src/ui/
                     drawn only while it has a step, its place kept, and
                     waits, under which both wait while a PCA runs; from
                     10 October 2026 drawn by popgen.html alone, with
-                    undoRedo.ts and shortcuts.ts
+                    undoRedo.ts and shortcuts.ts; from 10 October 2026
+                    said.ts, the status region that the error bar and
+                    the band of popgen2.html share
   runs.ts           awaits the outcome of each run core starts, at a Run
                     or, on popgen2.html, by autoRuns.ts, and hands it to
                     the store, which cancels the runs no longer asked for
@@ -3323,6 +3325,9 @@ src/ui/
                     drawn and the hidden one inert, for the tabs of
                     popgen2.html, and from 9 October 2026 a greyed tab
                     that does not open and says its reason;
+                    WideShort.tsx, from 10 October 2026, words whole and
+                    in a short form under 30 rem, which the band's line
+                    and its link draw;
                     DownloadMenu.tsx and downloadItems.ts, from 9
                     October 2026, the menu "Download…" of a table or a
                     plot and its items; waiting.ts, from 9 October
@@ -3399,9 +3404,15 @@ band of `popgen2.html` (section 7): the rows of `history.ts`,
 `store.ts`, `popgen2.tsx`, `popgen2Store.ts`, `autoRuns.ts`,
 `variants/`, `defects.ts`, `shell/` and `widgets/`, and two new rows of
 `src/ui`, `band/` and `pageTab.ts`. No rule of the imports changes:
-`band/` imports the store's types, `autoRuns.ts`, `defects.ts`,
-`pageTab.ts`, the words of the error bar of `shell/` and the words of
-the PCA tab, as `variants/` does; nothing of core imports it. The
+`band/` imports the store's types, `store.tsx`, `popgen2Store.ts`,
+`autoRuns.ts`, `defects.ts`, `pageTab.ts`, `runSeconds.ts`; of
+`variants/`, `chain.ts` and `words.ts`, for the one pass; of `shell/`,
+the words of the error bar, `barSave.ts`, its status region,
+`said.ts`, `ErrorBoundary.tsx`, `focusKept.ts` and `status.ts`; of
+`analyses/`, `words.ts`, `titles.ts`, `pca/words.ts`, and the
+attributes of the headings of `AnalysisPanel.tsx` and `Warnings.tsx`,
+which its link gives the focus to; and the widgets, as `variants/`
+does; nothing of core imports it. The
 removal of Undo from `popgen2.html` removes no module, since
 `popgen.html` keeps `UndoRedoButtons.tsx`, `undoRedo.ts` and
 `shortcuts.ts`.
