@@ -215,10 +215,46 @@ async function expectTooltipUnder(page: Page, anchor: Locator): Promise<void> {
   expect(tipBox.x + tipBox.width).toBeGreaterThan(anchorBox.x);
 }
 
+/** Scrolls what holds `control` and scrolls, the page or a frame, by a
+    pixel and back, and waits for the browser to send the events of the
+    scroll, as it does when the Tab key brings a control into view. */
+async function scrollByAPixel(control: Locator): Promise<void> {
+  await control.evaluate(
+    (element) =>
+      new Promise<void>((resolve) => {
+        let holder: Element | null = element.parentElement;
+        while (
+          holder !== null &&
+          !(
+            holder.scrollHeight > holder.clientHeight &&
+            /auto|scroll/u.test(getComputedStyle(holder).overflowY)
+          )
+        ) {
+          holder = holder.parentElement;
+        }
+        const scrolled = holder ?? document.scrollingElement;
+        if (scrolled === null) throw new Error("nothing scrolls");
+        const step = scrolled.scrollTop > 0 ? -1 : 1;
+        scrolled.scrollBy(0, step);
+        requestAnimationFrame(() => {
+          scrolled.scrollBy(0, -step);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              resolve();
+            });
+          });
+        });
+      }),
+  );
+}
+
 /** Expects `control` to wait with the reason of the lock: marked
     `aria-disabled`, and its tooltip, alone, shown under `anchor`, its
     visible part, when the Tab key reaches it from the control before it,
-    once, with no tooltip shown before the key. */
+    once, with no tooltip shown before the key, and still shown after a
+    scroll of what holds it: the browser scrolls a control reached by the Tab
+    key into view, and under load sends the events of that scroll after
+    the tooltip shows (task 9.2). */
 async function expectWaiting(
   page: Page,
   control: Locator,
@@ -231,6 +267,8 @@ async function expectWaiting(
   await expect(page.getByRole("tooltip")).toHaveCount(0);
   await page.keyboard.press("Tab");
   await expect(control).toBeFocused();
+  await expectTooltipUnder(page, anchor);
+  await scrollByAPixel(control);
   await expectTooltipUnder(page, anchor);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("tooltip")).toHaveCount(0);

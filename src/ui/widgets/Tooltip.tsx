@@ -124,7 +124,7 @@ export function WithTooltip({
       >
         {children(text === null ? undefined : id)}
         {held === undefined ? (
-          <StillTooltipBox>{text}</StillTooltipBox>
+          <StillTooltipBox describedById={id}>{text}</StillTooltipBox>
         ) : (
           <HeldTooltipBox held={held}>{text}</HeldTooltipBox>
         )}
@@ -139,10 +139,21 @@ export function WithTooltip({
 }
 
 /** React Aria's tooltip under its trigger, given a state of its trigger
-    with no animation, as `HeldTooltipBox` below says why. */
+    with no animation, as `HeldTooltipBox` below says why, and that does
+    not close on a scroll while the trigger has the focus. The browser
+    scrolls what holds a control reached by the Tab key to bring it into
+    view, and sends the event of that scroll a frame later, after the
+    focus has shown the tooltip, which React Aria then closed: the line
+    of a threshold, reached by the Tab key while a PCA ran, scrolled the
+    element without a class around its input and lost its reason, in 2 of 12 runs of its flow in Chromium,
+    four at once, on 10 October 2026 (task 9.2 of
+    docs/plans/analyses-pca.md). The trigger is the element described by
+    `describedById`, the hidden text of the tooltip. */
 function StillTooltipBox({
+  describedById,
   children,
 }: {
+  readonly describedById: string;
   readonly children: React.ReactNode;
 }): React.JSX.Element {
   const state = useContext(TooltipTriggerStateContext);
@@ -151,10 +162,18 @@ function StillTooltipBox({
       "popnei_web defect: a tooltip was drawn outside its trigger.",
     );
   }
+  const kept = {
+    ...state,
+    shouldSkipAnimation: true,
+    close: (immediate?: boolean): void => {
+      if (immediate === true && focusDescribedBy(describedById)) {
+        return;
+      }
+      state.close(immediate);
+    },
+  };
   return (
-    <TooltipTriggerStateContext.Provider
-      value={{ ...state, shouldSkipAnimation: true }}
-    >
+    <TooltipTriggerStateContext.Provider value={kept}>
       <AriaTooltip
         className={classOf(styles, "tooltip")}
         placement="bottom"
@@ -213,4 +232,11 @@ function HeldTooltipBox({
       </AriaTooltip>
     </TooltipTriggerStateContext.Provider>
   );
+}
+
+/** Whether the element with the focus is described by the element of
+    id `id`, as a trigger is by the hidden text of its tooltip. */
+function focusDescribedBy(id: string): boolean {
+  const described = document.activeElement?.getAttribute("aria-describedby");
+  return described?.split(/\s+/u).includes(id) === true;
 }

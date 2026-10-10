@@ -4,7 +4,10 @@
  * null while its tooltip is open takes the tooltip with it, so that no
  * empty box stays on the page with nothing to close it but Escape, and
  * the button is no longer described by it. Undo and Redo of the header
- * give such a hint (docs/specs/shell.md, "The header").
+ * give such a hint (docs/specs/shell.md, "The header"). And a tooltip
+ * shown by the focus of the keyboard stays through a scroll of the page
+ * while its button has the focus, as the browser scrolls a control
+ * reached by the Tab key into view.
  */
 import { StrictMode, act, createElement } from "react";
 import { createRoot } from "react-dom/client";
@@ -86,5 +89,33 @@ describe("AP1 D2 the tooltip of a button whose hint goes", () => {
     draw(null);
     expect(document.querySelector('[role="tooltip"]')).toBeNull();
     expect(button().hasAttribute("aria-describedby")).toBe(false);
+  });
+});
+
+describe("task 9.2 a tooltip shown by the focus through a scroll", () => {
+  test("a scroll of the page while the button has the focus leaves its tooltip shown", () => {
+    const hint = "Stop the PCA to change the filters.";
+    draw(hint);
+    tabToButton();
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(hint);
+    act(() => {
+      document.dispatchEvent(new Event("scroll"));
+    });
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(hint);
+  });
+
+  test("the focus gone, a scroll, and the focus back by the keyboard shows the tooltip again", () => {
+    const hint = "Stop the PCA to change the filters.";
+    draw(hint);
+    tabToButton();
+    act(() => {
+      button().blur();
+    });
+    expect(document.querySelector('[role="tooltip"]')).toBeNull();
+    act(() => {
+      document.dispatchEvent(new Event("scroll"));
+    });
+    tabToButton();
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(hint);
   });
 });
