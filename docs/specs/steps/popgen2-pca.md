@@ -1,12 +1,12 @@
-# popgen2.html: the five tabs, the PCA tab, the downloads and Undo
+# popgen2.html: the five tabs, the PCA tab and the downloads
 
 The screen spec of what `popgen2.html` gains with its first analysis:
 the row of five tabs under the two boxes, Variants, Individuals, PCA,
 Populations and Distances, with the tabs of the analyses greyed while
 they cannot run; the PCA tab, a PCA or a PCoA of the individuals of the
 variants file; a button "Download…" on every table and every plot of
-the page; and Undo and Redo at the right end of the line of the page's
-heading. It
+the page; and, from 9 to 10 October 2026, Undo and Redo at the right
+end of the line of the page's heading. It
 develops the design `docs/designs/analyses-pca.md`, approved by the
 owner on 9 October 2026 with its ten answers, and section 5 of
 `docs/functionality.md`, "The individuals". It covers case 3 of
@@ -27,6 +27,21 @@ whole: every question of the design was answered on 9 October 2026, so
 nothing is left open, and the choices the session made, listed at the
 end, are for the owner to change after trying the page.
 
+Revised on 10 October 2026 for `docs/designs/no-undo.md`, approved by
+the owner that day with the recommendations of its three open points,
+after the owner tried the page (`docs/plans/analyses-pca.md`, work
+package 10, round 1, item 4): Undo and Redo leave the page, with their
+keys ("No Undo and no Redo"); the PCA becomes live once its Run is
+pressed for the file, and is calculated again by itself a second after
+a change of what it reads, with a state of the tab about to start and
+a Stop that pauses the automatic runs until Run ("The PCA calculated
+again by itself"); a value set back is calculated again, since the page
+keeps no result for values left behind; the lock of the filters while
+a PCA runs stays, and the column of the populations stays open, now by
+the owner's answer; and the band at the top of the page says what is
+running, with its own spec, `docs/specs/steps/popgen2-band.md`. The
+parts that named Undo say so where they changed. Not yet built.
+
 The PCA tab is the panel of the old page, `popgen.html`, which is built
 and which the owner approved on 28 September 2026: its screen spec is
 the second half of `docs/specs/analyses/pca.md`, "The panel". This spec
@@ -38,10 +53,16 @@ The two boxes and the Variants and Individuals tabs are those of
 The module specs it reads, revised for it the same day:
 
 - the store, its setting for this page that makes no notice and stops a
-  calculation left behind, and `applyAfresh`, which the changes of the
-  individuals file go through, `docs/specs/core/store.md`, "On
-  popgen2.html: no notice, and a history of the filters";
-- the history, `docs/specs/core/history.md`;
+  calculation left behind, its setting from 10 October 2026 that keeps
+  no result for values left behind, `dropLeftBehind`, and `applyAfresh`,
+  which the changes of the individuals file go through,
+  `docs/specs/core/store.md`, "On popgen2.html: no notice, no Undo, and
+  no result kept for values left behind";
+- the history, `docs/specs/core/history.md`, kept by the store of this
+  page at one past project, with nothing of the page that walks it;
+- the band at the top of the page, `docs/specs/steps/popgen2-band.md`,
+  which shows a PCA running, about to start or stopping, with its Stop,
+  and points to its warnings while another tab is shown;
 - the PCA's module, its definition for this page with the filters that
   narrow those of the Variants tab, its colours with the unclassified,
   and the CSV of the coordinates, `docs/specs/analyses/pca.md`, "On
@@ -73,12 +94,24 @@ the old page, given other filters (`docs/specs/worker/protocol.md`).
   population, because there is no individuals file, no column is chosen,
   its cell is empty, `NA` or `-`, or it is not in the individuals file.
 - **The store** holds the project, the results and the calculations
-  under way, and the screens read it. A **command** changes the project
-  and is a **step of the history**, which Undo takes back; a **key** is
+  under way, and the screens read it. A **command** changes the project;
+  a **key** is
   the text made from everything a calculation reads, under which its
   result is kept in the **cache**, the store's memory of results. A
   result is on the screen only under the key the current project gives
-  (`docs/architecture.md`, section 3).
+  (`docs/architecture.md`, section 3), and on this page the cache keeps
+  no result under a key the PCA has left behind.
+- **Live**: the PCA is live for the open variants file once the user
+  has pressed its Run for that file, until a Stop of the PCA or the
+  opening of another variants file. While it is live, a change of what
+  its key holds starts it again by itself.
+- **The quiet second** is the second after the user stops changing
+  things, at whose end a live PCA starts again; **a change under way**
+  is one that has not reached the project yet and holds the second: a
+  slider held, a list open, digits typed and not confirmed, a run of the
+  arrow keys waiting.
+- **About to start** is the state of the PCA tab during the quiet
+  second.
 - **A run of the arrow keys** is the presses of the arrow keys on a
   threshold within a second of each other, which the page makes one
   change when they stop (`popgen2-filters.md`, "A threshold moved with
@@ -127,41 +160,43 @@ the old page, given other filters (`docs/specs/worker/protocol.md`).
 - Every table and every plot of the page has a button "Download…",
   which offers the table as CSV, or the plot's image as SVG or PNG and
   its data as CSV.
-- Undo and Redo are back, at the right end of the line of the page's
-  heading, each shown only while it has a step to take. Ctrl+Z and Cmd+Z undo.
-- Opening, removing or reading again the individuals file is no step of
-  Undo, as opening the variants file already is not.
+- No Undo and no Redo, and no key of theirs, from 10 October 2026.
+- Once Run has been pressed for the file, the PCA is calculated again by
+  itself one second after the user stops changing a threshold, the
+  FILTER box or an option of the PCA. While it runs, those stay greyed,
+  as before. Stop ends it and keeps it from starting again until Run.
+- A value set back is calculated again: no result is kept for values
+  the screen no longer shows.
+- A band at the top of the page says what is running and offers its
+  Stop (`docs/specs/steps/popgen2-band.md`).
 
 ## What it shows
 
 ### The order of the page
 
-From the top: the line of the heading "Popnei", with Undo and Redo at
-its right end; the two boxes, "Variants file" and "Individuals file", as
+From the top: the band (`docs/specs/steps/popgen2-band.md`); the line
+of the heading "Popnei", alone since 10 October 2026, when Undo and
+Redo left its right end; the two boxes, "Variants file" and "Individuals file", as
 `popgen2-input.md` gives them; the row of the five tabs; the content of
 the tab shown.
 
-### Undo and Redo
+### No Undo and no Redo
 
-**Where.** At the right end of the line of the heading "Popnei", in two
-places of their own, Undo then Redo, Redo's at the right margin of the
-page. A place stays empty while its button is hidden, so neither button
-moves when the other comes or goes, and a second click lands where the
-first did. The right margin is that of the page's column, at most 48
-rem wide, so at 1280 px the buttons stand about 528 px from the window's
-right edge, not in its corner. The line has the height of the heading whether or not a
-button is shown, so the page under it does not move when Undo appears.
-At 320 px the heading and both buttons stay on one line.
+From 10 October 2026 the page has no Undo and no Redo, no buttons and
+no keys, as the owner asked that day on trying the page, "the marimo
+model" (`docs/designs/no-undo.md`). From 9 to 10 October 2026 they
+stood at the right end of the line of the heading, each drawn only
+while it had a step, and waited while a PCA ran; this section described
+them, and its earlier text is in the history of the repository. What
+Ctrl+Z and Cmd+Z do on the page now is in `popgen2-filters.md`, "Undo,
+Redo and their keys": they put back the number of a box with digits
+not confirmed, and do nothing else. The changes that were steps, the
+thresholds, the FILTER box, the column of the populations, the options
+of the PCA, the colour, the axes and 3D or 2D, are commands of the
+store as before, each with its description, which is shown nowhere.
 
-**When.** Undo is drawn while the store has a step to undo, or a run of
-the arrow keys on a threshold waits to become one (`popgen2-filters.md`,
-"A threshold moved with the keys"); Redo while the store has a step to
-redo and no run waits. Otherwise each is not drawn at all: not reached by
-the Tab key, not found by a screen reader. So neither is there when the
-page opens, nor after a variants file or an individuals file is opened.
-
-**What is a step.** Each command of this table, with the description
-that names it in the tooltip and in the status region:
+**The commands**, each sent with `store.apply` and its description,
+which until 10 October 2026 named its step in the tooltip of Undo:
 
 | what the user does | the description |
 |---|---|
@@ -178,81 +213,156 @@ that names it in the tooltip and in the status region:
 | a component chosen for an axis | "the components on the axes changed" |
 | 3D or 2D | "the PCA was drawn in 3D", "the PCA was drawn in 2D" |
 
-Under the PCoA every "the PCA" of the table is "the PCoA", by the method
-of the project after the command, as the words of the tab follow it.
+Under the PCoA every "the PCA" of the table is "the PCoA". The opening
+of a variants file goes through the store's `open`, and the opening,
+the removal and a change of an option of the reader of the individuals
+file through `applyAfresh`; the column the page chooses at the end of
+a read is the store's `populationColumnChosen` (`docs/specs/entry.md`,
+"The column of the populations on popgen2.html").
 
-No step: the opening of a variants file, by the store's `open`; the
-opening, the removal and a change of an option of the reader of the
-individuals file, by the store's `applyAfresh`. Each starts the history
-afresh, with nothing to undo or redo, so Undo and Redo go after them.
-Nor the column the page chooses at the end of the read of the
-individuals file, which may come seconds after the opening: the store
-records it as it records the read, `populationColumnChosen`, into every
-project of the history since the opening, so a threshold moved while
-the file was read stays a step, and its undo keeps the column; a run of
-the arrow keys waiting and a number typed and not applied when it comes
-stay as they were (`docs/specs/entry.md`, "The column of the
-populations on popgen2.html"). The tab
-shown, the sort of a table, how far it is scrolled, the turn and the
-zoom of the 3D view and the group highlighted in the legend are of the
-screen, and no step.
+### The PCA calculated again by itself
 
-**What an undo brings back.** The project before the step, and with it
-every result the cache holds under that project's keys, shown with no
-calculation. A PCA that the step stopped had no result, so the undo
-shows none: the tab shows its options and Run, and the PCA is run
-again; a result calculated before it under the same settings, if the
-cache still holds it, is shown.
+**Live.** The PCA becomes live for the open variants file when the user
+presses its Run for that file. From then on, a change of anything its
+key holds starts it again by itself, without a press of Run: a
+threshold of the Variants tab, of the variants or of the individuals,
+the FILTER box, the method, the sliders of the missing data and the
+MAF, the LD switch, its r² and its distance. Nothing else starts it:
+not "Colour the points by", the axes, 3D or 2D, the turn of the 3D
+view, the individuals file, its column of the populations, nor a turn
+to another tab, since the key holds none of them
+(`docs/specs/analyses/pca.md`, "On popgen2.html", the key). The live
+state ends at a Stop of the PCA, in this tab or in the band, during a
+run or during the quiet second, as the owner chose on 10 October 2026
+(open point 1 of the design); at the opening of another variants file,
+or of the same one again, which is a new load; and at a reload of the
+page, which keeps nothing. It does not end when the PCA fails, is
+locked, or the user turns to another tab.
 
-**What they say.** The words on the buttons are "Undo" and "Redo". Each
-has a tooltip, on the mouse and on the focus, that names its step,
-"Undo: the MAF filter changed", which is also its description for a
-screen reader. An undo or a redo, by a button or by a key, is said in
-the status region, "Undone: the MAF filter changed." or "Redone: the
-MAF filter changed." A button that appears is not announced.
+**When it starts.** While the PCA is live, it starts by itself once
+all of these hold:
 
-**The keys.** The page listens on the whole window from the moment it
-opens, whether or not a button is shown: Ctrl+Z, and Cmd+Z on macOS,
-undo; Ctrl+Shift+Z, Cmd+Shift+Z and Ctrl+Y redo; Cmd+Y is the browser's
-history on macOS and is left to it. With no step to take, the key does
-nothing, and does not reach the browser's own undo. Beside the typing
-of a box:
+- the store gives it a key, so it is not locked, and holds no result
+  and no failure under that key, so it is `ready`;
+- the page has not started it under that key since the project last
+  gave that key; a key left behind and given back, a value set back,
+  counts as new;
+- the one pass is read to the end, as Run requires (`passLock`, "Run
+  and Stop", below);
+- no calculation runs in the calculation worker, nor a write of the
+  filtered variants, and the dialog of that download is not open;
+- the quiet second has run out.
 
-| where the focus is | Ctrl+Z or Cmd+Z |
-|---|---|
-| a number box with something typed and not yet given to the project by Enter, Tab or a click elsewhere | puts back the box's number, the project's value; the page undoes nothing |
-| a number box with nothing typed | the page's Undo |
-| a line of a threshold, with a run of the arrow keys waiting | the run is made a change, then undone, so the threshold goes back to where the presses started |
-| the dialog of the download of the filtered variants, open | nothing |
-| an open menu "Download…" | the page's Undo; the menu stays open, unless the undo removes the table or the plot it belongs to, which closes it, and the focus goes to the heading "Popnei" |
-| anywhere, while a PCA runs | nothing: Undo and Redo wait until the PCA ends or is stopped, their buttons greyed, as the filters it reads are locked (below, "While a PCA runs") |
-| anywhere else on the page | the page's Undo |
+**The quiet second** runs from the latest of two moments: the last
+change of the project, and the end of the last change under way. Each
+change, of any control, starts it again, so the user can go from one
+control to the next. A change under way is one the user is making that
+has not reached the project yet:
 
-The box refuses the browser's own undo of its text, by the keys and by
-the menu Edit, as it does since 9 October 2026 (`popgen2-filters.md`,
-"The number box"), so the browser's undo and the page's never act on the
-same press. The menu Edit of the browser is not the page's Undo.
+- the pointer held on the thumb of a slider of the PCA, or on the line
+  of a threshold, after it moved: from the first move to the release;
+- a list open, the method's or any other of the page: from its opening
+  to its closing;
+- a number box with text that differs from the project's value, those
+  of the thresholds and the PCA's r² and distance: from the first digit
+  to Enter, Tab, a click elsewhere or Escape;
+- a run of the arrow keys on a threshold, which becomes one change a
+  second after its last press (`popgen2-filters.md`, "When a threshold
+  changes the project");
+- the dialog of the download of the filtered variants open.
 
-**The focus.** When a press of Undo takes the last step and Undo goes,
-the focus moves to Redo, which the press has just shown; the same from
-Redo to Undo. When a button with the focus goes for any other reason, as
-when a file dropped on a box while Redo has the focus starts the history
-afresh, the focus goes to the heading "Popnei". A click on another
-control does not leave the focus on the button: in Chromium and in
-WebKit a click on the words of the FILTER box moves the focus off Redo
-before the box sends its command.
+So the PCA starts one second after the last change or release, and
+about two seconds after the last press of an arrow key on a threshold
+of the Variants tab, the threshold's own second and this one. Each
+press of an arrow key on a slider of the PCA is a change, and so is
+each press of the left or the right arrow, or of a letter, on the
+closed list of the method, which React Aria's list takes as a choice of
+the next item; each puts the second off. When the second runs out, the
+PCA is calculated for the values on the screen at that moment, not for
+those of the first change. Without the changes under way, the lock of
+the filters would fall on a control still in use: a thumb held still
+for a second would jump back at its release, an open list would close,
+and a box would stop taking digits before Enter (the design, choice 2).
 
-**While a PCA runs**, Undo and Redo wait, as the filters the PCA reads
-are locked (the owner's answer 2 to `docs/plans/analyses-pca.md`, 9
-October 2026). A button that has a step stays drawn where it was,
-greyed, and is still reached by the Tab key; its tooltip and its
-description for a screen reader are the reason it waits, "Stop the PCA
-to change the filters.", in place of its step; a click, Enter or Space
-on it does nothing; and the keys do nothing, as the table of the keys
-says. The reason is that of the lock of the filters, "Stop the PCoA to
-change the filters." under the PCoA (below, "While a PCA runs"; settled
-on 9 October 2026 by task 6.1 of the plan). When the PCA ends, fails or
-is stopped, each button is again as "When" and "What they say" give it.
+**About to start.** During the quiet second the tab shows no result,
+since its values are no longer those on the screen, and no Run: the
+options, open to change, the line of the individuals, and, in the
+place of the bar, the line "The PCA starts again in a moment, once the
+filters stop changing." ("The PCoA …" under the PCoA), with Stop beside
+it. Stop there ends the live state before the PCA starts: the tab shows
+Run, and nothing starts until it is pressed. (Stop during the second is
+the session's decision of 10 October 2026, from the owner's choice that
+Stop pauses the automatic runs: a user who wants to change two filters
+slowly, a screen reader's user among them, can keep the PCA from
+starting between them.)
+
+**Running.** A PCA started by itself is as one started by Run: Stop,
+the bar and the clock, and the filters it reads greyed with "Stop the
+PCA to change the filters." ("While a PCA runs", below). The status
+region says "Calculating the PCA again." ("the PCoA") once, at its start,
+and does not move the focus, so that a user who changed a threshold in
+the Variants tab, and then finds it greyed, learns why; a user who
+reaches a greyed control hears its reason as before. Its end is said
+as the end of any run, "PCA of panel.nei calculated.".
+
+**A value set back is calculated again.** The store of the page keeps
+no result for values the screen no longer shows (`docs/specs/core/store.md`,
+`dropLeftBehind`), so a threshold moved and moved back starts the PCA
+twice, once for each change that reaches the project. The one
+exception is a lock: the LD distance emptied keeps the result it had,
+not shown, and the same distance typed again shows it with no
+calculation; another distance calculates.
+
+**What starts nothing.** The PCA not live; locked, with its reason
+beside Run, until the lock lifts; done under the key; in error under
+the key, popnei's refusal or a failure of the worker, which a change to
+another key starts again, and Run again in the tab tries again under
+the same key; and a change that gives the key it had.
+
+**Stop.** Stop, in the tab or in the band, ends the run, as before,
+and the live state: the tab shows Run with no result, since none is
+kept for these values, and a later change starts nothing until Run is
+pressed. The reason is the memory: in WebKit, the engine of Safari, a
+Stop of a PCA of 9,381 individuals leaves its 3.7 to 4.2 GB in the tab
+for 40 s and more (`docs/architecture.md`, section 5), and a PCA
+started by itself a second after the next change would grow on top of
+it, and grey the next filter before the user reached it. The status
+region says "PCA stopped. Press Run in the PCA tab to calculate it
+again." ("PCoA"), whichever Stop was pressed, since a Stop in the band
+leaves the tab out of sight.
+
+**Another variants file** stops the PCA, as before, and ends the live
+state: for the new file, the PCA waits for its Run.
+
+**The download of the filtered variants** waits while a PCA runs, as
+built, also one started by itself; pressed during the quiet second, it
+goes first, and the PCA starts once its dialog closes
+(`popgen2-download.md`, "While a PCA runs", "When the PCA starts by
+itself").
+
+**For the implementer** (the design, "For the session that builds
+it"): the start by itself is in `src/ui/autoRuns.ts`, the PCA a second
+group after `POPGEN2_CHAIN`, so that it waits for the one pass as
+`passLock.ts` makes Run wait; Run of the tab calls `autoRuns.run`,
+which records the live state as the load id of the variants file and
+starts the PCA at once; Stop calls `autoRuns.pause`, which cancels the
+run and ends the live state; `autoRuns` forgets a key it started the PCA
+under once the store leaves that key behind; it starts nothing while
+`anyRunning` of its groups, a write of the store, or a change under way
+holds; and it reads the PCA's key from the store when the second runs
+out. The changes under way are counted by the gate of the page,
+`createRunGate` of `src/ui/variants/thresholdRun.ts`, whose `hold`
+gains a count and a `subscribe` that tells `autoRuns` when it falls to
+zero; `Slider.tsx`, `ThresholdSlider.tsx`, `Select.tsx` and
+`NumberField.tsx` of `src/ui/widgets/`, and the dialog of the download,
+take and release a hold through `RunGateProvider`. The state about to
+start is the PCA `ready` in the store, live, its key not started under,
+the one pass read to the end; `autoRuns` gives the page a function that
+says it, `aboutToStart`, and its `subscribe` tells the page when it
+changes with no change of the store. The live state is not in the
+project: the project is shared with `popgen.html`, and a field of it
+would have to be kept out of the PCA's key by hand (the design, choice
+3).
 
 ### The row of tabs
 
@@ -402,10 +512,10 @@ Then three, in this order:
   owner's decision of 7 October 2026), and a PCA's own value of 1, left
   by "Stricter for the PCA" before 10 October 2026, is no filter either
   (`pcaFilters`, `docs/specs/analyses/pca.md`, "On popgen2.html").
-  Each key pressed is one step of Undo, where a threshold of the
-  Variants tab makes one change of a run of the keys; the owner has
-  asked for Undo to go (round 1, item 4), so the page does not gather
-  them.
+  Each key pressed is a change of the project, where a threshold of
+  the Variants tab makes one change of a run of the keys; while the PCA
+  is live, the quiet second gathers them, and the PCA starts once, a
+  second after the last press ("The PCA calculated again by itself").
 
   The ends, the step and the value shown are `stricterBound` of
   `src/ui/analyses/pca/stricter.ts`, from the project and the decimals
@@ -467,7 +577,11 @@ individuals of panel.nei", or "111 of the 200 individuals of panel.nei,
 those the filters of individuals keep".
 
 **Run and Stop**, one button, with the lock beside it as text that
-describes it, the first of these:
+describes it. Run makes the PCA live for the file and starts it at
+once; Stop ends the run and the live state ("The PCA calculated again
+by itself"). During the quiet second the button is Stop, beside the
+line "The PCA starts again in a moment, once the filters stop
+changing.". The lock is the first of these:
 
 | the lock | the words |
 |---|---|
@@ -530,10 +644,13 @@ closed the tooltip on that scroll, so that the line of a threshold
 reached by the Tab key lost its reason in 2 of 12 runs of its flow in
 Chromium (since 10 October 2026). A press, a key or a drag on it
 changes nothing, and leaves its tooltip shown; the thumb of a slider
-stays where it is. Undo and Redo wait with the same
-words (above, "Undo and Redo"), and so does the download of the
-filtered variants, with its own ("Its words"). When the PCA ends, fails
-or is stopped, each is as before.
+stays where it is. The download of the filtered variants waits, with
+its own words ("Its words"). When the PCA ends, fails or is stopped,
+each is as before. The lock stays now that the PCA starts by itself,
+as the owner chose on 10 October 2026: a change that stopped the PCA
+and started it on the new values would end the calculation worker at
+each change, and in WebKit each stop of a large PCA leaves 3 to 4 GB
+in the tab for 40 s and more (`docs/architecture.md`, section 5).
 
 Not locked, since the PCA's key holds none of them: the box of the
 individuals file, its Open, its Remove, its reader's options and its
@@ -541,12 +658,10 @@ individuals file, its Open, its Remove, its reader's options and its
 counts; "Colour the points by", the axes, 3D or 2D and the turn and
 zoom of the 3D view; the row of tabs; and the opening of another variants file,
 which stops the PCA, as an opening stops every calculation. The owner's
-answer named the column of the populations among the filters to lock;
-the session asked on 9 October 2026 whether it should be, since the PCA
-does not read it, and until the owner answers the page follows the
-session's recommendation, to lock only what the PCA reads (written on 9
-October 2026, by task 6.1 of the plan; until then this spec listed the
-column).
+answer of 9 October 2026 named the column of the populations among the
+filters to lock; the session asked the same day whether it should be,
+since the PCA does not read it, and the owner answered on 10 October
+2026 that it stays open (open point 3 of `docs/designs/no-undo.md`).
 
 **The result**, as the old panel shows it (`docs/specs/analyses/pca.md`,
 "What it shows"), with these differences:
@@ -703,37 +818,46 @@ greyed or shows its line of not built yet.
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | the tab greyed, with its reason, as the row of tabs gives it; if it was shown when it became greyed, the reason in its place | open a variants file |
-| locked | the options, the line of the individuals, Run disabled with the lock beside it, from the table of "Run and Stop" | change the options; type the distance or turn the LD pruning off; Start again the one pass in the box; change the thresholds of the individuals |
-| ready | the options, the line of the individuals, Run | change the options; Run |
-| running | Stop, the bar and the clock, and the line under them; the options and the thresholds and FILTER box of the Variants tab greyed, with "Stop the PCA to change the filters." (above, "While a PCA runs") | Stop; change the individuals file, its column of the populations and the colour of the points; turn to another tab, where the PCA goes on; open another variants file, which stops it |
+| locked | the options, the line of the individuals, Run disabled with the lock beside it, from the table of "Run and Stop"; while the PCA is live, the lock and no Run but the same words, and the PCA starts by itself a second after the lock lifts, unless it lifts with the key it had, which shows the result kept | change the options; type the distance or turn the LD pruning off; Start again the one pass in the box; change the thresholds of the individuals |
+| ready | the options, the line of the individuals, Run: before the first Run for the file, and after a Stop | change the options; Run |
+| about to start | the PCA live, during the quiet second after a change: the options, the line of the individuals, no result, no Run, and in the place of the bar "The PCA starts again in a moment, once the filters stop changing." with Stop | go on changing the options and the thresholds, which puts the start off; Stop, which ends the live state |
+| running | Stop, the bar and the clock, and the line under them; the options and the thresholds and FILTER box of the Variants tab greyed, with "Stop the PCA to change the filters." (above, "While a PCA runs"); the same whether Run or a change started it | Stop; change the individuals file, its column of the populations and the colour of the points; turn to another tab, where the PCA goes on; open another variants file, which stops it |
 | done | the result, its warnings and notes, the downloads; "Loading the result…" in its place while its code downloads, or the words of its code that could not be downloaded, with "Try again" | colour, turn, highlight, sort, download; change the options; Try again |
-| results removed | the options, the line of the individuals and Run, as in ready, with no words of why: the page makes no notice, as the owner decided on 8 October 2026; an Undo of the change, or the filters set back as they were, show the result again from the cache | Undo; Run |
+| results removed | not a state of its own on this page: a change that takes the result off the screen gives about to start while the PCA is live, and ready, with Run, while it is not (before its first Run is impossible, so only after a Stop); the page makes no notice, as the owner decided on 8 October 2026, and keeps no result to bring back, since 10 October 2026 | as in about to start, or as in ready |
 | error | what happened and what to do, the old panel's words with this page's names, below | Run again after a failure that is not popnei's refusal; change the options or the thresholds after a refusal; open the variants file again after it could no longer be read |
 
 A change of the thresholds, of the FILTER box or of an option of the
 PCA that changes what the PCA reads, its key, takes a result off the
-screen. While a PCA runs no such change can be made, since they are
-locked; the store would stop it at once if one were. A change that does
-not, a threshold of the Variants tab moved while the PCA's own is
-stricter, the colour, the axes, the view, keeps the result on the
-screen. Another individuals file, or
-another column, colours the result again with no calculation. Another
-variants file stops the PCA and keeps its options.
+screen, and, while the PCA is live, starts it again a second after the
+user stops changing things. While a PCA runs no such change can be
+made, since they are locked; the store would stop it at once if one
+were. A change that does not, a threshold of the Variants tab moved
+while the PCA's own is stricter, the colour, the axes, the view, keeps
+the result on the screen and starts nothing. Another individuals file,
+or another column, colours the result again with no calculation.
+Another variants file stops the PCA, ends the live state and keeps its
+options.
 
 A defect of the application's own while the tab is drawn leaves its
-heading alone in its place, and the error bar says what happened, as
-for every part of the page; another variants file opened draws the tab
+heading alone in its place, and the band at the top of the page says
+what happened, in the place of the error bar
+(`docs/specs/steps/popgen2-band.md`), as for every part of the page; another variants file opened draws the tab
 again, and a tab that caught nothing keeps what it holds, a number
 half typed among it.
 
 ## What it sends and reads
 
-It sends the commands of the table of "What is a step", each with
+It sends the commands of the table of "No Undo and no Redo", each with
 `store.apply` and its description; the commands of the PCA are those of
-`src/ui/analyses/pca/commands.ts` with this page's descriptions; Run,
-`startAnalysis(store, "pca")` of `src/ui/runs.ts`; Stop,
-`store.cancelRun("pca")`; Undo and Redo, `undoOrRedo` of
-`src/ui/shell/undoRedo.ts`. The commands of the individuals file go
+`src/ui/analyses/pca/commands.ts` with this page's descriptions; from
+10 October 2026 Run, `autoRuns.run("pca")`, which makes the PCA live and
+starts it with `startAnalysis(store, "pca")` of `src/ui/runs.ts`; Stop,
+`autoRuns.pause("pca")`, which cancels the run with
+`store.cancelRun("pca")` and ends the live state; and each control that
+can hold a change under way takes and releases a hold of the gate
+(above, "The PCA calculated again by itself"). Until 10 October 2026
+Undo and Redo sent `undoOrRedo` of `src/ui/shell/undoRedo.ts`. The
+commands of the individuals file go
 that the user makes go through `store.applyAfresh` (`popgen2-input.md`,
 "What it sends and reads", revised), and the column the page chooses at
 a read is the store's `populationColumnChosen` (`docs/specs/entry.md`).
@@ -742,12 +866,10 @@ It reads: the state of `pca` among the store's analyses, and its run;
 the project, for `pcaOptions`, `pcaFilters` with the rule of this page,
 `pcaColours`, `colourColumns` and the names of the files; the
 individuals kept; `analysisTabs` of core for the row of tabs; the
-store's `undo` and `redo` and the run waiting on a threshold
-(`usePendingChange` of `src/ui/variants/runGate.tsx`) for Undo and
-Redo; the state of the one pass and of the code that starts it
-(`src/ui/autoRuns.ts`) for the lock of Run; and the state of `pca`,
-running or not, for the lock of the filters and the wait of Undo and
-Redo. It holds of its own the tab
+state of the one pass and of the code that starts it
+(`src/ui/autoRuns.ts`) for the lock of Run, and, from that code, whether
+the PCA is live and about to start; and the state of `pca`, running or
+not, for the lock of the filters. It holds of its own the tab
 shown, the sort and the scroll of each table, the group highlighted,
 the turn and the zoom of the 3D view, and the words of a PNG refused
 until the next choice of that menu (`docs/architecture.md`, section 7).
@@ -773,8 +895,6 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | Distances, the filters leave fewer than two | "The distances between populations need at least two populations, and the filters keep individuals of 1 population. Loosen the filters of the individuals in the Variants tab."; with none, "…, and the filters keep no individual of any population. …" |
 | Distances, no individual of the variants file in the individuals file | "The distances between populations need at least two populations, and no individual of panel.nei is in panel_pops.csv. Check that panel_pops.csv names the individuals as panel.nei does." |
 | Distances, the individuals in the file, but none with a value in the column | "The distances between populations need at least two populations, and no individual of panel.nei has a value in popcat. Choose another column of the populations in the box Individuals file, or add the populations to panel_pops.csv and open it again." |
-| Undo, Redo | "Undo"; "Redo"; their tooltips "Undo: ‹the description›", "Redo: ‹the description›" |
-| the status region, an undo or a redo | "Undone: ‹the description›."; "Redone: ‹the description›." |
 | the heading of the tab | "PCA"; "PCoA" |
 | the drop-down list of the method, its items and the line under it | "PCA of the genotypes"; "PCoA of the Kosman distances"; "The PCoA suits data with many missing genotypes." |
 | the filters | "Filters of the variants for the PCA"; "The PCA reads the variants the Variants tab keeps. Its own missing data and MAF filters can only be stricter."; "Maximum proportion of missing genotypes for the PCA"; "Maximum major allele frequency for the PCA"; "Prune the variants by linkage disequilibrium (LD)" |
@@ -791,8 +911,11 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | an error, a failure that is not popnei's refusal, in this page's words where the old panel's name the Variants step or a project to save (`popgen2FailureText` of `src/ui/analyses/words.ts`; since 9 October 2026, by task 6.1 of the plan, from the review of work package 2, which found the old words on this page) | the variants file changed on the disk since the one pass read it, a failure and not a refusal, "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants file."; an error of the application's own, "The application met an error of its own: ‹its words›. Run it again."; the calculations that could not start, "The application could not start its calculations. Reload the page and open panel.nei again."; the page out of date, "The page is out of date. Reload the page and open panel.nei again."; the worker that stopped, the PCA's own words of the memory, `crashText` of core with the page |
 | the note of the colours, a column to colour by that the individuals file lacks | "panel_pops.csv has no column height, by which the points were coloured, so they are coloured by the column of the populations chosen in the box Individuals file."; with no column of the populations chosen, or with None, "…, so every point is unclassified. Choose a column of the populations in the box Individuals file, or another column to colour the points by."; with no individuals file, "No individuals file is open in the box Individuals file, so the points cannot be coloured by height." |
 | the end of a run, in the status region | "PCA of panel.nei calculated."; "PCoA of panel.nei calculated."; a refusal or a failure, "The PCA of panel.nei could not be calculated: " followed by the words of its error |
+| in the place of the bar, during the quiet second | "The PCA starts again in a moment, once the filters stop changing."; "The PCoA starts again in a moment, once the filters stop changing." |
+| the status region, a PCA started by itself | "Calculating the PCA again."; "Calculating the PCoA again." |
+| the status region, a Stop of the PCA, in the tab or in the band | "PCA stopped. Press Run in the PCA tab to calculate it again."; "PCoA stopped. …" |
 | the download of the filtered variants while a PCA runs | "Waits for the PCA to end; or stop it in the PCA tab." |
-| the thresholds and the FILTER box of the Variants tab, the PCA's options, Undo and Redo, while a PCA runs, as tooltip and description | "Stop the PCA to change the filters."; under the PCoA, "Stop the PCoA to change the filters." |
+| the thresholds and the FILTER box of the Variants tab and the PCA's options, while a PCA runs, as tooltip and description | "Stop the PCA to change the filters."; under the PCoA, "Stop the PCoA to change the filters." |
 | the button of a download | "Download…", named for a screen reader "Download the plot of the proportion of missing genotypes of the variants", "Download the table of panel_pops.csv", "Download the plot of the PCA", "Download the explained variance of the PCA", "Download the table of the individuals of the PCA", from the title the table or the plot carries; but "Download the plot of the unbiased expected heterozygosity of the variants", whose title says "Expected heterozygosity (unbiased)", and "Download the counts per population of panel_pops.csv", whose caption names the individuals of the variants file |
 | its menu | "Table as CSV"; "Image as SVG"; "Image as PNG"; "Data as CSV" |
 | a histogram's menu waiting, and the menu of the counts per population | "Download once panel.nei is read to the end."; once the user stopped the one pass, "Download once panel.nei is read to the end: its reading was stopped; start it again in the box Variants file."; once it failed, "Nothing to download: panel.nei could not be read to the end; the box Variants file says why." |
@@ -850,15 +973,16 @@ individual.
 
 The criteria are those of WCAG 2.2 at level AA.
 
-**The order of the Tab key** (2.4.3): the heading is not a stop; Undo,
-then Redo, when shown; the box of the variants file and the box of the
+**The order of the Tab key** (2.4.3): the controls of the band, while
+it shows any (`docs/specs/steps/popgen2-band.md`, "Keys and focus");
+the heading is not a stop; the box of the variants file and the box of the
 individuals file, as `popgen2-input.md` gives them; the row of tabs,
 one stop, the tab shown, also after the arrow keys rested on a greyed
 tab before the focus left the row, whose Left and Right arrow keys move
 along the labels, greyed ones among them, and Home and End go to the
 first and the last; then
 the content of the tab shown. In the PCA tab: the method; the slider of
-the missing data; that of the MAF; the LD switch and its two fields; Run or Stop; the warnings; the plot's "Download…",
+the missing data; that of the MAF; the LD switch and its two fields; Run or Stop, or Stop beside the line of the quiet second; the warnings; the plot's "Download…",
 beside the title of the plot; the bar of controls; the legend; the link
 to the table; the "Download…" of the explained variance; the
 "Download…" of the table of the individuals, then the table. Each
@@ -883,8 +1007,9 @@ but in the greyed colour while it is shown, and a screen reader says
 "dimmed". Its contrast is exempt from 1.4.3 as
 that of a control that cannot be used.
 
-**What is said without moving the focus** (4.1.3): an undo or a redo; a
-file handed to the browser by a download, and a PNG refused; the end of
+**What is said without moving the focus** (4.1.3): a file handed to
+the browser by a download, and a PNG refused; the start of a PCA by
+itself, "Calculating the PCA again.", and a Stop of it; the end of
 a run, "PCA of panel.nei calculated.", and its refusal or failure,
 whichever tab is shown, since the user may have turned to another; the
 reason of the LD pruning with no distance when the switch is turned on
@@ -895,7 +1020,9 @@ result whose code could not be downloaded. Those of the 3D view and of
 the result's code are said once the PCA tab is shown, not while it is
 hidden behind another. A tab that becomes
 greyed or not is not said: the change comes from a file the user opened,
-whose box says it.
+whose box says it. The line of the quiet second is not said: it comes
+and goes within a second or two at each change, and the start that
+follows it is said.
 
 **The menus** are React Aria's: Enter, Space or the Down arrow key open
 a menu, the arrow keys move in it, Enter chooses, Escape closes it and
@@ -903,11 +1030,15 @@ gives the focus back to its button. Each button is named by what it
 downloads, so that the five buttons of the PCA tab are not five
 "Download".
 
-**Undo and Redo**: their tooltips are their descriptions; a button that
-goes hands the focus on, as "The focus" above says.
+**The focus at a Stop.** Stop in the tab gives way to Run, which takes
+the focus, as before. During the quiet second Stop stands where Run
+stood, so the focus stays on the button when it becomes Stop and when
+it becomes Stop's Run again. When the PCA starts by itself, the focus
+stays where it is: on a control that the lock greys, which keeps it
+and gives its reason, as before.
 
-**The size of what is pressed** (2.5.8): Undo, Redo, each "Download…"
-and each tab are at least 24 by 24 px, as every button of the page.
+**The size of what is pressed** (2.5.8): each "Download…" and each tab
+are at least 24 by 24 px, as every button of the page.
 
 The line "The Variants tab keeps at most …" is not said: it appears
 after a change made in the Variants tab, about a field the user is not
@@ -925,7 +1056,8 @@ and 2.5.1; "The result", the bar of controls; the owner's decision of
 
 **Not yet heard in VoiceOver**, which the session cannot run: the row
 read as "Files and analyses, tab list", a greyed tab read as dimmed with
-its reason; Undo read with its step; a menu of a download.
+its reason; a menu of a download; "Calculating the PCA again." heard
+once while the focus is on a threshold of the Variants tab.
 
 ## How it is checked
 
@@ -955,13 +1087,25 @@ its reason; Undo read with its step; a menu of a download.
   Start again offered, refused by popnei, read to the end.
 - The words of the lock of the filters by the method, and
   `popgen2FailureText` for each failure that is not popnei's refusal.
-- Undo and Redo, with the real store of the page and a fake worker:
-  nothing to undo after the store is made, after `panel.nei` is opened,
-  and after an individuals file is opened, read and given its column;
-  one step after a threshold; the descriptions of each row of "What is
-  a step"; an undo of a change that removed the PCA's result gives
-  `done` again with no request to the worker; a PCA running when a
-  threshold changes is stopped at once, and an undo gives `ready`.
+- The PCA calculated again by itself, from 10 October 2026, at
+  `createAutoRuns` with the real store of the page, a fake worker, the
+  gate, and the clock of Vitest: the PCA does not start before Run;
+  after Run and its end, a threshold changed starts it one second later,
+  and a second change within that second puts it off; a hold taken, a
+  slider held, a list open, digits not confirmed, the dialog of the
+  download open, keeps it from starting for 3 s, and its release starts
+  the second; the PCA is calculated for the key of the project when the
+  second runs out; nothing starts while a PCA, the one pass or a write
+  runs; a value set back starts it again; the colour of the points, the
+  individuals file and its column start nothing; a Stop, during a run or
+  during the second, ends the live state, and a change then starts
+  nothing until Run; another variants file ends it; the LD distance
+  emptied and typed again with the same value shows the result kept,
+  with no request; a PCA refused by popnei under a key does not start
+  again under it, and a change to another key starts it; `aboutToStart`
+  true during the second alone.
+- No Undo: the page's store has no `undo` nor `redo` in its type; a
+  press of Ctrl+Z on the page sends no command.
 - The CSV of each table and plot, in `docs/specs/widgets/downloads.md`.
 
 **In Playwright, on the built site, in Chromium and WebKit**, the two
@@ -1009,20 +1153,27 @@ engines that start on the owner's Mac, on `panel.nei`,
   to change the filters." as its tooltip and description; a press, a
   key or a drag on one changes nothing; the column of the populations
   and "Colour the points by" not greyed, a column chosen leaving the PCA
-  running; Undo greyed with the same words, and Ctrl+Z undoes nothing
-  while it runs; an opening of another variants file stops it, the tab
+  running; an opening of another variants file stops it, the tab
   ready.
-- **Undo and Redo**: no button when the page opens, after `panel.nei`,
-  and after `panel_pops.csv`; a threshold moved: Undo, with its tooltip
-  "Undo: the filter of the variants by missing data changed" on the focus; Undo pressed:
-  Redo appears, Undo goes, the focus on Redo, neither button moved by a
-  pixel; Ctrl+Z and Meta+Z on the heading, on a line and in a box with
-  nothing typed, an undo each; 0.9 typed in the MAF box, Ctrl+Z: the box
-  back to its number and Undo still naming the step before; the PCA
-  done, a threshold that removes it moved, Undo: the plot back with no
-  request to the worker; a menu "Download…" open, Ctrl+Z: an undo, the
-  menu still open; the line of the heading of the same height with and
-  without the buttons, at 320 and 1280 px.
+- **No Undo**: no button Undo nor Redo when the page opens, after
+  `panel.nei`, after a threshold moved and after the PCA; Ctrl+Z,
+  Meta+Z, Ctrl+Shift+Z and Ctrl+Y on the heading, on a line and in a
+  box with nothing typed change no threshold, no option and no result;
+  0.9 typed in the MAF box, Ctrl+Z: the box back to its number.
+- **Live**, the design's checks in the browser, in `e2e/popgen2Live.spec.ts`:
+  after Run and its end, ten presses of an arrow key on a threshold, on
+  the slider of the missing data of the PCA and on the closed list of
+  the method start one PCA, after the last press, and no control greys
+  before it (the worker's requests counted); a slider held still for
+  3 s, the list held open for 3 s and digits typed slowly over 3 s each
+  keep working, before any PCA starts; after a change the tab never
+  shows the old result, nor Run, between the change and the bar, read
+  every animation frame; the line of the quiet second, then the bar;
+  the status region says "Calculating the PCA again." once; a value set
+  back calculates again (a request); Stop during the second: Run, and a
+  later change sends nothing; the numbers of the PCA started by itself
+  after the missing data of the PCA moved to 0.05 are those of "Its
+  filters" below, 532 variants and PC1 3.58%.
 - **The downloads**: each menu opened and chosen with the keyboard
   alone; the CSV of the PCA's plot saved and read back, header
   `individual,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10` and the row of
@@ -1037,8 +1188,10 @@ engines that start on the owner's Mac, on `panel.nei`,
   greyed tabs and the menus, in light and in dark.
 
 The flows of the old page's PCA are run again, since its module and
-panel are shared, and the flows of `popgen2Undo.spec.ts`, which the
-hidden buttons had cut down, are brought back with the buttons.
+panel are shared, and so are the old page's flows of Undo, which keeps
+it. The flows of `popgen2Undo.spec.ts` that check Undo and Redo on this
+page go, and its checks that no key undoes anything stay, in the bullet
+"No Undo".
 
 **The numbers** are popnei's, from release 0.2.2 under node on 9
 October 2026, on `e2e/fixtures/panel.nei`. The reference is the first
@@ -1062,15 +1215,20 @@ these values.
 tooltip shown; the PCA tab locked, locked by the empty distance once
 the file is read, `popgen2-pca-locked-ld`, ready, running, done in 3D
 and in 2D, with the PCoA's warning, while the result's code downloads
-and after it could not be; a menu of a download open; Undo alone,
-Undo with Redo, and Undo waiting while a PCA runs,
-`popgen2-undo-waiting`; light and dark; 1280 and 320 px.
+and after it could not be; a menu of a download open; about to start,
+`popgen2-pca-about-to-start`, and running started by itself with the
+Variants tab shown and a threshold greyed, `popgen2-pca-live-locked`;
+light and dark; 1280 and 320 px. The screens `popgen2-undo`,
+`popgen2-undo-redo` and `popgen2-undo-waiting` go.
 
 **By hand**, in the plan: the memory and the time of a PCA and a PCoA
 of 1,000, 4,000 and 9,381 individuals after the one pass of the same
 file, in Chromium and WebKit (the design, "The memory and the time");
 the time of the CSV of a table of 10,000 rows; VoiceOver with Safari on
-the row of tabs, Undo and a menu.
+the row of tabs and a menu; and, by the owner in the running page,
+whether the quiet second is long enough to go from one control to the
+next, which would send the design back if it is not (the design, "How
+it will be tested").
 
 ## Choices made by the session
 
@@ -1083,30 +1241,40 @@ kept when the Variants tab goes below it; the upper end of each slider
 read as "as in the Variants tab", `follow` true, so that it stays so
 when the Variants tab changes; the MAF slider from 0.5, or from the
 Variants tab's value below 0.5; the step of each slider that of the
-Variants tab's box, 0.01 at the most; a command, and a step of Undo, at
-each key pressed on a slider; the PCA's limit of 9,381 individuals
+Variants tab's box, 0.01 at the most; a command at each key pressed on
+a slider; the PCA's limit of 9,381 individuals
 before the lock of the one pass; the LD pruning a
 switch; one button "Download…" with a menu; the names of the files;
-Redo back with Undo, shown by the same rule; their places that stay
-empty; the keys caught on the whole page; the removal of the individuals
-file and a change of its reader as no steps; the filters a running PCA
-reads locked, and Undo and Redo waiting while it runs (the owner's
-answer 2 of 9 October 2026), and the column of the populations left
-open meanwhile, pending the owner's answer to the session's question of
-the same day; the end of a slider at 1 while the Variants tab has the
+the removal of the individuals
+file and a change of its reader through `applyAfresh`; the end of a
+slider at 1 while the Variants tab has the
 threshold off, read as no filter; a population with no point left out
-of the legend; and the words.
+of the legend; and the words. From 10 October 2026: Stop offered during
+the quiet second; every open list of the page holding the second, not
+the method's alone, since a list open elsewhere is a user still
+choosing; the dialog of the download holding it; the line of the quiet
+second in the place of the bar; "Calculating the PCA again." said at
+each start by itself, and the Stop said in the status region; the PCA
+live again after Run again following a failure.
+
+Decided by the owner and no longer the session's: the filters a running
+PCA reads locked (answer 2 of 9 October 2026, kept on 10 October 2026
+after the measurement of a stopped worker in WebKit); the column of the
+populations open during a run, Stop that ends the live state, and the
+download that waits for a running PCA (the open points of
+`docs/designs/no-undo.md`, 10 October 2026).
 
 ## Left for the running application
 
-The spacing of the line of the heading and of the buttons, the look of
+The spacing of the line of the heading, the look of
 a greyed tab, the layout of the options and of the bar of controls, the
 size of the plot, where each "Download…" sits beside its caption, and
 whether the options fold away once there is a result.
 
 ## Open points
 
-None. The owner answered the design's questions on 9 October 2026.
+None. The owner answered the design's questions on 9 October 2026,
+and those of `docs/designs/no-undo.md` on 10 October 2026.
 
 ## Not in this spec
 
@@ -1114,7 +1282,11 @@ None. The owner answered the design's questions on 9 October 2026.
   `docs/specs/analyses/pca.md`, with its part "On popgen2.html".
 - The CSV of each table and plot, the menu's component and the handle
   of a plot: `docs/specs/widgets/downloads.md`.
-- The store's setting of this page and `applyAfresh`:
+- The band at the top of the page, its Stop and its pointer to the
+  warnings of the PCA: `docs/specs/steps/popgen2-band.md`.
+- What Ctrl+Z does on the page: `popgen2-filters.md`, "Undo, Redo and
+  their keys".
+- The store's settings of this page and `applyAfresh`:
   `docs/specs/core/store.md`.
 - The boxes, the Variants tab and the Individuals tab:
   `popgen2-input.md`, `popgen2-filters.md`, `popgen2-download.md`.

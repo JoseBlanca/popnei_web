@@ -46,6 +46,18 @@ and was lost when another file was opened. It covers cases 1 and 2 of
 `docs/use-cases.md` up to the point where the filters are carried out,
 which waits for the tools section.
 
+Revised on 10 October 2026 for `docs/designs/no-undo.md`, approved by
+the owner that day: the page has no Undo and no Redo for good, where
+from 9 October 2026 it had them again at the right end of the line of
+its heading; it catches none of their keys; and a change of a threshold
+or of the FILTER box starts the PCA again by itself a second later once
+its Run has been pressed for the file (`docs/specs/steps/popgen2-pca.md`,
+"The PCA calculated again by itself"). The sections "Undo, Redo and
+their keys", "When a threshold changes the project", "What it sends and
+reads", "Its words" and "Accessibility" say so; the descriptions of the
+commands, which named the steps of Undo, stay in the code and are shown
+nowhere on this page. The rest is unchanged.
+
 The commands of the project, the kind `passed`, the opening of a file
 as a new history, the failures that
 survive a change of a filter and the result so far kept after a Stop are
@@ -117,8 +129,9 @@ them and does not repeat them.
 - Each threshold on a histogram is a filter of the project. Moving it,
   typing its number or turning it off is a change of the project, with
   no notice.
-- The page has no Undo and no Redo, and Ctrl+Z changes nothing on it,
-  as the owner decided on 8 October 2026.
+- The page has no Undo and no Redo, and Ctrl+Z changes nothing on it
+  but the text of a number box, as the owner decided on 8 October 2026
+  and again, for good, on 10 October 2026.
 - A threshold is on or off. Off, its box shows 1 and its line stands
   at the top of the axis, both in grey, with no shading.
 - No line under a plot says how many variants or individuals its
@@ -129,8 +142,8 @@ them and does not repeat them.
   default, for a VCF and for a `.nei` file that records the FILTER of
   its variants.
 - The thresholds stay where they are when another file is opened.
-- Opening a file starts the history of the project afresh, so that an
-  Undo, when the page draws it again, never takes an opening back.
+- Opening a file starts the history of the project afresh; with no
+  Undo on the page, a user sees nothing of it.
 - After a Stop, the plots read so far stay, marked as made from the
   variants read before the Stop.
 - The expected heterozygosity keeps its plot and loses its line and its
@@ -150,77 +163,43 @@ histograms and the download of their table; "Open another variants
 file…". Until 8 October 2026 a row of Undo and Redo stood between the
 heading and the box of the file, there before any file was opened, both
 disabled, so that the page did not move down when the first file was
-opened; it goes back there when the page draws it again.
+opened. From 9 to 10 October 2026 Undo and Redo stood at the right end
+of the line of the heading; since 10 October 2026 there are none, and
+the band of the page stands above the heading
+(`docs/specs/steps/popgen2-band.md`).
 
 ### Undo, Redo and their keys
 
-Revised on 9 October 2026: the owner brought Undo and Redo back, at the
-right end of the line of the page's heading, each drawn only while it has a step to
-take, with their keys caught on the whole page whether or not a button
-is shown. What they do, where they are and how their keys live beside
-the number boxes is in `docs/specs/steps/popgen2-pca.md`, "Undo and
-Redo", which replaces this section where the two differ; built on the
-branch `pca-tab` that day, work package 4 of
-`docs/plans/analyses-pca.md`. The rest of this section is the state of
-8 October 2026.
+Revised on 10 October 2026 (`docs/designs/no-undo.md`): the page has no
+Undo and no Redo, no button and no key, for good. It had them from 7
+October 2026, hid them on 8 October 2026, and had them again from 9
+October 2026 at the right end of the line of its heading
+(`docs/specs/steps/popgen2-pca.md` until 10 October 2026). The line of
+the heading now holds the heading alone, and the band of the page stands
+above it (`docs/specs/steps/popgen2-band.md`).
 
-The page draws no Undo and no Redo, as the owner decided on 8 October
-2026 after trying the thresholds, until a later feature needs them. So
-it has no button Undo nor Redo, and no handler of the page catches
-Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y, Cmd+Z or Cmd+Shift+Z: on the heading, on
-a line or in a box with nothing typed, they change neither a threshold
-nor the FILTER box. Only the change the session needs to stop drawing
-the row was made (`src/ui/variants/VariantsPage.tsx`, where a comment
-stands in its place). The rest is kept, ready to draw the row again:
-the store's history, with the opening of a file as a new history; the
-thresholds and the FILTER box as commands of the store, each with the
-description that names its step of Undo; a run of the keys made a
-change before any other command, and before an opening; Ctrl+Z and
-Ctrl+Y caught by a threshold while its run waits, which now only make
-the run a change a little before its second is up; Undo enabled while
-a run waits, and the words of an undo; and the shell's buttons
-themselves, `src/ui/shell/UndoRedoButtons.tsx`, which the old page
-draws unchanged. The rest of this section says what the row does when
-the page draws it again.
+No handler of the page catches Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y, Cmd+Z or
+Cmd+Shift+Z, as the design's choice 6 says:
 
-The row holds the shell's Undo and Redo buttons (`docs/specs/shell.md`,
-"The header"), reused and not copied. Each is named, on hover and for a
-screen reader, by what it would take back or bring again, "Undo: the
-MAF filter changed", from `undo` and `redo` of the store, and is
-disabled when there is nothing to undo or redo. When the button that has
-the focus becomes disabled, the focus moves to the other one. The keys
-are the shell's, from `src/ui/shell/shortcuts.ts`, caught on the whole
-window as the shell's header catches them: Ctrl+Z undoes, Ctrl+Shift+Z
-and Ctrl+Y redo, and on macOS Cmd+Z and Cmd+Shift+Z. In a number box
-with something typed, Ctrl+Z puts back the box's number instead, as on
-the old page. An undo or a redo is told as `src/ui/shell/undoRedo.ts`
-tells it when the store gives no notice, which on this page it never
-does: in the status region, "Undone: the MAF filter changed."
+| where the focus is | Ctrl+Z or Cmd+Z |
+|---|---|
+| a number box with something typed and not yet given to the project by Enter, Tab or a click elsewhere | puts back the box's number, the project's value, as now |
+| a number box with nothing typed | nothing: the box refuses the browser's own undo of its text, which on 9 October 2026 put back the old text and gave it to the project as a change, in Chromium and WebKit on macOS ("The number box") |
+| a line of a threshold, with a run of the arrow keys waiting | nothing; the run becomes a change at its second, or when the focus leaves |
+| anywhere else on the page | nothing the page does; the browser's own, which on a page with no text field changes nothing |
 
-They undo and redo the changes of the filters alone. Opening a file,
-the first or another, by the button, a drop or a paste, starts the
-page's history afresh: the store's `open` takes the project with the
-new file and the filters as the user left them, so that Undo and Redo
-are both disabled after it, and the steps before it are gone
-(`openVariantsFile` of `src/ui/popgen2Store.ts`;
-`docs/specs/core/store.md`, "Commands and events"). The owner decided
-on 8 October 2026 that an Undo of an opening is "not necessary". Until
-then an opening was a step of Undo, named by the file, "Undo:
-panel.nei opened".
+Ctrl+Shift+Z, Cmd+Shift+Z and Ctrl+Y likewise. Safari is said to
+reopen the last closed tab at Cmd+Z when the page does not take the
+key; not tried (the design, "The browsers").
 
-An individuals file, opened, removed or read with other options, starts
-the history afresh too, through the store's `applyAfresh` rather than
-`open`, which would stop the one pass; the column the user chooses is a
-step, and the column the page chooses at the end of a read is none
-(`docs/specs/core/store.md`, "On popgen2.html: no notice, and a history
-of the filters").
-
-The part of the shell's header that draws the two buttons and listens
-for the keys was taken out of `src/ui/shell/Header.tsx` into a part of
-its own, `src/ui/shell/UndoRedoButtons.tsx`, which the old page's
-header draws beside Open project… and Save project, which
-`popgen2.html` does not have, and which this page drew until 8 October
-2026.
+The store keeps its history, of one past project on this page, since
+the code of `popgen.html` needs it (`docs/specs/core/store.md`, "On
+popgen2.html: no notice, no Undo, and no result kept for values left
+behind"). Opening a variants file goes through the store's `open`, and
+a change of the individuals file through `applyAfresh`, as before; with
+nothing to undo, a user sees no difference between the two.
+`src/ui/shell/UndoRedoButtons.tsx`, `undoRedo.ts` and `shortcuts.ts`
+stay for `popgen.html`, which draws them unchanged.
 
 ### No notice
 
@@ -380,7 +359,7 @@ one individual of the worked example of `individualChecks.md`, before
 
 ### When a threshold changes the project
 
-One change, with its step of Undo, is made:
+One change of the project is made:
 
 - when the user lets go of the line, not while it is dragged;
 - when the user presses Enter or Tab in the box, or the box loses the
@@ -393,8 +372,8 @@ One change, with its step of Undo, is made:
 While the line is dragged, a number is typed or a run of presses waits,
 the shading of that threshold, and whether it is grey, follow it from
 the bins, and nothing else on the page changes. A change that gives the value the
-project already has is no change and leaves no step of Undo. So a run
-or a drag that ends where it started makes no change, no step of Undo
+project already has is no change, and starts no PCA. So a run
+or a drag that ends where it started makes no change; and
 from off, where the line stands at the top of the axis,
 Down then Up ends at the top, and the filter stays off, although a line
 dragged there from another place would be a filter at that value.
@@ -418,33 +397,28 @@ they too go to the run.
 The reason for the runs: an axis has at most 100 steps of the threshold
 (`AXIS_POSITIONS` of `src/core/thresholds.ts`, the step chosen so in
 `docs/plans/thresholds.md`, "Round 1 with the owner"), and a held key
-repeats. A change at each press would fill the 200 steps of the history
-(`MAX_UNDO_STEPS` of `src/core/history.ts`) with two sweeps of an axis
-and push every change before them out of it.
+repeats. Until 10 October 2026 a change at each press would have filled
+the 200 steps of the history with two sweeps of an axis. From then the
+run is what keeps a held key from being a change at each press while
+the PCA is live: the run is one change, and the PCA starts once, a
+second after it is made (`docs/specs/steps/popgen2-pca.md`, "The PCA
+calculated again by itself"), about two seconds after the last press.
+While a run waits, it holds the PCA's second, as a slider held does.
 
-**A run waiting is made a change before any other command.** Undo, Redo,
-a click on the FILTER box, another threshold,
+**A run waiting is made a change before any other command.** A click
+on the FILTER box, another threshold, Run of the PCA, the download of
+the filtered variants,
 opening a file, by the button, a drop or a paste: each comes after the
 run waiting has been made a change. A click with the mouse on another
 control moves the focus to that control before the click acts; the
 threshold, losing the focus, makes its change then, so the click comes
-after it. Ctrl+Z and Ctrl+Y do not move the focus, so the threshold
-catches them itself while it holds a run, makes the change, and lets the
-Undo or Redo go on: Ctrl+Z pressed half a second after a run of ten
-presses undoes those ten presses, and Redo brings them back. A file
+after it. Until 10 October 2026 the threshold also caught Ctrl+Z and
+Ctrl+Y while it held a run, made the change and let the Undo or Redo go
+on; with no Undo it catches neither. A file
 dropped or pasted does not move the focus either, so the opening makes
 the run waiting a change first, and also commits a number typed and not
 yet committed, as the old page does before an opening (`onCommitReady`
 of the number box).
-
-**Undo while a run waits**, when the page draws Undo. For the second a run waits, Undo is enabled
-and named by the change the run will become, "Undo: the filter of the
-variants by missing data changed", and Redo is disabled, since that
-change will leave nothing to redo. A click on Undo, which in WebKit
-does not move the focus, makes the run a change and then undoes it, as
-Ctrl+Z does. Before 8 October 2026 Undo was drawn disabled, or named
-the change before the run, for that second, although Ctrl+Z undid the
-run.
 
 **A threshold that leaves the page.** The statistics leave the state
 ready, running or done in two cases: when the worker crashes, which
@@ -453,8 +427,8 @@ what failed and Start again (see "The states"); and when a Stop comes
 before the first result so far, which leaves no plots. In both, the
 thresholds leave the page, the one the user is moving among them. A run
 waiting, a drag or a number typed and not yet committed is made a
-change before its threshold goes, so that what the user did is kept,
-with its Undo. The focus, which was on the line or the box that went,
+change before its threshold goes, so that what the user did is kept.
+The focus, which was on the line or the box that went,
 goes to the heading of the page, "Popnei". Otherwise it would be on
 nothing, and the next press of Tab would start again from the top of the
 page in some browsers and from the end in others.
@@ -470,8 +444,8 @@ How the box is used, on this page:
   turns it off. Tab then moves the focus to the next control.
 - **Escape** puts back the box's number, the project's value, and so
   does **Ctrl+Z** while something typed is not yet committed. With
-  nothing typed, Ctrl+Z changes nothing on this page; it would be the
-  page's Undo if the page drew it again. The box keeps the browser's
+  nothing typed, Ctrl+Z changes nothing on this page, which has no
+  Undo since 10 October 2026. The box keeps the browser's
   own undo and redo off its text. Ctrl+Z on Windows and Linux and Cmd+Z
   on macOS offer them before the text changes, and the box refuses them.
   The command of an undo given by the page, `document.execCommand`,
@@ -578,13 +552,12 @@ since a `.nei` file written from a VCF would otherwise keep its failed
 variants with nothing on the page saying so.
 
 Each click is one change, with no notice, as the owner decided on 8
-October 2026; a screen reader hears the box ticked or not. Its step of
-Undo is named in the box's own words, "the variants that failed their
-FILTER are kept" when the box is unticked, "the variants that failed
-their FILTER are left out" when it is ticked: the hints of Undo and
-Redo, "Undo: the variants that failed their FILTER are kept", and the
-words of an undo in the status region, "Undone: the variants that
-failed their FILTER are kept." It changes no plot and no count. The count of the
+October 2026; a screen reader hears the box ticked or not. Its
+description, which named its step of Undo until 10 October 2026, is in
+the box's own words, "the variants that failed their FILTER are kept"
+when the box is unticked, "the variants that failed their FILTER are
+left out" when it is ticked. It changes no plot and no count; while the
+PCA is live it starts the PCA again a second later. The count of the
 variants that failed their FILTER is in the box of the file, "FILTER
 failures: 300" for `low_qual.vcf.gz`, from the one pass, as the piece
 `popnei-0.2.2` builds it; a file of which no variant passed is shown as
@@ -636,13 +609,13 @@ has no Undo and no Redo in any of them.
 
 ## What it sends and reads
 
-It sends, each with its description, which names its step of Undo:
+It sends, each with its description, which named its step of Undo
+until 10 October 2026 and is shown nowhere since:
 
 | what the user does | the command | the description |
 |---|---|---|
 | any of the five thresholds changed, turned on or turned off, by a drag, a run of keys or the box | `setThreshold(p, threshold, value)`, with the number, or `null` for an emptied box; 1 turns it off there | "the MAF filter changed", "the MAF filter was turned on", "the MAF filter was turned off"; "the filter of the variants by missing data changed", "the filter of individuals by missing data was turned off", and so for each |
 | the FILTER box | `setVariantFilter(p, { kind: "passed" })`, `turnOffVariantFilter(p, "passed")` | "the variants that failed their FILTER are left out", "the variants that failed their FILTER are kept" |
-| Undo, Redo, when the page draws them again | `store.undo()`, `store.redo()` | |
 | a file opened, by the button, a drop or a paste | `store.open((p) => loadVariants(p, load))`, through `openVariantsFile` | none: no step of Undo |
 
 The page chooses the words of a threshold's description by comparing its
@@ -666,9 +639,7 @@ kept with their values while off (`filtersOff`); whether the opening of the
 file said that its variants record their FILTER, for whether the box is
 shown (`keepsPassed` of the read of the file, `project.variants.read`
 of kind `read`, and not `keepsPassed(project.variants)`, which answers
-by the format before the read); what Undo
-and Redo would do (`undo` and `redo` of the store), when the page
-draws them; and the status of the summary, with its result so far while it
+by the format before the read); and the status of the summary, with its result so far while it
 runs and after a Stop. It holds no value of a filter of its own but the
 number being dragged, typed or moved by a run of keys.
 
@@ -691,8 +662,6 @@ heading the user can find.
 | announced when a number committed in the box, or a run of the keys made a change, changes the look | into on and grey: "This filter removes no variant of the plot.", "… no individual of the plot."; into off: "This filter removes nothing."; back to removing some: the number alone, as the line reads it, "0.05"; nothing when the look stays |
 | the FILTER box | "Leave out the variants that failed their FILTER" |
 | under it | "The plots show every variant. The ones that failed are left out of what is downloaded or analysed." |
-| after an undo, in the status region, when the page draws Undo | "Undone: the MAF filter changed."; "Undone: the variants that failed their FILTER are kept." |
-| the hint of Undo and Redo, when the page draws them | "Undo: the MAF filter changed", "Redo: the MAF filter changed", "Undo: the MAF filter was turned off"; of the FILTER box, "Undo: the variants that failed their FILTER are kept" |
 | over a part, after a Stop with plots | "Stopped. The plots are of the variants read before the Stop." |
 | the individuals with no value, on and off | "3 individuals with no called genotype are not in the histogram, and this filter removes them."; "3 individuals with no called genotype are not in the histogram." |
 
@@ -710,16 +679,16 @@ box and its line; the download of the table of the individuals; "Open
 another variants file…".
 
 **What is said without moving the focus** (4.1.3, "Status messages").
-A number refused, as today; an undo or a redo, when the page draws
-them again. A
+A number refused, as today. A
 change of a filter itself is heard as the change of the control the
 user acted on, and nothing more is said, except when it turns the
 threshold on, grey or off from another of the three: then the words of
 the new look are said once (above, "Its words"). Nothing at each press
 of an arrow key: the line's value is read as it moves, as of any
-slider; a run that changes the look is said once it is made a change,
-and an Undo straight after, when the page draws it, drops what it would
-have said.
+slider; a run that changes the look is said once it is made a change. A PCA
+that a change starts by itself is said by the PCA tab's words,
+"Calculating the PCA again." (`docs/specs/steps/popgen2-pca.md`), so a
+user who moved a threshold of the Variants tab learns of it there.
 
 **The grey in words** (1.4.1, "Use of color"). A threshold that keeps
 every value of its plot, off or on, is shown on the screen by its grey
@@ -737,11 +706,6 @@ the background, so the grey number in the box meets 1.4.3, "Contrast
 grey is often fainter, and a number too faint to read would hide the
 threshold's value.
 
-**The keys that would be lost**, when the page draws Undo. Ctrl+Z and
-Ctrl+Y on a line holding a run are caught by the threshold, as said
-above, so that a user of the keyboard never undoes the change before the
-run while meaning the run.
-
 **Not yet heard in VoiceOver.** The design asked that VoiceOver on
 macOS with Safari be heard before the plan was settled, which could not
 be done before the screen existed; the session cannot run VoiceOver,
@@ -749,8 +713,7 @@ and by 8 October 2026, when the owner accepted the screen, nobody had
 heard it. What is to be heard: a box that is off announced with its
 value 1 and "This filter removes nothing.", and the line with "1, keeps
 every variant"; a line on and grey with "0.1, keeps every variant of
-the plot"; the FILTER box with its sentence; and, once the page draws
-Undo again, a run of ten presses on a line as one step of Undo.
+the plot"; and the FILTER box with its sentence.
 
 ## How it is checked
 
@@ -761,7 +724,8 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
 
 - the worker receives one request for a file, and none while a threshold
   is dragged, typed, moved with the arrow keys or turned off, or the
-  FILTER box ticked;
+  FILTER box ticked, while the PCA has not been run for the file (once
+  it has, `docs/specs/steps/popgen2-pca.md` says what a change starts);
 - the page has no button Undo nor Redo, before a file and after one;
 - Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z, and Cmd+Z and Cmd+Shift+Z, pressed
   on the heading, on a line while its run waits, the page's clock

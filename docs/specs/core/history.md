@@ -14,7 +14,18 @@ event `populationColumnChosen` writes it into every project of the
 history that holds that read, as a read is recorded, with `mapProjects`.
 Nothing in this module changes, and nothing changed in it when the
 branch `pca-tab` built Undo and Redo on that page on 9 October 2026
-(`docs/plans/analyses-pca.md`, work packages 3 and 4). The code is in `src/core/history.ts`. The history keeps the projects the user has had, so that an undo
+(`docs/plans/analyses-pca.md`, work packages 3 and 4). Revised on 10
+October 2026 for `docs/designs/no-undo.md`, approved by the owner that
+day: `popgen2.html` has no Undo and no Redo from then, and its store
+keeps the history with a bound of one step, `maxUndoSteps` 1, so that
+it holds two projects at most; nothing of the page walks it
+(`docs/specs/core/store.md`, "On popgen2.html: no notice, no Undo, and
+no result kept for values left behind"). What this spec says of Undo
+and Redo, the header, the keys and the notice is of `popgen.html`
+alone. Nothing in this module changes; the bound of one step is a
+value it already takes, and its tests of a short bound cover it. The
+module goes whole when `popgen.html` is deleted, as the owner decided
+on 9 October 2026. The code is in `src/core/history.ts`. The history keeps the projects the user has had, so that an undo
 gives back the previous one and a redo the one after it. Because a result
 is found by the key that a project gives it (`docs/architecture.md`,
 section 3), an undo also brings back the results of the previous project,
@@ -190,7 +201,7 @@ With Vitest, at `commit`, `undo`, `redo`, `startHistory` and
 
 ## Open points
 
-1. **How far back undo goes.** 200 steps is a guess at more than a session
+1. **How far back undo goes**, on `popgen.html`. 200 steps is a guess at more than a session
    of work needs, and costs little memory, since the steps share what they
    did not change. The owner may prefer no bound, which risks holding many
    tables of 10,000 rows after many loads of individuals files, or a

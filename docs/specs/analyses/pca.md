@@ -2120,7 +2120,8 @@ The commands of the options, in `src/ui/analyses/pca/commands.ts`, read
 and write the options of the page too: `OptionsOf` is made for a page,
 with `read: (p) => pcaOptions(p, page)` and the page's definition, and
 every command takes the page and gives the page's description
-(`docs/specs/steps/popgen2-pca.md`, "What is a step"). On
+(`docs/specs/steps/popgen2-pca.md`, "No Undo and no Redo", its table
+of the commands). On
 `popgen2.html` a command that read the options of the old page would
 write `PCA_DEFAULTS`, whose LD filter follows, and turn the LD pruning
 off at the first change of the colour. The page of a command carries
@@ -2188,10 +2189,13 @@ is hard to undo").
 - **The Variants tab stricter than the PCA's own**: the PCA is given the
   Variants tab's value, and the project keeps its own; when the Variants
   tab goes back above it, the key goes back to that of the own value,
-  and a result of it comes back from the cache.
+  and the PCA is calculated again for it, since from 10 October 2026
+  the store of that page keeps no result under a key left behind
+  (`docs/specs/core/store.md`, `dropLeftBehind`); until then a result of
+  it came back from the cache.
 - **A project whose own value is looser than the Variants tab's**, which
-  the screen cannot make but an undo of the Variants tab can: the same
-  as the case before.
+  the screen cannot make but a later change of the Variants tab can:
+  the same as the case before.
 - **An individuals file of none of the individuals**: every point
   unclassified, the key unchanged.
 

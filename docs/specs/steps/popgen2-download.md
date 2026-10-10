@@ -21,6 +21,15 @@ takes its place; and the words of no individual kept end "Loosen
 them.". It covers case 1 of
 `docs/use-cases.md` to its end, the filtered file in the user's hands.
 
+Revised on 10 October 2026 for `docs/designs/no-undo.md`, approved by
+the owner that day with its open point 2 as recommended: the PCA, once
+its Run has been pressed for the file, starts again by itself a second
+after a change of the filters, so the button waits after such a change
+for as long as the PCA takes, with the words it has, and a download
+pressed in that second goes first (below, "While a PCA runs"). The
+writing of the file is also said in the band of the page
+(`docs/specs/steps/popgen2-band.md`). Nothing else changes.
+
 The module specs it reads, revised for it the same day: the write
 itself, its request, its file name, the check of a filtering that keeps
 no variant and the words of its failures,
@@ -155,6 +164,23 @@ the page, and the PCA's Run, out of reach while the file is written.
 (Written on 9 October 2026, by task 6.2 of `docs/plans/analyses-pca.md`,
 for the PCA tab that the page gains; the design of that piece,
 `docs/designs/analyses-pca.md`, answer 5, gave the words.)
+
+**When the PCA starts by itself**, from 10 October 2026: once the PCA
+is live, a change of a threshold or of the FILTER box starts it again a
+second after the user stops changing things
+(`docs/specs/steps/popgen2-pca.md`, "The PCA calculated again by
+itself"), and from its start the button waits as above, up to 4 minutes
+on a file of 9,381 individuals (134 to 259 s on the owner's Mac), a
+second or less up to 1,000. The owner chose on 10 October 2026 that it
+waits, rather than stop the PCA to write the file (open point 2 of the
+design); a user who wants the file first presses Stop in the PCA tab or
+in the band, which keeps the PCA from starting again until its Run is
+pressed. During the second before it starts, the button is usable: a
+press opens the dialog, and the PCA does not start while the dialog is
+open, nor while the file is written; it starts once the dialog closes,
+for the filters on the screen then, if the PCA is still live and has no
+result for them. So a write never waits behind a PCA, and a PCA never
+starts behind a write.
 
 ### The dialog
 
@@ -424,7 +450,7 @@ state `write`, the first that holds:
 |---|---|---|
 | empty | no file open: the sections of the statistics are not drawn, nor the button | open a file |
 | locked | the button disabled, with "The download waits for the statistics of the file to be read to the end." while the file is opened, while the one pass runs, and after its Stop; with "The download needs the statistics of the file, which could not be calculated." after a failure; or, in place of the button, the words of `keptNoneReason`, or the sentence of no variant when it is certain | Start again in the box of the file, after a Stop or a crash; change the thresholds |
-| waiting for the PCA | once the one pass is finished, while a PCA runs, the button disabled with "Waits for the PCA to end; or stop it in the PCA tab."; the text after the download and the sentences in place of the button stay as they were | wait, or Stop the PCA in the PCA tab |
+| waiting for the PCA | once the one pass is finished, while a PCA runs, whether the user pressed its Run or a change started it by itself, the button disabled with "Waits for the PCA to end; or stop it in the PCA tab."; the text after the download and the sentences in place of the button stay as they were | wait, or Stop the PCA in the PCA tab or in the band |
 | ready | the button | open the dialog; choose the format; Download or Cancel |
 | running | the dialog with the words of the write, the bar and Stop; the rest of the page out of reach | Stop |
 | done | the text after the download, with the focus on it, in place of the button, the store's `saved`; or, after a write of no variant, the sentence of no variant in its place, `noVariant`; or, the store's `done` when the file was not handed to the browser, a defect of the download or a Cancel of a Save click, the same text with "written" and Save | Save it again, or Save; change a filter or open another file, which brings the button back |
@@ -636,6 +662,14 @@ column, as the old page's flow of the write does:
   PCA tab." while a PCA is held running, and enabled once it is stopped;
   this flow is in `e2e/popgen2Pca.spec.ts` of the plan
   `docs/plans/analyses-pca.md` (work package 6), which can start a PCA;
+- from 10 October 2026, with the PCA live and its run held: a threshold
+  moved after the PCA ended, then "Download filtered variants…" pressed
+  within the second: the dialog opens, and the worker receives no
+  request of the PCA until the dialog closes; after it closes, one
+  request of the PCA, for the threshold moved; and a Stop of the PCA
+  during its run, then a threshold moved: no request of the PCA, the
+  button enabled; this flow is in `e2e/popgen2Live.spec.ts` of
+  `docs/plans/no-undo.md`;
 - the dialog, the button with its reason, and the text after the
   download, checked with axe (`e2e/axe.ts`), in light and in dark.
 

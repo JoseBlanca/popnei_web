@@ -137,7 +137,18 @@ new event, `populationColumnChosen`, with no step, and not through
 `applyAfresh`; that `applyAfresh` is on the store of `popgen2.html`
 alone, a `Popgen2Store`; and, on 10 October 2026, that the gate of the
 page makes a waiting run of the arrow keys a change before `startRun`
-too. The store is the one object of core that
+too. Revised on 10 October 2026 for `docs/designs/no-undo.md`,
+approved by the owner that day with the recommendations of its three
+open points: `popgen2.html` has no Undo and no Redo, and calculates the
+PCA again by itself after a change, so a second setting of
+`createStore`, `dropLeftBehind`, given by that page alone, throws away
+the result and the refusal kept under a key an analysis leaves behind
+and caches no result that arrives under such a key; the store of that
+page keeps one past project, and the page's type of it has no `undo`
+nor `redo`; and the gate of the page no longer wraps them (below, "On
+popgen2.html: no notice, no Undo, and no result kept for values left
+behind"). What this spec says of Undo, the notice and the cache holds
+for `popgen.html` unchanged. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -395,35 +406,38 @@ the history that holds their load, on `popgen2.html` the column of the
 populations the page chooses at a read, recorded so too (below), and
 the end of a calculation.
 
-### On popgen2.html: no notice, and a history of the filters
+### On popgen2.html: no notice, no Undo, and no result kept for values left behind
 
 From 9 October 2026 the PCA reads the filters on `popgen2.html`, the
 first calculation of that page that does, so a change of a threshold
 can take its result off the screen or leave its calculation behind.
 That page draws no notice, as the owner decided on 8 October 2026, so a
-PCA left running for an Undo would go on out of sight, with the
+PCA left running would go on out of sight, with the
 calculation worker and up to 3 GB of the tab, and the download of the
 filtered variants would wait for it with words that send the user to a
-Stop the PCA tab no longer shows.
+Stop the PCA tab no longer shows. From 10 October 2026 it has no Undo
+and no Redo either, and the PCA, once its Run has been pressed for the
+open variants file, starts again by itself a second after a change of
+what it reads, from `src/ui/autoRuns.ts` and not from the store
+(`docs/specs/steps/popgen2-pca.md`, "The PCA calculated again by
+itself"; `docs/designs/no-undo.md`). What the screen shows is the result
+of the values on it, or nothing while it is calculated again.
 
-The page keeps those changes from happening while a calculation runs,
-as the owner answered on 9 October 2026 (answer 2 of
-`docs/plans/analyses-pca.md`). While the PCA is `running`, its screen
+The page keeps a change from leaving a calculation behind while it
+runs, as the owner answered on 9 October 2026 (answer 2 of
+`docs/plans/analyses-pca.md`) and again on 10 October 2026 after the
+measurement of the memory a stopped worker keeps in WebKit
+(`docs/architecture.md`, section 5). While the PCA is `running`, its screen
 greys the filters the PCA reads, the thresholds and the FILTER box of
 the Variants tab and the PCA's own options, with the words of
-`docs/specs/steps/popgen2-pca.md`, "While a PCA runs"; and the buttons
-and keys of Undo and Redo wait, as the download of the filtered
-variants waits. The individuals file stays open to every change, its
+`docs/specs/steps/popgen2-pca.md`, "While a PCA runs", and the
+download of the filtered variants waits. The individuals file stays open to every change, its
 opening, its removal, its reader's options through `applyAfresh`
 (below), and the column of the populations through `apply`, and each
 leaves the PCA running: its key holds neither the file nor its column
 (`docs/specs/analyses/pca.md`, "What goes into its key"), which only
-colour its points. The owner's answer named the column of the
-populations among the filters to lock; the session asked on 9 October
-2026 whether it should be, since the PCA does not read it, and until
-the owner answers the page follows the session's recommendation, to
-lock only what the PCA reads (corrected on 9 October 2026, by task 6.1
-of that plan, from a list that held the column).
+colour its points, as the owner decided on 10 October 2026 (open point
+3 of the design).
 The writing of the filtered variants takes the page out of reach in a
 modal dialog while it runs (`docs/specs/steps/popgen2-download.md`).
 So on that page no change the screen allows leaves a calculation
@@ -445,13 +459,90 @@ an `applyAfresh`, the store:
   each is then as after the user's Stop, but that it keeps no result so
   far, since the key it would show it under is no longer the project's.
 
-An undo that gives a key back finds its result in the cache, if the
-cache holds it, and starts nothing: a calculation stopped so is run
-again by the user. A calculation of the key that the change kept goes
-on. A result that a stopped request gives after its `cancel()` is
-cached under its own key, as any late result is ("The cases"), and is
-shown when the project gives that key again. The setting changes
-nothing of `open`, which already stops every calculation.
+A calculation of the key that the change kept goes on. On a store made
+with this setting alone, which no page makes and the tests do, an undo
+that gives a key back finds its result in the cache and starts nothing,
+and a result that a stopped request gives after its `cancel()` is
+cached under its own key, as any late result is ("The cases"); the
+store of `popgen2.html` is also made with `dropLeftBehind`, under which
+neither holds (below). The setting changes nothing of `open`, which
+already stops every calculation.
+
+**`dropLeftBehind`**, a setting of `createStore`, true on
+`popgen2.html` and absent on `popgen.html`, from 10 October 2026. With
+it the store keeps a result, and popnei's refusal, only under the key
+its analysis has, or had when it was last not locked:
+
+- After every change that can change a key, a command, an undo, a redo,
+  an `applyAfresh`, an `open`, a read recorded,
+  `populationColumnChosen` and a `popneiReady` with another version,
+  the store compares, for each analysis, the key it had before the
+  change with the key it has after. When both are keys and they
+  differ, the result the cache holds under the key before is removed
+  from the cache, and so is the refusal kept under it. A failure that
+  is not popnei's is forgotten there already ("A calculation that
+  failed").
+- **A locked analysis has no key**, so a lock is not a change of its
+  key. The store remembers, for each analysis, the last key it had,
+  `lastKey`, through any number of changes in which it is locked; when
+  it has a key again, the result under `lastKey` is kept and shown if
+  that key is the same, and removed if it is another. On `popgen2.html`
+  every lock of the PCA comes from a parameter it reads: the LD pruning
+  on with its distance emptied, the filters of individuals keeping
+  none, or more than 9,381 kept under the PCoA; the individuals file
+  never locks it there (`docs/specs/analyses/pca.md`, "On popgen2.html",
+  `needs`). So a distance emptied and typed again with the same value
+  shows the result it had, which a calculation would give again; any
+  other value calculates. On the old page, where the PCA is locked
+  while the individuals file is read, the same rule would keep a PCA
+  of 9,381 individuals, 2 to 4 minutes, through each load of an
+  individuals file; the old page does not take the setting, and the
+  rule is written so that it would hold there.
+- **A late result is not cached.** A request that ends `done` under a
+  key that is not the key its analysis has at that moment, a locked
+  analysis having none, after a change that left it
+  behind and before its stop reached the worker, gives no result to
+  the cache and no warnings; nor does the statistics' request of a Run
+  that waited, under a key the project no longer gives them. A refusal
+  that ends so is not kept either. The outcome is otherwise taken in as
+  before: the request leaves `runs`.
+- **The one pass** of the page, the summary of the variants file, reads
+  no filter, so no change of a filter gives it another key, and its
+  result, its histograms and the statistics of each individual stay;
+  another variants file, a new load, removes it, as it removes every
+  result of the old load. `stopped`, the last result so far of a pass
+  the user stopped, is kept beside `ready` as before, since it is never
+  cached.
+- The bound of the cache, `cacheMaxBytes`, stays, and drops the result
+  used longest ago when it is reached, as on the other page; on
+  `popgen2.html` the cache holds the one pass's result and at most one
+  PCA, 0.90 MB at 9,381 individuals (`docs/specs/analyses/pca.md`, "How
+  it runs"), so the bound is not met there.
+- The write of the filtered variants is not cached and is not touched:
+  its file is kept until the write's key changes, as before ("The
+  writing of the filtered variants").
+
+The store does not know of the live state of the PCA, which is the
+page's (`docs/specs/steps/popgen2-pca.md`), and starts nothing: with
+`dropLeftBehind` a PCA that the project gives a key it holds no result
+for is `ready`, and the page decides whether to start it. Why the
+setting, and not the cache kept with the PCA started again: the old
+result would be shown for the minutes of the new calculation, which
+the owner did not want; and not the cache dropped whole on that page,
+which would drop the one pass's result and every histogram with it
+(`docs/designs/no-undo.md`, choice 5).
+
+**No Undo on `popgen2.html`.** `createPopgen2Store` of
+`src/ui/popgen2Store.ts` makes the store with `maxUndoSteps: 1`, so that the page keeps two projects at most,
+the present and the one before it, where it kept up to 201, and gives
+the page a type with no `undo` and no `redo`, `Popgen2PageStore`, so
+that a screen of that page that calls them does not compile. The
+history, `apply`'s steps, `applyAfresh` and `populationColumnChosen`
+stay as they are: the code of `popgen.html` needs the history, and
+removing it for one page would be a second way through every change of
+the project (the design, choice 4). `historyMoves` counts as before;
+no screen of `popgen2.html` reads it. The fields `undo` and `redo` of
+the state are still made; no screen of that page reads them.
 
 The one pass of that page, its summary of the variants file, reads no
 filter, so no command changes its key and the setting never stops it.
@@ -486,8 +577,9 @@ setting that stops nothing, which would give one command two meanings.
 
 On that page the screens reach the store through a gate,
 `gatedStore` of `src/ui/variants/thresholdRun.ts`, which makes a run of
-the arrow keys on a threshold a change before `apply`, `undo`, `redo`,
-`open` and `startRun`, and before `open` and `startRun` applies a
+the arrow keys on a threshold a change before `apply`, `open` and
+`startRun`, and, until 10 October 2026, before `undo` and `redo`, which
+the page no longer calls; before `open` and `startRun` it applies a
 number typed in a box and not yet applied, so that a Run pressed within
 the second of a run starts on the threshold the run gave (since 10
 October 2026, `docs/specs/steps/popgen2-pca.md`, "Run and Stop"). It wraps `applyAfresh` as it wraps `open`, both, so the run
@@ -1401,6 +1493,11 @@ export function createStore<J, R, F = never>(config: {
       behind (above, "On popgen2.html: no notice, and a history of the filters"); true on
       popgen2.html, false when absent. */
   readonly stopLeftBehind?: boolean;
+  /** Whether the result and the refusal under a key an analysis leaves behind are removed from the
+      cache, the last key of a locked analysis kept, and a result that ends under a key left behind
+      not cached (above, "dropLeftBehind"); true on popgen2.html from 10 October 2026, false when
+      absent. */
+  readonly dropLeftBehind?: boolean;
 }): Store<R, F>;   // a Popgen2Store<R, F> when given stopLeftBehind: true
 
 /** What the store takes from the pass of a result. */
@@ -1550,7 +1647,9 @@ the owner, on 24 September 2026:
   The result goes into the cache under the key it was asked for, with its
   warnings, and is not shown, since the project gives that analysis
   another key; an undo shows it with no calculation
-  (`docs/architecture.md`, section 5).
+  (`docs/architecture.md`, section 5). On a store made with
+  `dropLeftBehind`, `popgen2.html`'s, it is not cached, and the same
+  values set back are calculated again.
 - **Run asked twice** for the same key: the second `startRun` returns
   `null`, since the analysis is `running`.
 - **A cancel by the user, a crash, a restart.** The outcome is
@@ -1685,7 +1784,9 @@ once, and the outcome arrives as an event.
 
 What the store keeps grows with the session: the cache, bounded in bytes;
 the history, bounded in steps; popnei's refusals, one short text per key
-refused, not bounded, since a session makes few.
+refused, not bounded, since a session makes few. With `dropLeftBehind`
+the cache and the refusals hold only the keys the analyses have or last
+had, and with `maxUndoSteps` 1 the history two projects.
 
 ## How it is verified
 
@@ -1976,10 +2077,12 @@ The tests in the browser, of the walking skeleton, check the same through
 the screens, since core reaches them through the store
 (`.claude/skills/coding/testing.md`).
 
-**`stopLeftBehind` and `applyAfresh`**, with Vitest, on the store of
-`popgen2.html` made by `createPopgen2Store` with a fake `send` that
-records each request and its `cancel()`, and the PCA among its
-analyses:
+**`stopLeftBehind` and `applyAfresh`**, with Vitest, on a store made
+by `createStore` with the analyses and the first project of
+`popgen2.html`, `stopLeftBehind` and not `dropLeftBehind`, so that its
+undo can be read, with a fake `send` that records each request and its
+`cancel()`, and the PCA among its analyses (from 10 October 2026; until
+then on `createPopgen2Store`, which now also gives `dropLeftBehind`):
 
 - A PCA done under a threshold, the threshold moved: `notice` `null`,
   the PCA `ready` under the new key; undo: the PCA `done` with the same
@@ -2014,6 +2117,35 @@ analyses:
   `historyMoves` unchanged; undo: the threshold back, the column kept.
   A project of the history with another grouping keeps it; a load id
   the present project does not hold: the state the same object.
+
+**`dropLeftBehind`**, with Vitest, on the store of `popgen2.html` made
+by `createPopgen2Store` with the same fake `send`, from 10 October
+2026:
+
+- A PCA done under a threshold, the threshold moved: the PCA `ready`
+  under the new key, and the cache no longer holds the result under the
+  old key (`cache.get` of the old key `undefined`); the threshold set
+  back by a command: the PCA `ready`, not `done`, and no request sent.
+- A PCA in flight, the threshold moved, its `cancel()` called, its
+  result given by `runEnded`: nothing cached under its key; the
+  threshold set back: `ready`.
+- A PCA refused by popnei, `error`, the threshold moved and set back:
+  `ready`, not `error`.
+- A PCA done, its LD distance emptied: `locked`; typed again with the
+  same value: `done`, the same result object, no request; emptied
+  again and typed with another value: `ready`, and the old result no
+  longer in the cache; with that value set back: `ready`.
+- A PCA done, the colour of the points changed: `done`, the same
+  result object.
+- The one pass done, a threshold and the FILTER box changed: the one
+  pass `done`, the same result object; another variants file opened
+  with `open`: the result of the old load no longer in the cache.
+- The store of `popgen2.html` has no `undo` nor `redo` in its type
+  (`@ts-expect-error`), and after three commands its history holds one
+  past project (`historyMoves` and the state's `undo` read through the
+  `Store` type).
+- The same cases on the store of `popgen.html`: the results kept, an
+  undo shows them, as before.
 
 ## Open points
 

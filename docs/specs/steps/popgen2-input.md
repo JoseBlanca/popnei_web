@@ -71,8 +71,8 @@ moved under the tab and otherwise unchanged; their terms are used here.
   the populations; "None" is the grouping with no column.
 - **The store** holds the project, the results and what is being
   calculated, and the screens read it; a **command** sent to it with
-  `apply` gives a new project and is a **step of the history**, which an
-  Undo would take back. The **entry** is the code that runs when the
+  `apply` gives a new project and is a **step of the history**, which
+  an Undo took back from 9 to 10 October 2026, when the page had one. The **entry** is the code that runs when the
   page opens and does what the page does by itself.
 - **A load id** is the random name the page gives each file opened, new
   at every opening; a read of the individuals file is `pending` until
@@ -434,10 +434,14 @@ only the column the user chooses, or None, stays a command of `apply`,
 a step. The column the entry chooses at the end of a read is no step
 either, and goes through neither: the store's `populationColumnChosen`
 records it as the read is recorded (`docs/specs/entry.md`). The
-descriptions below remain, though only that one is shown, in the
+descriptions below remain, though only that one was shown, in the
 tooltip of Undo. Built on the branch `pca-tab` on 9 October 2026, work
 package 3 of `docs/plans/analyses-pca.md`; its review moved the
 column the page chooses from `applyAfresh` to `populationColumnChosen`.
+From 10 October 2026 the page has no Undo (`docs/designs/no-undo.md`),
+so no description is shown; the commands and the way each is sent do
+not change, and none of them starts the PCA, whose key holds neither
+the individuals file nor its column.
 
 It sends these commands, as the old step's
 (`src/ui/steps/individuals/commands.ts`), the column and None with
