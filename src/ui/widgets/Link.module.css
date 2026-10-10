@@ -14,3 +14,25 @@
   outline-offset: var(--focus-offset);
   border-radius: var(--radius-sm);
 }
+
+/* The words of a button or a link given a short form: the whole words,
+   and under 30 rem the short form in their place, the whole words then
+   still read by a screen reader. */
+.shortLabel {
+  display: none;
+}
+
+@media (width < 30em) {
+  .wideLabel {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .shortLabel {
+    display: inline;
+  }
+}

@@ -21,7 +21,18 @@ html {
   scroll-padding-block-end: var(--toast-room, 0);
 }
 
+/* While the band of popgen2.html is fixed at the top of the window, the
+   page keeps room above its content as tall as the band, which the band
+   measures into --band-room (src/ui/band/Band.tsx): nothing of the page
+   starts under it, and the browser scrolls what the Tab key reaches
+   clear of it (WCAG 2.4.11). 0 on popgen.html, which has no band, and
+   while the band scrolls with the page. */
+html {
+  scroll-padding-block-start: var(--band-room, 0);
+}
+
 body {
+  padding-block-start: var(--band-room, 0);
   padding-block-end: var(--toast-room, 0);
   margin: 0;
   background: var(--color-background);

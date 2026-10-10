@@ -23,7 +23,18 @@ import type { Defect, Defects } from "../defects.ts";
 import type { Saving } from "../saving.ts";
 import { Button } from "../widgets/Button.tsx";
 import styles from "./ErrorBar.module.css";
-import { barText, saveFromBar, saveLabel } from "./barSave.ts";
+import {
+  CLOSE_LABEL,
+  COPIED,
+  COPY_DETAILS_LABEL,
+  DETAILS_BOX_LABEL,
+  NOT_COPIED,
+  barText,
+  detailsText,
+  moreText,
+  saveFromBar,
+  saveLabel,
+} from "./barSave.ts";
 import type { PageStore } from "../store.tsx";
 
 /** What the bar is drawn with. */
@@ -39,11 +50,6 @@ export interface ErrorBarProps {
   /** The version of the application, for Copy the details. */
   readonly appVersion: string;
 }
-
-/** What the bar's status region says after Copy the details. */
-const COPIED = "The details were copied.";
-const NOT_COPIED =
-  "The details could not be copied. Select them in the box below and copy them.";
 
 /**
  * The text of the bar's status region, and `say`, which empties it and
@@ -207,12 +213,12 @@ export function ErrorBar({
             />
           )}
           <Button
-            label="Copy the details"
+            label={COPY_DETAILS_LABEL}
             onPress={() => {
               void copyDetails();
             }}
           />
-          <Button label="Close" onPress={close} />
+          <Button label={CLOSE_LABEL} onPress={close} />
         </div>
       )}
       <p
@@ -224,7 +230,7 @@ export function ErrorBar({
       </p>
       {boxShown && (
         <label className={classOf(styles, "details")}>
-          The details of the errors
+          {DETAILS_BOX_LABEL}
           <textarea readOnly rows={8} value={details} />
         </label>
       )}
@@ -238,30 +244,6 @@ interface Shown {
   readonly first: Defect | null;
   readonly failed: boolean;
   readonly changed: boolean;
-}
-
-/** The count of the errors after the first. */
-function moreText(more: number): string {
-  return more === 1
-    ? "1 more error followed it."
-    : `${String(more)} more errors followed it.`;
-}
-
-/** What Copy the details copies, for a report of the bug: the page, the
-    versions, the browser and every error kept; not the project. */
-function detailsText(
-  errors: string,
-  popneiVersion: string | null,
-  appVersion: string,
-): string {
-  return [
-    `Page: ${window.location.href}`,
-    `popnei web: ${appVersion}`,
-    `popnei: ${popneiVersion ?? "not loaded"}`,
-    `Browser: ${navigator.userAgent}`,
-    "",
-    errors,
-  ].join("\n");
 }
 
 /** The subscription of the bar when there is no store: nothing changes. */

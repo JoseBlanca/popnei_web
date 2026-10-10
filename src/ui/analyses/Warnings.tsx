@@ -25,7 +25,14 @@ export function Warnings({
       aria-labelledby={headingId}
       className={classOf(styles, "warnings")}
     >
-      <h3 id={headingId} className={classOf(styles, "warningsHeading")}>
+      {/* It takes the focus from the band's link to the warnings of the
+          PCA on popgen2.html, and is not in the order of the Tab key. */}
+      <h3
+        id={headingId}
+        tabIndex={-1}
+        data-warnings-heading=""
+        className={classOf(styles, "warningsHeading")}
+      >
         {warningsHeading(warnings.length)}
       </h3>
       <ul className={classOf(styles, "warningList")}>

@@ -10,8 +10,9 @@
  * holding the PCA's quiet second, the keys of Undo and Redo refused, so
  * that they reach no action of the browser on a page with no Undo, and
  * the column of the populations chosen at each read of
- * the individuals file, and draws the error bar and the page in two
- * roots, all in one run of this code.
+ * the individuals file, and draws the band, with the page's heading and
+ * the errors of the application, and the page in two roots, all in one
+ * run of this code.
  */
 import "./tokens.css";
 import "./base.css";
@@ -29,6 +30,8 @@ import {
   syncReads,
 } from "./pageStart.tsx";
 import type { DrawBar } from "./pageStart.tsx";
+import { Band } from "./band/Band.tsx";
+import type { BandWith } from "./band/Band.tsx";
 import {
   POPGEN2_AUTO_GROUPS,
   POPGEN2_LIVE,
@@ -49,16 +52,14 @@ import type { RunGate } from "./variants/thresholdRun.ts";
 import { reportDefects } from "./variants/workerDefects.ts";
 import { ChangeHoldsProvider } from "./widgets/changeHold.ts";
 
-/** The opening after the guard, the listeners and the bar: the store and
-    the worker client, the bar with the store and no saving, the
-    announcer, the reads, the analyses that start by themselves, the
-    column of the populations, and the page. */
-function startApplication(defects: Defects, drawBar: DrawBar): void {
+/** The opening after the guard, the listeners and the band: the store
+    and the worker client, the announcer, the reads, the analyses that
+    start by themselves, the tab shown, the band with them, the column
+    of the populations, and the page. */
+function startApplication(defects: Defects, drawBar: DrawBar<BandWith>): void {
   const { store, client, files } = connectStore((senders) =>
     createPopgen2Store({ ...senders, appVersion: APP_VERSION }),
   );
-  // No project is saved on this page yet, so the bar offers no Save.
-  drawBar(store, null);
 
   const announcer = createAnnouncer();
   // Stop or Start again of the box, while one is shown.
@@ -77,6 +78,10 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
   // The tab shown, which the row of tabs and the band both read and
   // change.
   const pageTab = createPageTab();
+  // The band at the top of the page, which carries its heading and says
+  // what it is doing; its error line has no Save, as this page saves no
+  // project.
+  drawBar({ store, autoRuns, pageTab, announcer });
   // The PCA started again by itself, and its Stop, said in the status
   // region wherever the focus is.
   announceLive(store, autoRuns, announcer);
@@ -151,4 +156,6 @@ function startByThemselves(
   return autoRuns;
 }
 
-startPage(startApplication);
+startPage<BandWith>(startApplication, (defects, made) => (
+  <Band defects={defects} page={made} appVersion={APP_VERSION} />
+));

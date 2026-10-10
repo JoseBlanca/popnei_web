@@ -29,6 +29,7 @@ import { pcaMethodOf } from "../../core/analyses/pca.ts";
 import { PcaTab } from "../analyses/pca/PcaTab.tsx";
 import { pcaTabTitle } from "../analyses/pca/tabWords.ts";
 import { classOf } from "../classOf.ts";
+import { PCA_TAB_CONTENT_ID } from "../pageTab.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { useAppState } from "../store.tsx";
@@ -177,7 +178,11 @@ function analysisTab(
         {/* The same element, greyed or not, so that what it holds is
             kept; hidden, it is out of the Tab key and of a screen
             reader. */}
-        <div hidden={words !== null} className={classOf(styles, "tabContent")}>
+        <div
+          hidden={words !== null}
+          className={classOf(styles, "tabContent")}
+          {...(id === "pca" && { id: PCA_TAB_CONTENT_ID })}
+        >
           {content}
         </div>
       </>

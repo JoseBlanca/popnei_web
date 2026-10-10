@@ -11,12 +11,6 @@
   padding: var(--space-4);
 }
 
-/* The heading of the page, alone on its line. */
-.title {
-  margin: 0;
-  font-size: var(--text-xl);
-}
-
 /* The two boxes of the files, one above the other, each the width of the
    page less its margins, at 320 pixels included. */
 .boxes {

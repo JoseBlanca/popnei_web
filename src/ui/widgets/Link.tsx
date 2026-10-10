@@ -37,6 +37,10 @@ export type LinkProps = LinkTarget & {
   /** The words of the link, which say where it goes and are its name for
       a screen reader. */
   readonly label: string;
+  /** Its words in a window under 30 rem wide, "PCA: 2 warnings" for
+      "PCA: 2 warnings, in the PCA tab", so that it fits a line, its
+      whole words still its name; its words when absent. */
+  readonly shortLabel?: string;
 };
 
 /** The words after those of a link that opens in a new tab, part of its
@@ -49,7 +53,9 @@ export function Link({
   newTab = false,
   onPress,
   label,
+  shortLabel,
 }: LinkProps): React.JSX.Element {
+  const words = newTab ? `${label} ${NEW_TAB_WORDS}` : label;
   return (
     <AriaLink
       className={classOf(styles, "link")}
@@ -57,7 +63,16 @@ export function Link({
       {...(newTab && { target: "_blank", rel: "noopener" })}
       {...(onPress !== undefined && { onPress })}
     >
-      {newTab ? `${label} ${NEW_TAB_WORDS}` : label}
+      {shortLabel === undefined ? (
+        words
+      ) : (
+        <>
+          <span className={classOf(styles, "wideLabel")}>{words}</span>
+          <span className={classOf(styles, "shortLabel")} aria-hidden>
+            {shortLabel}
+          </span>
+        </>
+      )}
     </AriaLink>
   );
 }

@@ -74,6 +74,13 @@
   --leading-body: 1.5;
   --leading-heading: 1.25;
 
+  /* the order in which what is fixed over the page covers one another:
+     the band at the top of popgen2.html over the page, whose plots and
+     their words are positioned, some at 1; a dialog's backdrop over the
+     band. React Aria's popovers and tooltips stand at 100000, over both. */
+  --layer-band: 2;
+  --layer-dialog: 3;
+
   /* shape, focus, size, motion */
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;

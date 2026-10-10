@@ -5,6 +5,7 @@
 .overlay {
   position: fixed;
   inset: 0;
+  z-index: var(--layer-dialog);
   display: grid;
   place-items: center;
   padding: var(--space-4);

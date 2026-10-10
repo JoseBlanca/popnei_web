@@ -7,12 +7,13 @@
  * the file is read again. The browser would otherwise leave the focus on
  * nothing, and the next Tab would start from the top of the page.
  */
+import { pageHeading } from "../pageHeading.ts";
 
 /**
  * Runs `change`, which draws what it changes before it returns, as a
  * `flushSync` does; then, when the element that had the focus left the
  * page with it and nothing took the focus since, gives it to the `<h1>`
- * of the step on screen, as Close of the error bar does.
+ * of the page, `pageHeading`, as Close of the error bar does.
  *
  * It looks in a microtask, which runs before the browser paints and after
  * those the change queued: the Variants step moves the focus itself when
@@ -34,6 +35,5 @@ function toHeadingIfLost(before: Element): void {
   if (before.isConnected) return;
   const now = document.activeElement;
   if (now !== null && now !== document.body && now.isConnected) return;
-  const heading = document.querySelector("main h1");
-  if (heading instanceof HTMLElement) heading.focus();
+  pageHeading()?.focus();
 }

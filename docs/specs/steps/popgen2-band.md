@@ -94,8 +94,12 @@ of the heading with its margins, the same whether or not it has
 anything to say, so that nothing under it moves when it starts or stops
 saying something: a PCA that starts by itself a second after the user
 let go of a slider would otherwise push the slider from under the
-pointer. That height is measured in work package 5 of
-`docs/plans/no-undo.md`; about 40 px is the estimate. The one exception
+pointer. That height, measured by the flows of work package 5 of
+`docs/plans/no-undo.md` on 10 October 2026, on the built site in
+Chromium 153 and WebKit 26.6 on the owner's Mac, is 51 px, at 1280 and
+at 320 px wide, with "Popnei" alone, with words, with words and a Stop
+or Stop recalculating, and with the link; the top of the two boxes
+stays at 67 px of the page in each. The one exception
 to "nothing moves" is an error of the application, whose line takes a
 second line of the band under the heading and pushes the page down when
 it comes ("An error of the application", below): an error is rare and
@@ -519,7 +523,8 @@ pass held by `e2e/holdWorker.ts`:
 - with the download's dialog open and an error thrown: the band's alert
   heard, its element not inert;
 - the band's height the same with "Popnei" alone, with a line and with
-  a Stop, at 1280 and at 320 px, measured and written into this spec,
+  a Stop, at 1280 and at 320 px, measured and written into this spec
+  (51 px, "Its place"),
   and the top of the two boxes at the same place in each; at 320 px no
   sideways scroll, and each short form with its button on one line
   beside "Popnei"; a screen reader's text of the status the whole

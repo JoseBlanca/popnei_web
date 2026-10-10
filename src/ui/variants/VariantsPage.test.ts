@@ -507,8 +507,8 @@ describe("IN3 the boundary of the zone that opens a variants file", () => {
     const headings = [...container.querySelectorAll("h1, h2, h3")].map(
       (heading) => `${heading.tagName} ${heading.textContent}`,
     );
+    // The page's heading, Popnei, is in the band, in the other root.
     expect(headings).toEqual([
-      "H1 Popnei",
       "H2 Variants file",
       "H3 Opening a variants file",
       "H2 Individuals file",

@@ -24,10 +24,11 @@ import { downloadFile, downloadText } from "./download.ts";
 import {
   connectStore,
   renderApplication,
+  errorBarOf,
   startPage,
   syncReads,
 } from "./pageStart.tsx";
-import type { DrawBar } from "./pageStart.tsx";
+import type { DrawBar, ErrorBarWith } from "./pageStart.tsx";
 import { createPopgenStore } from "./popgenStore.ts";
 import { SavingProvider, createSaving } from "./saving.ts";
 import type { Saving } from "./saving.ts";
@@ -44,7 +45,10 @@ import { ChangeHoldsProvider, HOLDS_NOTHING } from "./widgets/changeHold.ts";
     bar of `startPage`: the store, the worker client, the saving and the
     question before leaving, the bar with the store, the announcer and
     the reads, and the application. */
-function startApplication(defects: Defects, drawBar: DrawBar): void {
+function startApplication(
+  defects: Defects,
+  drawBar: DrawBar<ErrorBarWith>,
+): void {
   // 3 and 4. The store, with the counts of the filters, the statistics of
   // each individual and the writing of the filtered variants, and the
   // worker client its `send` and its write reach.
@@ -66,7 +70,7 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
     downloadFile,
   });
   askBeforeLeaving(saving, store);
-  drawBar(store, saving);
+  drawBar({ store, saving });
 
   // 6. The announcer of the shell's status region, with the announcements
   // made from two states of the store, and the reads the project waits
@@ -137,4 +141,4 @@ function announceChanges(
   });
 }
 
-startPage(startApplication);
+startPage(startApplication, errorBarOf);

@@ -2,8 +2,12 @@
  * Save the project of the error bar (docs/specs/shell.md, "The error
  * bar"): it saves under the name the saving proposes, with no dialog, and
  * gives what the bar's status region then says; and the words of the
- * bar's first line, which change once that Save has failed. Apart from the bar, so
- * that a test in node drives it on the real store and saving.
+ * bar, its first line, which change once that Save has failed, the count
+ * of the errors after the first, its buttons and what Copy the details
+ * copies and says. Apart from the bar, so that a test in node drives it
+ * on the real store and saving, and so that the band of popgen2.html,
+ * which shows the errors of the application there, takes the same words
+ * (docs/specs/steps/popgen2-band.md, "An error of the application").
  */
 import type { Defect, Defects } from "../defects.ts";
 import type { Saving } from "../saving.ts";
@@ -76,4 +80,46 @@ export function barText(
     (docs/specs/shell.md, "The error bar"). */
 export function saveLabel(saveFailed: boolean): string {
   return saveFailed ? "Try to save again" : "Save the project";
+}
+
+/** The button that copies the details of the errors. */
+export const COPY_DETAILS_LABEL = "Copy the details";
+
+/** The button that closes the bar, or the band's line of an error. */
+export const CLOSE_LABEL = "Close";
+
+/** The label of the box of the details, shown when they could not be
+    copied. */
+export const DETAILS_BOX_LABEL = "The details of the errors";
+
+/** What the status region of the bar, or of the band, says after Copy
+    the details. */
+export const COPIED = "The details were copied.";
+export const NOT_COPIED =
+  "The details could not be copied. Select them in the box below and copy them.";
+
+/** The count of the errors after the first: "1 more error followed
+    it.", "3 more errors followed it." */
+export function moreText(more: number): string {
+  return more === 1
+    ? "1 more error followed it."
+    : `${String(more)} more errors followed it.`;
+}
+
+/** What Copy the details copies, for a report of the bug: the page, the
+    versions, the browser and every error kept, `errors`; not the
+    project. */
+export function detailsText(
+  errors: string,
+  popneiVersion: string | null,
+  appVersion: string,
+): string {
+  return [
+    `Page: ${window.location.href}`,
+    `popnei web: ${appVersion}`,
+    `popnei: ${popneiVersion ?? "not loaded"}`,
+    `Browser: ${navigator.userAgent}`,
+    "",
+    errors,
+  ].join("\n");
 }

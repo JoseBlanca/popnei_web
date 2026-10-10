@@ -2,7 +2,8 @@
  * What the entries of the pages of population genetics, `popgen.html`
  * and `popgen2.html`, share of the opening (docs/specs/entry.md, "At the
  * opening"): taking over from the start guard, the listeners of the
- * errors nothing else shows, the error bar in its own root, the store
+ * errors nothing else shows, the error bar, or the band of popgen2.html,
+ * in its own root, the store
  * joined to the worker client, the reads the project waits for, and the
  * root of the application with its handlers of errors. Each entry calls
  * them in the order of the opening, in one run of its code, so that
@@ -85,22 +86,52 @@ function listenForDefects(defects: Defects): void {
   );
 }
 
-/** Draws the error bar again, with the store and the saving once they
-    are made. */
-export type DrawBar = (store: PageStore | null, saving: Saving | null) => void;
+/** Draws what `#defects` shows again, with what the page made since,
+    `made`: the store and the saving for the error bar of popgen.html,
+    the store and what the band reads for the band of popgen2.html. */
+export type DrawBar<B> = (made: B) => void;
+
+/** What `#defects` shows: from the log of the errors `defects`, and
+    `made`, what the page has made since it started, or `null` before. */
+export type BarOf<B> = (defects: Defects, made: B | null) => ReactNode;
+
+/** What the error bar of popgen.html is drawn with once the store is
+    made. */
+export interface ErrorBarWith {
+  readonly store: PageStore;
+  readonly saving: Saving | null;
+}
+
+/** The error bar of popgen.html in `#defects` (docs/specs/shell.md, "The
+    error bar"), with no store until it is made. */
+export function errorBarOf(
+  defects: Defects,
+  made: ErrorBarWith | null,
+): ReactNode {
+  return (
+    <ErrorBar
+      defects={defects}
+      store={made?.store ?? null}
+      saving={made?.saving ?? null}
+      appVersion={APP_VERSION}
+    />
+  );
+}
 
 /**
  * Steps 1 and 2 of the opening, then the page's own: the guard steps
- * back, and the page's listeners of errors take over; the error bar is
- * drawn in `#defects` with no store; then `startApplication` is called
- * with the log of the errors and the function that draws the bar again.
- * Nothing more is done when the guard found the browser too old. When
- * `startApplication` throws, "Loading…" goes from `#root` and the
- * window's listener gives the error to the bar, which says the page met
- * it as it started.
+ * back, and the page's listeners of errors take over; what `barOf` gives,
+ * the error bar on popgen.html, the band on popgen2.html, is drawn in
+ * `#defects` with nothing made; then `startApplication` is called with
+ * the log of the errors and the function that draws it again with what
+ * the page made. Nothing more is done when the guard found the browser
+ * too old. When `startApplication` throws, "Loading…" goes from `#root`
+ * and the window's listener gives the error to the bar, which says the
+ * page met it as it started.
  */
-export function startPage(
-  startApplication: (defects: Defects, drawBar: DrawBar) => void,
+export function startPage<B>(
+  startApplication: (defects: Defects, drawBar: DrawBar<B>) => void,
+  barOf: BarOf<B>,
 ): void {
   const guard = window.__startGuard;
   guard?.remove();
@@ -109,21 +140,17 @@ export function startPage(
   listenForDefects(defects);
 
   const defectsRoot = createRoot(pageElement("defects"));
-  const drawBar: DrawBar = (store, saving) => {
+  const draw = (made: B | null): void => {
     defectsRoot.render(
       <StrictMode>
-        <I18nProvider locale={LOCALE}>
-          <ErrorBar
-            defects={defects}
-            store={store}
-            saving={saving}
-            appVersion={APP_VERSION}
-          />
-        </I18nProvider>
+        <I18nProvider locale={LOCALE}>{barOf(defects, made)}</I18nProvider>
       </StrictMode>,
     );
   };
-  drawBar(null, null);
+  const drawBar: DrawBar<B> = (made) => {
+    draw(made);
+  };
+  draw(null);
 
   try {
     startApplication(defects, drawBar);

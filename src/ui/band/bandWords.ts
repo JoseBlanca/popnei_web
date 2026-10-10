@@ -10,7 +10,7 @@ import { escaped } from "../../core/project.ts";
 import type { PcaMethod } from "../../worker/protocol.ts";
 import { methodName } from "../analyses/pca/words.ts";
 import { clockText } from "../analyses/words.ts";
-import type { BandLine } from "./band.ts";
+import type { BandLine } from "./bandLine.ts";
 
 /** The page's heading, at the band's left. */
 export const PAGE_HEADING = "Popnei";

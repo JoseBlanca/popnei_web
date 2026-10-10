@@ -13,6 +13,11 @@ import { useSyncExternalStore } from "react";
 
 import type { PageTab } from "../core/popgen2Tabs.ts";
 
+/** The id of the element that holds what the PCA tab shows, where the
+    band's link to the PCA's warnings or error finds the heading it gives
+    the focus to. */
+export const PCA_TAB_CONTENT_ID = "pca-tab-content";
+
 /** The tab shown, read and changed by the two roots of the page. */
 export interface PageTabStore {
   /** The tab shown now. A property made once, as `subscribe` is, for

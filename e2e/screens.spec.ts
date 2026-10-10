@@ -6194,6 +6194,245 @@ for (const theme of ["light", "dark"] as const) {
         ).toBeVisible();
         await save(page, `popgen2-ploidy-not-read${at}-${theme}`);
       });
+
+      // The band at the top of the window (docs/specs/steps/
+      // popgen2-band.md, "The screens"), each picture the window as the
+      // user sees it, the band over the top of the page.
+
+      /** The band. */
+      function band(page: Page): Locator {
+        return page.getByRole("banner", { name: "What the page is doing" });
+      }
+
+      /** Opens panel.nei with the one pass and each PCA held, releases
+          the pass to its end, shows the PCA tab, types the distance of
+          the LD pruning and presses Run: the PCA held running. */
+      async function bandPcaRunning(page: Page): Promise<Locator> {
+        await holdSummary(page, { holdPca: true });
+        await page.reload();
+        await pickOnNewPage(page, "panel.nei");
+        await release(page, "allSoFar");
+        await release(page, "result");
+        const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+        await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+        const panel = page.getByRole("tabpanel");
+        const field = panel.getByRole("textbox", {
+          name: /^Distance within which variants are compared/u,
+        });
+        await expect(field).toBeVisible({ timeout: 20_000 });
+        await field.fill("50000");
+        await field.press("Enter");
+        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(band(page)).toContainText("PCA running", {
+          timeout: 20_000,
+        });
+        await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
+        return panel;
+      }
+
+      /** Throws an error of the application, as the flows of the error
+          bar do, and waits for the band's line of it. */
+      async function bandError(page: Page): Promise<void> {
+        await page.evaluate(() => {
+          setTimeout(() => {
+            throw new Error("test");
+          });
+          setTimeout(() => {
+            throw new Error("second");
+          }, 10);
+        });
+        await expect(band(page).getByRole("alert")).toHaveText(
+          /^The application met an error of its own: test\./u,
+        );
+        await expect(band(page)).toContainText("Details");
+      }
+
+      test("NU5 D5 the band with Popnei alone", async ({ page }) => {
+        await save(page, `popgen2-band-empty${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test("NU5 D5 the band reading the variants file, with its share and Stop", async ({
+        page,
+      }) => {
+        await holdSummary(page);
+        await page.reload();
+        await pickOnNewPage(page, "panel.nei");
+        await release(page, "oneSoFar");
+        await expect(band(page)).toContainText(/Reading.* · \d+%/u);
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-band-reading${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test("NU5 D5 the band with the PCA held running, the Variants tab shown", async ({
+        page,
+      }) => {
+        await bandPcaRunning(page);
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-band-pca-running${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test("NU5 D5 the band after its Stop of the PCA, Stopping the PCA", async ({
+        page,
+      }) => {
+        await bandPcaRunning(page);
+        // The worker made after the Stop is held before its script
+        // arrives, so that the line stays for the picture.
+        let freeWorker = (): void => undefined;
+        const held = new Promise<void>((resolve) => {
+          freeWorker = resolve;
+        });
+        await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
+          await held;
+          await route.fallback();
+        });
+        await band(page).getByRole("button", { name: "Stop the PCA" }).click();
+        await expect(band(page)).toContainText("Stopping");
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-band-stopping${at}-${theme}`, {
+          fullPage: false,
+        });
+        freeWorker();
+        await page.unrouteAll({ behavior: "ignoreErrors" });
+      });
+
+      test("NU5 D5 the band with the PCA about to start, the Variants tab shown", async ({
+        page,
+      }) => {
+        await page.clock.install();
+        await page.reload();
+        await pickOnNewPage(page, "panel.nei");
+        const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+        await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+        const panel = page.getByRole("tabpanel");
+        const field = panel.getByRole("textbox", {
+          name: /^Distance within which variants are compared/u,
+        });
+        await expect(field).toBeVisible({ timeout: 20_000 });
+        await field.fill("50000");
+        await field.press("Enter");
+        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(
+          panel.getByText(/^The place of each of the 200 individuals/u),
+        ).toBeVisible({ timeout: 30_000 });
+        // The plots of the Variants tab drawn before the clock stops,
+        // which they wait for.
+        await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+        // The page's timers stand still, so that the quiet second does
+        // not run out before the picture.
+        await page.clock.pauseAt(Date.now() + 1000);
+        const missing = panel.getByRole("slider", {
+          name: /^Maximum proportion of missing genotypes for the PCA$/u,
+        });
+        await missing.focus();
+        await missing.press("ArrowLeft");
+        await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
+        await expect(band(page)).toContainText(/in a moment/u);
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-band-about-to-start${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test("NU5 D5 the band writing the filtered variants, behind the dialog", async ({
+        page,
+      }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("write.vcf.gz");
+        await writeBigVcf(vcf, 30_000);
+        await holdSummary(page, { holdWrite: true });
+        await page.reload();
+        await pickOnNewPage(page, vcf);
+        await release(page, "allSoFar");
+        await release(page, "result");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 60_000,
+        });
+        await downloadButton(page).click();
+        await downloadDialog(page)
+          .getByRole("button", { name: "Download" })
+          .click();
+        await expect(
+          downloadDialog(page).getByRole("progressbar"),
+        ).toHaveAttribute("aria-valuenow", /^[1-9]\d*$/u, { timeout: 60_000 });
+        await expect(
+          page
+            .locator("#defects header")
+            .getByText(/Writing/u)
+            .first(),
+        ).toBeAttached();
+        await save(page, `popgen2-band-writing${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test("NU5 D5 the band's link to the 2 warnings of the PCoA, the Variants tab shown", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+        await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+        const panel = page.getByRole("tabpanel");
+        await expect(
+          panel.getByRole("button", { name: /Method$/u }),
+        ).toBeVisible({ timeout: 20_000 });
+        await panel.getByRole("button", { name: /Method$/u }).click();
+        await page
+          .getByRole("option", { name: /^PCoA of the Kosman/u })
+          .click();
+        await panel
+          .locator("label")
+          .filter({
+            hasText: "Prune the variants by linkage disequilibrium (LD)",
+          })
+          .click();
+        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(
+          panel.getByRole("heading", { level: 3, name: "2 warnings" }),
+        ).toBeVisible({ timeout: 30_000 });
+        await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
+        await expect(
+          band(page).getByRole("link", { name: /^PCoA: 2 warnings/u }),
+        ).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-band-warning${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      for (const shot of ["error", "error-details", "error-running"] as const) {
+        test(`NU5 D5 the band with an error of the application${shot === "error-details" ? ", its details shown" : shot === "error-running" ? ", beside the PCA held running" : ""}`, async ({
+          page,
+        }) => {
+          if (shot === "error-running") {
+            await bandPcaRunning(page);
+          } else {
+            await pickOnNewPage(page, "panel.nei");
+            await expect(newPageStats(page).locator("svg.chart")).toHaveCount(
+              6,
+              { timeout: 20_000 },
+            );
+          }
+          await bandError(page);
+          if (shot === "error-details") {
+            await band(page)
+              .getByRole("button", { name: "Details", exact: true })
+              .click();
+            await expect(band(page)).toContainText("1 more error followed it.");
+          }
+          await page.mouse.move(0, 0);
+          await save(page, `popgen2-band-${shot}${at}-${theme}`, {
+            fullPage: false,
+          });
+        });
+      }
     });
   }
 }

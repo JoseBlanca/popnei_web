@@ -1,8 +1,8 @@
 /**
  * The body of popgen2.html (docs/specs/steps/popgen2-input.md, "The order
- * of the page"): the page's one heading, "Popnei", alone on its line, as
- * the page has no Undo and no Redo since 10 October 2026
- * (docs/specs/steps/popgen2-pca.md, "No Undo and no Redo"); under it the
+ * of the page"), under the band at the top of the window, which carries
+ * the page's one heading, "Popnei", since 10 October 2026
+ * (docs/specs/steps/popgen2-band.md, "Its place"): the
  * two boxes
  * of the files, side by side from 720 pixels and one above the other
  * below, the variants file's first; and under them the row of five tabs,
@@ -79,11 +79,6 @@ export function VariantsPage({
   return (
     <>
       <main className={classOf(styles, "page")}>
-        {/* It takes the focus after Close of the error bar, and is not in
-            the order of the Tab key. */}
-        <h1 tabIndex={-1} className={classOf(styles, "title")}>
-          Popnei
-        </h1>
         <div className={classOf(styles, "boxes")}>
           <section
             aria-labelledby={variantsHeadingId}

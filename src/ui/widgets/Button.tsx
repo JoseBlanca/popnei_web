@@ -92,6 +92,17 @@ interface ButtonBaseProps {
   /** How it looks: a button, the default, or a link in a line of text,
       with no border, underlined and in the colour of the links. */
   readonly look?: "button" | "link";
+  /** Its name for a screen reader when its words alone do not say what
+      it acts on, "Stop the PCA" for "Stop"; it begins with its words, so
+      that a user of speech names it by what they see (WCAG 2.5.3). Its
+      words when absent. */
+  readonly name?: string;
+  /** Its words in a window under 30 rem wide, "Stop" for "Stop
+      recalculating", so that it fits a line; its words when absent. */
+  readonly shortLabel?: string;
+  /** Whether what it shows and hides is shown, told to a screen reader
+      as expanded or collapsed; nothing told when absent. */
+  readonly expanded?: boolean;
 }
 
 /** A button with its words. */
@@ -109,6 +120,9 @@ export function Button({
   isSubmit = false,
   autoFocus = false,
   look = "button",
+  name,
+  shortLabel,
+  expanded,
 }: ButtonProps): React.JSX.Element {
   const ownId = useId();
   const descriptionId = givenId ?? ownId;
@@ -131,8 +145,19 @@ export function Button({
             {...(describedBy.length > 0 && {
               "aria-describedby": describedBy.join(" "),
             })}
+            {...(name !== undefined && { "aria-label": name })}
+            {...(expanded !== undefined && { "aria-expanded": expanded })}
           >
-            {label}
+            {shortLabel === undefined ? (
+              label
+            ) : (
+              <>
+                <span className={classOf(styles, "wideLabel")}>{label}</span>
+                <span className={classOf(styles, "shortLabel")} aria-hidden>
+                  {shortLabel}
+                </span>
+              </>
+            )}
           </AriaButton>
         );
       }}

@@ -1,0 +1,138 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* Fixed at the top of the window, the width of the window, over the
+   room the page keeps for it (base.css), under the popovers and the
+   dialogs (tokens.css, the layers). */
+.band {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: var(--layer-band);
+  border-block-end: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+/* While the details of an error are shown: in the flow of the page, so
+   that it scrolls with it and never covers more than a few lines. */
+.bandScrolls {
+  border-block-end: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+/* The column of the page: as wide as the page's, 48 rem at most, with
+   its margins, and at its start. */
+.column {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  max-inline-size: 48rem;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-4);
+}
+
+/* The heading, its words and its control, on one line whatever it says,
+   at least as tall as a button of Button.module.css, a line of text, its
+   padding and its border of 1px on each side, so that the band's height
+   is the same with a button and without one. */
+.line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: calc(
+    var(--text-base) * var(--leading-body) + 2 * var(--space-1) + 2px
+  );
+  min-inline-size: 0;
+}
+
+.heading {
+  flex: none;
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+/* The words take the room left, on one line, cut with "…" at their end
+   when there is too little; the control after them stays whole. */
+.words {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.control {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* The short form, shown under 30 rem, where the whole words are read by
+   a screen reader alone. */
+.short {
+  display: none;
+}
+
+@media (width < 30em) {
+  .line {
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+  }
+
+  .heading {
+    font-size: var(--text-xl);
+  }
+
+  .full {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .short {
+    display: inline;
+  }
+}
+
+/* The line of an error, in the colour of danger and with "error" or
+   "stopped" in its words. A word longer than the line breaks where it
+   must, as in the error bar. */
+.error {
+  margin: 0;
+  margin-block-start: var(--space-2);
+  padding-inline-start: var(--space-3);
+  border-inline-start: 4px solid var(--color-danger);
+  font-weight: bold;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+
+.details {
+  display: grid;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+
+.more {
+  margin: 0;
+}
+
+.box {
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* Its own status region: no margins, so that it takes no room while it
+   is empty. */
+.status {
+  margin: 0;
+}

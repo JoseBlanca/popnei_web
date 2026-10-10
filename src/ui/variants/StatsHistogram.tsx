@@ -58,6 +58,7 @@ import { useRunGate } from "./runGate.tsx";
 import type { PlotThreshold, StatsPlot } from "./statsPlots.ts";
 import { thresholdLookChangeText } from "./statsWords.ts";
 import styles from "./StatsHistogram.module.css";
+import { pageHeading } from "../pageHeading.ts";
 import { useFiltersLock } from "./filtersLock.ts";
 import { createThresholdRun } from "./thresholdRun.ts";
 import type { ThresholdRun } from "./thresholdRun.ts";
@@ -234,8 +235,7 @@ export function StatsHistogram({
       queueMicrotask(() => {
         const now = document.activeElement;
         if (now !== null && now !== document.body && now.isConnected) return;
-        const heading = document.querySelector("main h1");
-        if (heading instanceof HTMLElement) heading.focus();
+        pageHeading()?.focus();
       });
     },
     [],
