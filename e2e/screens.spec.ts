@@ -33,7 +33,34 @@ async function save(
   name: string,
   { fullPage }: { readonly fullPage: boolean } = { fullPage: true },
 ): Promise<void> {
-  await page.screenshot({ path: join(SCREENS, `${name}.png`), fullPage });
+  const style = fullPage ? await bandAtTop(page) : undefined;
+  await page.screenshot({
+    path: join(SCREENS, `${name}.png`),
+    fullPage,
+    ...(style === undefined ? {} : { style }),
+  });
+}
+
+/** The band of popgen2.html, its `<header>` in the page's second root. */
+const BAND = '#defects header[aria-label="What the page is doing"]';
+
+/** The CSS that draws the band of popgen2.html at the top of the
+    document during a picture of the whole page, or nothing when the page
+    has no band fixed at the top of the window. Fixed, the band is drawn
+    where the window was scrolled when the picture is taken, over the
+    middle of the page, with the room kept for it empty at the top;
+    absolute at the top, it lies over that room, as a user sees it with
+    the page scrolled to its start. Scrolling to the top would do it too,
+    but would close a popover open in the picture. While an error is
+    shown the band is already in the flow at the top, and is left as it
+    is. */
+async function bandAtTop(page: Page): Promise<string | undefined> {
+  const band = page.locator(BAND);
+  if ((await band.count()) === 0) return undefined;
+  const position = await band.evaluate((el) => getComputedStyle(el).position);
+  return position === "fixed"
+    ? `${BAND} { position: absolute !important; }`
+    : undefined;
 }
 
 async function pick(page: Page, fixture: string): Promise<void> {
