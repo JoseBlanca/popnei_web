@@ -110,6 +110,16 @@
  * drawn by the bar and five times with it dropped in the worker, timed
  * from the press of Write to the answer of the write.
  *
+ * And the memory and the time of a PCA after the one pass (AP7 D1, the
+ * plan of the PCA tab, docs/plans/analyses-pca.md, work package 7), in
+ * both engines: on popgen2.html, whose calculation worker has just read
+ * the file once for the Variants tab and keeps that memory, a PCA and a
+ * PCoA of 1,000, 4,000 and 9,381 individuals from the VCFs of IP6 D6,
+ * the PCA's LD pruning off, each run once on a new page; whether it gave
+ * a result, failed or closed the tab, its time, and the memory of the
+ * engine before the file was opened, at the end of the pass, at the
+ * peak of the run and 3 s after its answer.
+ *
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
  *
@@ -3691,6 +3701,260 @@ test.describe("IP6 D6 the times of the PCA", () => {
       rows,
     );
   });
+});
+
+// ---------------------------------------------------------------------
+// AP7 D1, the memory and the time of a PCA after the one pass.
+
+/** The individuals of the VCFs of AP7 D1, those of IP6 D6 from 1,000 up,
+    the last popnei's limit. */
+const AFTER_PASS_INDIVIDUALS: readonly number[] = [1_000, 4_000, 9_381];
+
+/** The answers that end a request of the calculation worker on
+    popgen2.html: those of every request, and a worker that stopped with
+    no answer. */
+const AFTER_PASS_ENDS = new Set([...ENDS, "workerError"]);
+
+/** What one PCA on popgen2.html after the one pass gave. */
+interface AfterPassRun {
+  /** The answer that ended the PCA's request, or "the tab closed". */
+  readonly answer: string;
+  /** From the run posted to the calculation worker to its answer; `null`
+      when the tab closed. */
+  readonly runMs: number | null;
+  /** The engine's memory, the footprints of its processes summed: on the
+      page before the file was opened; at the end of the one pass, the
+      last sample before Run, 2 s after the pass's answer; the largest
+      while the PCA ran; and 3 s after its answer. `null` when the tab
+      closed before it was taken. */
+  readonly beforeFile: number | null;
+  readonly endOfPass: number | null;
+  readonly peak: number | null;
+  readonly after: number | null;
+  /** Whether a new calculation worker was started after the answer. */
+  readonly restarted: boolean;
+  /** Of a result, the variants it used. */
+  readonly numVarsUsed: number | null;
+  /** From the file picked to the answer of the one pass. */
+  readonly passMs: number;
+}
+
+/** Opens popgen2.html on a new page, opens the variants file at `vcf`,
+    waits for the end of the one pass, turns the PCA's LD pruning off,
+    chooses `method` and presses Run once, with the memory of the engine
+    sampled every `pauseMs` and the time of a sample. */
+async function pcaAfterPass(
+  browser: Browser,
+  browserName: string,
+  vcf: string,
+  method: "pca" | "pcoa",
+  timeout: number,
+  pauseMs: number,
+): Promise<AfterPassRun> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const closed = { crashed: false };
+  page.on("crash", () => {
+    closed.crashed = true;
+  });
+  const sampler = sampleMemory(browser, browserName, pauseMs);
+  const shown = page.getByRole("tabpanel");
+  try {
+    await page.addInitScript(instrument);
+    await page.goto("popgen2.html");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    // The memory settles after the load before it is taken.
+    await page.waitForTimeout(2000);
+    const pickedAt = Date.now();
+    const chooser = page.waitForEvent("filechooser");
+    await page
+      .getByRole("button", { name: /^Open (another )?variants file…$/u })
+      .click();
+    await (await chooser).setFiles(vcf);
+    let pass: Logged | undefined;
+    await expect
+      .poll(
+        async () => {
+          pass = (await logOf(page)).find(
+            (l) => isCalc(l) && l.event === "in" && AFTER_PASS_ENDS.has(l.kind),
+          );
+          return pass !== undefined;
+        },
+        { timeout: 300_000, intervals: [200] },
+      )
+      .toBe(true);
+    if (pass?.kind !== "result") {
+      throw new Error(`the one pass ended with ${pass?.kind ?? "nothing"}`);
+    }
+    const passMs = pass.wall - pickedAt;
+    await page
+      .getByRole("tablist", { name: "Files and analyses" })
+      .getByRole("tab", { name: "PCA", exact: true })
+      .click();
+    await shown
+      .locator("label")
+      .filter({ hasText: "Prune the variants by linkage disequilibrium (LD)" })
+      .click();
+    if (method === "pcoa") {
+      await shown
+        .getByRole("radiogroup", { name: "Method", exact: true })
+        .locator("label")
+        .filter({ hasText: "PCoA" })
+        .click();
+      await expect(
+        shown.getByRole("heading", { level: 2, name: "PCoA" }),
+      ).toBeVisible();
+    }
+    const run = shown.getByRole("button", { name: "Run", exact: true });
+    await expect(run).toBeEnabled();
+    // The memory of the end of the pass settles as that before the file.
+    const settleUntil = pass.wall + 2000;
+    if (Date.now() < settleUntil) {
+      await page.waitForTimeout(settleUntil - Date.now());
+    }
+    const logged = (await logOf(page)).length;
+    const clickedAt = Date.now();
+    await run.click();
+    let ended: readonly Logged[] = [];
+    try {
+      await expect
+        .poll(
+          async () => {
+            if (closed.crashed) return true;
+            ended = (await logOf(page)).slice(logged).filter(isCalc);
+            return ended.some(
+              (l) => l.event === "in" && AFTER_PASS_ENDS.has(l.kind),
+            );
+          },
+          { timeout, intervals: [200] },
+        )
+        .toBe(true);
+    } catch (error) {
+      if (!closed.crashed && !/crash|closed/i.test(String(error))) throw error;
+      closed.crashed = true;
+    }
+    const answeredAt = Date.now();
+    const at = (from: number, to: number): readonly Sample[] =>
+      sampler.samples.filter((s) => s.t >= from && s.t <= to);
+    const beforeFile = at(0, pickedAt).at(-1)?.total ?? null;
+    const endOfPass = at(pass.wall, clickedAt).at(-1)?.total ?? null;
+    if (closed.crashed) {
+      await sampler.stop();
+      const during = at(clickedAt, answeredAt).map((s) => s.total);
+      return {
+        answer: "the tab closed",
+        runMs: null,
+        beforeFile,
+        endOfPass,
+        peak: during.length === 0 ? null : Math.max(...during),
+        after: null,
+        restarted: false,
+        numVarsUsed: null,
+        passMs,
+      };
+    }
+    const posted = ended.find((l) => l.event === "out" && l.kind === "run");
+    const answer = ended.find(
+      (l) => l.event === "in" && AFTER_PASS_ENDS.has(l.kind),
+    );
+    if (posted === undefined || answer === undefined) {
+      throw new Error("no run, or no answer to it, in the log of the worker");
+    }
+    await page.waitForTimeout(3000);
+    await sampler.stop();
+    const during = at(clickedAt, answeredAt).map((s) => s.total);
+    const restarted = (await logOf(page)).some(
+      (l) => isCalc(l) && l.event === "start" && l.worker > answer.worker,
+    );
+    return {
+      answer: answer.kind,
+      runMs: answer.t - posted.t,
+      beforeFile,
+      endOfPass,
+      peak: during.length === 0 ? null : Math.max(...during),
+      after: sampler.samples.at(-1)?.total ?? null,
+      restarted,
+      numVarsUsed: answer.numVarsUsed ?? null,
+      passMs,
+    };
+  } finally {
+    await sampler.stop();
+    await context.close().catch(() => undefined);
+  }
+}
+
+test.describe("AP7 D1 the memory and the time of a PCA after the one pass", () => {
+  for (const n of AFTER_PASS_INDIVIDUALS) {
+    for (const method of ["pca", "pcoa"] as const) {
+      const name = method === "pca" ? "PCA" : "PCoA";
+      const size = n.toLocaleString("en-US");
+      test(`AP7 D1 the ${name} of ${size} individuals on popgen2.html after the one pass: the outcome, the time, and the memory before the file, at the end of the pass, at the peak and 3 s after`, async ({
+        browser,
+        browserName,
+      }) => {
+        // Under the 550,000 ms of a command of the measurement run.
+        test.setTimeout(540_000);
+        const loadBefore = machineLoad();
+        const vcf = await pcaVcf(n);
+        const ran = await pcaAfterPass(
+          browser,
+          browserName,
+          vcf,
+          method,
+          480_000,
+          n <= 2_000 ? 20 : 250,
+        );
+        const gb = (x: number | null): string =>
+          x === null ? "" : `${(x / 1e9).toFixed(3)} GB`;
+        report(
+          `AP7 D1 the ${name} of ${size} individuals after the one pass`,
+          `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; the gzipped VCF of ${String(PCA_VARIANTS)} variants of e2e/bigVcf.ts of IP6 D6, the thresholds of a new page, the PCA's LD pruning off; Run pressed once, 2 s after the one pass answered; the memory is the footprints of the engine's processes summed, taken every ${String(n <= 2_000 ? 20 : 250)} ms and the time of a sample`,
+          [
+            "individuals",
+            "method",
+            "answer",
+            "one pass",
+            "run posted to answer",
+            "before the file",
+            "end of the pass",
+            "peak of the run",
+            "grown by in the run",
+            "3 s after the answer",
+            "worker started again",
+            "variants used",
+          ],
+          [
+            [
+              size,
+              name,
+              ran.answer,
+              `${(ran.passMs / 1000).toFixed(2)} s`,
+              ran.runMs === null ? "" : `${(ran.runMs / 1000).toFixed(2)} s`,
+              gb(ran.beforeFile),
+              gb(ran.endOfPass),
+              gb(ran.peak),
+              ran.peak === null || ran.endOfPass === null
+                ? ""
+                : gb(ran.peak - ran.endOfPass),
+              gb(ran.after),
+              ran.restarted ? "yes" : "no",
+              ran.numVarsUsed === null ? "" : String(ran.numVarsUsed),
+            ],
+          ],
+        );
+        // A tab that closes, or a PCA that fails, is the outcome, and
+        // fails nothing; the memory was taken in every case.
+        expect(ran.beforeFile).toBeGreaterThan(0);
+        expect(ran.endOfPass).toBeGreaterThan(0);
+        if (ran.answer === "result") {
+          expect(ran.peak).toBeGreaterThan(0);
+          expect(ran.after).toBeGreaterThan(0);
+          // The PCoA's result tells no variants used.
+          if (method === "pca") expect(ran.numVarsUsed).toBeGreaterThan(0);
+        }
+      });
+    }
+  }
 });
 
 // ---------------------------------------------------------------------
