@@ -1542,6 +1542,45 @@ by about 135 MB for any PCA up to 1,000 individuals, and all but 15
 MB of it was given back after a PCA of 700, which does not restart
 the worker (below).
 
+On `popgen2.html` the PCA runs in the calculation worker that has just
+made the one pass over the file, with no restart between them, and a
+wasm never gives memory back; so the same runs were made there, by
+`AP7 D1` of `e2e/measure.spec.ts` on 10 October 2026, to see whether
+they still complete. Each run on a new page, on the same VCFs of 300
+variants, the LD pruning off, Run pressed 2 s after the pass ended,
+once each and alone on the machine; the same Mac and macOS 27.0.1,
+Playwright 1.63.0, Chromium 153.0.8010.12 and WebKit 26.6. The load
+averages rose from 1.65 to 8.63 through the runs, a macOS virtual
+machine outside this work using 80 to 537% of a core and two services
+of macOS up to 92% and 70%. The time and the memory are measured as
+above, the memory grown being the largest footprint during the run less
+the footprint before Run, beside the same run of 29 September on
+`popgen.html`:
+
+| individuals | engine | PCA, 10 October | PCA, 29 September | PCoA, 10 October | PCoA, 29 September |
+|---|---|---|---|---|---|
+| 1,000 | Chromium 153 | 0.32 s, 0.05 GB | 0.31 s, 0.049 GB | 0.37 s, 0.044 GB | 0.36 s, 0.046 GB |
+| 4,000 | Chromium 153 | 16.7 s, 0.618 GB | 16.0 s, 0.613 GB | 19.9 s, 0.624 GB | 18.9 s, 0.620 GB |
+| 9,381 | Chromium 153 | 226 s, 3.01 GB | 205 s, 3.03 GB | 259 s, 3.29 GB | 240 s, 3.30 GB |
+| 1,000 | WebKit 26.6 | 0.26 s, 0.191 GB | 1.21 s, 0.143 GB | 0.31 s, 0.082 GB | 1.26 s, 0.145 GB |
+| 4,000 | WebKit 26.6 | 11.1 s, 0.813 GB | 10.2 s, 0.745 GB | 14.7 s, 0.611 GB | 12.9 s, 0.724 GB |
+| 9,381 | WebKit 26.6 | 134 s, 3.38 GB | 121 s, 3.12 GB | 215 s, 4.33 GB | 156 s, 3.40 GB |
+
+Every run completed in both engines, as on 29 September, so nothing
+changes: the rule set before the runs (`docs/plans/analyses-pca.md`,
+work package 7) was that a run failing or closing the tab where the old
+page completed it would restart the worker at the end of the one pass,
+or lower the limit of individuals on this page. WebKit's PCoA of 9,381
+individuals grew 4.33 GB, above the 4.10 GB of the old page's first run
+of 29 September, and completed. The times of 9,381 individuals are 8 to
+38% longer than on 29 September, under a load that measurement did not
+have. The pass over 300 variants left the engine 0.04 to 0.07 GB larger
+in Chromium and 0.19 to 0.23 GB in WebKit before Run, so the decision
+holds for a pass over a file of a few hundred variants; what a pass
+over a file of many more variants leaves in the worker before a PCA was
+not measured. The worker is started again after the PCA, as after
+every PCA of more than 700 individuals (below).
+
 The memory of wasm grows to the matrix and never shrinks
 (`docs/architecture.md`, section 11), so a worker that made a PCA of
 4,000 individuals holds some 700 MB until it is started again. The
