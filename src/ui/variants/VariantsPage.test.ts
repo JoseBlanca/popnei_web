@@ -657,6 +657,21 @@ describe("AP6 the boundary of the PCA tab", () => {
     ).toEqual(["PCoA"]);
   });
 
+  test("a throw while the tab is drawn under the PCA, the method of a new project, leaves the heading of the tab, PCA, in its place", async () => {
+    const { store } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+    inject.pcaTabThrows = true;
+    await act(async () => {
+      tabOf("PCA").click();
+      await Promise.resolve();
+    });
+    expect(caught).toContainEqual(new Error("the PCA tab could not be drawn"));
+    const panel = container.querySelector('[role="tabpanel"]:not([inert])');
+    expect(
+      [...(panel?.querySelectorAll("h2") ?? [])].map((h) => h.textContent),
+    ).toEqual(["PCA"]);
+  });
+
   test("options of the PCA the project refuses cost the PCA tab alone: the row of tabs stays, and the tab shows its boundary under PCA", async () => {
     const { store } = await drawPage();
     await open(store, "a".repeat(32), "first.nei");
