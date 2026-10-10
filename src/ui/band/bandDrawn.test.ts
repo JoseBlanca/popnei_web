@@ -459,4 +459,69 @@ describe("NU5 D2 the band drawn", () => {
     expect(container.querySelector("textarea")).toBeNull();
     Reflect.deleteProperty(navigator, "clipboard");
   });
+
+  test("Stopping goes 10 s after the band first saw it when the worker never says it is ready", async () => {
+    vi.useFakeTimers({
+      toFake: ["setTimeout", "clearTimeout", "performance"],
+    });
+    try {
+      const testPage = page(SUMMARY);
+      await testPage.endPass();
+      testPage.auto.run("pca");
+      await drawBand(testPage);
+      await settled();
+      await press(button("Stop the PCA"));
+      expect(container.textContent).toContain("Stopping the PCA…");
+
+      await act(async () => {
+        vi.advanceTimersByTime(9_000);
+        await flush();
+      });
+      expect(container.textContent).toContain("Stopping the PCA…");
+      await act(async () => {
+        vi.advanceTimersByTime(1_050);
+        await flush();
+      });
+
+      expect(testPage.store.getState().stoppedAwaitingWorker).toBe("pca");
+      expect(container.textContent).toBe("Popnei");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("Close empties the status region and hides the details and their box, so that the next error shows them closed", async () => {
+    const testPage = page(SUMMARY);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: () => Promise.reject(new Error("no clipboard")) },
+    });
+    await drawBand(testPage);
+    await act(async () => {
+      testPage.defects.report(new Error("test"), "event", null);
+      await Promise.resolve();
+    });
+    await press(button("Details"));
+    await press(button("Copy the details"));
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+    expect(container.querySelector('[role="status"]')?.textContent).toBe(
+      "The details could not be copied. Select them in the box below and copy them.",
+    );
+    expect(container.querySelector("textarea")).not.toBeNull();
+
+    await press(button("Close"));
+    expect(container.querySelector('[role="status"]')?.textContent).toBe("");
+    await act(async () => {
+      testPage.defects.report(new Error("next"), "event", null);
+      await Promise.resolve();
+    });
+
+    expect(button("Details").getAttribute("aria-expanded")).toBe("false");
+    expect(container.textContent).not.toContain("Copy the details");
+    await press(button("Details"));
+    expect(container.querySelector("textarea")).toBeNull();
+    Reflect.deleteProperty(navigator, "clipboard");
+  });
 });

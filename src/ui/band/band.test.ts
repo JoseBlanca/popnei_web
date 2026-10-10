@@ -367,7 +367,6 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       }),
     );
     await flush();
-    // About to start, over the link to the warnings of the result before.
     expect(about.band().line.kind).toBe("aboutToStart");
     const aboutPage = pageOf(about);
     expect(
@@ -380,6 +379,39 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
         about.defects.getState(),
       ).line,
     ).toEqual({ kind: "stopping", what: { kind: "pca", method: "pca" } });
+
+    // About to start over the link: the PCA's result with its warning,
+    // which the Variants tab links to, and the PCA said about to start,
+    // a state built by hand, since a change that makes it about to start
+    // leaves no result for the link.
+    const linked = await pcaDone(SUMMARY, "pca", 1);
+    expect(linked.band().line.kind).toBe("result");
+    expect(
+      bandOf(
+        {
+          ...pageOf(linked),
+          pcaLive: { kind: "live", aboutToStart: "changes", running: false },
+        },
+        linked.defects.getState(),
+      ).line.kind,
+    ).toBe("aboutToStart");
+  });
+
+  test("the write of the filtered variants while the PCA live is about to start: the writing line, with no Stop recalculating", async () => {
+    const testPage = await pcaDone(SUMMARY, "pca", 548);
+    testPage.store.apply("the missing data filter changed", (p) =>
+      setVariantFilter(p, {
+        kind: "missing_data",
+        maxAllowedMissingRate: 0.05,
+      }),
+    );
+    await flush();
+    expect(testPage.band().line.kind).toBe("aboutToStart");
+    void startWriting(testPage.store, "nei");
+    await flush();
+
+    expect(words(testPage.band())).toBe("Writing panel.filtered.nei");
+    expect(stopOf(testPage.band().line)).toBeNull();
   });
 
   test("the line of an error of the application stands beside each of the others", async () => {

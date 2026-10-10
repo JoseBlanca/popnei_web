@@ -559,7 +559,10 @@ after a Stop the focus is on the heading "Popnei"; the line carries no
 live role, and the alert and the band's status region carry
 `data-live-announcer`; Details shows and hides the
 message with `aria-expanded`; Close calls `defects.dismiss` and gives
-the focus to the heading.
+the focus to the heading, empties the band's status region and hides
+the details and their box for the next error; "Stopping the PCA…"
+gone 10 s after the band first saw it, on a clock of the test, while
+the store still waits for the worker.
 
 **In Playwright, on the built site, in Chromium and WebKit**, the two
 engines that start on the owner's Mac, on `panel.nei`,

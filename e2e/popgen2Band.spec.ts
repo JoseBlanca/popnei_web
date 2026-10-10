@@ -861,6 +861,30 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       await expect
         .poll(() => lineText(page), { timeout: RESULT_TIMEOUT })
         .toBe("Popnei");
+      // The link: the PCoA with the LD pruning off, calculated again by
+      // itself, has 2 warnings, which the Variants tab links to.
+      await tab(page, "PCA").click();
+      await shown(page)
+        .getByRole("button", { name: /Method$/u })
+        .click();
+      await page.getByRole("option", { name: /^PCoA of the Kosman/u }).click();
+      await shown(page)
+        .locator("label")
+        .filter({
+          hasText: "Prune the variants by linkage disequilibrium (LD)",
+        })
+        .click();
+      await expect(
+        shown(page).getByRole("heading", { level: 3, name: "2 warnings" }),
+      ).toBeVisible({ timeout: RESULT_TIMEOUT });
+      await tab(page, "Variants").click();
+      await expect
+        .poll(() => lineText(page))
+        .toBe(
+          width === 320
+            ? "Popnei PCoA: 2 warnings"
+            : "Popnei PCoA: 2 warnings, in the PCA tab",
+        );
 
       const states = await bandStates(page);
       const heights = new Set(states.map((state) => state.height));
