@@ -24,6 +24,7 @@ import {
 } from "../../../core/testSupport.ts";
 import type { OptionCommand } from "../optionCommand.ts";
 import {
+  emptyRangeLine,
   stepDecimalsOf,
   stricterBound,
   stricterLines,
@@ -318,5 +319,54 @@ describe("AP6 D1 stepDecimalsOf, the decimals of the step of the Variants tab's 
     };
     expect(stepDecimalsOf(result, "missing_data", 2)).toBe(3);
     expect(stepDecimalsOf(result, "maf", 2)).toBe(2);
+  });
+});
+
+describe("AP10 D2 emptyRangeLine, a slider whose two ends are the same", () => {
+  test("the Variants tab's missing rate at 0: the line, under the PCA and the PCoA", () => {
+    const bound = stricterBound(project([missing(0)]), "missing_data", 3);
+    expect([bound.min, bound.max]).toEqual([0, 0]);
+    expect(emptyRangeLine(bound, "pca")).toBe(
+      "0, as in the Variants tab. The PCA cannot be stricter than the Variants tab here.",
+    );
+    expect(emptyRangeLine(bound, "pcoa")).toBe(
+      "0, as in the Variants tab. The PCoA cannot be stricter than the Variants tab here.",
+    );
+  });
+
+  test("the Variants tab's MAF at 0.5 and at 0.4: the line with its value", () => {
+    for (const value of [0.5, 0.4]) {
+      const bound = stricterBound(project([maf(value)]), "maf", 2);
+      expect(emptyRangeLine(bound, "pca")).toBe(
+        `${String(value)}, as in the Variants tab. The PCA cannot be stricter than the Variants tab here.`,
+      );
+    }
+  });
+
+  test("a range, at 0.1, at 0.51 and off: no line", () => {
+    expect(
+      emptyRangeLine(
+        stricterBound(project([missing(0.1)]), "missing_data", 3),
+        "pca",
+      ),
+    ).toBeNull();
+    expect(
+      emptyRangeLine(stricterBound(project([maf(0.51)]), "maf", 2), "pca"),
+    ).toBeNull();
+    expect(
+      emptyRangeLine(stricterBound(project([]), "maf", 2), "pca"),
+    ).toBeNull();
+  });
+});
+
+describe("AP10 D2 stricterMoveCommand given a value that is no number", () => {
+  test("throws a defect for NaN and an infinity", () => {
+    const p = project([missing(0.1)]);
+    const page = { page: "popgen2", method: "pca" } as const;
+    for (const value of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() =>
+        stricterMoveCommand(p, "missing_data", value, 3, page),
+      ).toThrow(/^popnei_web defect:/u);
+    }
   });
 });

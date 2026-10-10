@@ -120,7 +120,9 @@ export function Slider({
             maxValue={maxValue}
             step={step}
             onChange={(moved) => {
-              if (waits) return;
+              // React Aria divides by the range, and gives NaN when its
+              // two ends are the same.
+              if (waits || !Number.isFinite(moved)) return;
               if (dragging.current) setMoving(moved);
               else if (moved !== value) onChange(moved);
             }}
@@ -130,7 +132,14 @@ export function Slider({
               setMoving(null);
               // A press with no move ends where it started, and changes
               // nothing; a key was given at its change.
-              if (!waits && dragged && ended !== value) onChange(ended);
+              if (
+                !waits &&
+                dragged &&
+                Number.isFinite(ended) &&
+                ended !== value
+              ) {
+                onChange(ended);
+              }
             }}
           >
             <Label className={classOf(styles, "label")}>{label}</Label>

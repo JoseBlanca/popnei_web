@@ -59,6 +59,7 @@ import { followCommand, methodCommand, ownValueCommand } from "./commands.ts";
 import type { Popgen2CommandPage } from "./commands.ts";
 import styles from "./PcaTabOptions.module.css";
 import {
+  emptyRangeLine,
   stepDecimalsOf,
   stricterBound,
   stricterLines,
@@ -254,10 +255,23 @@ function StricterFilter({
   const lines = stricterLines(project, kind, page.method);
   const lineId = useId();
   const tabStricterId = useId();
+  const label = stricterSliderLabel(kind, page.method);
+  const empty = emptyRangeLine(bound, page.method);
+  if (empty !== null) {
+    // The two ends the same: no slider, whose thumb could not move, and
+    // which React Aria cannot draw, since it divides by its range.
+    return (
+      <div className={classOf(styles, "filter")}>
+        <p className={classOf(styles, "name")}>{label}</p>
+        <p className={classOf(styles, "line")}>{empty}</p>
+        <p className={classOf(styles, "muted")}>{line}</p>
+      </div>
+    );
+  }
   return (
     <div className={classOf(styles, "filter")}>
       <Slider
-        label={stricterSliderLabel(kind, page.method)}
+        label={label}
         minValue={bound.min}
         maxValue={bound.max}
         step={bound.step}

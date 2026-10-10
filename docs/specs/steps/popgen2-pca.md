@@ -409,6 +409,16 @@ Then three, in this order:
   when the Variants tab goes back above it, the thumb shows 0.05 again
   with no command. The thumb never shows a value looser than the one
   used. These lines are `stricterLines` of the same module.
+
+  **When the slider would have no range**, its two ends the same, with
+  the Variants tab's missing rate at 0, or its MAF at or below 0.5, no
+  slider is drawn, since its thumb could not move: its name, and under
+  it the line "0, as in the Variants tab. The PCA cannot be stricter
+  than the Variants tab here.", with the Variants tab's value, "0.5" or
+  "0.4" for the MAF; then the line of what popnei filters on. The PCA
+  uses the Variants tab's value. This line is `emptyRangeLine` of the
+  same module; decided by the session on 10 October 2026, as React
+  Aria's slider divides by its range and showed "NaN" there.
 - **LD pruning**, a switch, "Prune the variants by linkage
   disequilibrium (LD)", on when the page opens, with two number fields
   under it while on: "Maximum r² with a variant kept before it, from 0
@@ -752,6 +762,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | the heading of the tab | "PCA"; "PCoA" |
 | the filters | "Filters of the variants for the PCA"; "The PCA reads the variants the Variants tab keeps. Its own missing data and MAF filters can only be stricter."; "Maximum proportion of missing genotypes for the PCA"; "Maximum major allele frequency for the PCA"; "Prune the variants by linkage disequilibrium (LD)" |
 | the value of a slider | "0.1, as in the Variants tab"; "Off, as in the Variants tab"; "0.05" |
+| a filter whose slider would have no range | "0, as in the Variants tab. The PCA cannot be stricter than the Variants tab here." |
 | the Variants tab stricter than the PCA's own | "The Variants tab keeps at most 0.03, stricter than the 0.05 set here, so the PCA uses 0.03." |
 | the lock and the help of the one pass | the table of "Run and Stop" |
 | under the field of the distance | "Choose the distance beyond which the r² between two variants falls to its background level in your species, as studies of its LD decay report." |

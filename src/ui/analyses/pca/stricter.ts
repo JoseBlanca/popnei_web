@@ -110,6 +110,21 @@ export function stricterValueText(bound: StricterBound, value: number): string {
   return numberText(rounded(value, bound.decimals));
 }
 
+/**
+ * The line drawn in the place of the slider `bound` whose two ends are the
+ * same, the method `method` naming the PCA or the PCoA, or `null` while
+ * the slider has a range: "0, as in the Variants tab. The PCA cannot be
+ * stricter than the Variants tab here.", with the Variants tab's missing
+ * rate at 0, or its MAF at or below 0.5.
+ */
+export function emptyRangeLine(
+  bound: StricterBound,
+  method: PcaMethod,
+): string | null {
+  if (bound.min < bound.max) return null;
+  return `${numberText(bound.max)}, ${AS_IN_THE_TAB}. The ${methodName(method)} cannot be stricter than the Variants tab here.`;
+}
+
 /** The words of a slider at its upper end, after its value. */
 const AS_IN_THE_TAB = "as in the Variants tab";
 
@@ -132,6 +147,11 @@ export function stricterMoveCommand(
   stepDecimals: number | null,
   page: Popgen2CommandPage,
 ): OptionCommand | null {
+  if (!Number.isFinite(value)) {
+    throw new Error(
+      `popnei_web defect: a slider of the PCA's own filters gave ${String(value)}.`,
+    );
+  }
   const bound = stricterBound(p, kind, stepDecimals);
   const given = value >= bound.max ? bound.max : rounded(value, bound.decimals);
   // A move that ends at the value shown changes nothing: at the upper end

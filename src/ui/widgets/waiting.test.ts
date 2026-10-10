@@ -654,6 +654,60 @@ describe("AP10 D2 the slider of a filter of the PCA's own", () => {
     expect(container.querySelector("output")?.textContent).toBe("0.05");
   });
 
+  test("with its two ends the same, a key, a press on the track and a change of its input give no value that is not a number", () => {
+    const given: number[] = [];
+    draw(
+      createElement(Slider, {
+        label: "Maximum proportion of missing genotypes for the PCA",
+        minValue: 0,
+        maxValue: 0,
+        step: 0.001,
+        value: 0,
+        valueText: String,
+        onChange: (value) => given.push(value),
+      }),
+    );
+    const [input] = inputs();
+    if (input === undefined) throw new Error("no input");
+    act(() => {
+      input.focus();
+    });
+    for (const key of ["ArrowLeft", "ArrowRight", "Home", "End", "PageDown"]) {
+      act(() => {
+        input.dispatchEvent(
+          new KeyboardEvent("keydown", { key, bubbles: true }),
+        );
+        input.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
+      });
+    }
+    const track = input.parentElement?.parentElement;
+    if (track === null || track === undefined) throw new Error("no track");
+    const pointer = {
+      bubbles: true,
+      pointerId: 2,
+      pointerType: "mouse",
+      button: 0,
+      clientX: 5,
+      clientY: 5,
+    };
+    act(() => {
+      track.dispatchEvent(new PointerEvent("pointerdown", pointer));
+    });
+    act(() => {
+      track.dispatchEvent(
+        new PointerEvent("pointermove", { ...pointer, clientX: 1 }),
+      );
+      track.dispatchEvent(new PointerEvent("pointerup", pointer));
+    });
+    const prototype = Object.getPrototypeOf(input) as object;
+    act(() => {
+      Reflect.set(prototype, "value", "0.5", input);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(given.filter((value) => !Number.isFinite(value))).toEqual([]);
+  });
+
   test("at its upper end, ArrowRight, End and Page Up give no value", () => {
     const given: number[] = [];
     const input = drawSlider(null, given, 0.1);
