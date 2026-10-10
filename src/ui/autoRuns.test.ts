@@ -1121,6 +1121,22 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     expect(page.events).toEqual([]);
   });
 
+  test("Run pressed while a run of the arrow keys waits sends the PCA with the value the run holds, through the gate", async () => {
+    const page = await livePage();
+    const run = createThresholdRun({
+      gate: page.gate,
+      change: (to) => {
+        page.setMissing(to);
+      },
+      ended: () => undefined,
+    });
+    run.press(0.1, 0.099);
+    expect(page.auto.run("pca")).toBe(true);
+    expect(run.waiting()).toBe(false);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(JSON.stringify(page.pcaRequests()[0]?.job)).toContain("0.099");
+  });
+
   test("after Run and its end, a threshold changed starts the PCA one second later, and not before", async () => {
     const page = await liveDone();
     page.setMissing(0.05);
