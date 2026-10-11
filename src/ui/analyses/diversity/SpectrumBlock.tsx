@@ -41,7 +41,7 @@ import { MAX_HISTOGRAM_BINS } from "../../../charts/limits.ts";
 import { diversityOptions } from "../../../core/analyses/diversity.ts";
 import type { DiversityPage } from "../../../core/analyses/diversity.ts";
 import {
-  spectraCsv,
+  allSpectraCsv,
   spectraOf,
   spectrumWarnings,
 } from "../../../core/analyses/sfs.ts";
@@ -73,7 +73,7 @@ import {
   populationCells,
   populationColumns,
   spectrumCaption,
-  spectrumCsvName,
+  allSpectraCsvName,
   spectrumDescription,
   tooManyBarsLine,
   underHistogramsLine,
@@ -123,7 +123,11 @@ export const SpectrumBlock = memo(function SpectrumBlock({
   const anyShares = spectra.pops.some((pop) => pop.shares !== null);
 
   const download = (): void => {
-    downloadText(spectrumCsvName(variantsName), spectraCsv(result), "text/csv");
+    downloadText(
+      allSpectraCsvName(variantsName),
+      allSpectraCsv(result),
+      "text/csv",
+    );
   };
 
   const histograms = (

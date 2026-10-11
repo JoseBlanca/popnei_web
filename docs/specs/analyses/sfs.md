@@ -82,6 +82,12 @@ the Populations tab, with the words of that page in its warning, a
 those files (below, "On popgen2.html"). The old page changes in
 nothing. Approved by the owner on 11 October 2026; not yet built; its plan is `docs/plans/population-tab.md`.
 
+Renamed on 11 October 2026 after the review of work package 1 of that
+plan, so that the names say one population or all: `spectraCsv` is
+`allSpectraCsv`, `spectrumCsv` is `populationSpectrumCsv`, and the name
+of the file of all the spectra is `allSpectraCsvName`; and
+`spectrumWarnings` takes its page with no default.
+
 ## What is decided here, and what is asked
 
 The spectrum is part of the diversity: the same call of popnei, the same
@@ -198,7 +204,7 @@ words under the plots say it, so that no user reads it as a fall.
 
 ### The warnings
 
-The spectrum has one warning of its own, which `spectrumWarnings(r, p)`
+The spectrum has one warning of its own, which `spectrumWarnings(r, p, page)`
 gives and the block writes at the end of its caption, beside the
 histograms it is about, as the owner decided on 1 October 2026 (B4 of
 the stop of the diversity). Until that day the diversity's `warnings(r,
@@ -342,10 +348,11 @@ export interface Spectra {
 export function spectraOf(r: DiversityResult): Spectra;
 
 /** The spectra as the text of a CSV file (the panel, "What it shows"). */
-export function spectraCsv(r: DiversityResult): string;
+export function allSpectraCsv(r: DiversityResult): string;
 
-/** The warnings of the spectrum, which the diversity's warnings append. */
-export function spectrumWarnings(r: DiversityResult, p: Project): Warning[];
+/** The warnings of the spectrum, in the words of the page of the definition (below,
+    "On popgen2.html"); the page is required since 11 October 2026. */
+export function spectrumWarnings(r: DiversityResult, p: Project, page: DiversityPage): Warning[];
 ```
 
 `spectraOf` keeps its answer in a `WeakMap` keyed by the result object,
@@ -412,7 +419,7 @@ With Vitest, at the highest functions that show each thing:
 - **`spectraOf` of a population not calculated**: a third population
   with `foldedSfs` `null` and `numVarsInDraw` 0 gives `calculated`
   false, `expected` empty, `shares` `null`, and is left out of the CSV
-  of `spectraCsv`.
+  of `allSpectraCsv`.
 - **`spectraOf` on a worked example.** A diversity result of two
   populations with `numCalledAlleles` 4, `numVarsInDraw` `[5, 3]` and
   `foldedSfs` `[1, 2, 2]` and `[3, 0, 0]`: the first has the shares
@@ -429,7 +436,7 @@ With Vitest, at the highest functions that show each thing:
   is at 0.95, from which the text takes the threshold, and a result
   whose `passStats.filtering.maf` is 1,152 given and 1,128 kept, the
   text of the table above to the letter.
-- **`spectraCsv`** on the worked example, to the letter.
+- **`allSpectraCsv`** on the worked example, to the letter.
 - **The numbers of popnei**, with a result written as literals from the
   run below: at n = 40 with no filter, `spectraOf` gives p0 a share at
   bin 1 of 0.03296202862168288 and at bin 20 of 0.026276898456079615,
@@ -518,10 +525,10 @@ same request, as on the old page. Three things differ.
 - **The downloads**, as every plot and table of the page
   (`docs/specs/widgets/downloads.md`): each histogram has its
   "Download…", "Image as SVG", "Image as PNG" and "Data as CSV", whose
-  CSV is that population's rows of `spectraCsv`, with its header,
-  `spectrumCsv(r, population)`; the table of the spectrum has its
+  CSV is that population's rows of `allSpectraCsv`, with its header,
+  `populationSpectrumCsv(r, population)`; the table of the spectrum has its
   "Download…" below it, "Table as CSV", from the values of its cells.
-  The old button "Download the spectrum as CSV", and `spectraCsv` as a
+  The old button "Download the spectrum as CSV", and `allSpectraCsv` as a
   download, serve the old page alone.
 - **The names of the files**: `downloadName(stem, "sfs.‹population›",
   ext)` for a histogram, `panel.sfs.p0.svg`, the population's name made
@@ -531,17 +538,17 @@ same request, as on the old page. Three things differ.
   result already gave; `panel.sfs.csv` for the table.
 
 ```ts
-/** sfs.ts: the rows of one population of `spectraCsv`, with its header; a defect for a
+/** sfs.ts: the rows of one population of `allSpectraCsv`, with its header; a defect for a
     population not in the result. */
-export function spectrumCsv(r: DiversityResult, population: string): string;
+export function populationSpectrumCsv(r: DiversityResult, population: string): string;
 export function spectrumWarnings(r: DiversityResult, p: Project, page: DiversityPage): Warning[];
 
 /** fileNames.ts: the parts of file names of `names`, in their order, as above. */
 export function fileNameParts(names: readonly string[]): readonly string[];
 ```
 
-Checked with Vitest: `spectrumCsv` of the result of the flow at the
-missing data of 0.05, p0's rows equal to those of `spectraCsv` for p0;
+Checked with Vitest: `populationSpectrumCsv` of the result of the flow at the
+missing data of 0.05, p0's rows equal to those of `allSpectraCsv` for p0;
 `spectrumWarnings` with page "popgen2", the text above; `fileNameParts`
 of `["p0", "a/b", "a?b", "é"]`, `["p0", "a_b", "a_b_2", "é"]`, a
 letter of another alphabet kept, since a browser saves it.
@@ -602,7 +609,7 @@ who reads the spectrum learns where it is set.
   "not drawn".
 - **A download**, "Download the spectrum as CSV", saves
   `panel.sfs.csv`, named as `panel.diversity.csv` is, with the text of
-  `spectraCsv`: the header `population,rarer_allele,variants,share`, one
+  `allSpectraCsv`: the header `population,rarer_allele,variants,share`, one
   row per population and count, the numbers as `String` writes them,
   and an empty share for bin 0; quoted as the diversity's CSV.
 
@@ -620,7 +627,7 @@ in "Its words".
 
 It sends nothing: the diversity's Run calculates it. It reads the
 diversity's result from the store, through `spectraOf` and
-`spectraCsv`, and the name of the variants file and the number of
+`allSpectraCsv`, and the name of the variants file and the number of
 variants kept, which the diversity's caption reads too.
 
 ### Its words
@@ -694,7 +701,7 @@ spec:
   interface"), and `numVarsInDraw`, popnei's `numVars.inDraw`, which its
   rarefaction needs as well.
 - Its panel shows the block of this spec below its table in the state
-  done, and the block ends its caption with `spectrumWarnings(r, p)`,
+  done, and the block ends its caption with `spectrumWarnings(r, p, page)`,
   which its `warnings` does not append, from 1 October 2026 (B4).
 - Its default size of the draw is never below 2, which popnei refuses:
   the ploidy times a minimum of 0, or of 1 for a haploid dataset, gives

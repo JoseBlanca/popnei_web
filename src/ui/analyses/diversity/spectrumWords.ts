@@ -181,6 +181,6 @@ export const SPECTRUM_CSV_LABEL = "Download the spectrum as CSV";
 
 /** The name of the download: the stem of the variants file, then
     `.sfs.csv`; `panel.nei` gives `panel.sfs.csv`. */
-export function spectrumCsvName(variantsName: string): string {
+export function allSpectraCsvName(variantsName: string): string {
   return `${variantsStem(variantsName)}.sfs.csv`;
 }

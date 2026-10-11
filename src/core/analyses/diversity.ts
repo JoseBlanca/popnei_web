@@ -281,7 +281,7 @@ const NO_POPULATION = "`pops` names no population";
 
 /**
  * The words of a refusal of popnei, for the error state of the panel of
- * the project `p` on the page `page`, the old page by default, by the
+ * the project `p` on the page `page`, by the
  * start of popnei's message: no population, which the thresholds of the
  * filters of individuals leave; on popgen2.html, the refusals of the
  * variants file itself, in the words of the box Variants,
@@ -296,7 +296,7 @@ const NO_POPULATION = "`pops` names no population";
 export function refusalText(
   message: string,
   p: Project,
-  page: DiversityPage = "popgen",
+  page: DiversityPage,
 ): string {
   if (p.variants === null) {
     throw defect("refusalText was given a project with no variants file.");
@@ -357,7 +357,7 @@ export function statisticsFailedText(
   p: Project,
   failureText: (failure: Failure) => string,
   waited: boolean,
-  page: DiversityPage = "popgen",
+  page: DiversityPage,
 ): string {
   const notDone = waited
     ? "the diversity was not run"
@@ -462,7 +462,10 @@ function isOnePopulation(p: Project, page: DiversityPage): boolean {
  * (docs/specs/steps/popgen2-populations.md, "The populations it runs
  * on"). Throws a defect when popgen2.html runs populations of a column.
  */
-export function onePopulationLine(p: Project, numIndividuals: number): string {
+export function popgen2OnePopulationLine(
+  p: Project,
+  numIndividuals: number,
+): string {
   const cause = popgen2OnePopulationCause(p);
   if (cause === null) {
     throw defect(

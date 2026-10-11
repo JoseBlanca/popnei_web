@@ -13,7 +13,7 @@ import {
   populationCells,
   populationColumns,
   spectrumCaption,
-  spectrumCsvName,
+  allSpectraCsvName,
   spectrumDescription,
   tooManyBarsLine,
   underHistogramsLine,
@@ -131,6 +131,6 @@ describe("PA7 D2 the words of the block of the spectrum", () => {
         0,
       ),
     ).toEqual(["1,234.6", "not drawn"]);
-    expect(spectrumCsvName("panel.vcf.gz")).toBe("panel.sfs.csv");
+    expect(allSpectraCsvName("panel.vcf.gz")).toBe("panel.sfs.csv");
   });
 });

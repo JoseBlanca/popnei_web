@@ -15,7 +15,7 @@
 import {
   diversityOptions,
   drawOf,
-  onePopulationLine,
+  popgen2OnePopulationLine,
   refusalText,
   statisticsFailedText,
 } from "../../../core/analyses/diversity.ts";
@@ -137,7 +137,7 @@ export function diversityTabReadyLines(
       ? []
       : [
           onePopulation
-            ? onePopulationLine(p, first[1].length)
+            ? popgen2OnePopulationLine(p, first[1].length)
             : populationsText(pops.pops),
         ]),
     ...(pops.unclassifiedLeftOut > 0

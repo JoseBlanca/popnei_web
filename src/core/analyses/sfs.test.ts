@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { spectraCsv, spectraOf, spectrumCsv, spectrumWarnings } from "./sfs.ts";
+import {
+  allSpectraCsv,
+  spectraOf,
+  populationSpectrumCsv,
+  spectrumWarnings,
+} from "./sfs.ts";
 import type { Project } from "../project.ts";
 import {
   deepFreeze,
@@ -79,7 +84,7 @@ describe("PA6 D6 the spectrum's module: spectraOf", () => {
     expect(p3?.expected).toEqual(new Float64Array(0));
     expect(p3?.shares).toBeNull();
     expect(p3?.numIndividuals).toBe(50);
-    expect(spectraCsv(r)).toBe(spectraCsv(workedExample()));
+    expect(allSpectraCsv(r)).toBe(allSpectraCsv(workedExample()));
   });
 
   test("PA7 D2 each spectrum carries the individuals of its population, and a result with none for a population is a defect", () => {
@@ -167,7 +172,7 @@ describe("PA6 D6 the spectrum's module: spectraOf", () => {
     expect(p4?.expected).toEqual(Float64Array.from([0, 0, 0]));
     expect(p4?.shares).toBeNull();
     expect(spectraOf(r).largestShare).toBe(0.5);
-    expect(spectraCsv(r)).toBe(
+    expect(allSpectraCsv(r)).toBe(
       "population,rarer_allele,variants,share\n" +
         "p0,0,1,\n" +
         "p0,1,2,0.5\n" +
@@ -186,13 +191,13 @@ describe("PA6 D6 the spectrum's module: spectraOf", () => {
       foldedSfs: [null, null],
     });
     expect(spectraOf(r).largestShare).toBe(0);
-    expect(spectraCsv(r)).toBe("population,rarer_allele,variants,share\n");
+    expect(allSpectraCsv(r)).toBe("population,rarer_allele,variants,share\n");
   });
 });
 
-describe("PA6 D6 the spectrum's module: spectraCsv", () => {
+describe("PA6 D6 the spectrum's module: allSpectraCsv", () => {
   test("the worked example, to the letter", () => {
-    expect(spectraCsv(workedExample())).toBe(
+    expect(allSpectraCsv(workedExample())).toBe(
       "population,rarer_allele,variants,share\n" +
         "p0,0,1,\n" +
         "p0,1,2,0.5\n" +
@@ -210,7 +215,7 @@ describe("PA6 D6 the spectrum's module: spectraCsv", () => {
       numVarsInDraw: [2],
       foldedSfs: [[1, 1]],
     });
-    expect(spectraCsv(r)).toBe(
+    expect(allSpectraCsv(r)).toBe(
       "population,rarer_allele,variants,share\n" +
         '"north, ""high""",0,1,\n' +
         '"north, ""high""",1,1,1\n',
@@ -218,7 +223,7 @@ describe("PA6 D6 the spectrum's module: spectraCsv", () => {
   });
 });
 
-describe("PA10 spectraCsv and a name a spreadsheet would run as a formula", () => {
+describe("PA10 allSpectraCsv and a name a spreadsheet would run as a formula", () => {
   test("a population named +north is written with a quote before it", () => {
     const r = result({
       pops: ["+north"],
@@ -226,7 +231,7 @@ describe("PA10 spectraCsv and a name a spreadsheet would run as a formula", () =
       numVarsInDraw: [2],
       foldedSfs: [[1, 1]],
     });
-    expect(spectraCsv(r)).toBe(
+    expect(allSpectraCsv(r)).toBe(
       "population,rarer_allele,variants,share\n" +
         "'+north,0,1,\n" +
         "'+north,1,1,1\n",
@@ -239,7 +244,7 @@ describe("PA6 D6 the spectrum's module: spectrumWarnings", () => {
     const p = projectWith([
       { kind: "missing_data", maxAllowedMissingRate: 0.05 },
     ]);
-    expect(spectrumWarnings(workedExample(), p)).toEqual([]);
+    expect(spectrumWarnings(workedExample(), p, "popgen")).toEqual([]);
   });
 
   test("no warning for a MAF filter that kept every variant it was given", () => {
@@ -251,7 +256,7 @@ describe("PA6 D6 the spectrum's module: spectrumWarnings", () => {
       foldedSfs: [[1, 1]],
       maf: { varsProcessed: 1200, varsKept: 1200 },
     });
-    expect(spectrumWarnings(r, p)).toEqual([]);
+    expect(spectrumWarnings(r, p, "popgen")).toEqual([]);
   });
 
   test("no warning for a MAF filter at 1, which removes only the variants with no called allele", () => {
@@ -263,7 +268,7 @@ describe("PA6 D6 the spectrum's module: spectrumWarnings", () => {
       foldedSfs: [[1, 1]],
       maf: { varsProcessed: 1200, varsKept: 1198 },
     });
-    expect(spectrumWarnings(r, p)).toEqual([]);
+    expect(spectrumWarnings(r, p, "popgen")).toEqual([]);
   });
 
   test("the text of the flow's MAF filter at 0.95, to the letter", () => {
@@ -278,7 +283,7 @@ describe("PA6 D6 the spectrum's module: spectrumWarnings", () => {
       foldedSfs: [[1, 1]],
       maf: { varsProcessed: 1152, varsKept: 1128 },
     });
-    expect(spectrumWarnings(r, p)).toEqual([
+    expect(spectrumWarnings(r, p, "popgen")).toEqual([
       {
         code: "mafFilterOnSpectrum",
         text: "The MAF filter of the Variants step removes the variants whose commonest allele is above 0.95 in the individuals kept, taken together, and it removed 24 of the 1,152 it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn off the MAF filter in the Variants step.",
@@ -341,37 +346,37 @@ describe("SF2 D4 the warning of the spectrum reads the filters that apply to the
   test("with passed on and a .nei file whose read says keepsPassed false, the warnings are those of the filters without it", () => {
     const base = projectWith([{ kind: "maf", maxAllowedMaf: 0.95 }]);
     const r = workedExample();
-    expect(spectrumWarnings(r, withPassedOn(base, false))).toEqual(
-      spectrumWarnings(r, base),
+    expect(spectrumWarnings(r, withPassedOn(base, false), "popgen")).toEqual(
+      spectrumWarnings(r, base, "popgen"),
     );
   });
 });
 
 describe("PT1 D1 the spectrum on popgen2.html", () => {
-  test("spectrumCsv of p0 gives the header and p0's rows of spectraCsv, in their order", () => {
+  test("populationSpectrumCsv of p0 gives the header and p0's rows of allSpectraCsv, in their order", () => {
     const r = workedExample();
-    const [header = "", ...rows] = spectraCsv(r).split("\n");
+    const [header = "", ...rows] = allSpectraCsv(r).split("\n");
     const p0 = rows.filter((row) => row.startsWith("p0,"));
     expect(p0).toHaveLength(3);
-    expect(spectrumCsv(r, "p0")).toBe(
+    expect(populationSpectrumCsv(r, "p0")).toBe(
       [header, ...p0].map((line) => `${line}\n`).join(""),
     );
-    expect(spectrumCsv(r, "p1")).toBe(
+    expect(populationSpectrumCsv(r, "p1")).toBe(
       "population,rarer_allele,variants,share\np1,0,3,\np1,1,0,\np1,2,0,\n",
     );
   });
 
-  test("spectrumCsv of a population not calculated gives the header alone, and of one not in the result a defect", () => {
+  test("populationSpectrumCsv of a population not calculated gives the header alone, and of one not in the result a defect", () => {
     const r = result({
       pops: ["p0", "p3"],
       numCalledAlleles: 4,
       numVarsInDraw: [5, 0],
       foldedSfs: [[1, 2, 2], null],
     });
-    expect(spectrumCsv(r, "p3")).toBe(
+    expect(populationSpectrumCsv(r, "p3")).toBe(
       "population,rarer_allele,variants,share\n",
     );
-    expect(() => spectrumCsv(r, "p9")).toThrow("popnei_web defect");
+    expect(() => populationSpectrumCsv(r, "p9")).toThrow("popnei_web defect");
   });
 
   test("spectrumWarnings with the page popgen2 names the MAF threshold of the Variants tab, to the letter; the old page's words unchanged", () => {
@@ -392,6 +397,11 @@ describe("PT1 D1 the spectrum on popgen2.html", () => {
         text: "The MAF threshold of the Variants tab removes the variants whose commonest allele is above 0.95 in the individuals kept, taken together, and it removed 24 of the 1,152 it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn the MAF threshold off in the Variants tab.",
       },
     ]);
-    expect(spectrumWarnings(r, p, "popgen")).toEqual(spectrumWarnings(r, p));
+    expect(spectrumWarnings(r, p, "popgen")).toEqual([
+      {
+        code: "mafFilterOnSpectrum",
+        text: "The MAF filter of the Variants step removes the variants whose commonest allele is above 0.95 in the individuals kept, taken together, and it removed 24 of the 1,152 it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn off the MAF filter in the Variants step.",
+      },
+    ]);
   });
 });

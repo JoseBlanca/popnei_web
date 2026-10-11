@@ -148,17 +148,20 @@ const CSV_HEADER = "population,rarer_allele,variants,share";
  * when it holds a comma, a quote or a new line, and each line ended by a
  * new line.
  */
-export function spectraCsv(r: DiversityResult): string {
+export function allSpectraCsv(r: DiversityResult): string {
   return csvOf(spectraOf(r).pops.flatMap(spectrumLines));
 }
 
 /**
- * The rows of the population `population` of `spectraCsv(r)`, after its
+ * The rows of the population `population` of `allSpectraCsv(r)`, after its
  * header, the CSV of one histogram of popgen2.html (sfs.md, "On
  * popgen2.html"); the header alone for a population not calculated.
  * Throws a defect for a population not in the result.
  */
-export function spectrumCsv(r: DiversityResult, population: string): string {
+export function populationSpectrumCsv(
+  r: DiversityResult,
+  population: string,
+): string {
   const pop = spectraOf(r).pops.find((p) => p.population === population);
   if (pop === undefined) {
     throw defect(
@@ -212,12 +215,12 @@ const MAF_KEEPS_ALL = 1;
  * was made from: a MAF filter with a threshold below 1 that removed at
  * least one of the variants it was given, as the counts of the pass of
  * `r` have them, in the words of the page `page` of the diversity's
- * definition, the old page's by default (sfs.md, "On popgen2.html").
+ * definition (sfs.md, "On popgen2.html").
  */
 export function spectrumWarnings(
   r: DiversityResult,
   p: Project,
-  page: DiversityPage = "popgen",
+  page: DiversityPage,
 ): Warning[] {
   const filter = filtersApplied(p).find((f) => f.kind === "maf");
   const counts = r.passStats.filtering.maf;

@@ -151,8 +151,14 @@ const DIVERSITY: AnalysisUi = Object.freeze({
         : { numCalledAlleles, ploidy: read.ploidy },
     );
   },
-  refusalText,
-  statisticsFailedText,
+  refusalText: (message: string, p: Project): string =>
+    refusalText(message, p, "popgen"),
+  statisticsFailedText: (
+    error: AnalysisError,
+    p: Project,
+    failureText: (failure: Failure) => string,
+    waited: boolean,
+  ): string => statisticsFailedText(error, p, failureText, waited, "popgen"),
   Results: DiversityResults,
   Options: DiversityOptionsPart,
   runningLine: (): null => null,

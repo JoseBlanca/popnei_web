@@ -964,7 +964,7 @@ the order of the file, with the missing data filter at 0.05: popnei gave
 it a value at 641 of the 1,152 variants kept, and at 653 of the 1,200
 with no filter (node, 25 September 2026, `js-v0.1.0-dev.2`).
 
-The warning of the spectrum, `spectrumWarnings(r, p)` of
+The warning of the spectrum, `spectrumWarnings(r, p, page)` of
 `docs/specs/analyses/sfs.md`, is not among them from 1 October 2026:
 the block of the spectrum says it, at the end of its caption, beside
 the histograms it is about, as the owner decided that day (B4). Until

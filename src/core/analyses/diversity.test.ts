@@ -9,7 +9,7 @@ import {
   diversityPageOf,
   diversityRows,
   drawOf,
-  onePopulationLine,
+  popgen2OnePopulationLine,
   onePopulationName,
   refusalText,
   statisticsFailedText,
@@ -619,6 +619,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
       refusalText(
         "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
         project({ variantsName: "empty.vcf" }),
+        "popgen",
       ),
     ).toBe(
       "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step.",
@@ -630,6 +631,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
       refusalText(
         "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
         vcfProject("empty.vcf", false),
+        "popgen",
       ),
     ).toBe(
       "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step.",
@@ -641,6 +643,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
       refusalText(
         "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
         vcfProject("failed.vcf", true),
+        "popgen",
       ),
     ).toBe(
       'failed.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is no variant to calculate the diversity over. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again.',
@@ -652,17 +655,19 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
       refusalText(
         "the pass gave no variant: its source gave 1200 and the steps kept none of them",
         project(),
+        "popgen",
       ),
     ).toMatch(/^The filters kept none/u);
     expect(
       refusalText(
         "the pass gave no variant and its source holds none",
         project(),
+        "popgen",
       ),
     ).toMatch(/^panel\.nei has no variants/u);
-    expect(refusalText("the pass gave no variantx", project())).toMatch(
-      /^popnei could not calculate the diversity/u,
-    );
+    expect(
+      refusalText("the pass gave no variantx", project(), "popgen"),
+    ).toMatch(/^popnei could not calculate the diversity/u);
   });
 
   test("refusalText of an empty pass tells to loosen the filters", () => {
@@ -670,6 +675,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
       refusalText(
         "the pass gave no variant: its source gave 1200 and the steps kept none of them, the `missing_data` filter was given 1200 and kept 1152, the `maf` filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives",
         project(),
+        "popgen",
       ),
     ).toBe(
       "The filters kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step.",
@@ -681,6 +687,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
       refusalText(
         "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies",
         project({ variantsName: "tetraploid.vcf.gz" }),
+        "popgen",
       ),
     ).toBe(
       "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
@@ -692,6 +699,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
       refusalText(
         "line 4 of the VCF, the column of a: `z` is not an allele number, which is a run of digits",
         project({ variantsName: "panel.vcf.gz" }),
+        "popgen",
       ),
     ).toBe(
       "popnei could not read panel.vcf.gz: line 4 of the VCF, the column of a: `z` is not an allele number, which is a run of digits. Correct the file, or fetch it again, and load it in the Variants step.",
@@ -699,7 +707,9 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
   });
 
   test("refusalText of another message gives popnei's message without its full stop", () => {
-    expect(refusalText("the memory of the tab ran out.", project())).toBe(
+    expect(
+      refusalText("the memory of the tab ran out.", project(), "popgen"),
+    ).toBe(
       "popnei could not calculate the diversity: the memory of the tab ran out. Change the settings, or load the variants file again, to run it again.",
     );
   });
@@ -709,6 +719,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
       refusalText(
         "`minNumIndividuals` is 0, and `calcDiversity` needs one at least.",
         project(),
+        "popgen",
       ),
     ).toBe(
       "popnei could not calculate the diversity: minNumIndividuals is 0, and calcDiversity needs one at least. Change the settings, or load the variants file again, to run it again.",
@@ -1227,7 +1238,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
     const message =
       "the VCF was written by bgzip and does not end with the empty member of 28 bytes that marks the end of a bgzipped file, so the file is cut short and the variants after the cut are not in it; the file has to be fetched or copied again. bcftools says of the same file `no BGZF EOF marker; file may be truncated`";
     expect(
-      refusalText(message, project({ variantsName: "panel.vcf.gz" })),
+      refusalText(message, project({ variantsName: "panel.vcf.gz" }), "popgen"),
     ).toBe(
       `popnei could not read panel.vcf.gz: ${message}. Correct the file, or fetch it again, and load it in the Variants step.`,
     );
@@ -1244,7 +1255,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
 
   test("refusalText throws a defect on a project with no variants file", () => {
     const p = deepFreeze<Project>({ ...project(), variants: null });
-    expect(() => refusalText("the pass gave no variant", p)).toThrow(
+    expect(() => refusalText("the pass gave no variant", p, "popgen")).toThrow(
       /^popnei_web defect: /,
     );
   });
@@ -1640,6 +1651,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
           throw new Error("a refusal was given the words of a failure");
         },
         true,
+        "popgen",
       ),
     ).toBe(
       "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. popnei could not calculate the statistics of each individual: the pass gave no variant: its source gave 1200 and the steps kept none of them, the missing_data filter was given 1200 and kept 1152, the maf filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives. Change the settings, or load the variants file again, to calculate them again.",
@@ -1651,6 +1663,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
       refusalText(
         "`pops` names no population, and a result holds one value for each population: leave `pops` out for one population of every individual",
         project(),
+        "popgen",
       ),
     ).toBe(
       "The thresholds of the filters of individuals leave none of the individuals of panel.nei that have a population in pop, so no population is left. Loosen the thresholds in the Variants step.",
@@ -1671,6 +1684,7 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
           return "The calculation stopped unexpectedly.";
         },
         true,
+        "popgen",
       ),
     ).toBe(
       "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. The calculation stopped unexpectedly.",
@@ -1686,6 +1700,7 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
         project(),
         () => "The calculation stopped unexpectedly.",
         false,
+        "popgen",
       ),
     ).toBe(
       "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity cannot run. The calculation stopped unexpectedly.",
@@ -2870,7 +2885,7 @@ describe("PA6 D4 the warnings of stage 5", () => {
     ).toEqual(["noFInHaploid"]);
     expect(warningsOf(r, p, "mafFilterOnSpectrum")).toEqual([]);
     // The spectrum's own function still gives it, for its block.
-    expect(spectrumWarnings(r, p).map((w) => w.code)).toEqual([
+    expect(spectrumWarnings(r, p, "popgen").map((w) => w.code)).toEqual([
       "mafFilterOnSpectrum",
     ]);
     expect(warningsOf(r, p, "noFInHaploid")).toEqual([
@@ -3594,7 +3609,9 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     ).toBe(
       "panel.nei has no variants. Open another variants file in the box Variants.",
     );
-    expect(refusalText("`pops` names no population once filtered", p)).toBe(
+    expect(
+      refusalText("`pops` names no population once filtered", p, "popgen"),
+    ).toBe(
       "The thresholds of the filters of individuals leave none of the individuals of panel.nei that have a population in pop, so no population is left. Loosen the thresholds in the Variants step.",
     );
   });
@@ -3620,19 +3637,19 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       "No individual is assigned to a population, so the diversity is of every individual kept as one population.";
     const mixed = MIXED;
     expect(
-      onePopulationLine(
+      popgen2OnePopulationLine(
         deepFreeze<Project>({ ...project(), individuals: null }),
         200,
       ),
     ).toBe(`1 population, Unclassified: 200 individuals. ${first}`);
-    expect(onePopulationLine(noneProject(), 1)).toBe(
+    expect(popgen2OnePopulationLine(noneProject(), 1)).toBe(
       `1 population, Unclassified: 1 individual. ${first}`,
     );
-    expect(onePopulationLine(refusedProject(), 4)).toBe(
+    expect(popgen2OnePopulationLine(refusedProject(), 4)).toBe(
       `1 population, Unclassified: 4 individuals. ${first} pops.csv could not be read, as the box Individuals says; open it again, or another file, there to get populations. ${mixed}`,
     );
     expect(
-      onePopulationLine(
+      popgen2OnePopulationLine(
         deepFreeze<Project>({
           ...project(),
           grouping: { kind: "populations", column: "country" },
@@ -3642,21 +3659,23 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     ).toBe(
       `1 population, Unclassified: 4 individuals. ${first} pops.csv has no column country; choose a column of the populations in the box Individuals. ${mixed}`,
     );
-    expect(onePopulationLine(tooManyProject(), 21)).toBe(
+    expect(popgen2OnePopulationLine(tooManyProject(), 21)).toBe(
       `1 population, Unclassified: 21 individuals. ${first} pop has 21 values, more than the 20 a column of populations can have; choose another column in the box Individuals to get populations. ${mixed}`,
     );
-    expect(() => onePopulationLine(project(), 3)).toThrow("popnei_web defect");
+    expect(() => popgen2OnePopulationLine(project(), 3)).toThrow(
+      "popnei_web defect",
+    );
   });
 
   test("the line of the one population of a column that classifies nobody says the numbers may mix populations; with no file and with None it does not", () => {
     const first =
       "No individual is assigned to a population, so the diversity is of every individual kept as one population.";
-    expect(onePopulationLine(noneClassifiedProject(), 4)).toBe(
+    expect(popgen2OnePopulationLine(noneClassifiedProject(), 4)).toBe(
       `1 population, Unclassified: 4 individuals. ${first} ${MIXED}`,
     );
-    expect(onePopulationLine(noneProject(), 4)).not.toContain(MIXED);
+    expect(popgen2OnePopulationLine(noneProject(), 4)).not.toContain(MIXED);
     expect(
-      onePopulationLine(
+      popgen2OnePopulationLine(
         deepFreeze<Project>({ ...project(), individuals: null }),
         4,
       ),
