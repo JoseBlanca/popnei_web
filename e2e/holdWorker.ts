@@ -53,9 +53,18 @@ const CHANNEL = "e2e-hold";
     them. Or `crash`, which makes the worker stop as a crash of the wasm
     would, with what it holds, at the moment the flow chooses, after a
     result so far, where crashWorker.ts crashes it at a message of the
-    page. */
+    page. `pca` and `diversity` let the results of that analysis through,
+    those held and those after them; `holdPcaAgain` holds those of the
+    PCA after it again. */
 export type Release =
-  "oneSoFar" | "allSoFar" | "result" | "crash" | "write" | "pca" | "diversity";
+  | "oneSoFar"
+  | "allSoFar"
+  | "result"
+  | "crash"
+  | "write"
+  | "pca"
+  | "diversity"
+  | "holdPcaAgain";
 
 /** What a worker says on the channel once it listens. */
 const LISTENING = "listening";
@@ -122,6 +131,10 @@ const front = (
     const release = event.data;
     if (release === "crash") {
       setTimeout(() => { throw new Error("a crash of the test"); }, 0);
+      return;
+    }
+    if (release === "holdPcaAgain") {
+      holding.pca = true;
       return;
     }
     if (release === "pca") {

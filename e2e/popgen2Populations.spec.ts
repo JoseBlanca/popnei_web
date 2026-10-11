@@ -505,18 +505,36 @@ test.describe("PT1 D4 the Populations tab", () => {
 });
 
 test.describe("PT1 D4 the diversity live beside the PCA", () => {
-  test("PT1 D4 both live, a threshold moved: one PCA, and one diversity after the PCA's result", async ({
+  test("PT1 D4 both live, a threshold moved: one PCA, and while it runs the diversity waits, Stop recalculating and no Stop; then one diversity after the PCA's result", async ({
     page,
   }) => {
     test.setTimeout(120_000);
+    await holdSummary(page);
     await openPage(page);
     await pick(page, "panel.nei");
+    await release(page, "allSoFar");
+    await release(page, "result");
     await pickIndividuals(page, "panel_pops.csv");
     await runPca(page);
     await runDiversity(page);
     const before = (await timeline(page)).length;
 
+    // The PCA's result held from here. The page posts a request to its
+    // worker only once the worker is idle, so the timeline alone would
+    // be the same with a diversity started during the PCA: the button
+    // says whether the diversity runs.
+    await release(page, "holdPcaAgain");
     await setMissing(page, "0.05", "Populations");
+    await expect
+      .poll(async () => (await timeline(page)).slice(before))
+      .toEqual(["run pca"]);
+    // More than the quiet second after the change, in which the
+    // diversity would have started had it not waited.
+    await page.waitForTimeout(1500);
+    await expect(button(page, "Stop recalculating")).toBeVisible();
+    await expect(button(page, "Stop")).toHaveCount(0);
+
+    await release(page, "pca");
     await expect(table(page, CAPTION_005)).toBeVisible({
       timeout: RESULT_TIMEOUT,
     });
