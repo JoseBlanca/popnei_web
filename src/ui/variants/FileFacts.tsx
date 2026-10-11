@@ -42,11 +42,9 @@ export function FileFacts({
   if (variants === null || variants.read.kind === "failed") return null;
   const read = variants.read;
   return (
-    <div
-      role="group"
-      aria-label={FACTS_NAME}
-      className={classOf(styles, "facts")}
-    >
+    // A region named for a screen reader, which lists it among the
+    // regions of the page; the lines have no heading on the screen.
+    <section aria-label={FACTS_NAME} className={classOf(styles, "facts")}>
       <p className={classOf(styles, "fact")}>{fileSizeLine(variants)}</p>
       {read.kind === "read" ? (
         <Chromosomes autoRuns={autoRuns} />
@@ -56,7 +54,7 @@ export function FileFacts({
       <p className={classOf(styles, "fact")}>
         {read.kind === "read" ? ploidyLine(read.ploidy) : PLOIDY_READING}
       </p>
-    </div>
+    </section>
   );
 }
 

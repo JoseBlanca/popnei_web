@@ -412,7 +412,7 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   ).toBeVisible();
   await expect(
     page
-      .getByRole("group", { name: "About the file" })
+      .getByRole("region", { name: "About the file" })
       .getByText("Chromosomes: 1 so far"),
   ).toBeVisible();
   const plotsDrawn = (texts: readonly string[]): number =>

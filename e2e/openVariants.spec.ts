@@ -53,7 +53,7 @@ function info(page: Page): Locator {
 /** The lines at the top of the Variants tab: the size of the file, its
     chromosomes and its ploidy, out of the box since 11 October 2026. */
 function facts(page: Page): Locator {
-  return page.getByRole("group", { name: "About the file" });
+  return page.getByRole("region", { name: "About the file" });
 }
 
 /** The lines of the box, in their order. */

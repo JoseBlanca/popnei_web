@@ -72,6 +72,7 @@ const inject = vi.hoisted(() => ({
   tabsThrow: false,
   pcaTabThrows: false,
   pcaOptionsThrow: false,
+  factsThrow: false,
 }));
 
 vi.mock("../../core/analyses/pca.ts", async (importOriginal) => {
@@ -152,6 +153,14 @@ vi.mock("./words.ts", async (importOriginal) => {
       }
       return real.variantsLineOf(...args);
     },
+    ploidyLine: (
+      ...args: Parameters<typeof real.ploidyLine>
+    ): ReturnType<typeof real.ploidyLine> => {
+      if (inject.factsThrow) {
+        throw new Error("the line of the ploidy could not be drawn");
+      }
+      return real.ploidyLine(...args);
+    },
   };
 });
 
@@ -195,6 +204,7 @@ beforeEach(() => {
   inject.tabsThrow = false;
   inject.pcaTabThrows = false;
   inject.pcaOptionsThrow = false;
+  inject.factsThrow = false;
   container = document.createElement("div");
   document.body.append(container);
   caught = [];
@@ -554,6 +564,30 @@ describe("IN3 the page in two boxes and the row of tabs", () => {
       "Chromosomes: 2 so far",
       "Ploidy: 2",
     ]);
+  });
+
+  test("NU8 R1 the size, the chromosomes and the ploidy are a region named About the file, which a screen reader lists", async () => {
+    const { store } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+    const facts = container.querySelector('[aria-label="About the file"]');
+    expect(facts?.tagName).toBe("SECTION");
+    expect(facts?.getAttribute("role")).toBeNull();
+  });
+
+  test("NU8 R1 a throw in the lines of the file at the top of the Variants tab leaves their heading alone, and the statistics drawn", async () => {
+    inject.factsThrow = true;
+    const { store } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+    expect(caught).toEqual([
+      new Error("the line of the ploidy could not be drawn"),
+    ]);
+    const headings = [...container.querySelectorAll("h2, h3")].map(
+      (heading) => `${heading.tagName} ${heading.textContent}`,
+    );
+    expect(headings).toContain("H2 About the file");
+    expect(headings).not.toContain("H2 Statistics of the file");
+    expect(headings).toContain("H2 Filters of the variants");
+    expect(factsOfTab()).toEqual([]);
   });
 
   test("NU8 R1 a Stop in the quiet second before the one pass starts, which changes nothing in the store, makes the chromosomes not counted", async () => {

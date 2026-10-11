@@ -358,6 +358,15 @@ or a failure of the pass, "Chromosomes: not counted". The words of the
 chromosomes and the ploidy are those the box had. A file that could not
 be opened shows none of them: the box says why.
 
+The three lines have no heading on the screen. They are a region named
+"About the file" for a screen reader, a `section` with that name, which
+a screen reader lists among the regions of the page, as it lists the box
+Variants, and not a group, which it does not list. They are in a
+boundary of errors of their own, made anew for each variants file, apart
+from the statistics', so that a throw in a line leaves the heading
+"About the file" in their place and the statistics drawn, and a throw in
+the statistics leaves the lines.
+
 ### The Individuals tab
 
 | the individuals file | what the tab shows |
@@ -558,7 +567,8 @@ the project's (`docs/architecture.md`, section 7).
 | the headers of the counts | "Population"; "Individuals" |
 | a count not yet known, for a screen reader | "not counted yet" |
 | the line of the rows not used, in the Individuals tab | "Individuals in panel_pops.csv but not in panel.nei: 18" |
-| the top of the Variants tab | "File size: 261 KB"; "Chromosomes: 1"; "Ploidy: 2" |
+| the top of the Variants tab | "File size: 261 KB"; "Chromosomes: 1"; "Ploidy: 2"; their name for a screen reader, and the heading drawn in their place when their code throws, "About the file" |
+| the Variants tab of a file that could not be opened | "panel.nei could not be read; the box Variants says why." |
 | the refusals, in the box | "panel_pops.csv could not be read: " and the words of the reader spec after the colon (`docs/specs/worker/individuals.md`, "The refusals and their words"), ending as below |
 | the end of `raggedRow` and `unclosedQuote` | "Choose another separator in the Individuals tab, or open a corrected file." |
 | the end of `variantsFile` | "it is a variants file; open it with Open variants file in the box Variants." in place of the reader's words after the colon |

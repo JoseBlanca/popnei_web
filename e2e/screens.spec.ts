@@ -4408,7 +4408,7 @@ function newPageCount(page: Page): Locator {
 /** The size, the chromosomes and the ploidy of the file open on
     popgen2.html, at the top of the Variants tab. */
 function newPageFacts(page: Page): Locator {
-  return page.getByRole("group", { name: "About the file" });
+  return page.getByRole("region", { name: "About the file" });
 }
 
 /** The statistics of the open file on popgen2.html, above the open
