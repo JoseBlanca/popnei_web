@@ -2542,7 +2542,7 @@ function individualsBoxWords(
 ): string {
   switch (error.kind) {
     case "variantsFile":
-      return "it is a variants file; open it with Open variants file in the box Variants file.";
+      return "it is a variants file; open it with Open variants file in the box Variants.";
     case "tooLarge":
       return `it is ${megabytes(error.size)}, more than the ${grouped(error.max / BYTES_IN_MB)} MB an individuals file can have; check that it is the individuals file and not the variants file.`;
     case "readerNotLoaded":

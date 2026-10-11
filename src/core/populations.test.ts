@@ -531,9 +531,9 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
     );
   });
 
-  test("individualsBoxNeeds says a variants file is opened in the box Variants file", () => {
+  test("individualsBoxNeeds says a variants file is opened in the box Variants", () => {
     expect(individualsBoxNeeds(refused({ kind: "variantsFile" }))).toBe(
-      "panel_pops.csv could not be read: it is a variants file; open it with Open variants file in the box Variants file.",
+      "panel_pops.csv could not be read: it is a variants file; open it with Open variants file in the box Variants.",
     );
   });
 
