@@ -14,7 +14,13 @@ import {
   refusalText,
   statisticsFailedText,
 } from "./diversity.ts";
-import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "../apps.ts";
+import { pcaOnPopgen2 } from "./pca.ts";
+import {
+  POPGEN2_ANALYSES,
+  POPGEN_ANALYSES,
+  countsOf,
+  individualStatsOf,
+} from "../apps.ts";
 import type { IndividualsKept } from "../individualsKept.ts";
 import { createKeyMemo, keyOf } from "../keys.ts";
 import type { Key, KeyedDef } from "../keys.ts";
@@ -3219,6 +3225,18 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     );
     expect(onePopulationName("popgen")).toBe("All individuals");
     expect(onePopulationName("popgen2")).toBe("Unclassified");
+  });
+
+  test("POPGEN2_ANALYSES lists diversityOnPopgen2 after pcaOnPopgen2, and POPGEN_ANALYSES keeps the old diversity", () => {
+    expect(POPGEN2_ANALYSES.map((def) => def.id)).toEqual([
+      "variantsSummary",
+      "pca",
+      "diversity",
+    ]);
+    expect(POPGEN2_ANALYSES[1]).toBe(pcaOnPopgen2);
+    expect(POPGEN2_ANALYSES[2]).toBe(diversityOnPopgen2);
+    expect(POPGEN_ANALYSES).toContain(diversity);
+    expect(POPGEN_ANALYSES).not.toContain(diversityOnPopgen2);
   });
 
   test("run sends the worked example as the old page does, i4, unclassified, left out with no lock", () => {

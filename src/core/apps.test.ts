@@ -10,6 +10,7 @@ import {
   variantsKept,
   writeCountsOf,
 } from "./apps.ts";
+import { diversityOnPopgen2 } from "./analyses/diversity.ts";
 import { ldDecay } from "./analyses/ldDecay.ts";
 import { pca, pcaOnPopgen2 } from "./analyses/pca.ts";
 import { popDists } from "./analyses/popDists.ts";
@@ -483,7 +484,11 @@ describe("IP2 D3 the histograms of the variants after an undo to a load whose st
 
 describe("AP2 D2 the PCA of popgen2.html in apps.ts", () => {
   test("POPGEN2_ANALYSES lists pcaOnPopgen2 after variantsSummary, and POPGEN_ANALYSES keeps the PCA of the old page", () => {
-    expect(POPGEN2_ANALYSES).toEqual([variantsSummary, pcaOnPopgen2]);
+    expect(POPGEN2_ANALYSES).toEqual([
+      variantsSummary,
+      pcaOnPopgen2,
+      diversityOnPopgen2,
+    ]);
     expect(POPGEN2_ANALYSES[1]).toBe(pcaOnPopgen2);
     expect(POPGEN_ANALYSES).toContain(pca);
     expect(POPGEN_ANALYSES).not.toContain(pcaOnPopgen2);
@@ -499,6 +504,7 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
     expect(POPGEN2_ANALYSES.map((def) => def.id)).toEqual([
       "variantsSummary",
       "pca",
+      "diversity",
     ]);
     expect(POPGEN_ANALYSES.map((def) => def.id)).not.toContain(
       "variantsSummary",
@@ -553,6 +559,7 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
     expect(state.analyses.map((view) => [view.id, view.status.kind])).toEqual([
       ["variantsSummary", "done"],
       ["pca", "locked"],
+      ["diversity", "ready"],
     ]);
     const read = state.project.variants?.read;
     expect(read?.kind === "read" ? read.numVars : null).toBe(1200);

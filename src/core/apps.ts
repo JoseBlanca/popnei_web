@@ -7,7 +7,7 @@
  * It holds the population genetics application alone.
  */
 
-import { diversity } from "./analyses/diversity.ts";
+import { diversity, diversityOnPopgen2 } from "./analyses/diversity.ts";
 import { filterCounts, variantsOfFile } from "./analyses/filterCounts.ts";
 import { individualChecks } from "./analyses/individualChecks.ts";
 import { ldDecay } from "./analyses/ldDecay.ts";
@@ -69,12 +69,15 @@ export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
     variants and the statistics of each individual of their own requests
     are the old page's. Then the principal components of the PCA tab, the
     definition of that page, whose filters narrow those of the Variants
-    tab (docs/specs/analyses/pca.md, "On popgen2.html"). It is a list
+    tab (docs/specs/analyses/pca.md, "On popgen2.html"); then the
+    diversity of the Populations tab, the definition of that page, whose
+    unclassified individuals are left out or one population
+    (docs/specs/analyses/diversity.md, "On popgen2.html"). It is a list
     apart from `POPGEN_ANALYSES`, so that the old page neither shows the
     summary nor changes (docs/plans/open-variants.md, "Its own list of
     analyses"). */
 export const POPGEN2_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
-  Object.freeze([variantsSummary, pcaOnPopgen2]);
+  Object.freeze([variantsSummary, pcaOnPopgen2, diversityOnPopgen2]);
 
 /** The steps of the population genetics application, by their ids, in
     their order. */

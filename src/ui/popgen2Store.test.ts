@@ -102,6 +102,7 @@ describe("the store of popgen2.html", () => {
       [
         ["variantsSummary", "running"],
         ["pca", "locked"],
+        ["diversity", "ready"],
       ],
     );
   });
@@ -443,6 +444,7 @@ describe("DL4 D3 the store of popgen2.html writes, and works out the individuals
     ).toStrictEqual([
       ["variantsSummary", "ready"],
       ["pca", "locked"],
+      ["diversity", "ready"],
     ]);
   });
 

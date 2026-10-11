@@ -208,7 +208,13 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
 
     expect(
       POPGEN2_ANALYSES.map((analysis) => stoppingWords(analysis.id)),
-    ).toEqual(["Stopping the statistics of panel.nei…", "Stopping the PCA…"]);
+    ).toEqual([
+      "Stopping the statistics of panel.nei…",
+      "Stopping the PCA…",
+      // The band's words until work package 4 of
+      // docs/plans/population-tab.md, which names it "the diversity".
+      "Stopping the calculation of Diversity…",
+    ]);
     expect(stoppingWords("diversity")).toBe(
       "Stopping the calculation of Diversity…",
     );

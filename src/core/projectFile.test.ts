@@ -3853,8 +3853,21 @@ describe("SF2 D3 an opened project and the variants file given again give the sa
     };
   }
 
-  /** The checks the file saved of `p` holds, with every analysis ready. */
-  function checksSaved(p: Project): unknown {
+  /** The analyses of the page whose definition `def` is: the two pages
+      have a diversity of the same id, which a file saved by one page
+      holds once. */
+  function pageOf(
+    def: (typeof DEFS)[number],
+  ): readonly (typeof DEFS)[number][] {
+    return POPGEN_ANALYSES.includes(def) ? POPGEN_ANALYSES : POPGEN2_ANALYSES;
+  }
+
+  /** The checks the file saved of `p` by the page of the analyses `defs`
+      holds, with every analysis ready. */
+  function checksSaved(
+    p: Project,
+    defs: readonly (typeof DEFS)[number][],
+  ): unknown {
     const state = deepFreeze<AppState<JobResult>>({
       project: p,
       undo: null,
@@ -3862,7 +3875,7 @@ describe("SF2 D3 an opened project and the variants file given again give the sa
       historyMoves: 0,
       stoppedAwaitingWorker: null,
       popneiVersion: "0.2.2",
-      analyses: DEFS.map((def) => ({
+      analyses: defs.map((def) => ({
         id: def.id,
         status: { kind: "ready", key: A_KEY, stopped: null },
       })),
@@ -3872,7 +3885,7 @@ describe("SF2 D3 an opened project and the variants file given again give the sa
       write: null,
     });
     const file: unknown = JSON.parse(
-      writeProjectFile(state, DEFS, "0.2.0", "2026-10-08T10:00:00.000Z"),
+      writeProjectFile(state, defs, "0.2.0", "2026-10-08T10:00:00.000Z"),
     );
     return typeof file === "object" && file !== null && "checks" in file
       ? file.checks
@@ -3897,7 +3910,7 @@ describe("SF2 D3 an opened project and the variants file given again give the sa
         source,
       );
       expect(settingsAsSaved(def, given, check, source, null)).toBe(true);
-      expect(checksSaved(given)).toEqual([
+      expect(checksSaved(given, pageOf(def))).toEqual([
         {
           analysis: def.id,
           numbers: [1],
@@ -3951,7 +3964,7 @@ describe("SF2 D3 an opened project and the variants file given again give the sa
     (_on, variants, savedOn) => {
       const def = defIn(DEFS, "diversity");
       const { given } = givenAgain(def, settingsWith(savedOn), LOW_QUAL_NEI);
-      expect(checksSaved(beforeTheRead(given, variants))).toEqual([
+      expect(checksSaved(beforeTheRead(given, variants), pageOf(def))).toEqual([
         {
           analysis: def.id,
           numbers: [1],
@@ -3976,7 +3989,7 @@ describe("SF2 D3 an opened project and the variants file given again give the sa
       const turned = savedOn
         ? turnOffVariantFilter(before, "passed")
         : setVariantFilter(before, { kind: "passed" });
-      expect(checksSaved(turned)).toEqual([]);
+      expect(checksSaved(turned, pageOf(def))).toEqual([]);
     },
   );
 });
