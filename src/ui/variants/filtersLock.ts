@@ -27,8 +27,7 @@ import type { JobResult } from "../../worker/protocol.ts";
 import { liveBeside, runningAnalysisOf } from "../analyses/status.ts";
 import { filtersLockedText } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
-import { useAutoRuns } from "../autoRunsContext.ts";
-import { useAppState } from "../store.tsx";
+import { useLive } from "../autoRunsContext.ts";
 
 /** The reason the thresholds and the FILTER box wait in `s`, while a
     live analysis runs, with Stop all when another is live beside it;
@@ -57,15 +56,15 @@ export function optionsLockOf(
 }
 
 /** The reason the thresholds and the FILTER box wait while a live
-    analysis runs, or `null` while none runs. */
+    analysis runs, or `null` while none runs; the component is drawn
+    again only when it changes. */
 export function useFiltersLock(): string | null {
-  const autoRuns = useAutoRuns();
-  return useAppState((s) => filtersLockOf(s, autoRuns));
+  return useLive(filtersLockOf);
 }
 
 /** The reason the options of the analysis `id` wait while it runs, or
-    `null` while it does not. */
+    `null` while it does not; the component is drawn again only when it
+    changes. */
 export function useOptionsLock(id: AnalysisId): string | null {
-  const autoRuns = useAutoRuns();
-  return useAppState((s) => optionsLockOf(s, autoRuns, id));
+  return useLive((s, autoRuns) => optionsLockOf(s, autoRuns, id));
 }

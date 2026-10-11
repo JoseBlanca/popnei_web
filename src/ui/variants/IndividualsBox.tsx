@@ -28,7 +28,7 @@ import { populationCounts } from "../../core/populations.ts";
 import type { PageTab } from "../../core/popgen2Tabs.ts";
 import { escaped, individualsBoxNeeds } from "../../core/project.ts";
 import type { IndividualsSource, Project } from "../../core/project.ts";
-import { useAutoRuns } from "../autoRunsContext.ts";
+import { useLive } from "../autoRunsContext.ts";
 import { classOf } from "../classOf.ts";
 import { useFiles } from "../files.tsx";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
@@ -377,6 +377,7 @@ function CountsLineShown({
     box no more; and read again when the analyses the page starts by
     itself tell a Stop. */
 function usePassWait(): PassWait {
-  const autoRuns = useAutoRuns();
-  return useAppState((s) => passWaitOf(s, (key) => autoRuns.startedUnder(key)));
+  return useLive((s, autoRuns) =>
+    passWaitOf(s, (key) => autoRuns.startedUnder(key)),
+  );
 }
