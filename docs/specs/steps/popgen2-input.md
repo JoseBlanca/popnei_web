@@ -644,7 +644,10 @@ panel_pops.csv".
 
 **A table that a screen reader can read.** The counts are a table named for
 a screen reader by the caption it had, which the screen no longer
-shows, with two header cells; a count waiting is "…" on the screen
+shows: the table's own `<caption>`, hidden from the screen
+(`captionHidden` of `Table.tsx`), so that its words are read once, as
+the table's name, and not also as a paragraph before it, as they were
+until 11 October 2026. It has two header cells; a count waiting is "…" on the screen
 and "not counted yet" to a screen reader. The table of the file has its
 first column as row headers.
 

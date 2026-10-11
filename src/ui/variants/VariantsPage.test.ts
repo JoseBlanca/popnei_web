@@ -521,15 +521,13 @@ describe("IN3 the page in two boxes and the row of tabs", () => {
       ["Population", "Individuals"],
       ["Unclassified", "2"],
     ]);
-    // No words on the screen but the table's: its caption, the one
-    // paragraph, names it for a screen reader alone, hidden by the style
-    // of the box, which jsdom does not apply.
-    const named = individualsBox
-      ?.querySelector("table")
-      ?.getAttribute("aria-labelledby");
-    expect(
-      [...(individualsBox?.querySelectorAll("p") ?? [])].map((p) => p.id),
-    ).toEqual([named]);
+    // No words on the screen but the table's: its own caption names it
+    // for a screen reader alone, hidden by its style, which jsdom does
+    // not apply.
+    expect(individualsBox?.querySelectorAll("p")).toHaveLength(0);
+    expect(individualsBox?.querySelector("table > caption")?.textContent).toBe(
+      "Individuals of first.nei after the filters of individuals",
+    );
     expect(
       [...(individualsBox?.querySelectorAll("button") ?? [])].some((b) =>
         (b.getAttribute("aria-label") ?? b.textContent).startsWith("Download"),

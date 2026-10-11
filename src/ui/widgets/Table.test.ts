@@ -2,8 +2,9 @@
 /**
  * The table of results drawn by React in jsdom: its caption, which names
  * the table by `aria-labelledby`, shown above it, or, with
- * `captionHidden`, kept as its name for a screen reader and hidden from
- * the screen by the class of words for a screen reader alone, as the
+ * `captionHidden`, the table's own `<caption>`, its name for a screen
+ * reader, hidden from the screen by the class of words for a screen
+ * reader alone, as the
  * counts of the box of the individuals file of popgen2.html draw it since
  * 11 October 2026 (docs/specs/steps/popgen2-input.md, "The counts").
  * jsdom applies no style, so the test reads the class.
@@ -72,8 +73,13 @@ function draw(props: TableProps): {
     root.render(createElement(StrictMode, null, createElement(Table, props)));
   });
   const table = container.querySelector("table");
+  // The element that names the table: the paragraph of its caption
+  // shown, or its own caption, hidden.
   const id = table?.getAttribute("aria-labelledby") ?? null;
-  const name = id === null ? null : document.getElementById(id);
+  const name =
+    id === null
+      ? (table?.querySelector("caption") ?? null)
+      : document.getElementById(id);
   if (table === null || name === null) {
     throw new Error("no table, or no element that names it");
   }
@@ -87,9 +93,15 @@ describe("NU8 R1 the caption of a table", () => {
     expect(name.classList.contains(VISUALLY_HIDDEN)).toBe(false);
   });
 
-  test("hidden from the screen with captionHidden, still the table's name", () => {
-    const { name } = draw({ ...COUNTS, captionHidden: true });
+  test("hidden from the screen with captionHidden: the table's own caption, its name, read once", () => {
+    const { table, name } = draw({ ...COUNTS, captionHidden: true });
+    expect(name.tagName).toBe("CAPTION");
+    expect(name.parentElement).toBe(table);
     expect(name.textContent).toBe(COUNTS.caption);
     expect(name.classList.contains(VISUALLY_HIDDEN)).toBe(true);
+    // No paragraph of the caption beside it, which a screen reader would
+    // read as words of the page before it reads the table's name.
+    expect(table.hasAttribute("aria-labelledby")).toBe(false);
+    expect([...container.querySelectorAll("p")]).toEqual([]);
   });
 });

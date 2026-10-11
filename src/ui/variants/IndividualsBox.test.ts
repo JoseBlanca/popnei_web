@@ -365,20 +365,6 @@ function paragraphs(element: HTMLElement): string[] {
   return [...element.querySelectorAll("p")].map((p) => p.textContent);
 }
 
-/** The texts of the paragraphs of `element` that the screen shows: all
-    but the caption of a table, which names it for a screen reader alone
-    in the box (its style hides it, which jsdom does not apply). */
-function shownParagraphs(element: HTMLElement): string[] {
-  const names = new Set(
-    [...element.querySelectorAll("table")].map((table) =>
-      table.getAttribute("aria-labelledby"),
-    ),
-  );
-  return [...element.querySelectorAll("p")]
-    .filter((p) => !names.has(p.id))
-    .map((p) => p.textContent);
-}
-
 /** The words of the buttons of `element`, in their order. */
 function buttons(element: HTMLElement): string[] {
   return [...element.querySelectorAll("button")].map((b) => b.textContent);
@@ -473,13 +459,10 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     await recorded(store, readOf(POPS));
     await choose(store, "popcat");
     expect(undoNames(store)).toBe("the column of the populations changed");
-    // The caption names the table for a screen reader alone.
-    const named = box().querySelector("table")?.getAttribute("aria-labelledby");
-    expect(
-      named === null || named === undefined
-        ? null
-        : document.getElementById(named)?.textContent,
-    ).toBe("Individuals of panel.nei after the filters of individuals");
+    // The table's own caption names it for a screen reader alone.
+    expect(box().querySelector("table > caption")?.textContent).toBe(
+      "Individuals of panel.nei after the filters of individuals",
+    );
     expect(downloadsOfBox()).toEqual([]);
     expect(countRows()).toEqual([
       ["Population", "Individuals"],
@@ -638,7 +621,7 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
       ["Population", "Individuals"],
       ["Unclassified", "5"],
     ]);
-    expect(shownParagraphs(box())).toEqual([]);
+    expect(paragraphs(box())).toEqual([]);
     expect(downloadsOfBox()).toEqual([]);
     await act(async () => {
       store.apply("the threshold of the missing genotypes changed", (p) =>
@@ -651,7 +634,7 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
       ["Population", "Individuals"],
       ["Unclassified", "…not counted yet"],
     ]);
-    expect(shownParagraphs(box())).toEqual([
+    expect(paragraphs(box())).toEqual([
       "The individuals the filters keep are counted once panel.nei is read to the end.",
     ]);
     await act(async () => {
@@ -672,7 +655,7 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
       ["Population", "Individuals"],
       ["Unclassified", String(numKept)],
     ]);
-    expect(shownParagraphs(box())).toEqual([]);
+    expect(paragraphs(box())).toEqual([]);
   });
 
   test("a progress of the one pass draws the box no more", async () => {

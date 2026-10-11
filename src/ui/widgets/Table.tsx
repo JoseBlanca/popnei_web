@@ -5,7 +5,8 @@
  * selected, does not need, and whose removal took 14.19 KB gzipped off
  * the page's first script (docs/technology.md, "React Aria Components").
  * Its caption
- * is shown above it and names it, by `aria-labelledby`; the cell of one
+ * is shown above it and names it, by `aria-labelledby`, or, for a screen
+ * reader alone, is its own `<caption>`, hidden from the screen; the cell of one
  * column is the header of its row, so that a screen reader reads a cell
  * with its row and its column, "p2, Observed heterozygosity, 0.3512". It
  * sits in a frame that scrolls sideways on a page narrower than the
@@ -83,10 +84,10 @@ export type TableProps = TableLook &
 export interface TableLook {
   /** What the table is, shown above it; also its name. */
   readonly caption: string;
-  /** Whether the caption is for a screen reader alone: kept as the
-      table's name and hidden from the screen, as the counts of the box of
-      the individuals file of popgen2.html have it since 11 October 2026,
-      whose box names them by its heading. */
+  /** Whether the caption is for a screen reader alone: the table's own
+      `<caption>`, its name, hidden from the screen, as the counts of the
+      box of the individuals file of popgen2.html have it since 11
+      October 2026, whose box names them by its heading. */
   readonly captionHidden?: boolean;
   /** Its columns. */
   readonly columns: readonly TableColumn[];
@@ -114,15 +115,12 @@ export function Table(props: TableProps): React.JSX.Element {
   // what the frame is then.
   const frame = useSidewaysFrame(scrollRef, limitedHeight);
   const scrolls = frame.scrolls;
-  const captionLine = (
-    <p
-      id={captionId}
-      className={
-        props.captionHidden === true
-          ? VISUALLY_HIDDEN
-          : classOf(styles, "caption")
-      }
-    >
+  const captionHidden = props.captionHidden === true;
+  // A caption for a screen reader alone is the table's own, which names
+  // it and is read once, as its name; a paragraph hidden beside it was
+  // read once as words of the page and again as the name.
+  const captionLine = captionHidden ? null : (
+    <p id={captionId} className={classOf(styles, "caption")}>
       {caption}
     </p>
   );
@@ -159,7 +157,15 @@ export function Table(props: TableProps): React.JSX.Element {
         "aria-labelledby": captionId,
       })}
     >
-      <table aria-labelledby={captionId} className={classOf(styles, "table")}>
+      <table
+        {...(!captionHidden && { "aria-labelledby": captionId })}
+        className={classOf(styles, "table")}
+      >
+        {captionHidden && (
+          <caption id={captionId} className={VISUALLY_HIDDEN}>
+            {caption}
+          </caption>
+        )}
         <thead>
           <tr>
             {columns.map((column) => (
