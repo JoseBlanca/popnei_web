@@ -407,7 +407,7 @@ What each one is for here:
 | advanced options, a warning's explanation | `Disclosure`, `DisclosurePanel` | |
 | the notice of removed results with Undo | `UNSTABLE_ToastRegion`, `UNSTABLE_ToastQueue` | still marked unstable in 1.21, which is one reason it lives in one wrapper; below |
 | a sortable table, the GWAS hits, the individuals | `Table` with `Column allowsSorting`, `sortDescriptor`, `onSortChange`; `Virtualizer` with `TableLayout` beyond a few hundred rows | `aria-label` or `aria-labelledby` on the table; one column `isRowHeader` |
-| load a file | `DropZone` holding a `FileTrigger` | dragging is not possible with a keyboard, so the zone always holds a button that opens the file picker |
+| load a file | `DropZone` holding a button, in `FileZone` | dragging is not possible with a keyboard, so the zone always holds a button that opens the file picker; the button opens it from a file input of the zone's own and not through `FileTrigger`, whose press reaches the button by a way a greyed button cannot refuse (11 October 2026, `docs/specs/steps/popgen2-input.md`); the shell's button that opens a project still holds a `FileTrigger` |
 | progress of a run | `ProgressBar` with a label | announced through the status region, below |
 
 A `File` the user picked or dropped goes into the worker client's map

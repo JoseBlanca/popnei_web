@@ -169,6 +169,13 @@ What each plot's CSV holds, written by the functions of core below:
   `left_edge,right_edge,count`; for the heterozygosity of the
   individuals, whose plot counts apart those with none, a last row with
   empty edges and their count.
+- **A histogram of the spectrum of a population**, in the Populations
+  tab of `popgen2.html`: not `binsCsv` but `populationSpectrumCsv` of
+  `docs/specs/analyses/sfs.md`, "On popgen2.html", the population's
+  rows of the CSV of the spectra, one per count of the rarer allele,
+  header `population,rarer_allele,variants,share`, the numbers the old
+  page's download of the spectrum gives. (Since 11 October 2026: this
+  list named `binsCsv` for every histogram before.)
 - **The PCA's plot**, 2D or 3D: `pcaCoordinatesCsv` of
   `docs/specs/analyses/pca.md`, the coordinates vavilov-explorer
   imports.

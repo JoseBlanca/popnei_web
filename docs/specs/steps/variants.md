@@ -161,11 +161,16 @@ they belong to the project and stay across loads.
 ### The file
 
 A drop zone, React Aria's `DropZone`, an area of the page onto which a
-file is dragged from the desktop, that holds a button, React Aria's
-`FileTrigger`, a button that opens the file picker of the system,
-"Choose a variants file…", since dropping a file cannot be done with a
-keyboard
-(`.claude/skills/coding/react.md`, "Widgets"). The format is told by the
+file is dragged from the desktop, that holds a button that opens the
+file picker of the system, "Choose a variants file…", since dropping a
+file cannot be done with a keyboard
+(`.claude/skills/coding/react.md`, "Widgets"). The zone is `FileZone`
+of `src/ui/widgets/`, which both pages use; its button opens the picker
+from a file input of the zone's own, and not from React Aria's
+`FileTrigger`, as it did until 11 October 2026, since a press passed
+through `FileTrigger` reaches the button by a way that a greyed button
+cannot refuse (`docs/specs/steps/popgen2-input.md`, "While the
+diversity runs"). The format is told by the
 end of the name, compared without regard to case, `PANEL.VCF.GZ` as
 `panel.vcf.gz`, since the page does not read the file:
 `.nei` is a `.nei` file; `.vcf`, `.vcf.gz` and `.vcf.bgz` are a VCF,
