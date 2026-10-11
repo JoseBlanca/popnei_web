@@ -900,3 +900,35 @@ test("OV2 the start guard of popgen2.html tells a browser without Array.prototyp
   ).toBeVisible();
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
+
+test("NU8 R1 at 320 pixels with the text at twice its size, the lines at the top of the Variants tab stay inside the tab", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await openPage(page);
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "32px";
+  });
+  await pick(page, join(FIXTURES, "panel.nei"));
+  await expect(facts(page).getByRole("paragraph")).toHaveText([
+    "File size: 261 KB",
+    "Chromosomes: 1",
+    "Ploidy: 2",
+  ]);
+  const panel = page.getByRole("tabpanel", { name: "Variants" });
+  const panelBox = await panel.boundingBox();
+  if (panelBox === null) throw new Error("the Variants tab is not drawn");
+  for (const fact of await facts(page).getByRole("paragraph").all()) {
+    const box = await fact.boundingBox();
+    if (box === null) throw new Error("a line of the file is not drawn");
+    expect(box.x + box.width).toBeLessThanOrEqual(
+      panelBox.x + panelBox.width + 0.5,
+    );
+  }
+  // Nor does the page scroll sideways.
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});

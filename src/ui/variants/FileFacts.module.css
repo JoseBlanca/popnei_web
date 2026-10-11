@@ -6,10 +6,12 @@
    so that a line that grows, "Chromosomes: 1 so far" turned "Chromosomes:
    not counted" at a Stop, does not take the ploidy onto another line and
    move the plots under it down, by 28 pixels at 320 when the lines
-   wrapped between them. 14rem holds "Chromosomes: 12,345 so far". */
+   wrapped between them. 14rem holds "Chromosomes: 12,345 so far". A
+   column is never wider than the tab, which at 320 pixels with the text
+   at twice its size, 280 pixels against 448, it would overflow. */
 .facts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 14rem);
+  grid-template-columns: repeat(auto-fill, min(14rem, 100%));
   gap: var(--space-1) var(--space-4);
   min-inline-size: 0;
 }
