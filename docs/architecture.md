@@ -3072,7 +3072,12 @@ src/core/
                     popgen2.html both say; and sfs.ts, the rows,
                     the CSV and the warnings of the folded spectrum, which
                     the diversity's module and panel call and which is no
-                    analysis of its own (docs/specs/analyses/sfs.md)
+                    analysis of its own (docs/specs/analyses/sfs.md);
+                    from 11 October 2026 the diversity given popgen2.html,
+                    diversityOnPopgen2 of diversity.ts, and the line of
+                    its one population, apart in diversityOnePopulation.ts
+                    so that the page does not load it before the
+                    Populations tab
   individualsKept.ts
                     the list of the individuals the filters keep, and the
                     counts of each filter of individuals (section 4)
