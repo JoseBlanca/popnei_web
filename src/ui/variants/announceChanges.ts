@@ -3,12 +3,12 @@
  * store, away from the focus: the file read, its count, the statistics
  * of the open file, the sentence of no variant that takes the place
  * of the button of the download after a change of the filters, and the
- * end of a run of the PCA, whichever tab is shown. The
+ * end of a run of the PCA or of the diversity, whichever tab is shown. The
  * entry calls it once, before the page is drawn; a test calls it over the
  * store of the page and the section alone.
  */
 import { pcaOptions } from "../../core/analyses/pca.ts";
-import { isPopgen2Live } from "../../core/apps.ts";
+import { POPGEN2_LIVE, isPopgen2Live } from "../../core/apps.ts";
 import type { Popgen2LiveId } from "../../core/apps.ts";
 import type { AnalysisId } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
@@ -48,6 +48,12 @@ interface LiveSaid {
       analysis starts by itself a quiet second after a change, which is
       longer than the region's pause. */
   readonly runKind: string;
+  /** The end of a run of it from `before` to `after`, done, failed or
+      stopped, or `null` when no run of it ended. */
+  readonly end: (
+    before: AppState<JobResult, Blob>,
+    after: AppState<JobResult, Blob>,
+  ) => string | null;
   /** Its start by itself, alone in its round. */
   readonly startedAlone: (s: AppState<JobResult, Blob>) => string;
   /** That a crash of the worker holds it, and what starts it. */
@@ -65,6 +71,7 @@ interface LiveSaid {
 const LIVE_SAID: Readonly<Record<Popgen2LiveId, LiveSaid>> = Object.freeze({
   pca: Object.freeze({
     runKind: "pcaRun",
+    end: pcaEndAnnouncement,
     startedAlone: (s: AppState<JobResult, Blob>) =>
       pcaStartedByItselfText(methodOf(s)),
     heldAfterCrash: (s: AppState<JobResult, Blob>) =>
@@ -74,6 +81,7 @@ const LIVE_SAID: Readonly<Record<Popgen2LiveId, LiveSaid>> = Object.freeze({
   }),
   diversity: Object.freeze({
     runKind: "diversityRun",
+    end: diversityEndAnnouncement,
     startedAlone: () => DIVERSITY_STARTED_BY_ITSELF,
     heldAfterCrash: () => DIVERSITY_HELD_AFTER_CRASH,
     stopped: (_s: AppState<JobResult, Blob>, runOffered: boolean) =>
@@ -139,21 +147,18 @@ export function announceChanges(
       focusOnCountButton: button !== null && document.activeElement === button,
     });
     const noVariant = noVariantAnnouncement(before, after);
-    const pcaEnd = pcaEndAnnouncement(before, after);
-    const diversityEnd = diversityEndAnnouncement(before, after);
+    const ends = POPGEN2_LIVE.map((id) => ({
+      text: LIVE_SAID[id].end(before, after),
+      replaces: LIVE_SAID[id].runKind,
+    }));
     before = after;
     for (const text of texts) announcer.announce(text);
     if (noVariant !== null) announcer.announce(noVariant);
     // Of the kind of the start by itself, which it drops while the start
-    // still waits to be written: a PCA that ends within the region's
-    // pause is said by its end alone.
-    if (pcaEnd !== null) {
-      announcer.announce(pcaEnd, { replaces: LIVE_SAID.pca.runKind });
-    }
-    if (diversityEnd !== null) {
-      announcer.announce(diversityEnd, {
-        replaces: LIVE_SAID.diversity.runKind,
-      });
+    // still waits to be written: an analysis that ends within the
+    // region's pause is said by its end alone.
+    for (const { text, replaces } of ends) {
+      if (text !== null) announcer.announce(text, { replaces });
     }
     const fileId = fileIdOf(after);
     if (fileId !== null && fileId === shownFor) {
