@@ -220,9 +220,14 @@ async function settled(): Promise<void> {
 }
 
 /** Draws the page in <StrictMode>, as the development server draws it,
-    with the analyses it starts by itself; a file picked is kept under
+    with the analyses it starts by itself, synced after each change of
+    the store, or never with `syncByHand`, which holds the one pass in
+    the quiet second before it starts; a file picked is kept under
     `pickedId`, and with none given the test picks no file. */
-async function drawPage(pickedId?: string): Promise<{
+async function drawPage(
+  pickedId?: string,
+  { syncByHand = false }: { readonly syncByHand?: boolean } = {},
+): Promise<{
   readonly store: Popgen2PageStore<JobResult, Blob>;
   readonly requests: Request[];
   readonly pageTab: PageTabStore;
@@ -254,11 +259,13 @@ async function drawPage(pickedId?: string): Promise<{
       endsLive: failureEndsLive,
     },
   });
-  store.subscribe(() => {
-    queueMicrotask(() => {
-      autoRuns.sync();
+  if (!syncByHand) {
+    store.subscribe(() => {
+      queueMicrotask(() => {
+        autoRuns.sync();
+      });
     });
-  });
+  }
   const files = {
     addFile: (): string => {
       if (pickedId === undefined) throw new Error("the test picks no file");
@@ -545,6 +552,32 @@ describe("IN3 the page in two boxes and the row of tabs", () => {
     expect(factsOfTab()).toEqual([
       "File size: 1 KB",
       "Chromosomes: 2 so far",
+      "Ploidy: 2",
+    ]);
+  });
+
+  test("NU8 R1 a Stop in the quiet second before the one pass starts, which changes nothing in the store, makes the chromosomes not counted", async () => {
+    const { store, requests } = await drawPage(undefined, { syncByHand: true });
+    await open(store, "a".repeat(32), "first.nei");
+    expect(requests).toHaveLength(0);
+    expect(factsOfTab()).toEqual([
+      "File size: 1 KB",
+      "Chromosomes: counting…",
+      "Ploidy: 2",
+    ]);
+    const project = store.getState().project;
+    const stop = [...(box()?.querySelectorAll("button") ?? [])].find(
+      (button) => button.textContent === "Stop",
+    );
+    await act(async () => {
+      stop?.click();
+      await Promise.resolve();
+    });
+    expect(store.getState().project).toBe(project);
+    expect(requests).toHaveLength(0);
+    expect(factsOfTab()).toEqual([
+      "File size: 1 KB",
+      "Chromosomes: not counted",
       "Ploidy: 2",
     ]);
   });
