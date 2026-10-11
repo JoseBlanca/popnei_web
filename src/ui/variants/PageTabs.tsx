@@ -47,7 +47,7 @@ import { INDIVIDUALS_TAB_CONTENT_NAME } from "./individualsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
 import { StatsSection } from "./StatsSection.tsx";
 import styles from "./VariantsPage.module.css";
-import { NO_VARIANTS_FILE_TAB } from "./words.ts";
+import { NO_VARIANTS_FILE_TAB, notReadTabText } from "./words.ts";
 
 /** What the row of tabs is drawn with. */
 export interface PageTabsProps {
@@ -73,6 +73,11 @@ export function PageTabs({
   onStatsShown,
 }: PageTabsProps): React.JSX.Element {
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
+  // The name of a variants file popnei could not read, whose tab has no
+  // statistics to show.
+  const notRead = useAppState((s) =>
+    s.project.variants?.read.kind === "failed" ? s.project.variants.name : null,
+  );
   const individualsId = useAppState(
     (s) => s.project.individuals?.fileId ?? null,
   );
@@ -101,6 +106,11 @@ export function PageTabs({
               {fileId === null && (
                 <p className={classOf(styles, "boxLine")}>
                   {NO_VARIANTS_FILE_TAB}
+                </p>
+              )}
+              {notRead !== null && (
+                <p className={classOf(styles, "boxLine")}>
+                  {notReadTabText(notRead)}
                 </p>
               )}
               <StatsSection

@@ -23,6 +23,7 @@ import {
   variantsLineOf,
   FAILURES_COUNTING,
   NO_VARIANTS_FILE_TAB,
+  notReadTabText,
   OPENING_NAME,
   OPENING_ZONE_NAME,
   FAILURES_NOT_COUNTED,
@@ -481,6 +482,15 @@ describe("IN3 the words of the boxes and the tabs of the files", () => {
   test("the tab of the variants file with no file", () => {
     expect(NO_VARIANTS_FILE_TAB).toBe(
       "No variants file open. Open one in the box Variants.",
+    );
+  });
+
+  test("the tab of a variants file that could not be read, its name escaped", () => {
+    expect(notReadTabText("panel.nei")).toBe(
+      "panel.nei could not be read; the box Variants says why.",
+    );
+    expect(notReadTabText("a\u202eb.vcf")).toBe(
+      "a\\u202eb.vcf could not be read; the box Variants says why.",
     );
   });
 });

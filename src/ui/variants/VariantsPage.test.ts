@@ -467,6 +467,32 @@ describe("IN3 the page in two boxes and the row of tabs", () => {
     ]);
   });
 
+  test("NU8 R1 a variants file popnei could not read: the Variants tab says so in one line and sends the user to the box Variants", async () => {
+    const { store } = await drawPage();
+    const fileId = "c".repeat(32);
+    await act(async () => {
+      store.apply("a new variants file was loaded", (p) =>
+        loadVariants(p, {
+          fileId,
+          name: "panel.nei",
+          size: 1000,
+          format: "nei",
+          readOptions: null,
+        }),
+      );
+      store.variantsRead(fileId, {
+        kind: "failed",
+        error: { kind: "popnei", message: "the source is not a vars file" },
+      });
+      await Promise.resolve();
+    });
+    await settled();
+    const panel = container.querySelector('[role="tabpanel"]:not([inert])');
+    expect(panel === null ? null : shownText(panel)).toBe(
+      "panel.nei could not be read; the box Variants says why.",
+    );
+  });
+
   test("NU8 R1 with a variants file read and no individuals file, the box of the individuals has the counts of one row, Unclassified, with no caption and no Download", async () => {
     const { store } = await drawPage();
     await open(store, "a".repeat(32), "first.nei");

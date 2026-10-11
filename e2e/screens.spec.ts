@@ -4877,6 +4877,11 @@ for (const theme of ["light", "dark"] as const) {
             .getByRole("region", { name: "Variants", exact: true })
             .getByText(/^popnei could not read bad\.vcf/u),
         ).toBeVisible();
+        await expect(
+          page.getByText(
+            "bad.vcf could not be read; the box Variants says why.",
+          ),
+        ).toBeVisible();
         await save(page, `popgen2-not-read${at}-${theme}`);
       });
 

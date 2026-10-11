@@ -205,7 +205,7 @@ test("OV2 NU8 R1 panel.vcf.gz shows its individuals and its variants in the box,
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("OV2 bad.vcf is refused at the opening, with popnei's words", async ({
+test("OV2 bad.vcf is refused at the opening, with popnei's words in the box and one line in the Variants tab", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -217,6 +217,10 @@ test("OV2 bad.vcf is refused at the opening, with popnei's words", async ({
     "bad.vcf",
     "popnei could not read bad.vcf: the source is not a VCF: it starts with \u201cThis is a line o\u201d. Open another file.",
   ]);
+  // The Variants tab, with no statistics to show, says so in one line.
+  await expect(page.getByRole("tabpanel", { name: "Variants" })).toHaveText(
+    "bad.vcf could not be read; the box Variants says why.",
+  );
   await expectNoViolations(makeAxeBuilder);
 });
 

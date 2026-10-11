@@ -60,6 +60,12 @@ export const OPENING_ZONE_NAME = "Opening a variants file";
 export const NO_VARIANTS_FILE_TAB =
   "No variants file open. Open one in the box Variants.";
 
+/** What the tab of the variants file says when popnei could not read the
+    file `name`, whose box gives the reason. */
+export function notReadTabText(name: string): string {
+  return `${escaped(name)} could not be read; the box Variants says why.`;
+}
+
 /** What the page says when several files are dropped or pasted at once. */
 export const SEVERAL_DROPPED = "Open one variants file at a time.";
 

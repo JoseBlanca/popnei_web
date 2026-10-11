@@ -340,7 +340,11 @@ unchanged, but for "Open another variants file…", now in the box: the
 part "Filters of the variants", its four histograms and the FILTER box;
 the part "Filters of the individuals", its two histograms and the download of their table; the
 download of the filtered variants. With no variants file: "No variants
-file open. Open one in the box Variants."
+file open. Open one in the box Variants." With a variants file popnei
+could not read, which has no statistics, the one line "panel.nei could
+not be read; the box Variants says why.", as the Individuals tab says of
+an individuals file refused (since 11 October 2026; the tab was empty
+under its label until then).
 
 **The size, the chromosomes and the ploidy** of the file open, which the
 box of the variants file showed until 11 October 2026, stand at the top
