@@ -79,8 +79,9 @@ export interface FileZoneProps {
   readonly waiting?: ZoneWaiting | null;
 }
 
-/** The name of the one file of `names`, or `null` for none or several. */
-function oneName(names: readonly string[]): string | null {
+/** The name of the one file of `names`, or `null` for none, several, or
+    one thing that is not a file, given as `null`. */
+function oneName(names: readonly (string | null)[]): string | null {
   const [only, ...others] = names;
   return only !== undefined && others.length === 0 ? only : null;
 }
@@ -132,7 +133,7 @@ export function FileZone({
     if (waiting !== null) {
       waiting.onRefused(
         oneName(
-          event.items.map((item) => (item.kind === "file" ? item.name : "")),
+          event.items.map((item) => (item.kind === "file" ? item.name : null)),
         ),
       );
       return;

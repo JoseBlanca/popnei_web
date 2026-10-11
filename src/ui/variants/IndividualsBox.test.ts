@@ -1141,20 +1141,33 @@ function buttonNamed(element: HTMLElement, name: string): HTMLButtonElement {
 /** Pastes a file named `name` into the zone's hidden button, which takes
     a paste while it has the focus, as React Aria reads a paste. */
 async function pasteFile(name: string): Promise<void> {
+  const file = new File(["IID,pop\n"], name);
+  await paste({
+    types: ["Files"],
+    items: [{ kind: "file", type: "text/csv", getAsFile: () => file }],
+    getData: () => "",
+  });
+}
+
+/** Pastes a piece of text into the zone's hidden button. */
+async function pasteText(text: string): Promise<void> {
+  await paste({
+    types: ["text/plain"],
+    items: [{ kind: "string", type: "text/plain" }],
+    getData: () => text,
+  });
+}
+
+/** Pastes `clipboardData` into the zone's hidden button, which takes a
+    paste while it has the focus, as React Aria reads a paste. */
+async function paste(clipboardData: object): Promise<void> {
   const paste = buttonNamed(box(), "Paste an individuals file");
   await act(async () => {
     paste.focus();
     await Promise.resolve();
   });
   const event = new Event("paste", { bubbles: true, cancelable: true });
-  const file = new File(["IID,pop\n"], name);
-  Object.defineProperty(event, "clipboardData", {
-    value: {
-      types: ["Files"],
-      items: [{ kind: "file", type: "text/csv", getAsFile: () => file }],
-      getData: () => "",
-    },
-  });
+  Object.defineProperty(event, "clipboardData", { value: clipboardData });
   await act(async () => {
     paste.dispatchEvent(event);
     await Promise.resolve();
@@ -1247,6 +1260,17 @@ describe("PT3 D2 the box Individuals and the Individuals tab greyed while the di
     await running(store, "diversity");
     expect(paragraphs(box())).not.toContain(OTHER_NOT_OPENED);
     expect(paragraphs(box())).not.toContain(POPULATIONS_LOCKED);
+  });
+
+  test("a piece of text pasted while the diversity runs opens nothing and shows that nothing was opened, with no name", async () => {
+    const { store } = await bothRead();
+    await running(store, "diversity");
+    const before = store.getState().project;
+    await pasteText("IID,pop");
+    expect(store.getState().project).toBe(before);
+    expect(paragraphs(box())).toContain(
+      "Nothing was opened: the populations cannot change while the diversity runs. Stop the diversity in the Populations tab, then open the individuals file again.",
+    );
   });
 
   test("a file picked while the diversity runs, in a picker opened before it started, opens nothing and shows the file not opened", async () => {
