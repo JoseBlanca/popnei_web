@@ -2247,6 +2247,24 @@ describe("PT1 D2 several analyses calculated again by themselves", () => {
     expect(page.told).toHaveLength(1);
   });
 
+  test("a Run of the PCA that waits for the diversity, which then crashes: at the next change of the project, the PCA starts by itself, told as such, not as the Run that waited", async () => {
+    const page = await livePage();
+    expect(page.auto.run(DIV)).toBe("started");
+    expect(page.auto.run("pca")).toBe("waiting");
+    await endDiversity(page, {
+      kind: "failed",
+      error: { kind: "workerFailed", message: "the worker crashed" },
+    });
+    expect(page.told).toEqual([{ kind: "heldAfterCrash", ids: ["pca"] }]);
+    page.setDistance(60_000);
+    await wait(1000);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(page.told).toEqual([
+      { kind: "heldAfterCrash", ids: ["pca"] },
+      { kind: "startedByItself", id: "pca", round: ["pca"] },
+    ]);
+  });
+
   test("a crash that holds no other live analysis tells nothing", async () => {
     const page = await livePage();
     expect(page.auto.run(DIV)).toBe("started");

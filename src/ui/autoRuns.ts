@@ -528,7 +528,8 @@ export function createAutoRuns(deps: {
   const toldLive = new Map<AnalysisId, LiveState>();
   const givenLive = new Map<AnalysisId, LiveState>();
   /** The live analyses a Run made live behind a calculation that ran,
-      not started since, whose start is told as `startedAfterWaiting`. */
+      neither started nor held by a crash since, whose start is told as
+      `startedAfterWaiting`. */
   const waitedRun = new Set<AnalysisId>();
   /** Whether the first start by itself since the quiet second last ran
       out has been told with its round. */
@@ -749,6 +750,9 @@ export function createAutoRuns(deps: {
       const held = crashed
         ? liveOrder.filter((id) => aboutToStart(id) === "afterCrash")
         : [];
+      // A Run that waited and is held is said as held: its start, at
+      // the next change of the project, is a start by itself.
+      for (const id of held) waitedRun.delete(id);
       if (held.length > 0) tellLive({ kind: "heldAfterCrash", ids: held });
     });
     live.changes.subscribe(() => {
