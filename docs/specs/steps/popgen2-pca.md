@@ -712,7 +712,16 @@ and then the diversity again. To change the filters, press Stop all
 beside the heading Popnei, or stop each in its tab." ("the PCoA" by the
 method); with one, its own words, as above. The later starts of the
 same round say nothing; each end is said as the end of any run, "PCA
-of panel.nei calculated.", "Diversity of panel.nei calculated.". A Run
+of panel.nei calculated.", "Diversity of panel.nei calculated.". Only
+the end of the last analysis of the round drops the round's words
+still waiting in the region's pause of a tenth of a second, as the end
+of an analysis alone drops its start: a PCA that ends within that
+pause is said after the round's words, "Calculating the PCA and then
+the diversity again. … PCA of panel.nei calculated.", since the
+diversity then starts and its start is said nowhere else (corrected on
+11 October 2026 after the review of work packages 2 and 3: until then
+the PCA's end dropped the round's words, and the diversity's start was
+never said). A Run
 that waited is said when it starts, "Calculating the diversity of
 panel.nei.", since the user pressed it earlier, and the bar then comes
 in a tab they may not see; the PCA's, "Calculating the PCA of

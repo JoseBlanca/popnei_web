@@ -341,7 +341,7 @@ describe("PT2 D2 the status region says a round of two analyses once, a Run that
     ]);
   });
 
-  test("the round's start is never joined with the PCA's end: an end within the region's pause is said alone", async () => {
+  test("a PCA that ends within the region's pause does not drop the round's start, which says the diversity starts next", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
       const announcer = createAnnouncer();
@@ -356,7 +356,40 @@ describe("PT2 D2 the status region says a round of two analyses once, a Run that
       page.endLast((key) => ({ kind: "done", key, result: pcaResult() }));
       await run;
       await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
-      expect(announcer.getState()).toBe("PCA of panel.nei calculated.");
+      expect(announcer.getState()).toBe(
+        `${ROUND} PCA of panel.nei calculated.`,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a round whose last analysis ends within the region's pause is said by its ends alone", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const announcer = createAnnouncer();
+      const page = await setUpReady(announcer);
+      announceChanges(page.store, announcer, () => null);
+      const pca = startAnalysis(page.store, "pca");
+      page.tell({
+        kind: "startedByItself",
+        id: "pca",
+        round: ["pca", "diversity"],
+      });
+      page.endLast((key) => ({ kind: "done", key, result: pcaResult() }));
+      await pca;
+      const diversity = startAnalysis(page.store, "diversity");
+      page.tell({ kind: "startedByItself", id: "diversity", round: [] });
+      page.endLast((key) => ({
+        kind: "done",
+        key,
+        result: diversityResult(),
+      }));
+      await diversity;
+      await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+      expect(announcer.getState()).toBe(
+        "PCA of panel.nei calculated. Diversity of panel.nei calculated.",
+      );
     } finally {
       vi.useRealTimers();
     }

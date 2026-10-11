@@ -196,6 +196,8 @@ function fileIdOf(s: AppState<JobResult, Blob>): string | null {
  *   in their order, "Calculating the PCA and then the diversity again.
  *   To change the filters, stop each in its tab.", with Stop all named
  *   once the band offers it; the later starts of the round say nothing;
+ *   only the end of its last analysis drops it within the region's
+ *   pause;
  * - a start by itself alone in its round, its own words, "Calculating the
  *   PCA again. To change the filters, stop it in the PCA tab.";
  * - a Run that waited, at its start, "Calculating the diversity of
@@ -220,7 +222,8 @@ export function announceLive(
     switch (event.kind) {
       case "startedByItself": {
         const [first, ...rest] = event.round;
-        if (first === undefined) return;
+        const last = event.round.at(-1);
+        if (first === undefined || last === undefined) return;
         const text =
           rest.length === 0
             ? liveSaidOf(first).startedAlone(s)
@@ -228,7 +231,10 @@ export function announceLive(
                 event.round.map((id) => liveAnalysisOf(s, id).name),
                 STOP_ALL_OFFERED,
               );
-        announcer.announce(text, { replaces: liveSaidOf(first).runKind });
+        // Of the kind of the round's last analysis, whose end alone drops
+        // it: an end of an earlier one within the region's pause is said
+        // after it, since the next one then starts, said nowhere else.
+        announcer.announce(text, { replaces: liveSaidOf(last).runKind });
         return;
       }
       case "startedAfterWaiting": {
