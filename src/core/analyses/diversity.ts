@@ -1141,7 +1141,7 @@ function onlyClassifiedText(
   individuals: readonly string[] | null,
 ): string {
   const column = populationsColumnOf(p) ?? "";
-  const text = `Only ${namesOf([population])} has a population in ${shown(column)} among the individuals kept, and an allele is private when one population has it and no other does, so the table has no private alleles.`;
+  const text = `Of the populations of ${shown(column)}, only ${namesOf([population])} has individuals kept, and an allele is private when one population has it and no other does, so the table has no private alleles.`;
   const unclassified =
     popgen2PopulationsKept(p, individuals)?.unclassifiedLeftOut ?? 0;
   return unclassified > 0

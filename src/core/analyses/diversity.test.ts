@@ -3479,7 +3479,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       null,
     );
     const only =
-      "Only A has a population in pop among the individuals kept, and an allele is private when one population has it and no other does, so the table has no private alleles.";
+      "Of the populations of pop, only A has individuals kept, and an allele is private when one population has it and no other does, so the table has no private alleles.";
     expect(diversityOnPopgen2.warnings(r, withUnclassified, null)).toEqual([
       {
         code: "privateAllelesNeedTwoPopulations",
@@ -3508,7 +3508,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       null,
     );
     const only =
-      "Only A has a population in pop among the individuals kept, and an allele is private when one population has it and no other does, so the table has no private alleles.";
+      "Of the populations of pop, only A has individuals kept, and an allele is private when one population has it and no other does, so the table has no private alleles.";
     expect(diversityOnPopgen2.warnings(r, p, ["i1", "i3"])).toEqual([
       { code: "privateAllelesNeedTwoPopulations", text: only },
     ]);

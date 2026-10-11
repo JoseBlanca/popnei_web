@@ -131,7 +131,10 @@ that plan, in "On popgen2.html": the lock of the draw over every
 individual moves from `needs` to `keptNeeds`, so that the lock of no
 individual kept comes first; and the last sentence of the warning of
 one classified population counts the unclassified among the
-individuals kept, which the store now gives the warnings.
+individuals kept, which the store now gives the warnings, and its
+first sentence reads "Of the populations of popcat, only p0 has
+individuals kept, …", where "Only p0 has a population in popcat …" read
+as a population that has a population.
 
 The walking skeleton is stage 2 of `docs/build-order.md`, the smallest
 application that goes through every part once. For it the owner decided,
@@ -1922,8 +1925,8 @@ the result are the old ones.
   column of the populations in the box Individuals, or fill in popcat
   in panel_pops.csv and open it again, to count them."; of one classified population, with or without
   unclassified individuals left out, when the runner sends that one
-  alone and asks for no private alleles, "Only p0 has a population in
-  popcat among the individuals kept, and an allele is private when one
+  alone and asks for no private alleles, "Of the populations of popcat,
+  only p0 has individuals kept, and an allele is private when one
   population has it and no other does, so the table has no private
   alleles. The unclassified individuals are not a population to compare
   it with."; the last sentence left out when none of the individuals
