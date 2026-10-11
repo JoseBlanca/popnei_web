@@ -23,7 +23,8 @@ controls of what it reads are greyed with the reason, **the lock**, so
 that no change ever meets a running calculation. **The band** is the
 line at the top of the page, beside the heading "Popnei", that says
 what runs and offers its Stop; it gains **Stop all**, shown whenever
-two or more analyses are live, which ends every
+two or more analyses are live and one of them runs, waits or is about
+to start, which ends every
 live analysis at once. **The one pass** is the reading of the variants
 file the page makes by itself when the file is opened. **The status
 region** is what a screen reader reads aloud without moving the
@@ -568,7 +569,8 @@ What it gives, on `popgen2.html`: the band names the diversity running,
 about to start or stopping, as the PCA; "PCA running · 1:20 · then the
 diversity" while the diversity waits after the PCA; "The PCA and the
 diversity start again in a moment" in the quiet second of both; Stop
-all whenever two or more analyses are live; the link to the warnings or the error
+all whenever two or more analyses are live and one of them runs,
+waits or is about to start; "Popnei" alone while nothing does; the link to the warnings or the error
 of the first analysis in the order of the tabs.
 
 Deliverables:

@@ -35,7 +35,8 @@ analysis calculated again by itself
 (`docs/specs/steps/popgen2-populations.md`): the line names the
 diversity as it names the PCA, says which analyses wait after the one
 running or are about to start together, and gains "Stop all" whenever
-two or more analyses are live; the link points to the first result of the order
+two or more analyses are live and one of them runs, waits or is about
+to start; the link points to the first result of the order
 of the tabs that has warnings or failed. The section "Several live
 analyses", below, says so; the tables of "The line", of the short forms
 and of "Its words" gain their rows. Not yet built; its plan is
@@ -289,22 +290,22 @@ PCA name any live analysis, in the words of its tab, "PCA", "PCoA",
 | a live analysis runs and none waits | "Diversity running · 0:12" | Stop; and Stop all while another analysis is live |
 | two or more are about to start | "The PCA and the diversity start again in a moment"; while the dialog of the download holds them, "The PCA and the diversity start again when the download is written or closed" | Stop all |
 | one is about to start | "The diversity starts again in a moment", as the PCA's row | Stop recalculating, that analysis's; and Stop all while another analysis is live |
-| two or more live, nothing running nor about to start | nothing after "Popnei" | Stop all |
 | a Stop of the diversity under way | "Stopping the diversity…" | none |
 | results with warnings, or failed, in tabs not shown | the first in the order of the tabs: "Diversity: 2 warnings, in the Populations tab"; "Diversity: could not be calculated, in the Populations tab" | none |
 
-**Stop all** is shown whenever two or more analyses are live, in any
-state, and only then, as the design's choices 5 and 6 and the owner's
-answer 1a of 11 October 2026 have it: so that a user who stops the PCA
-while the diversity is live and done, to change two thresholds, can end
-both before the diversity starts again a second after the first
-change and greys the filters. It calls `autoRuns.pauseAll()`, which
-stops the one running and ends the live state of every one, and the
-status region says so ("Its words"). With two or more live and nothing
-running nor about to start, the band shows "Popnei" and Stop all, where
-the owner's decision of 10 October 2026, made with the PCA alone, had
-"Popnei" alone while nothing runs. With one live analysis its own Stop
-or Stop recalculating stands alone, as until now.
+**Stop all** is shown whenever two or more analyses are live and one
+of them runs, waits or is about to start, as the design's choices 5
+and 6 and the owner's answer 1a of 11 October 2026 have it: that is
+when a time limit runs on the user (WCAG 2.2, success criterion 2.2.1),
+for instance a user who stops the PCA while the diversity is live, to
+change two thresholds, and must end both before the diversity starts
+again a second after the first change. It calls `autoRuns.pauseAll()`,
+which stops the one running and ends the live state of every one, and
+the status region says so ("Its words"). While nothing runs, waits or
+is about to start, the band shows "Popnei" alone, as the owner decided
+on 10 October 2026, whatever is live, and each tab keeps its own Stop
+recalculating. With one live analysis its own Stop or Stop
+recalculating stands alone, as until now.
 
 **The tab shown.** While the tab of the analysis that runs, or of the
 one about to start, is shown, the band drops that analysis's Stop or

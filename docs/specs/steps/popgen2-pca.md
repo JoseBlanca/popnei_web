@@ -630,8 +630,8 @@ calculate with the new value (the design, choice 5, the owner's answer
 1a of 11 October 2026). Stop recalculating in a tab ends that
 analysis's live state alone too.
 
-**Stop all**, in the band, whenever two or more analyses are live,
-whatever their states, stops the one running and
+**Stop all**, in the band, whenever two or more analyses are live and
+one of them runs, waits or is about to start, stops the one running and
 ends the live state of every live analysis at once, so that nothing
 starts by itself again until a Run (`popgen2-band.md`, "The line"). A
 user who needs longer than a second to reach a filter, with a screen
