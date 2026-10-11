@@ -118,6 +118,14 @@ leaves it out for such a file, and gives `p.filters` itself otherwise. On
 `popgen.html`, whose projects never hold that filter, the two are the
 same array, so nothing a user sees changes.
 
+Revised on 11 October 2026 for `docs/designs/population-tab.md`,
+approved by the owner that day: the Populations tab of `popgen2.html`
+runs the diversity through a definition of its own,
+`diversityOnPopgen2`, with the populations of that page, where the
+unclassified are left out or are one population, its locks and its
+words (below, "On popgen2.html"). The old page changes in nothing. Not
+yet built; its plan is `docs/plans/population-tab.md`.
+
 The walking skeleton is stage 2 of `docs/build-order.md`, the smallest
 application that goes through every part once. For it the owner decided,
 on 25 September 2026: the inbreeding coefficient F waits for stage 5, and
@@ -1800,6 +1808,205 @@ and the row p2's private alleles, 1; the flow of stage 3 reads p0 of
 29 individuals with F −0.0141; it types a draw of 96 and reads
 `variantsNotInDraw` of p0, "277 of the 1,152 variants", and the column
 headed with 96.
+
+## On popgen2.html
+
+From 11 October 2026, for `docs/designs/population-tab.md`, approved by
+the owner that day. The Populations tab of `popgen2.html`
+(`docs/specs/steps/popgen2-populations.md`) runs the analysis of this
+module through a second definition, `diversityOnPopgen2`, made by the
+same code with what differs given as a page, as the PCA has
+`pcaOnPopgen2` ("On popgen2.html" of `docs/specs/analyses/pca.md`); the
+old page changes in nothing a user sees. A user of the new page would
+see three things go wrong with the old definition: a diversity locked
+because some individual of the variants file is not in the individuals
+file, which that page calls unclassified and not an error
+(`docs/functionality.md`, section 4); a diversity locked with "None"
+chosen in the list of the column, where the owner decided that the
+unclassified are then one population; and words that send the user to
+"the Variants step", "the Individuals step" and "the metadata file",
+which the page does not have. The request, the runner, the numbers and
+the result are the old ones.
+
+### What differs
+
+- **The populations**, by the owner's answer 3 of 9 October 2026
+  (`docs/designs/input-page.md`, "The unclassified in the analyses per
+  population"). The key holds those of `popgen2Populations(p)`: `"all"`,
+  the one population, with no individuals file and with "None" chosen
+  (**Open 2** of `popgen2-populations.md`, meanwhile so); the populations
+  of the column chosen, as `populationsOf` gives them, otherwise; and
+  `null`, which locks, while the file is read, after it was refused,
+  and for a column the file does not have or its list does not offer,
+  a column of booleans among them. `run` sends the populations of the
+  column narrowed to the individuals of the variants file and to those
+  the filters keep, as on the old page (`populationsKept`), so the
+  unclassified, an empty cell or an individual not in the file, are in
+  none and left out; and when none of the individuals of the variants
+  file is classified, a column that gives none of them a population, it
+  sends the one population of every individual kept, as for `"all"`.
+  The one population is named `ONE_POPULATION` of `src/core/project.ts`,
+  "All individuals" (**Open 1** of `popgen2-populations.md`, meanwhile
+  so).
+- **`needs`**, without `individualsNeeds` of
+  `docs/specs/core/project.md`, which locks on an individual missing
+  from the file, and without `populationsNeeds`, which locks with no
+  column and with a column that classifies none. Its reasons, the first
+  that holds, each with the words of `popgen2-populations.md`, "The
+  locks": the individuals file being read; refused, or its read failed;
+  a column the file does not have, or that the list does not offer; a
+  column of more than `MAX_LISTED_POPULATIONS`, 20, values, counted as
+  `populationCounts` counts them, the bound the owner set for a column
+  of populations on 9 October 2026 (answer 5 of the same design); and
+  last the draw larger than the chromosomes of the largest population,
+  `drawNeeds`, with "the thresholds of the individuals in the Variants
+  tab" where the old words name the filters of individuals, and no
+  words of the lists to keep and to remove, which this page does not
+  have. `keptNeeds` gives `populationsKeptNeeds` and the draw with this
+  page's words.
+- **The words**, where the old ones name a place of `popgen.html`:
+  "the Variants tab" for "the Variants step"; "panel_pops.csv", the name
+  of the individuals file, for "the metadata file"; "in the box
+  Individuals" for "in the Individuals step"; "Open it again in the box
+  Variants" for "load it again in the Variants step"; "the thresholds
+  of the individuals" for "the filters of individuals"; and the
+  failures that are not popnei's refusals in the words of
+  `popgen2FailureText` of `src/ui/analyses/words.ts`, as the PCA tab has
+  them. So `tooFewIndividuals` ends "merge it with another population
+  in panel_pops.csv, or lower the minimum number of individuals in the
+  options of the diversity."; `privateAllelesNeedTwoPopulations` of the
+  one population ends "Choose a column of the populations in the box
+  Individuals to count them.", or, with no individuals file, "Open an
+  individuals file that assigns the individuals to populations in the
+  box Individuals to count them."; the refusal of no population left
+  ends "Loosen the thresholds of the individuals in the Variants tab.".
+- **`individualsWithoutPopulation` is not raised.** An unclassified
+  individual is no fault on this page, and the tab says how many are
+  left out (`popgen2-populations.md`, "The populations it runs on").
+  `populationNotInResult` and the other warnings stay, with the words
+  above.
+- **The CSV of the table** is the table component's, from the values
+  of its cells, the header the labels of the columns
+  (`docs/specs/widgets/downloads.md`, "A table"), as for every table of
+  the page, so `diversityCsv`, whose header holds the names of the
+  Python script, serves the old page alone. The name is
+  `downloadName(stem, "diversity", "csv")`, `panel.diversity.csv`.
+- **The key**, `keyInputs`, as the old one with the populations above;
+  the definitions share the id "diversity" and the key version 3, and
+  each page has its own store and cache, so neither finds a result of
+  the other. A project file does not cross: `popgen2.html` saves none,
+  and when it does, the diversity of each page needs an id of its own
+  or the file its page, as the PCA's does
+  (`docs/specs/analyses/pca.md`, "On popgen2.html", the end of "The
+  TypeScript interface").
+- **The check numbers and the script** are the old ones; the page
+  compares none and shows no script.
+
+### The TypeScript interface
+
+```ts
+export type DiversityPage = "popgen" | "popgen2";
+
+/** The two definitions, both of the id "diversity": `diversity`, listed by POPGEN_ANALYSES, and
+    `diversityOnPopgen2`, listed by POPGEN2_ANALYSES of src/core/apps.ts after pcaOnPopgen2. */
+export const diversity: AnalysisDef<Job, JobResult>;
+export const diversityOnPopgen2: AnalysisDef<Job, JobResult>;
+
+/** The page of the definition a store runs; a defect for another. */
+export function diversityPageOf(def: AnalysisDef<Job, JobResult>): DiversityPage;
+
+/** In src/core/project.ts: the populations of the key on popgen2.html, "all" with no individuals
+    file and with no column chosen, those of the column otherwise, null while the file is not
+    read, refused, or for a column its list does not offer. Never reads p.variants. The same
+    frozen value for the same frozen table and column. */
+export function popgen2Populations(p: Project): Pops | "all" | null;
+
+/** The words of a refusal, of the statistics that failed and of a warning, by the page. */
+export function refusalText(message: string, p: Project, page: DiversityPage): string;
+export function statisticsFailedText(
+  error: AnalysisError, p: Project, failureText: (failure: Failure) => string,
+  waited: boolean, page: DiversityPage,
+): string;
+```
+
+The panel's parts take the page from the definition the store runs, as
+the PCA's do: the options part, the results and the spectrum's block of
+`src/ui/analyses/diversity/` take the definition and read its page with
+`diversityPageOf`, and the old page's panel binds them to `diversity`.
+
+### The cases
+
+- **Some individuals not in the file**, or with an empty cell: left out
+  of `pops`; no lock, no warning.
+- **"None" chosen, then a column**: the key goes from `"all"` to the
+  column's populations, and the diversity is calculated again while
+  live.
+- **A column that gives none of the individuals of the variants file a
+  population**: the key holds that column's populations; `run` sends
+  the one population; the warning of the private alleles is that of
+  the one population with a column, "Choose a column of the
+  populations …".
+- **The same file opened again**, its table the same: the key the same,
+  so the result is shown with no calculation while the store holds it.
+- **The thresholds of the individuals keep only unclassified
+  individuals**, while some individual of the variants file has a
+  population: `keptNeeds` locks with `populationsKeptNeeds`, as on the
+  old page, and the one population is not run, since the file does
+  classify some.
+
+### How it is verified
+
+With Vitest, at the definition and `popgen2Populations`, on frozen
+projects of `popgen2.html` made in the test, beside the old page's
+cases, which stay:
+
+- `popgen2Populations`: no individuals file, `"all"`; "None", `"all"`;
+  the column `pop` of the worked example, its populations; the file
+  pending, refused, a column absent and a column of booleans, `null`;
+  none reads `p.variants`, which the test makes a getter that throws.
+- `run`, with a fake client: the worked example with `i4`, of no
+  population, and `i5`, not in the variants file, sends `[["A", ["i1",
+  "i3"]], ["B", ["i2"]]]`, as the old page; a variants file with an
+  individual `i6` not in the table sends the same; a column whose
+  populations hold none of the variants file's individuals sends
+  `[["All individuals", every individual kept]]`; "None" the same.
+- `needs` of `diversityOnPopgen2`: each row of "The locks" of
+  `popgen2-populations.md` but those of the one pass, which are the
+  screen's, with its words whole; a project with an individual missing
+  from the file, `null`; a column of 21 values, the words of too many,
+  and of 20, `null`.
+- The words: each warning and refusal that names a place, with this
+  page's words, and `individualsWithoutPopulation` absent from
+  `warnings` of a result of the worked example; the old page's words
+  unchanged, by the tests that are there.
+- The key: "None" and no individuals file give the same key; a column
+  and "None" different keys.
+
+The numbers of `panel.nei` on this page, from popnei's release 0.2.2
+under node on 11 October 2026, the missing data of the variants at 0.1,
+the default of the page, which keeps all 1,200 variants (the FILTER
+filter, on in the page's first project, is left out for `panel.nei`,
+which holds no FILTER, `filtersApplied`): with `panel_pops.csv` and
+`popcat`, the numbers of "How it is verified" above with the filter at
+1, p0 He 0.35193160994408107, Ho 0.35642172473116646, polymorphic
+0.9266666666666666, F −0.012758486763376542; with no individuals file,
+the one population of the 200, He 0.3754712450806149, Ho
+0.35429523451520484, polymorphic 0.9791666666666666, F
+0.05639848814751047, alleles per variant 2, rarefied
+1.9926031027785522 at the draw of 40, from
+
+```js
+const v = openVars(new Uint8Array(readFileSync("e2e/fixtures/panel.nei")));
+v.filterByMissingData(0.1);
+calcPerVarDistribs(v, { pops: { "All individuals": the200 },
+  stats: ["obs_het", "unbiased_exp_het", "poly_vars_ratio"], minNumIndividuals: 20, polyThreshold: 0.95 });
+calcPopDiversity(v, { pops: { "All individuals": the200 },
+  stats: ["num_alleles", "fis", "folded_sfs"], numCalledAlleles: 40, minNumIndividuals: 20 });
+```
+
+where `the200` are the names of the first column of `panel_pops.csv`,
+the 200 individuals of `panel.nei`. The Playwright flows read them in
+the Populations tab (`popgen2-populations.md`, "How it is checked").
 
 ## The panel
 

@@ -69,6 +69,20 @@ a box, where this spec had said they put its number back; and the lock
 of the filters while a PCA runs names the PCA tab and what Run does
 again.
 
+Revised on 11 October 2026 for `docs/designs/population-tab.md`,
+approved by the owner that day, which brings the diversity of the
+Populations tab as a second analysis calculated again by itself: the
+thresholds and the FILTER box are greyed while either runs, with the
+words of the one running, "Stop the diversity in the Populations tab
+to change the filters; then press Run there to calculate it again.",
+and with Stop all named while another analysis waits after it
+(`docs/specs/steps/popgen2-pca.md`, "Several analyses calculated again
+by themselves", "The lock"; `popgen2-populations.md`, "While the
+diversity runs"). A change of a threshold or of the FILTER box starts
+again every live analysis whose key it changes, one after the other.
+Nothing else here changes. Not yet built; its plan is
+`docs/plans/population-tab.md`.
+
 The commands of the project, the kind `passed`, the opening of a file
 as a new history, the failures that
 survive a change of a filter and the result so far kept after a Stop are

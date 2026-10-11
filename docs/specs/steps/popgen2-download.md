@@ -39,6 +39,15 @@ the write goes to the line of an error of the band, where the error bar
 of the page was, with the dialog's way to put it right and not the
 reload the band says of other errors.
 
+Revised on 11 October 2026 for `docs/designs/population-tab.md`,
+approved by the owner that day, which brings the diversity of the
+Populations tab as a second analysis calculated again by itself
+(`docs/specs/steps/popgen2-populations.md`): the button waits while any
+analysis of the page runs, the diversity as the PCA, and for those
+waiting after it, with words that name them (below, "While an analysis
+runs", and "Its words"). The rest is unchanged. Not yet built; its plan
+is `docs/plans/population-tab.md`.
+
 The module specs it reads, revised for it the same day: the write
 itself, its request, its file name, the check of a filtering that keeps
 no variant and the words of its failures,
@@ -193,6 +202,21 @@ dialog closes, the quiet second that the close of the dialog, a change
 under way that ends, starts, for the filters and options on the screen
 then, if the PCA is still live and has no result for them. So a write never waits behind a PCA, and a PCA never
 starts behind a write.
+
+**While an analysis runs**, from 11 October 2026, the same holds of
+every analysis of the page calculated again by itself, the diversity
+as the PCA (`docs/specs/steps/popgen2-pca.md`, "Several analyses
+calculated again by themselves"; the design's choice 9 (a)): the button
+waits while one runs, with words that name it and its tab, and, while
+others wait to start after it, for them too, since each starts when the
+one before ends: "Waits for the diversity to end; or stop it in the
+Populations tab."; with the diversity waiting after the PCA, "Waits for
+the PCA, and the diversity after it, to end; or press Stop all beside
+the heading Popnei." A download pressed during the quiet second goes
+first, and every live analysis starts a second after its dialog closes,
+in the order of the tabs. The button reads the running analysis from
+`runningAnalysisOf` of `src/ui/analyses/status.ts` and those waiting
+from `autoRuns`, in the place of `runningPcaOf`.
 
 ### The dialog
 
@@ -467,7 +491,7 @@ state `write`, the first that holds:
 |---|---|---|
 | empty | no file open: the sections of the statistics are not drawn, nor the button | open a file |
 | locked | the button disabled, with "The download waits for the statistics of the file to be read to the end." while the file is opened, while the one pass runs, and after its Stop; with "The download needs the statistics of the file, which could not be calculated." after a failure; or, in place of the button, the words of `keptNoneReason`, or the sentence of no variant when it is certain | Start again in the box of the file, after a Stop or a crash; change the thresholds |
-| waiting for the PCA | once the one pass is finished, while a PCA runs, whether the user pressed its Run or a change started it by itself, the button disabled with "Waits for the PCA to end; or stop it in the PCA tab."; the text after the download and the sentences in place of the button stay as they were | wait, or Stop the PCA in the PCA tab or in the band |
+| waiting for an analysis | from 11 October 2026 the same for the diversity, with its words, and with the words of the analyses waiting after it; once the one pass is finished, while a PCA runs, whether the user pressed its Run or a change started it by itself, the button disabled with "Waits for the PCA to end; or stop it in the PCA tab."; the text after the download and the sentences in place of the button stay as they were | wait, or Stop the PCA in the PCA tab or in the band |
 | ready | the button | open the dialog; choose the format; Download or Cancel |
 | running | the dialog with the words of the write, the bar and Stop; the rest of the page out of reach | Stop |
 | done | the text after the download, with the focus on it, in place of the button, the store's `saved`; or, after a write of no variant, the sentence of no variant in its place, `noVariant`; or, the store's `done` when the file was not handed to the browser, a defect of the download or a Cancel of a Save click, the same text with "written" and Save | Save it again, or Save; change a filter or open another file, which brings the button back |
@@ -520,6 +544,8 @@ store works out the individuals kept from the finished one pass
 | beside it, disabled, while the file is opened, the one pass runs or after its Stop | "The download waits for the statistics of the file to be read to the end." |
 | beside it, disabled, after a failure of the opening or of the one pass | "The download needs the statistics of the file, which could not be calculated." |
 | beside it, disabled, while a PCA runs | "Waits for the PCA to end; or stop it in the PCA tab."; under the PCoA, "Waits for the PCoA to end; or stop it in the PCA tab." |
+| beside it, disabled, while the diversity runs | "Waits for the diversity to end; or stop it in the Populations tab." |
+| beside it, disabled, while an analysis runs and another waits after it | "Waits for the PCA, and the diversity after it, to end; or press Stop all beside the heading Popnei."; "Waits for the diversity, and the PCA after it, to end; …" |
 | in its place, the filters of the individuals keep none | "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them."; with one individual, "The filters of individuals do not keep the one individual of one.vcf. Loosen them." |
 | in its place, no variant kept, before or after the write | "None of the 1,200 variants of low_qual.vcf.gz pass the filters, so there is nothing to download." |
 | the heading of the dialog | "Download filtered variants" |
@@ -687,6 +713,13 @@ column, as the old page's flow of the write does:
   during its run, then a threshold moved: no request of the PCA, the
   button enabled; this flow is in `e2e/popgen2Live.spec.ts` of
   `docs/plans/no-undo.md`;
+- from 11 October 2026, the diversity held running: the button disabled
+  with "Waits for the diversity to end; or stop it in the Populations
+  tab."; the PCA held running and the diversity live with a new key
+  after a threshold moved: "Waits for the PCA, and the diversity after
+  it, to end; or press Stop all beside the heading Popnei.", and Stop
+  all in the band enables it; these flows are in the plan
+  `docs/plans/population-tab.md`;
 - the dialog, the button with its reason, and the text after the
   download, checked with axe (`e2e/axe.ts`), in light and in dark.
 

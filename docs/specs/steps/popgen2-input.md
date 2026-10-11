@@ -32,6 +32,18 @@ covers step 2 of case 4 of `docs/use-cases.md`, how many individuals
 each population has, and the file of the populations that case 3 needs
 for the colours of its PCA.
 
+Revised on 11 October 2026 for `docs/designs/population-tab.md`,
+approved by the owner that day with its open point 2 as recommended:
+the diversity of the Populations tab reads the populations, so while it
+runs the box Individuals greys the list "Column of the populations",
+the opening of another individuals file, by its button, a drop and a
+paste, and Remove, and the Individuals tab greys the three lists of how
+a text file is read, each with the reason (below, "While the diversity
+runs"); while the PCA runs they stay open, as before. A change of the
+individuals file or of the column now takes the diversity's result off
+the screen, and starts it again while it is live ("The states"). Not
+yet built; its plan is `docs/plans/population-tab.md`.
+
 The two tabs were called "Variants file" and "Individuals file" until 9
 October 2026, when the row of five tabs of `popgen2-pca.md` renamed them
 "Variants" and "Individuals" and named the row "Files and analyses";
@@ -452,6 +464,40 @@ one height as the table scrolls sideways: "Fecha de muestreo" of
 `individuals_10000.xlsx` wrapped onto two lines, and the row grew from
 33 to 57 pixels when it came into view. The types of the columns are not shown.
 
+### While the diversity runs
+
+From 11 October 2026, while the diversity of the Populations tab runs,
+whether its Run or a change started it, what gives the populations is
+greyed, so that no change leaves the running diversity behind
+(`docs/specs/steps/popgen2-populations.md`, "While the diversity
+runs"; the design's choice 2 (a)):
+
+- in the box Individuals: the list "Column of the populations", whose
+  popover does not open; the zone that opens another individuals file,
+  whose button opens no picker and which takes no drop and no paste;
+  and "Remove panel_pops.csv";
+- in the Individuals tab: the lists "Encoding", "Separator" and
+  "Decimal mark" of a text file.
+
+Each is drawn greyed, carries `aria-disabled`, and is still reached by
+the Tab key, as the greyed thresholds are (`popgen2-pca.md`, "While a
+PCA runs"); its tooltip, on the mouse, the focus and a press, and its
+description for a screen reader, are "Stop the diversity in the
+Populations tab to change the populations; then press Run there to
+calculate it again.", or, while another analysis waits after it, the
+words of `popgen2-populations.md` with Stop all. A file dropped or
+pasted on the greyed zone opens nothing and the box shows the same
+words where it shows the words of a folder dropped, and the status
+region says them; a drop elsewhere on the page opens nothing, as now.
+When the diversity ends, fails or is stopped, each is as before. The
+zone of a file, `src/ui/widgets/FileZone.tsx`, takes no greyed state
+today and gains one, with its reason.
+
+Not greyed: the counts, the table of the file, its sort and scroll,
+and the copy of the names, which change nothing. While only the PCA
+runs, nothing of this box is greyed, as the owner decided on 10
+October 2026 (open point 3 of `docs/designs/no-undo.md`).
+
 ### Both tabs kept drawn
 
 Both tabs stay drawn while the other is shown (`shouldForceMount` of
@@ -498,7 +544,8 @@ analysis, and has no Run of its own.
 | ready | cannot happen apart: nothing waits for a Run, the counts are drawn as soon as they are known | |
 | running | the individuals file being read, "Reading panel_pops.csv." in the box and the tab; the one pass running, as `popgen2-filters.md` gives it, the counts waiting when a threshold of the individuals is on | open another file; remove the file; choose a column of a file already read |
 | done | the list, the counts and their lines; the tab with how it was read, the missing ones and the table | choose the column, sort and scroll the table, change the options of a CSV, copy the names, open another file, remove it |
-| results removed | never: no change of the individuals file stops or removes a calculation, since neither the one pass's key nor the download's holds it; a change of the filters or the column changes the counts in place, with no notice, as the owner decided for every change on this page on 8 October 2026 | |
+| results removed | never in this box: a change of the filters or the column changes the counts in place, with no notice, as the owner decided for every change on this page on 8 October 2026. From 11 October 2026 a change of the individuals file or of the column takes the diversity's result off the Populations tab, and starts it again a second later while it is live (`popgen2-populations.md`, "The states"); neither the one pass's key nor the download's holds it | |
+| locked, from 11 October 2026 | while the diversity runs: the list, the zone and Remove greyed, with their reason; the three lists of the reader in the Individuals tab the same (above, "While the diversity runs") | Stop the diversity in the Populations tab, or Stop all in the band |
 | error | the file refused or its read failed: its words in the box, the options of the reader under the tab for a text file | change the options of a CSV; open another file; remove it |
 
 ## What it sends and reads
@@ -655,6 +702,11 @@ first column as row headers.
 its label and by the weight of its words; each warning by the word
 "Warning:".
 
+**The greyed controls while the diversity runs** (from 11 October
+2026): each keeps its place in the order of the Tab key and says its
+reason as its description; a drop or a paste on the greyed zone says
+the reason in the status region, since nothing on the screen moved.
+
 **Not yet heard in VoiceOver**, which the session cannot run: the row of
 the tabs read as "The files, tab list", each label with its position;
 the counts read with their name; a waiting count read "not counted
@@ -738,15 +790,23 @@ core and of the entry in their module specs.
   once more at each later read, by its new light worker;
 - 320 px wide: no sideways scroll of the page, the boxes one above the
   other, the two labels of the tabs visible;
-- axe on each state of the box and of the tab, in light and in dark.
+- axe on each state of the box and of the tab, in light and in dark;
+- from 11 October 2026, the diversity held running: the list, the zone,
+  Remove and the three lists of the reader greyed, each with
+  `aria-disabled="true"`, reached by the Tab key, its reason as its
+  tooltip and description; the list's popover does not open; a file
+  dropped and one pasted on the zone open nothing and show the reason;
+  the button opens no picker; the PCA held running instead: none of
+  them greyed (`popgen2-populations.md`, "How it is checked").
 
 The flows of the old page's Individuals step are run again, since its
 reader changed.
 
 **The screens**, `--project=screens`: no file; both files read with the
 counts; the counts waiting; a refusal; the warning of too many values;
-the Individuals tab with a CSV and with an xlsx; light and dark;
-1280 and 320 px.
+the Individuals tab with a CSV and with an xlsx; from 11 October 2026
+the box greyed while the diversity runs, `popgen2-individuals-box-locked`;
+light and dark; 1280 and 320 px.
 
 **By hand**, in the plan: the memory of the light worker and of the page
 after reading a CSV of 20 MB of short cells, in Chromium and WebKit,

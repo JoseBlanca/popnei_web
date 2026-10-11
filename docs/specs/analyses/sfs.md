@@ -75,6 +75,13 @@ rarefaction; the issue asks popnei to give the first three from
 `calcPopDiversity` too, so that one pass does (decision 4 of
 `docs/specs/stage-5-open-points.md`).
 
+Revised on 11 October 2026 for `docs/designs/population-tab.md`,
+approved by the owner that day: on `popgen2.html` the spectrum is in
+the Populations tab, with the words of that page in its warning, a
+"Download…" on each histogram and below its table, and the names of
+those files (below, "On popgen2.html"). The old page changes in
+nothing. Not yet built; its plan is `docs/plans/population-tab.md`.
+
 ## What is decided here, and what is asked
 
 The spectrum is part of the diversity: the same call of popnei, the same
@@ -491,6 +498,53 @@ the same spectra to the last digit. Without `numCalledAlleles` popnei
 refuses `folded_sfs`, and with 402, above the 400 gene copies of the
 panel's 200 diploid individuals, it refuses the draw; the diversity's
 spec keeps both from any request.
+
+## On popgen2.html
+
+From 11 October 2026, for `docs/designs/population-tab.md`: the
+spectrum is part of the diversity of the Populations tab of
+`popgen2.html` (`docs/specs/steps/popgen2-populations.md`), from the
+same request, as on the old page. Three things differ.
+
+- **The words of its warning**, `spectrumWarnings(r, p, page)`, with
+  the page of the diversity's definition (`diversity.md`, "On
+  popgen2.html"): "The MAF threshold of the Variants tab removes the
+  variants whose commonest allele is above 0.95 in the individuals
+  kept, taken together, and it removed 24 of the 1,152 it was given. So
+  the spectrum lacks many of the rare alleles, and its first bins are
+  lower than those of the population. To see every variant in the
+  spectrum, turn the MAF threshold off in the Variants tab." The
+  condition and the numbers are the old ones.
+- **The downloads**, as every plot and table of the page
+  (`docs/specs/widgets/downloads.md`): each histogram has its
+  "Download…", "Image as SVG", "Image as PNG" and "Data as CSV", whose
+  CSV is that population's rows of `spectraCsv`, with its header,
+  `spectrumCsv(r, population)`; the table of the spectrum has its
+  "Download…" below it, "Table as CSV", from the values of its cells.
+  The old button "Download the spectrum as CSV", and `spectraCsv` as a
+  download, serve the old page alone.
+- **The names of the files**: `downloadName(stem, "sfs.‹population›",
+  ext)` for a histogram, `panel.sfs.p0.svg`, the population's name made
+  a part of a file name by `fileNameParts` of `src/core/fileNames.ts`,
+  every character other than a letter, a digit, "-" and "_" written
+  "_", and "_2", "_3" after a name that an earlier population of the
+  result already gave; `panel.sfs.csv` for the table.
+
+```ts
+/** sfs.ts: the rows of one population of `spectraCsv`, with its header; a defect for a
+    population not in the result. */
+export function spectrumCsv(r: DiversityResult, population: string): string;
+export function spectrumWarnings(r: DiversityResult, p: Project, page: DiversityPage): Warning[];
+
+/** fileNames.ts: the parts of file names of `names`, in their order, as above. */
+export function fileNameParts(names: readonly string[]): readonly string[];
+```
+
+Checked with Vitest: `spectrumCsv` of the result of the flow at the
+missing data of 0.05, p0's rows equal to those of `spectraCsv` for p0;
+`spectrumWarnings` with page "popgen2", the text above; `fileNameParts`
+of `["p0", "a/b", "a?b", "é"]`, `["p0", "a_b", "a_b_2", "é"]`, a
+letter of another alphabet kept, since a browser saves it.
 
 ## The block of the panel
 

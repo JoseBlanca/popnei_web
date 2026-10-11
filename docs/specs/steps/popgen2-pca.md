@@ -65,6 +65,23 @@ for the line under the heading of the PCA's filters in their own words,
 line under "Stop recalculating" while the result shows; and for the
 "Download…" of every table below the table, the plots keeping theirs.
 
+Revised on 11 October 2026 for `docs/designs/population-tab.md`,
+approved by the owner that day with the recommendations of its two open
+points, which brings the Populations tab
+(`docs/specs/steps/popgen2-populations.md`): the PCA is no longer the
+one analysis calculated again by itself. The new section "Several
+analyses calculated again by themselves" gives the rules every live
+analysis follows, the order after a change, the state waiting, a Run
+pressed while another analysis runs, a Stop that lets the others start
+a quiet second later, Stop all, the lock and the status region of
+several, and the interface of `src/ui/autoRuns.ts` they need; "The PCA
+calculated again by itself" keeps what is the PCA's own. "While a PCA
+runs" says that the column of the populations and the individuals file
+stay open while the PCA runs and are greyed while the diversity runs;
+"The tabs not built yet" no longer names the Populations tab; the lines
+of the PCA's tab while it waits for the diversity are in "About to
+start". Not yet built; its plan is `docs/plans/population-tab.md`.
+
 The PCA tab is the panel of the old page, `popgen.html`, which is built
 and which the owner approved on 28 September 2026: its screen spec is
 the second half of `docs/specs/analyses/pca.md`, "The panel". This spec
@@ -366,6 +383,13 @@ Stop pauses the automatic runs: a user who wants to change two filters
 slowly, a screen reader's user among them, can keep the PCA from
 starting between them.)
 
+From 11 October 2026 the PCA can also wait for the diversity: an option
+of the PCA changed while the diversity runs, which the diversity's lock
+leaves open, or Run pressed then. The tab then shows the same, with the
+line "The PCA starts once the diversity, which is running, ends." ("The
+PCoA …"), and the PCA starts at the diversity's end with no second
+more ("Several analyses calculated again by themselves").
+
 **Stop recalculating.** Whenever the PCA is live and no PCA runs, with
 its result, during the quiet second, live and locked, or after a
 failure that leaves it live, the tab's one button is "Stop
@@ -400,7 +424,9 @@ the bar and the clock, and the filters it reads greyed with "Stop the
 PCA in the PCA tab to change the filters; then press Run there to
 calculate it again." ("While a PCA runs", below). The status region
 says "Calculating the PCA again. To change the filters, stop it in the
-PCA tab." ("the PCoA") once, at its start, and does not move the
+PCA tab." ("the PCoA") once, at its start, or, at the first start of a round of
+several live analyses, the words of the round ("Several analyses
+calculated again by themselves", "The status region"), and does not move the
 focus, so that a user who changed a threshold in the Variants tab, and
 then finds it greyed, learns why and where; a user who reaches a
 greyed control hears its reason as before. Both name the tab and what
@@ -543,6 +569,200 @@ project: the project is shared with `popgen.html`, and a field of it
 would have to be kept out of the PCA's key by hand (the design, choice
 3).
 
+### Several analyses calculated again by themselves
+
+From 11 October 2026, for `docs/designs/population-tab.md`, the PCA and
+the diversity of the Populations tab are each live on their own, and
+later the LD decay and the distances between populations will be too.
+What this section says holds for every live analysis; what the section
+above says of the PCA, its live state, its quiet second, its changes
+under way, its Stop and its failures, holds for each, with its own key,
+its own tab and its own words. A user who wants the diversity
+calculated again does not get a PCA of minutes they never asked for:
+each analysis is live once its own Run is pressed (the design, choice
+4).
+
+**The order.** The calculation worker runs one calculation at a time.
+When several live analyses are about to start after one change, a
+threshold of the Variants tab for instance, they run one after the
+other in the order of the tabs: the PCA, then the diversity, later the
+LD decay, then the distances (the design, choice 1, recommended over
+the tab shown first and over analyses calculated only when their tab
+is shown). The quiet second is one for all of them: when it runs out,
+the first in the order starts, and each next one starts when the one
+before it ends, with no second more, unless a change comes meanwhile.
+A change of what one analysis alone reads, an option of the PCA, the
+column of the populations, an option of the diversity, gives that one
+alone a new key, and starts it alone.
+
+**Waiting.** A live analysis whose quiet second has run out and that
+does not run, because another calculation runs, is waiting. Its tab
+says which analysis it waits for ("The diversity starts once the PCA,
+which is running, ends."), keeps its options open and shows no result,
+since none is kept for values left behind. While the quiet second runs,
+an analysis with another before it in the order about to start says so
+too ("The diversity starts after the PCA, once the filters and the
+options stop changing.").
+
+**What holds an analysis back.** A live analysis waits for the one pass
+and for nothing else of the page but a calculation running: whatever
+the state of the other live analyses, not live, stopped by the user,
+locked, done, in error or about to start, they do not keep it from
+starting. Until 11 October 2026 any analysis before it that was
+neither done nor locked held it back, so a PCA never run would have
+kept the diversity from ever starting by itself (the design, "For the
+session that builds it", point 1).
+
+**A Run while another analysis runs** makes its analysis live and
+waiting, and sends nothing: it starts when the one running ends, in the
+order above (the design, choice 3). With nothing running and no write,
+Run starts its analysis at once, whatever is about to start; the
+others about to start then wait after it. Run during the one pass stays
+locked, as it is: the one pass is no live analysis, and its Stop and
+Start again are its box's.
+
+**Stop.** The Stop of a live analysis, in its tab or in the band, stops
+that analysis and ends its live state alone, as for the PCA. The other
+live analyses then start a quiet second after the Stop, not at once:
+the user who stopped the PCA to change a threshold has that second to
+begin, and each change puts the start off again, so the others
+calculate with the new value (the design, choice 5, the owner's answer
+1a of 11 October 2026). Stop recalculating in a tab ends that
+analysis's live state alone too.
+
+**Stop all**, in the band, while the band names more than one live
+analysis, running, waiting or about to start, stops the one running and
+ends the live state of every live analysis at once, so that nothing
+starts by itself again until a Run (`popgen2-band.md`, "The line"). A
+user who needs longer than a second to reach a filter, with a screen
+reader or a switch, presses it, and then Run in each tab they want
+back; that is how the page meets WCAG 2.2, success criterion 2.2.1,
+Timing Adjustable, with several analyses. Each tab then shows the line
+of a Stop.
+
+**The lock.** While a live analysis runs, what it reads is greyed with
+the words of its tab: the PCA's as in "While a PCA runs"; the
+diversity's in `popgen2-populations.md`, "While the diversity runs",
+which also greys the column of the populations and the individuals
+file. When another live analysis waits after the one running, the words
+add Stop all: "Stop the PCA in the PCA tab to change the filters, or
+press Stop all beside the heading Popnei to stop the diversity waiting
+after it too; then press Run in each tab to calculate them again."
+("the PCoA" by the method), since a Stop of the PCA alone would let the
+diversity start a second later and grey the filters again.
+
+**The status region.** The first start of a round, the starts by
+themselves that one quiet second gives, says the analyses of the round
+once, in their order, when there are two or more: "Calculating the PCA
+and then the diversity again. To change the filters, press Stop all
+beside the heading Popnei, or stop each in its tab." ("the PCoA" by the
+method); with one, its own words, as above. The later starts of the
+same round say nothing; each end is said as the end of any run, "PCA
+of panel.nei calculated.", "Diversity of panel.nei calculated.". A Run
+that waited is said when it starts, "Calculating the diversity of
+panel.nei.", since the user pressed it earlier, and the bar then comes
+in a tab they may not see. Stop all is said once: "Stopped: the PCA and
+the diversity no longer start by themselves. Press Run in their tabs to
+calculate them again."
+
+**The download of the filtered variants** waits for the calculation
+running and for those waiting after it, since each starts when the one
+before ends (`popgen2-download.md`, "While an analysis runs"); pressed
+during the quiet second it goes first, and every live analysis starts
+a second after its dialog closes, in the order above.
+
+**For the implementer** (the design, "For the session that builds it",
+points 1 to 7). `POPGEN2_AUTO_GROUPS` of `src/ui/popgen2Store.ts` is
+the one pass, `POPGEN2_CHAIN`, then a group for each live analysis, the
+PCA and then the diversity; `POPGEN2_LIVE` lists the live ones in that
+order. In `src/ui/autoRuns.ts`:
+
+- `holderOf` holds a live analysis back behind no live analysis, only
+  behind the groups before it that hold none, the one pass;
+  `sync` starts nothing while any analysis of its groups runs, as now,
+  and the first live analysis in the order with a key not started
+  under, so one at a time.
+- `run(id)` makes `id` live and starts it at once through `runStart`
+  when nothing runs and no write runs; when another runs it makes `id`
+  live and calls `sync`, which starts it after; it is refused during a
+  write, as now.
+- `pause(id)` ends the live state of `id`, starts the quiet second
+  again, `quietAgain`, and then cancels its run if one is in flight, so
+  that the `sync` after the store's change does not start the waiting
+  analysis at once. `pauseAll()` ends the live state of every live
+  analysis and cancels the one running; it needs no quiet second, since
+  nothing is left live.
+- `endsLive` of `LiveDeps` is given by the page as one function that
+  dispatches by analysis: the PCA's `failureEndsLive` of
+  `src/ui/analyses/pca/liveEnd.ts`; for the diversity, the failures only
+  a reload mends, the calculations that could not start, the page out
+  of date and an error of the application's own, while a crash of the
+  worker and popnei's refusal leave it live, its crash not being one of
+  memory: a diversity peaked under 1 GB of the whole engine on every
+  file measured (the design, "The time and the memory of a diversity,
+  measured").
+- The interface changes so:
+
+```ts
+/** What the start by itself of a live analysis waits for: "changes",
+    the quiet second or a change under way; "download", the dialog of the
+    download of the filtered variants or its write; "behind", another
+    calculation that runs, its own quiet second run out. */
+export type AboutToStart = "changes" | "download" | "behind";
+
+export type LiveState =
+  | { readonly kind: "off" }
+  | { readonly kind: "stopped" }
+  | {
+      readonly kind: "live";
+      readonly aboutToStart: AboutToStart | null;
+      readonly running: boolean;
+      /** While it is about to start: the live analysis that runs, or
+          that is about to start before it in the order; `null` when
+          none, and while it is not about to start. */
+      readonly after: AnalysisId | null;
+    };
+
+/** What the page is told of the live analyses beyond the store. */
+export type LiveEvent =
+  /** `id` started by itself; `round`, the live analyses about to start
+      at this start, in their order, `id` first, at the first start of a
+      round, and empty at a later start of the same round. */
+  | { readonly kind: "startedByItself"; readonly id: AnalysisId; readonly round: readonly AnalysisId[] }
+  /** A Run that waited behind another calculation, at its start. */
+  | { readonly kind: "startedAfterWaiting"; readonly id: AnalysisId }
+  /** The user's Stop of `id`, in its tab or in the band. */
+  | { readonly kind: "paused"; readonly id: AnalysisId }
+  /** Stop all: `ids`, the analyses whose live state it ended, in order. */
+  | { readonly kind: "pausedAll"; readonly ids: readonly AnalysisId[] };
+
+interface AutoRuns {
+  // … as before, and:
+  /** The user's Run of the live analysis `id`: "started" at once,
+      "waiting" behind a calculation that runs, or "refused" during a
+      write, when nothing is made live. */
+  run(id: AnalysisId): "started" | "waiting" | "refused";
+  /** Stop all: stops the analysis running, if one is live, and ends the
+      live state of every live analysis. */
+  pauseAll(): void;
+}
+```
+
+  The band and the tabs read `liveState(id)` of each live analysis with
+  `subscribe` alone, as now; its `after` is what a tab's line of waiting
+  names. A round is the starts by themselves between two runs-out of
+  the quiet second, which `autoRuns` counts.
+- `runningAnalysisOf` of `src/ui/analyses/status.ts` gives the live
+  analysis running, its name in a sentence, its tab and whether it reads
+  the populations, so that the lock of the filters
+  (`src/ui/variants/filtersLock.ts`), the box Individuals
+  (`src/ui/variants/IndividualsBox.tsx`), the Individuals tab and the
+  download (`src/ui/variants/downloadState.ts`) read it, with the
+  analyses waiting from `autoRuns`.
+- `announceLive` of `src/ui/variants/announceChanges.ts` says the round,
+  the start of a Run that waited, a Stop and Stop all, each analysis in
+  its own words.
+
 ### The row of tabs
 
 The labels, in their order: "Variants", "Individuals", "PCA",
@@ -603,9 +823,11 @@ is, and the page does not scroll sideways.
 
 ### The tabs not built yet
 
-Populations, once not greyed, shows one line: "Not built yet: the
-diversity of each population, its site frequency spectrum and its LD
-decay come in a later version of the page." Distances: "Not built yet:
+From 11 October 2026 the Populations tab shows the diversity of each
+population and its spectrum (`popgen2-populations.md`); until then it
+showed one line, "Not built yet: the diversity of each population, its
+site frequency spectrum and its LD decay come in a later version of the
+page." Distances: "Not built yet:
 the distances between the populations, Hudson's Fst or Jost's D, come
 in a later version of the page."
 
@@ -859,6 +1081,10 @@ answer of 9 October 2026 named the column of the populations among the
 filters to lock; the session asked the same day whether it should be,
 since the PCA does not read it, and the owner answered on 10 October
 2026 that it stays open (open point 3 of `docs/designs/no-undo.md`).
+From 11 October 2026 they stay open while the PCA runs and are greyed
+while the diversity runs, whose key holds the populations
+(`popgen2-populations.md`, "While the diversity runs"; the owner's
+answer 2a to `docs/designs/population-tab.md`).
 
 **The result**, as the old panel shows it (`docs/specs/analyses/pca.md`,
 "What it shows"), with these differences:
@@ -1329,6 +1555,29 @@ focus is on a threshold of the Variants tab.
   in each state, and a reader subscribed to `autoRuns` alone told of a
   change of a filter, of the dialog's hold and of a new load; a
   control removed while it holds lets its hold go.
+- Several analyses calculated again by themselves, from 11 October
+  2026, at `createAutoRuns` with the real store of the page, the PCA and
+  the diversity, a fake worker, the gate and the clock of Vitest (the
+  design, "How it will be tested"): with the PCA never run, `ready`, a
+  live diversity starts by itself after a change; the same after a Stop
+  of the PCA, which leaves it not live and `ready`; with the PCA locked,
+  done, refused by popnei and crashed; with both live, a change of a
+  threshold starts the PCA a second later and the diversity at the
+  PCA's end, whichever tab is shown, and never both at once (the
+  worker's requests counted); a change of the column of the populations
+  or of an option of the diversity starts the diversity alone, and one
+  of an option of the PCA the PCA alone; `liveState("diversity")` is
+  `behind` with `after` "pca" while the PCA runs, and `changes` with
+  `after` "pca" in the quiet second; a Run of the diversity while the
+  PCA runs gives "waiting", sends nothing until the PCA ends, and then
+  one request, with `startedAfterWaiting`; a Stop of the running PCA
+  starts the waiting diversity one second later, not at once, and a
+  change within that second puts it off; `pauseAll` during a run and
+  during the quiet second ends both live states and a change then
+  starts nothing; the round is told once, with both, at the PCA's
+  start, and the diversity's start of the same round with an empty
+  `round`; a crash of the memory of the PCA ends its live state and
+  not the diversity's.
 - No Undo: the page's store has no `undo` nor `redo` in its type; a
   press of Ctrl+Z on the page sends no command.
 - The CSV of each table and plot, in `docs/specs/widgets/downloads.md`.
@@ -1545,6 +1794,7 @@ and those of `docs/designs/no-undo.md` on 10 October 2026.
   `docs/specs/core/store.md`.
 - The boxes, the Variants tab and the Individuals tab:
   `popgen2-input.md`, `popgen2-filters.md`, `popgen2-download.md`.
-- The analyses of the Populations and Distances tabs, later pieces.
+- The Populations tab: `popgen2-populations.md`. The LD decay and the
+  Distances tab, later pieces.
 - The saving of a project on this page, and the help drawer.
 - The old page, `popgen.html`, which gets none of this.

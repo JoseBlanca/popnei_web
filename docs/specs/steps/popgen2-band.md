@@ -28,6 +28,19 @@ names it; an error band that scrolls with the page, brought into view
 when it comes, with the focus given to the heading when the jump
 leaves it out of the window, and held while a dialog is open.
 
+Revised on 11 October 2026 for `docs/designs/population-tab.md`,
+approved by the owner that day with the recommendations of its two open
+points, which brings the diversity of the Populations tab as a second
+analysis calculated again by itself
+(`docs/specs/steps/popgen2-populations.md`): the line names the
+diversity as it names the PCA, says which analyses wait after the one
+running or are about to start together, and gains "Stop all" while it
+names more than one; the link points to the first result of the order
+of the tabs that has warnings or failed. The section "Several live
+analyses", below, says so; the tables of "The line", of the short forms
+and of "Its words" gain their rows. Not yet built; its plan is
+`docs/plans/population-tab.md`.
+
 It reads what the other specs of the page give, and repeats none of
 it:
 
@@ -128,6 +141,14 @@ to a screen reader:
 | "The PCA starts again when the download is written or closed" | "PCA later" |
 | "PCA: 2 warnings, in the PCA tab" | "PCA: 2 warnings" |
 | "PCA: could not be calculated, in the PCA tab" | "PCA: failed" |
+| "Diversity running · 0:12" | "Diversity · 0:12" |
+| "PCA running · 1:20 · then the diversity" | "PCA · 1:20" |
+| "Stopping the diversity…" | "Stopping…" |
+| "The diversity starts again in a moment" | "Diversity soon" |
+| "The PCA and the diversity start again in a moment" | "Analyses soon" |
+| "The PCA and the diversity start again when the download is written or closed" | "Analyses later" |
+| "Diversity: 2 warnings, in the Populations tab" | "Diversity: 2 warnings" |
+| "Diversity: could not be calculated, in the Populations tab" | "Diversity: failed" |
 
 "PCoA" in place of "PCA" under the PCoA. The flows check that each fits
 one line at 320 px with "Popnei" and its button, the whole "Stop
@@ -252,6 +273,49 @@ the warnings are then above the result the user looks at. It comes
 back when the user turns to another tab. The warnings stay in the PCA
 tab, beside the result they qualify; the band names them and does not
 repeat their words.
+
+### Several live analyses
+
+From 11 October 2026 the diversity of the Populations tab is live as
+the PCA is, each once its own Run is pressed, and they run one after
+the other in the order of the tabs (`popgen2-pca.md`, "Several analyses
+calculated again by themselves"). The rows of "The line" that name the
+PCA name any live analysis, in the words of its tab, "PCA", "PCoA",
+"Diversity", with these additions:
+
+| what holds | the words | the controls after them |
+|---|---|---|
+| a live analysis runs and others wait after it | "PCA running · 1:20 · then the diversity"; with two waiting, "… · then the diversity and the LD decay" | Stop, of the one running, and Stop all |
+| a live analysis runs and none waits | "Diversity running · 0:12" | Stop |
+| two or more are about to start | "The PCA and the diversity start again in a moment"; while the dialog of the download holds them, "The PCA and the diversity start again when the download is written or closed" | Stop all |
+| one is about to start, or waits | "The diversity starts again in a moment", as the PCA's row | Stop recalculating, that analysis's |
+| a Stop of the diversity under way | "Stopping the diversity…" | none |
+| results with warnings, or failed, in tabs not shown | the first in the order of the tabs: "Diversity: 2 warnings, in the Populations tab"; "Diversity: could not be calculated, in the Populations tab" | none |
+
+**Stop all** is shown whenever the line names more than one live
+analysis, and only then: one running with others waiting after it, or
+several about to start. It calls `autoRuns.pauseAll()`, which stops the
+one running and ends the live state of every one, and the status region
+says so ("Its words"). Where the line names one, its own Stop or Stop
+recalculating stands alone, as for the PCA until now: a single live
+analysis needs no second button.
+
+**The tab shown.** While the tab of the analysis that runs, or of the
+one about to start, is shown, the band drops that analysis's Stop or
+Stop recalculating, as it drops the PCA's in the PCA tab, and keeps
+Stop all, whose words differ from the tab's button. The link drops
+while its tab is shown, as now, and names the next in the order that
+has warnings or failed in a tab not shown, if any.
+
+**Stopping** names the analysis by its words, "Stopping the diversity…",
+where the band named any analysis but the PCA by its title until 11
+October 2026, "Stopping the calculation of Diversity…". After Stop all
+it names the one that ran.
+
+At 320 px the short forms drop the analyses waiting, "PCA · 1:20", the
+whole words given to a screen reader, and the line holds "Popnei", the
+short form, Stop and Stop all; the flows check that it fits on one
+line, as "PCoA soon" with the whole "Stop recalculating" does.
 
 ### An error of the application
 
@@ -378,9 +442,11 @@ It sends:
   does;
 - the Stop of the PCA, and its Stop recalculating while it is about to
   start, `autoRuns.pause("pca")`, as the PCA tab does
-  (`popgen2-pca.md`, "What it sends and reads");
-- a change of the tab shown, to the PCA tab, through the page's store of
-  the tab shown, `src/ui/pageTab.ts`;
+  (`popgen2-pca.md`, "What it sends and reads"); the same of the
+  diversity, `autoRuns.pause("diversity")`, from 11 October 2026;
+- Stop all, `autoRuns.pauseAll()`;
+- a change of the tab shown, to the PCA tab or the Populations tab, by
+  its link, through the page's store of the tab shown, `src/ui/pageTab.ts`;
 - the close of the log of the errors, `defects.dismiss()`, and the copy
   of its details, as the error bar does.
 
@@ -393,7 +459,9 @@ It reads:
   file and the method of the PCA;
 - the clock of a run, `useRunSeconds` of `src/ui/runSeconds.ts`, as the
   PCA tab reads it;
-- from `src/ui/autoRuns.ts`: the PCA's live state, `liveState("pca")`,
+- from `src/ui/autoRuns.ts`: the live state of each live analysis,
+  `liveState(id)`, with its `after` (`BandPage.pcaLive` becomes one
+  entry per live analysis, from 11 October 2026); until then the PCA's alone, `liveState("pca")`,
   whether it is live, about to start and what its start waits for, or
   stopped by the user, read with its `subscribe` alone, which tells
   every change of it, those a change of the store makes among them (the
@@ -426,17 +494,22 @@ change; it is still the screen's, not the project's
 | the one pass running | "Statistics of panel.vcf.gz · 45%"; before its first progress, "Statistics of panel.vcf.gz" |
 | the PCA running | "PCA running · 1:20"; "PCoA running · 1:20"; under a minute, "PCA running · 0:12" |
 | the write | "Writing panel.filtered.vcf.gz · 45%"; "Writing panel.filtered.nei · 45%" |
-| a Stop under way | "Stopping the PCA…"; "Stopping the PCoA…"; "Stopping the statistics of panel.vcf.gz…"; for an analysis the page will run beside them, by its title, "Stopping the calculation of Diversity…" |
+| a Stop under way | "Stopping the PCA…"; "Stopping the PCoA…"; "Stopping the statistics of panel.vcf.gz…"; "Stopping the diversity…" ("Stopping the calculation of Diversity…" until 11 October 2026) |
+| an analysis running with others waiting after it | "PCA running · 1:20 · then the diversity"; "Diversity running · 0:12" with none |
+| several about to start | "The PCA and the diversity start again in a moment"; "The PCA and the diversity start again when the download is written or closed" |
+| the diversity about to start | "The diversity starts again in a moment"; "The diversity starts again when the download is written or closed" |
+| the link of the diversity | "Diversity: 1 warning, in the Populations tab"; "Diversity: could not be calculated, in the Populations tab" |
 | the PCA about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment"; while the dialog of the download is open, "The PCA starts again when the download is written or closed"; "The PCoA starts again when the download is written or closed" |
 | the link to the warnings | "PCA: 1 warning, in the PCA tab"; "PCA: 2 warnings, in the PCA tab"; "PCoA: 1 warning, in the PCA tab" |
 | the link to an error | "PCA: could not be calculated, in the PCA tab"; "PCoA: could not be calculated, in the PCA tab" |
-| the buttons | "Stop"; "Stop recalculating"; "Details"; "Close"; "Copy the details" |
-| the name of the Stop for a screen reader | "Stop the statistics of panel.vcf.gz"; "Stop the PCA"; "Stop the PCoA"; "Stop recalculating the PCA"; "Stop recalculating the PCoA" |
+| the buttons | "Stop"; "Stop recalculating"; "Stop all"; "Details"; "Close"; "Copy the details" |
+| the name of the Stop for a screen reader | "Stop the statistics of panel.vcf.gz"; "Stop the PCA"; "Stop the PCoA"; "Stop recalculating the PCA"; "Stop recalculating the PCoA"; "Stop the diversity"; "Stop recalculating the diversity"; "Stop all: the PCA and the diversity" |
 | an error of the application | the three sentences of `barText` on this page, "An error of the application", with the message in each |
 | its details | "1 more error followed it."; "3 more errors followed it." |
 | the band's own status region | "The details were copied."; "The details could not be copied. Select them in the box below and copy them." |
 | the name of the band for a screen reader | "What the page is doing" |
-| the status region of the page, a Stop pressed in the band | the words of that Stop where it is pressed elsewhere: of the PCA, "PCA stopped. Press Run in the PCA tab to calculate it again."; of the one pass, what its Stop in the box says today |
+| the status region of the page, a Stop pressed in the band | the words of that Stop where it is pressed elsewhere: of the PCA, "PCA stopped. Press Run in the PCA tab to calculate it again."; of the diversity, "Diversity stopped. Press Run in the Populations tab to calculate it again."; of the one pass, what its Stop in the box says today |
+| the status region of the page, Stop all | "Stopped: the PCA and the diversity no longer start by themselves. Press Run in their tabs to calculate them again." |
 
 ## Accessibility
 
@@ -583,6 +656,17 @@ others; the percentage of a progress of 1,234 of 10,000 bytes, "12%",
 rounded down, so that 100% is said only at the end; the clock at 59 s
 and at 61 s, "0:59" and "1:01".
 
+From 11 October 2026, at `bandOf`, with the PCA and the diversity: the
+PCA running and the diversity waiting, "PCA running · 1:20 · then the
+diversity" with Stop and Stop all; the diversity running alone, its
+words and Stop; both about to start, the words of both and Stop all
+alone, and while the dialog of the download holds them; the PCA tab
+shown with the PCA running and the diversity waiting, the words with
+Stop all and no Stop; the Populations tab shown with the diversity
+about to start alone, no button; the link of the diversity's warnings
+while the PCA has none, and the PCA's when both have them; "Stopping
+the diversity…".
+
 **In jsdom**, the band drawn: the Stop of the one pass calls
 `autoRuns.stop` with the page's group, and the Stop of the PCA and
 its Stop recalculating while it is about to start
@@ -678,6 +762,12 @@ pass held by `e2e/holdWorker.ts`:
   Run enabled after it in both; on the owner's Mac, an Apple M5 Pro of
   64 GB with macOS 27.0.1, on 10 October 2026, with a load average of
   3.3 over the last minute (`NU5 D6` of `e2e/measure.spec.ts`);
+- from 11 October 2026, the PCA and the diversity live, a threshold
+  moved in the Variants tab, the PCA held running: "PCA running · 0:0… ·
+  then the diversity" with Stop and Stop all; Stop all: no request of
+  the diversity follows, both tabs show the line of a Stop, and the
+  status region says the words of Stop all once; at 320 px, "Popnei",
+  "PCoA · 1:20", Stop and Stop all on one line, no sideways scroll;
 - axe, the checker of accessibility, with the band in each state, in
   light and in dark.
 
@@ -686,7 +776,8 @@ dark: `popgen2-band-empty`, "Popnei" alone, `popgen2-band-reading`,
 `popgen2-band-pca-running`, `popgen2-band-stopping`,
 `popgen2-band-about-to-start`, `popgen2-band-pca-tab-about-to-start`
 (the PCA tab shown, the words and no Stop recalculating in the band),
-`popgen2-band-writing` (behind the
+`popgen2-band-then-diversity` and `popgen2-band-analyses-soon`, from
+11 October 2026, `popgen2-band-writing` (behind the
 dialog), `popgen2-band-warning`, `popgen2-band-error` and
 `popgen2-band-error-details`, and `popgen2-band-error-running`, both
 lines.
