@@ -283,7 +283,7 @@ population that would give the same name gets "_2" after it, then "_3".
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | the tab greyed, with its reason, as the row of tabs gives it (`popgen2-pca.md`, "When a tab is greyed"); if it was shown when it became greyed, the reason in its place | open a variants file |
-| locked | the options, the line of the populations, Run disabled with the lock beside it, from the table of "The locks"; while the diversity is live, the same lock with Stop recalculating in the place of Run, and the diversity starts by itself a second after the lock lifts, unless it lifts with the key it had | what the lock names: Start again the one pass, choose a column, wait for the read, change the draw or the thresholds; Stop recalculating |
+| locked | the options, the line of the populations, Run disabled with the lock beside it, from the table of "The locks"; while the diversity is live, the same lock with Stop recalculating in the place of Run, and the diversity starts by itself a second after the lock lifts, unless it lifts with the values its result was calculated for, which shows that result again | what the lock names: Start again the one pass, choose a column, wait for the read, change the draw or the thresholds; Stop recalculating |
 | ready | the options, the line of the populations, Run; after a Stop, the line of a Stop in the place of the bar | change the options; Run |
 | about to start | live, in the quiet second: the options, the line of the populations, no result, Stop recalculating, and the line of the table of "Run and Stop" | go on changing things, which puts the start off; Stop recalculating |
 | waiting | live, the PCA running: as about to start, with "The diversity starts once the PCA, which is running, ends." | change the options of the diversity, which are open, or the populations; Stop recalculating; Stop all in the band |
@@ -292,8 +292,9 @@ population that would give the same name gets "_2" after it, then "_3".
 | results removed | not a state of this page: a change that takes the result off the screen gives about to start while the diversity is live, and ready while it is not, as in the PCA tab | as in about to start, or ready |
 | error | the words of the failure, the old panel's with this page's names (`diversity.md`, "On popgen2.html"); while the failure leaves it live, Stop recalculating under them, with Run before it after a crash of the worker; after one that ends it, the line of a Stop | Run again after a failure that is not popnei's refusal; change the options or the thresholds after a refusal; open the variants file again after it could no longer be read |
 
-Waiting is the eighth row, which the seven states of a screen do not
-have: it is live and settled, and the user who changed a threshold in
+About to start and waiting are two rows more than the seven states
+every screen spec has, as about to start is in the PCA tab; waiting is
+new: it is live and settled, and the user who changed a threshold in
 the Variants tab finds it so when they turn to this tab during a PCA of
 minutes.
 
@@ -490,7 +491,7 @@ while it scrolls sideways.
 
 ## Open points
 
-1. **The name of the one population.** When no individual is
+1. **Open 1: the name of the one population.** When no individual is
    classified, the table has one row of every individual kept, and the
    CSV the same name in its first column. (a) "All individuals", the
    name the old page gives it and popnei's result carries; the line of
@@ -503,7 +504,7 @@ while it scrolls sideways.
    beside populations that are not there. Meanwhile (a); the answer
    changes one constant and the words that name it (task 1.1 of the
    plan).
-2. **"None" chosen in the list of the column.** The design said, in
+2. **Open 2: "None" chosen in the list of the column.** The design said, in
    its choice 8, that no column chosen locks the diversity until one is
    chosen. The owner's answer 3 of 9 October 2026 says that with no
    column chosen the unclassified are one population, and this spec
