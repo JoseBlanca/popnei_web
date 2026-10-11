@@ -3152,6 +3152,17 @@ function keptNeeds2(p: Project, kept: IndividualsKept): string | null {
   return diversityOnPopgen2.keptNeeds(p, kept);
 }
 
+/** `p` with its individuals file named `name`, the same table. */
+function withIndividualsName(p: Project, name: string): Project {
+  if (p.individuals === null) {
+    throw new Error("the project of the test has an individuals file");
+  }
+  return deepFreeze<Project>({
+    ...p,
+    individuals: { ...p.individuals, name },
+  });
+}
+
 /** The worked example with "None" chosen in the list of the column. */
 function noneProject(): Project {
   return project({ column: null });
@@ -3652,26 +3663,69 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     ).not.toContain(MIXED);
   });
 
-  test("the key: None and no individuals file give the same key, a column and None different keys, and the same table opened again the same key", () => {
-    const none = keyOfDiversity(noneProject(), "0.2.2", diversityOnPopgen2);
-    const noFile = keyOfDiversity(
+  test("the key holds what the warnings read: no individuals file and None, run and then the file opened with None, give different keys and different warnings", () => {
+    const noFile = withDiversity(
       deepFreeze<Project>({ ...project(), individuals: null }),
-      "0.2.2",
-      diversityOnPopgen2,
+      2,
+      null,
     );
-    expect(none).toBe(noFile);
-    expect(keyOfDiversity(refusedProject(), "0.2.2", diversityOnPopgen2)).toBe(
-      none,
+    const none = withDiversity(noneProject(), 2, null);
+    expect(keyOfDiversity(none, "0.1.0", diversityOnPopgen2)).not.toBe(
+      keyOfDiversity(noFile, "0.1.0", diversityOnPopgen2),
     );
-    const column = keyOfDiversity(project(), "0.2.2", diversityOnPopgen2);
-    expect(column).not.toBe(none);
-    expect(keyOfDiversity(project(), "0.2.2", diversityOnPopgen2)).toBe(column);
-    expect(diversityOnPopgen2.keyInputs(noneProject())).toEqual({
-      pops: "all",
-      options: KEY_OPTIONS,
+    expect(diversityOnPopgen2.warnings(oneResult(), noFile, null)).not.toEqual(
+      diversityOnPopgen2.warnings(oneResult(), none, null),
+    );
+  });
+
+  test("the key: two columns of the same populations, and two individuals files of the same table, give different keys; the same file opened again the same key", () => {
+    const twoColumns: IndividualsTable = {
+      columns: ["name", "pop", "site"],
+      rows: [
+        ["i1", "A", "A"],
+        ["i2", "A", "A"],
+        ["i3", "B", "B"],
+        ["i4", "B", "B"],
+      ],
+    };
+    const pop = project({ table: twoColumns, column: "pop" });
+    const site = project({ table: twoColumns, column: "site" });
+    expect(keyOfDiversity(site, "0.2.2", diversityOnPopgen2)).not.toBe(
+      keyOfDiversity(pop, "0.2.2", diversityOnPopgen2),
+    );
+    const renamed = withIndividualsName(pop, "other.csv");
+    expect(keyOfDiversity(renamed, "0.2.2", diversityOnPopgen2)).not.toBe(
+      keyOfDiversity(pop, "0.2.2", diversityOnPopgen2),
+    );
+    expect(keyOfDiversity(project(), "0.2.2", diversityOnPopgen2)).toBe(
+      keyOfDiversity(project(), "0.2.2", diversityOnPopgen2),
+    );
+    // The old page's key is as it was: no column's name nor file's.
+    expect(diversity.keyInputs(project())).not.toHaveProperty("words");
+  });
+
+  test("the key groups the one population's causes as its words do: a refused file with no file; a column absent, too many values and None together; a column that classifies nobody with a column of populations, which the load tells apart", () => {
+    const keyOf = (p: Project): string =>
+      keyOfDiversity(p, "0.2.2", diversityOnPopgen2);
+    const noFile = deepFreeze<Project>({ ...project(), individuals: null });
+    expect(keyOf(refusedProject())).not.toBe(keyOf(noFile));
+    expect(diversityOnPopgen2.keyInputs(refusedProject())).toMatchObject({
+      words: { cause: "file", column: "pop", individualsFile: "pops.csv" },
     });
-    expect(
-      diversityOnPopgen2.keyInputs(withVariantsUnreadable(project())),
-    ).toEqual(diversity.keyInputs(project()));
+    expect(diversityOnPopgen2.keyInputs(noFile)).toMatchObject({
+      words: { cause: "file", column: null, individualsFile: null },
+    });
+    expect(diversityOnPopgen2.keyInputs(noneProject())).toMatchObject({
+      words: { cause: "column", column: null, individualsFile: "pops.csv" },
+    });
+    expect(diversityOnPopgen2.keyInputs(tooManyProject())).toMatchObject({
+      words: { cause: "column" },
+    });
+    expect(diversityOnPopgen2.keyInputs(noneClassifiedProject())).toMatchObject(
+      { words: { cause: null, column: "pop" } },
+    );
+    expect(diversityOnPopgen2.keyInputs(project())).toMatchObject({
+      words: { cause: null, column: "pop", individualsFile: "pops.csv" },
+    });
   });
 });

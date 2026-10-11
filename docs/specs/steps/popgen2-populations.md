@@ -356,7 +356,13 @@ file, takes the result off the screen like a change of a threshold,
 and starts the diversity again a second later while it is live; a
 change that gives the populations they had, the same file opened
 again, shows the result with no calculation while the store still holds
-it under that key (`docs/specs/core/store.md`, `dropLeftBehind`). An
+it under that key (`docs/specs/core/store.md`, `dropLeftBehind`); but
+since 11 October 2026 the key also holds the name of the individuals
+file, the column and why there is one population, which the warnings
+name, so another file of the same table, another column of the same
+populations, or an individuals file opened after a result with none,
+with "None", calculates again (`diversity.md`, "On popgen2.html", the
+key). An
 individuals file being read locks the diversity, and the live state
 stays. None of these ends the live state; another variants file does.
 

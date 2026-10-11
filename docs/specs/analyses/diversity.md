@@ -129,9 +129,11 @@ yet built; its plan is `docs/plans/population-tab.md`.
 Corrected on 11 October 2026 after the review of work package 1 of
 that plan, in "On popgen2.html": the lock of the draw over every
 individual moves from `needs` to `keptNeeds`, so that the lock of no
-individual kept comes first; and the last sentence of the warning of
-one classified population counts the unclassified among the
-individuals kept, which the store now gives the warnings, and its
+individual kept comes first; the key holds what the warnings read,
+the cause of the one population, the column and the individuals file,
+so no file and "None" no longer share a key; and the last sentence of
+the warning of one classified population counts the unclassified among
+the individuals kept, which the store now gives the warnings, and its
 first sentence reads "Of the populations of popcat, only p0 has
 individuals kept, …", where "Only p0 has a population in popcat …" read
 as a population that has a population.
@@ -1946,8 +1948,26 @@ the result are the old ones.
   the page, so `diversityCsv`, whose header holds the names of the
   Python script, serves the old page alone. The name is
   `downloadName(stem, "diversity", "csv")`, `panel.diversity.csv`.
-- **The key**, `keyInputs`, as the old one with the populations above;
-  the definitions share the id "diversity" and the key version 3, and
+- **The key**, `keyInputs`, as the old one with the populations above,
+  and, from 11 October 2026, what the warnings read beyond them, which
+  the store makes once from the request's project and keeps with the
+  result: `words`, the cause of the one population grouped as the
+  words of the private alleles group it, `"file"` for no individuals
+  file and a refused one, `"column"` for "None", a column absent, not
+  offered or of more than 20 values, and `null` for the populations of
+  a column, which the load of the variants file tells from a column
+  that classifies nobody; the name of the column of the populations;
+  and the name of the individuals file. So no file and "None", which
+  give the same populations, `"all"`, give different keys; so do two
+  columns of the same populations, and two individuals files of the
+  same table under other names; and a result is never shown with the
+  words of another file or column. Such a change calculates again.
+  (Corrected after the review of
+  work package 1 of `docs/plans/population-tab.md`: until then no file
+  and "None" gave the same key, and the warnings of a result calculated
+  with no file said "Open an individuals file…" once one was open.)
+  The old page's key is unchanged. The definitions share the id
+  "diversity" and the key version 3, and
   each page has its own store and cache, so neither finds a result of
   the other. A project file does not cross: `popgen2.html` saves none,
   and when it does, the diversity of each page needs an id of its own
@@ -2073,8 +2093,11 @@ cases, which stay:
   page's words, and `individualsWithoutPopulation` absent from
   `warnings` of a result of the worked example; the old page's words
   unchanged, by the tests that are there.
-- The key: "None" and no individuals file give the same key; a column
-  and "None" different keys.
+- The key: no individuals file and "None" different keys, and
+  different warnings of the same result; two columns of the same
+  populations, and two individuals files of the same table under other
+  names, different keys; the same file opened again the same key; the
+  groups of the causes as above; the old page's key without `words`.
 
 The numbers of `panel.nei` on this page, from popnei's release 0.2.2
 under node on 11 October 2026, the missing data of the variants at 0.1,

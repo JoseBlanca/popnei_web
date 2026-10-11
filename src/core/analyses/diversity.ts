@@ -647,7 +647,49 @@ function keyInputs(p: Project, page: DiversityPage): JsonObject {
         ? {}
         : { numCalledAlleles: options.numCalledAlleles }),
     },
+    ...(page === "popgen2" ? { words: popgen2WordsRead(p) } : {}),
   };
+}
+
+/**
+ * What the warnings of popgen2.html read of `p` beyond the populations,
+ * which the store makes once from the request's project and keeps with
+ * the result, so that the key holds it and a result is never shown with
+ * the words of another file or column: the cause of the one population
+ * grouped as the words group it, "file" for no individuals file and a
+ * refused one, "column" for "None", a column absent, not offered or of
+ * too many values, and `null` for the populations of a column, which
+ * the load of the variants file tells from a column that classifies
+ * nobody; the name of the column of the populations; and the name of
+ * the individuals file. Reads nothing of `p.variants` that changes the
+ * answer.
+ */
+function popgen2WordsRead(p: Project): JsonObject {
+  return {
+    cause: causeGroupOf(popgen2OnePopulationCause(p)),
+    column: populationsColumnOf(p),
+    individualsFile: p.individuals?.name ?? null,
+  };
+}
+
+/** The group of the cause `cause` of the one population by the words of
+    its warnings, as `popgen2WordsRead` gives it. */
+function causeGroupOf(
+  cause: OnePopulationCause | null,
+): "file" | "column" | null {
+  switch (cause?.kind) {
+    case "noFile":
+    case "refused":
+      return "file";
+    case "noColumn":
+    case "noSuchColumn":
+    case "notOffered":
+    case "tooMany":
+      return "column";
+    case "noneClassified":
+    case undefined:
+      return null;
+  }
 }
 
 /**
