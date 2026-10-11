@@ -1,70 +1,71 @@
 /**
  * The analyses a page starts by itself (docs/plans/open-variants.md, "It
- * runs on its own once the file is read"): the summary of the variants
- * file of popgen2.html, whose one pass gives the count of the variants
- * and the statistics of the open file, starts as soon as it can run,
- * with no Run button, since the user opened the file to see what it holds
+ * runs on its own once the file is read"): the summary of the variants file
+ * of popgen2.html, whose one pass gives the count of the variants and the
+ * statistics of the open file, starts as soon as it can run, with no Run
+ * button, since the user opened the file to see what it holds
  * (docs/plans/live-stats.md).
  *
  * They are given in groups, each the analyses a Stop of a group stops
- * together and its start again starts again; popgen2.html has two: the
- * one pass, which the Stop and the Start again of its box act on, and
- * the PCA, which starts by itself only once live (below). They start one
- * at a time, in their order, since the one calculation worker runs one
- * request at a time and the store has no state for a request that waits
- * in the client's queue. An analysis starts once every one before it is
- * done or locked, a locked analysis starting nothing and holding back
- * nothing; within its group, one before it that failed in a way a new
- * calculation may mend, a crash or a defect of ours, does not hold it
- * back, since each analysis of a group is shown apart and a failure of
+ * together and its start again starts again; popgen2.html has three: the one
+ * pass, which the Stop and the Start again of its box act on, and the PCA
+ * and the diversity, each a group of its own that starts by itself only once
+ * live (below). They start one at a time, in their order, since the one
+ * calculation worker runs one request at a time and the store has no state
+ * for a request that waits in the client's queue. An analysis starts once
+ * every one before it is done or locked, a locked analysis starting nothing
+ * and holding back nothing; within its group, one before it that failed in a
+ * way a new calculation may mend, a crash or a defect of ours, does not hold
+ * it back, since each analysis of a group is shown apart and a failure of
  * one should not hide the other. popnei's refusal, or a variants file the
- * browser could not read again, holds back those after it, since they
- * would fail the same way after a pass of minutes; and a group starts
- * only once every analysis of the group before it is done or locked.
+ * browser could not read again, holds back those after it, since they would
+ * fail the same way after a pass of minutes; and a group starts only once
+ * every analysis of the groups before it is done or locked, but for a live
+ * analysis, which waits for the groups before it that hold no live analysis,
+ * the one pass, and for no group of another live analysis, whatever its
+ * state (below).
  *
  * Each starts once for each key: not again after a failure, nor after a
  * Stop, which leaves it ready under a key it was started under and holds
- * back those after it; but again for a new file, or a new read of it,
- * which gives a new key, and when the user asks, with `resume`, after a
- * Stop or a crash of the worker, the one failure a new
- * calculation is offered for: popnei's refusal and a file that could not
- * be read again fail the same way again, and a page that could not start
- * its calculations, a page out of date or a defect of ours ask for a
- * reload. The entry calls `sync` after every change of the store, and the
- * page reads what changes here, which no change of the store tells,
- * through `subscribe` and `getVersion`. Plain TypeScript, so that a test
- * in node drives it on the real store.
+ * back those after it; but again for a new file, or a new read of it, which
+ * gives a new key, and when the user asks, with `resume`, after a Stop or a
+ * crash of the worker, the one failure a new calculation is offered for:
+ * popnei's refusal and a file that could not be read again fail the same way
+ * again, and a page that could not start its calculations, a page out of
+ * date or a defect of ours ask for a reload. The entry calls `sync` after
+ * every change of the store, and the page reads what changes here, which no
+ * change of the store tells, through `subscribe` and `getVersion`. Plain
+ * TypeScript, so that a test in node drives it on the real store.
  *
- * A live analysis, the PCA of popgen2.html, is a group of its own that
- * starts by itself only once the user's Run made it live for the load of
- * the variants file open, and then again after each change of what its
- * key holds, a quiet second after the user stops changing things
- * (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by
- * itself"; docs/designs/no-undo.md, choices 1 to 3). The second runs
- * from the latest of the last change of the project and the end of the
- * last change under way that the gate of the page counts; the analysis
- * starts when it runs out, under the key the store gives then, while
- * nothing runs, no write of the filtered variants runs and no change is
- * under way. It starts once for each key the project gives: a key the
- * store leaves behind is forgotten, so a value set back is calculated
- * again. A Stop, `pause`, ends the live state, and another load ends it
- * too; so does a failure the page's `endsLive` names, a crash of the
- * memory or one only a reload mends, while every other failure leaves
- * it live, for the next change of its key to try again.
+ * A live analysis, the PCA or the diversity of popgen2.html, is a group of
+ * its own that starts by itself only once the user's Run made it live for
+ * the load of the variants file open, and then again after each change of
+ * what its key holds, a quiet second after the user stops changing things
+ * (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by itself";
+ * docs/designs/no-undo.md, choices 1 to 3). The second runs from the latest
+ * of the last change of the project and the end of the last change under way
+ * that the gate of the page counts; the analysis starts when it runs out,
+ * under the key the store gives then, while nothing runs, no write of the
+ * filtered variants runs and no change is under way. It starts once for each
+ * key the project gives: a key the store leaves behind is forgotten, so a
+ * value set back is calculated again. A Stop, `pause`, ends the live state,
+ * and another load ends it too; so does a failure the page's `endsLive`
+ * names, by the rule of each analysis, while every other failure leaves it
+ * live, for the next change of its key to try again.
  *
- * Several analyses can be live at once, each a group of its own, the PCA
- * and then the diversity on popgen2.html, each live from its own Run
+ * Several analyses can be live at once, each a group of its own, the PCA and
+ * then the diversity on popgen2.html, each live from its own Run
  * (docs/specs/steps/popgen2-pca.md, "Several analyses calculated again by
- * themselves"; docs/designs/population-tab.md). One quiet second serves
- * them all: when it runs out, the first live analysis about to start
- * starts, and each next one when the one before it ends, with no second
- * more. A live analysis waits for the one pass and for a calculation
- * running, and for nothing else: whatever the state of another live
- * analysis, not live, stopped, locked, done or failed, it does not hold
- * it back. A Run while a calculation runs makes its analysis live and
- * waiting, and sends nothing until that calculation ends; a Stop of one
- * starts the quiet second again, so that the others start a second
- * after it; Stop all, `pauseAll`, ends every live state.
+ * themselves"; docs/designs/population-tab.md). One quiet second serves them
+ * all: when it runs out, the first live analysis about to start starts, and
+ * each next one when the one before it ends, with no second more. A live
+ * analysis waits for the one pass and for a calculation running, and for
+ * nothing else: whatever the state of another live analysis, not live,
+ * stopped, locked, done or failed, it does not hold it back. A Run while a
+ * calculation runs makes its analysis live and waiting, and sends nothing
+ * until that calculation ends; a Stop of one starts the quiet second again,
+ * so that the others start a second after it; Stop all, `pauseAll`, ends
+ * every live state.
  */
 
 import type { Key } from "../core/keys.ts";

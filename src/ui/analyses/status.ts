@@ -119,7 +119,11 @@ export interface LiveAnalysisName {
   /** The label of the tab where it is stopped: "PCA", "Populations". */
   readonly tab: string;
   /** Whether it reads the populations, so that the column of the
-      populations and the individuals file wait while it runs. */
+      populations and the individuals file are to wait while it runs.
+      Nothing reads it yet: until work package 3 of
+      docs/plans/population-tab.md locks the box Individuals, a change of
+      them while the diversity runs stops it, as the store stops every
+      calculation a change leaves behind. */
   readonly readsPopulations: boolean;
 }
 

@@ -11,6 +11,12 @@
  * analysis and its tab, and with Stop all when another analysis is live
  * beside it, so that no change leaves the running analysis behind.
  *
+ * The column of the populations and the individuals file, which the
+ * diversity reads too, are not locked yet: until work package 3 of
+ * docs/plans/population-tab.md greys the box Individuals while the
+ * diversity runs, a change of them stops the diversity, as the store of
+ * the page stops every calculation a change leaves behind.
+ *
  * Which analyses are live, and which wait after the one running, is
  * known to `autoRuns` alone, which the entry of the page gives to every
  * component under `AutoRunsProvider`.
