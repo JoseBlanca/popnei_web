@@ -217,7 +217,7 @@ export function aboutToStartLine(
     with the tab where it is stopped: "Calculating the PCA again. To
     change the filters, stop it in the PCA tab."; "the PCoA" under the
     PCoA. */
-export function startedByItselfText(method: PcaMethod): string {
+export function pcaStartedByItselfText(method: PcaMethod): string {
   return `Calculating the ${methodName(method)} again. To change the filters, stop it in the PCA tab.`;
 }
 
@@ -227,10 +227,7 @@ export function startedByItselfText(method: PcaMethod): string {
     `runOffered`; "PCA stopped." alone when it does not, Run disabled by
     a lock, whose reason takes the focus in the tab, or the result shown
     with no button; "PCoA stopped. …" under the PCoA. */
-export function liveStoppedText(
-  method: PcaMethod,
-  runOffered: boolean,
-): string {
+export function pcaStoppedText(method: PcaMethod, runOffered: boolean): string {
   const stopped = `${methodName(method)} stopped.`;
   return runOffered
     ? `${stopped} Press Run in the PCA tab to calculate it again.`

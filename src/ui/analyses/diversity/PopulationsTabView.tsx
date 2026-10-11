@@ -30,9 +30,9 @@ import { diversityOnPopgen2 } from "../../../core/analyses/diversity.ts";
 import { useAutoRuns } from "../../autoRunsContext.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
-import { announceRunWaiting } from "../../variants/announceChanges.ts";
 import { summaryStatus } from "../../variants/words.ts";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
+import { runLive } from "../liveRun.ts";
 import { passLock } from "../pca/passLock.ts";
 import { waitsAfterName } from "../status.ts";
 import { POPULATIONS_TAB_PANEL } from "./populationsTabPanel.ts";
@@ -72,16 +72,10 @@ export function PopulationsTabView(): React.JSX.Element {
         lock,
         live: diversityPanelLive(state, before),
         onRun: () => {
-          const answer = autoRuns.run(DIVERSITY);
-          // Read after the Run, which made it live and waiting.
-          const now = autoRuns.liveState(DIVERSITY);
-          announceRunWaiting(
-            announcer,
-            answer,
-            diversityWaitingLine(
-              "behind",
-              waitsAfterName(store.getState(), now),
-            ),
+          runLive(
+            { autoRuns, announcer, getState: () => store.getState() },
+            DIVERSITY,
+            (waitsFor) => diversityWaitingLine("behind", waitsFor),
           );
         },
         onStop: () => {

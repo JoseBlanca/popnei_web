@@ -26,9 +26,9 @@ import type { Popgen2PageStore } from "../../popgen2Store.ts";
 import { WAITS_FOR_STATISTICS_TEXT } from "../words.ts";
 import {
   aboutToStartLine,
-  liveStoppedText,
+  pcaStoppedText,
   pcaEndAnnouncement,
-  startedByItselfText,
+  pcaStartedByItselfText,
   failureEndedLine,
   stoppedLine,
   LOADING_RESULT,
@@ -389,24 +389,24 @@ describe("NU4 D2 the words of the PCA started again by itself, by the method", (
   });
 
   test("the status region at a start by itself", () => {
-    expect(startedByItselfText("pca")).toBe(
+    expect(pcaStartedByItselfText("pca")).toBe(
       "Calculating the PCA again. To change the filters, stop it in the PCA tab.",
     );
-    expect(startedByItselfText("pcoa")).toBe(
+    expect(pcaStartedByItselfText("pcoa")).toBe(
       "Calculating the PCoA again. To change the filters, stop it in the PCA tab.",
     );
   });
 
   test("the status region at a Stop, in the tab or in the band", () => {
-    expect(liveStoppedText("pca", true)).toBe(
+    expect(pcaStoppedText("pca", true)).toBe(
       "PCA stopped. Press Run in the PCA tab to calculate it again.",
     );
-    expect(liveStoppedText("pcoa", true)).toBe(
+    expect(pcaStoppedText("pcoa", true)).toBe(
       "PCoA stopped. Press Run in the PCA tab to calculate it again.",
     );
     // With no Run to press, Run disabled or the result shown.
-    expect(liveStoppedText("pca", false)).toBe("PCA stopped.");
-    expect(liveStoppedText("pcoa", false)).toBe("PCoA stopped.");
+    expect(pcaStoppedText("pca", false)).toBe("PCA stopped.");
+    expect(pcaStoppedText("pcoa", false)).toBe("PCoA stopped.");
   });
 
   test("the line beside Run after a Stop", () => {

@@ -31,10 +31,10 @@ import { useAutoRuns } from "../../autoRunsContext.ts";
 import type { PcaMethod } from "../../../worker/protocol.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
-import { announceRunWaiting } from "../../variants/announceChanges.ts";
 import { summaryStatus } from "../../variants/words.ts";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
 import type { PanelLive } from "../AnalysisPanel.tsx";
+import { runLive } from "../liveRun.ts";
 import { waitsAfterName } from "../status.ts";
 import { passLock } from "./passLock.ts";
 import { pcaTabPanel } from "./pcaTabPanel.ts";
@@ -119,17 +119,10 @@ export function PcaTab({ shown }: PcaTabProps): React.JSX.Element {
         lock,
         live: panelLive(state, method, before),
         onRun: () => {
-          const answer = autoRuns.run(PCA);
-          // Read after the Run, which made it live and waiting.
-          const now = autoRuns.liveState(PCA);
-          announceRunWaiting(
-            announcer,
-            answer,
-            aboutToStartLine(
-              method,
-              "behind",
-              waitsAfterName(store.getState(), now),
-            ),
+          runLive(
+            { autoRuns, announcer, getState: () => store.getState() },
+            PCA,
+            (waitsFor) => aboutToStartLine(method, "behind", waitsFor),
           );
         },
         onStop: () => {

@@ -461,9 +461,8 @@ change, and the start that follows them is said; but a Run pressed
 while another calculation runs, which starts nothing, is said once,
 "The diversity starts once the PCA, which is running, ends.", so that
 a user of a screen reader learns why no bar comes. It is said by
-`announceRunWaiting` of `src/ui/variants/announceChanges.ts`, which the
-Run of a tab calls when `autoRuns.run` gives "waiting", with the words
-of that tab; the PCA's Run, which can wait for the diversity, says
+`runLive` of `src/ui/analyses/liveRun.ts`, the Run of both tabs, when
+`autoRuns.run` gives "waiting", with the words of that tab; the PCA's Run, which can wait for the diversity, says
 "The PCA starts once the diversity, which is running, ends." the same
 way ("The PCoA …").
 
@@ -490,7 +489,7 @@ Individuals.
 
 ## How it is checked
 
-**In Vitest, in node**: `announceRunWaiting`, given "waiting" from
+**In Vitest, in node**: `runLive`, given "waiting" from
 `run`, says the line once, for the diversity behind the PCA and for the
 PCA behind the diversity, and says nothing for "started", "kept"
 and "refused"; the words of the tab, by state and by what it

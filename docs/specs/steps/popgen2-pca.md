@@ -411,8 +411,9 @@ line "The PCA starts once the diversity, which is running, ends." ("The
 PCoA …"), and the PCA starts at the diversity's end with no second
 more ("Several analyses calculated again by themselves"). A Run of the
 PCA that waits so is said once in the status region, "The PCA starts
-once the diversity, which is running, ends.", by `announceRunWaiting`
-(`popgen2-populations.md`, "Accessibility").
+once the diversity, which is running, ends.", by `runLive` of
+`src/ui/analyses/liveRun.ts` (`popgen2-populations.md`,
+"Accessibility").
 
 **Stop recalculating.** Whenever the PCA is live and no PCA runs, with
 its result, during the quiet second, live and locked, or after a
@@ -838,7 +839,9 @@ interface AutoRuns {
   analyses waiting from `autoRuns`.
 - `announceLive` of `src/ui/variants/announceChanges.ts` says the round,
   the start of a Run that waited, a Stop and Stop all, each analysis in
-  its own words; `announceRunWaiting`, beside it, says a Run that
+  its own words, the words of several analyses at once coming from
+  `src/ui/analyses/liveWords.ts`; `runLive` of
+  `src/ui/analyses/liveRun.ts`, the Run of each tab, says a Run that
   waits, when `run` gives "waiting".
 
 ### The row of tabs

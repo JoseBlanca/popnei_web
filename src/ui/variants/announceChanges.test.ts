@@ -21,11 +21,7 @@ import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
 import { ANNOUNCE_DELAY_MS, createAnnouncer } from "../shell/status.ts";
 import type { Announcer } from "../shell/status.ts";
-import {
-  announceChanges,
-  announceLive,
-  announceRunWaiting,
-} from "./announceChanges.ts";
+import { announceChanges, announceLive } from "./announceChanges.ts";
 
 /** A result of the PCA of `s000` and `s001`. */
 function pcaResult(): JobResult {
@@ -426,24 +422,43 @@ describe("PT2 D2 the status region says a round of two analyses once, a Run that
       vi.useRealTimers();
     }
   });
+});
 
-  test("announceRunWaiting says the line of a Run that waits once, and nothing for a Run started, kept or refused", () => {
-    const { said, announcer } = recorder();
-    const line = "The diversity starts once the PCA, which is running, ends.";
-    announceRunWaiting(announcer, "started", line);
-    announceRunWaiting(announcer, "kept", line);
-    announceRunWaiting(announcer, "refused", line);
-    expect(said).toEqual([]);
-    announceRunWaiting(announcer, "waiting", line);
-    expect(said).toEqual([line]);
-    announceRunWaiting(
-      announcer,
-      "waiting",
-      "The PCA starts once the diversity, which is running, ends.",
-    );
-    expect(said).toEqual([
-      line,
-      "The PCA starts once the diversity, which is running, ends.",
-    ]);
-  });
+describe("PT2 D2 a run of a live analysis that ends within the region's pause is said by its end alone", () => {
+  test.each([
+    { id: "pca", started: "startedByItself" },
+    { id: "pca", started: "startedAfterWaiting" },
+    { id: "diversity", started: "startedByItself" },
+    { id: "diversity", started: "startedAfterWaiting" },
+  ] as const)(
+    "$id $started, ended within the pause: its end alone",
+    async ({ id, started }) => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      try {
+        const announcer = createAnnouncer();
+        const page = await setUpReady(announcer);
+        announceChanges(page.store, announcer, () => null);
+        const run = startAnalysis(page.store, id);
+        page.tell(
+          started === "startedByItself"
+            ? { kind: started, id, round: [id] }
+            : { kind: started, id },
+        );
+        page.endLast((key) => ({
+          kind: "done",
+          key,
+          result: id === "pca" ? pcaResult() : diversityResult(),
+        }));
+        await run;
+        await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+        expect(announcer.getState()).toBe(
+          id === "pca"
+            ? "PCA of panel.nei calculated."
+            : "Diversity of panel.nei calculated.",
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 });
