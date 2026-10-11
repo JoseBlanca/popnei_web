@@ -792,20 +792,20 @@ test.describe("PT1 D3 the code of the Populations tab", () => {
 const LOCKED_DIVERSITY =
   "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again.";
 const LOCKED_DIVERSITY_PCA_LIVE =
-  "Stop the diversity in the Populations tab and the PCA in the PCA tab to change the filters; then press Run in each tab to calculate them again.";
+  "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again.";
 
 /** The words of the lock of the thresholds while the PCA runs with the
     diversity live beside it. */
 const LOCKED_PCA_DIVERSITY_LIVE =
-  "Stop the PCA in the PCA tab and the diversity in the Populations tab to change the filters; then press Run in each tab to calculate them again.";
+  "Stop the PCA in the PCA tab to change the filters, or press Stop all beside the heading Popnei to stop the diversity too; then press Run in each tab to calculate them again.";
 
 /** The words of the download's wait. */
 const WAITS_DIVERSITY =
   "Waits for the diversity to end; or stop it in the Populations tab.";
 const WAITS_DIVERSITY_THEN_PCA =
-  "Waits for the diversity, and the PCA after it, to end; or stop the diversity in the Populations tab and the PCA in the PCA tab.";
+  "Waits for the diversity, and the PCA after it, to end; or press Stop all beside the heading Popnei.";
 const WAITS_PCA_THEN_DIVERSITY =
-  "Waits for the PCA, and the diversity after it, to end; or stop the PCA in the PCA tab and the diversity in the Populations tab.";
+  "Waits for the PCA, and the diversity after it, to end; or press Stop all beside the heading Popnei.";
 
 /** The statistics of the file, in the Variants tab. */
 function stats(page: Page): Locator {
@@ -1262,9 +1262,9 @@ const WAITS_FOR_DIVERSITY =
   "The PCA starts once the diversity, which is running, ends.";
 
 /** What the status region says at the first start of a round of the PCA
-    and the diversity, until the band offers Stop all. */
+    and the diversity, with the band's Stop all. */
 const ROUND =
-  "Calculating the PCA and then the diversity again. To change the filters, stop each in its tab; to change the populations, stop the diversity in the Populations tab.";
+  "Calculating the PCA and then the diversity again. To change the filters, press Stop all beside the heading Popnei, or stop each in its tab; to change the populations, stop the diversity in the Populations tab.";
 
 /** The texts the status region took that hold `text`. */
 async function saidWith(page: Page, text: string): Promise<readonly string[]> {

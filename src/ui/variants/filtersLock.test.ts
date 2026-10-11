@@ -163,7 +163,7 @@ describe("PT3 D1 the lock of the populations names only the live analyses that r
       "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again.",
     );
     expect(filtersLockOf(s, bothLive)).toBe(
-      "Stop the diversity in the Populations tab and the PCA in the PCA tab to change the filters; then press Run in each tab to calculate them again.",
+      "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again.",
     );
   });
 });

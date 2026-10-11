@@ -19,7 +19,7 @@ import type { JobResult } from "../../worker/protocol.ts";
 import { defectsRootOptions } from "../defects.ts";
 import { createPageTab } from "../pageTab.ts";
 import type { PageTabStore } from "../pageTab.ts";
-import { PCA_TAB_CONTENT_ID } from "../pageTab.ts";
+import { PCA_TAB_CONTENT_ID, tabContentId } from "../pageTab.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 import type { PageStore } from "../store.tsx";
 import { createAnnouncer } from "../shell/status.ts";
@@ -28,7 +28,7 @@ import { PANEL_HEADING_ATTRIBUTE } from "../analyses/AnalysisPanel.tsx";
 import { WARNINGS_HEADING_ATTRIBUTE } from "../analyses/Warnings.tsx";
 import { DIALOG_MARK } from "../widgets/dialogMark.ts";
 import { Band } from "./Band.tsx";
-import { flush, page, pcaDone, pcaResult } from "./testSupport.ts";
+import { endLast, flush, page, pcaDone, pcaResult } from "./testSupport.ts";
 import type { TestPage } from "./testSupport.ts";
 
 declare global {
@@ -67,6 +67,7 @@ afterEach(() => {
   });
   container.remove();
   document.getElementById(PCA_TAB_CONTENT_ID)?.remove();
+  document.getElementById(tabContentId("populations"))?.remove();
 });
 
 /** Draws the band over `testPage`, with a tab shown of its own and an
@@ -368,7 +369,7 @@ describe("NU5 D2 the band drawn", () => {
       );
       await flush();
     });
-    expect(container.textContent).toContain("The PCA starts again in a moment");
+    expect(container.textContent).toContain("The PCA starts in a moment");
 
     await press(button("Stop recalculating the PCA"));
 
@@ -687,5 +688,168 @@ describe("NU5 D2 the band drawn", () => {
       control.remove();
       dialog.remove();
     }
+  });
+});
+
+/** The names of the buttons of the band, as a screen reader reads them. */
+function buttonNames(): readonly string[] {
+  return [...container.querySelectorAll("button")].map(
+    (b) => b.getAttribute("aria-label") ?? b.textContent,
+  );
+}
+
+/** The page with the one pass done, the PCA run by Run and running, and
+    the diversity's Run pressed, waiting after it. */
+async function pcaThenDiversity(): Promise<TestPage> {
+  const testPage = page(SUMMARY);
+  await testPage.endPass();
+  expect(testPage.auto.run("pca")).toBe("started");
+  await flush();
+  expect(testPage.auto.run("diversity")).toBe("waiting");
+  return testPage;
+}
+
+describe("PT4 D2 the band drawn with the PCA and the diversity", () => {
+  test("Stop all, beside the Stop of the PCA running with the diversity waiting, calls autoRuns.pauseAll and gives the focus to the heading Popnei", async () => {
+    const testPage = await pcaThenDiversity();
+    const pauseAll = vi.spyOn(testPage.auto, "pauseAll");
+    await drawBand(testPage);
+    await settled();
+    expect(container.textContent).toContain(
+      "PCA running · 0:00 · then the diversity",
+    );
+    expect(buttonNames()).toEqual([
+      "Stop the PCA",
+      "Stop all: the PCA and the diversity",
+    ]);
+    expect(button("Stop all: the PCA and the diversity").textContent).toBe(
+      "Stop all",
+    );
+
+    await press(button("Stop all: the PCA and the diversity"));
+
+    expect(pauseAll).toHaveBeenCalledTimes(1);
+    expect(testPage.auto.isLive("pca")).toBe(false);
+    expect(testPage.auto.isLive("diversity")).toBe(false);
+    expect(buttonNames()).toEqual([]);
+    expect(document.activeElement).toBe(heading());
+  });
+
+  test("the Stop of the diversity running calls autoRuns.pause with the diversity, the line says Stopping the diversity, and the focus goes to the heading", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    testPage.auto.run("diversity");
+    const pause = vi.spyOn(testPage.auto, "pause");
+    await drawBand(testPage);
+    await settled();
+    expect(container.textContent).toContain("Diversity running · 0:00");
+    expect(buttonNames()).toEqual(["Stop the diversity"]);
+
+    await press(button("Stop the diversity"));
+
+    expect(pause).toHaveBeenCalledWith("diversity");
+    expect(container.textContent).toContain("Stopping the diversity…");
+    expect(document.activeElement).toBe(heading());
+  });
+
+  test("no Stop of an analysis whose tab is shown, Stop all kept: the PCA tab with the PCA running, the Populations tab with the diversity running", async () => {
+    const testPage = await pcaThenDiversity();
+    const { pageTab } = await drawBand(testPage);
+    await settled();
+    act(() => {
+      pageTab.show("pca");
+    });
+    expect(buttonNames()).toEqual(["Stop all: the PCA and the diversity"]);
+    act(() => {
+      pageTab.show("populations");
+    });
+    expect(buttonNames()).toEqual([
+      "Stop the PCA",
+      "Stop all: the PCA and the diversity",
+    ]);
+
+    // The PCA ends: the diversity runs, the Populations tab shown, once
+    // the quiet second of the options the test page typed has run out.
+    await act(async () => {
+      await endLast(testPage, "pca");
+    });
+    await vi.waitFor(
+      async () => {
+        await settled();
+        expect(container.textContent).toContain("Diversity running");
+      },
+      { timeout: 3000, interval: 100 },
+    );
+    expect(buttonNames()).toEqual(["Stop all: the PCA and the diversity"]);
+  });
+
+  test("the diversity about to start alone beside the PCA live: its Stop recalculating calls autoRuns.pause with the diversity, and Stop all is beside it", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const testPage = page(SUMMARY);
+      await testPage.endPass();
+      testPage.auto.run("pca");
+      await flush();
+      await endLast(testPage, "pca");
+      testPage.auto.run("diversity");
+      await flush();
+      await endLast(testPage, "diversity");
+      const pause = vi.spyOn(testPage.auto, "pause");
+      await drawBand(testPage);
+      await act(async () => {
+        testPage.setDiversity({ minNumIndividuals: 1 });
+        await flush();
+      });
+      expect(container.textContent).toContain(
+        "The diversity starts in a moment",
+      );
+      expect(buttonNames()).toEqual([
+        "Stop recalculating the diversity",
+        "Stop all: the PCA and the diversity",
+      ]);
+
+      await press(button("Stop recalculating the diversity"));
+
+      expect(pause).toHaveBeenCalledWith("diversity");
+      expect(buttonNames()).toEqual([]);
+      expect(document.activeElement).toBe(heading());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("the link to the diversity's warnings shows the Populations tab and gives the focus to the heading of its warnings", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    testPage.auto.run("diversity");
+    await flush();
+    // The diversity of the one population has 2 warnings, of its
+    // private alleles and of its draw.
+    await endLast(testPage, "diversity");
+    const { pageTab } = await drawBand(testPage);
+    const content = document.createElement("div");
+    content.id = tabContentId("populations");
+    const warnings = document.createElement("h3");
+    warnings.tabIndex = -1;
+    warnings.setAttribute(WARNINGS_HEADING_ATTRIBUTE, "");
+    warnings.textContent = "2 warnings";
+    content.append(warnings);
+    document.body.append(content);
+    const link = [...container.querySelectorAll('[role="link"], a')].find(
+      (element) =>
+        element.textContent.includes(
+          "Diversity: 2 warnings, in the Populations tab",
+        ),
+    );
+    expect(link).toBeInstanceOf(HTMLElement);
+
+    await press(link as HTMLElement);
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+
+    expect(pageTab.shown()).toBe("populations");
+    expect(document.activeElement).toBe(warnings);
+    expect(container.textContent).not.toContain("Diversity: 2 warnings");
   });
 });

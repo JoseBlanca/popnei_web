@@ -3,14 +3,20 @@
  * (docs/specs/steps/popgen2-band.md, "Its words" and "Its place"): the
  * line after "Popnei" in its whole words and in its short form, which
  * the band shows under 30 rem, a screen reader still given the whole;
- * and its Stop, by what it stops. The words of an error of the
+ * its Stop, by what it stops; and its Stop all, by the analyses it
+ * ends. An analysis is named as the page's words name it in the middle
+ * of a sentence, "the PCA", "the diversity" (`LiveAnalysisName` of
+ * analyses/status.ts), and at the start of the line by the same words,
+ * "PCA", "Diversity". The words of an error of the
  * application are the error bar's, `barText` of shell/barSave.ts.
  */
+import type { Popgen2LiveId } from "../../core/apps.ts";
 import { escaped } from "../../core/project.ts";
-import type { PcaMethod } from "../../worker/protocol.ts";
 import { STOP_RECALCULATING } from "../analyses/AnalysisPanel.tsx";
 import { methodName } from "../analyses/pca/words.ts";
+import type { LiveAnalysisName } from "../analyses/status.ts";
 import { clockText } from "../analyses/words.ts";
+import type { AboutToStart } from "../autoRuns.ts";
 import type { BandLine, Stopping } from "./bandLine.ts";
 
 /** The page's heading, at the band's left. */
@@ -23,6 +29,9 @@ export const BAND_NAME = "What the page is doing";
     Copy the details, and hides them. */
 export const DETAILS_LABEL = "Details";
 
+/** The button that ends the live state of every live analysis. */
+export const STOP_ALL_LABEL = "Stop all";
+
 /** The words of the line, whole and in their short form. */
 export interface LineWords {
   /** The whole words: "Statistics of panel.vcf.gz · 45%". */
@@ -33,15 +42,24 @@ export interface LineWords {
 
 /** The Stop that follows the words of a line. */
 export interface BandStop {
-  /** Its words: "Stop", or "Stop recalculating" for the PCA about to
-      start. */
+  /** Its words: "Stop", or "Stop recalculating" for an analysis about
+      to start. */
   readonly label: string;
   /** Its name for a screen reader, by what it stops: "Stop the PCA". */
   readonly name: string;
-  /** What it stops: the one pass, the box's Stop; the PCA running, the
-      PCA tab's Stop; or the PCA about to start, the PCA tab's Stop
-      recalculating. Both of the PCA end its live state. */
-  readonly stops: "pass" | "pca" | "live";
+  /** What it stops: the one pass, "pass", the box's Stop; or an analysis
+      that can be live, by its id, running, its tab's Stop, or about to
+      start, its tab's Stop recalculating; both end its live state. */
+  readonly stops: "pass" | Popgen2LiveId;
+}
+
+/** The Stop all that follows the words of a line, beside its Stop. */
+export interface BandStopAll {
+  /** Its words, "Stop all". */
+  readonly label: string;
+  /** Its name for a screen reader, with the analyses it ends: "Stop all:
+      the PCA and the diversity". */
+  readonly name: string;
 }
 
 /**
@@ -59,12 +77,16 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
         full: withShare(`Statistics of ${escaped(line.name)}`, line.share),
         short: withShare("Statistics", line.share),
       };
-    case "pcaRunning": {
-      const name = methodName(line.method);
+    case "running": {
+      const title = titleOf(line.named);
       const clock = clockText(seconds);
+      const then =
+        line.then.length === 0
+          ? ""
+          : ` · then ${joined(line.then.map((one) => one.name))}`;
       return {
-        full: `${name} running · ${clock}`,
-        short: `${name} · ${clock}`,
+        full: `${title} running · ${clock}${then}`,
+        short: `${title} · ${clock}`,
       };
     }
     case "writing":
@@ -74,37 +96,20 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
       };
     case "stopping":
       return { full: stoppingWords(line.what), short: "Stopping…" };
-    case "aboutToStart": {
-      const name = methodName(line.method);
-      // The words of the PCA tab's line of the quiet second, and, while
-      // the dialog of the download holds the start, of that dialog's.
-      return line.waitsFor === "download"
-        ? {
-            full: `The ${name} starts again when the download is written or closed`,
-            short: `${name} later`,
-          }
-        : line.waitsFor === "afterCrash"
-          ? {
-              full: `The ${name} starts again after the next change`,
-              short: `${name} later`,
-            }
-          : {
-              full: `The ${name} starts again in a moment`,
-              short: `${name} soon`,
-            };
-    }
+    case "aboutToStart":
+      return aboutToStartWords(line.named, line.waitsFor);
     case "result":
-      return resultWords(line.method, line.warnings);
+      return resultWords(line.named, line.warnings);
   }
 }
 
 /**
  * The Stop after the words of `line`, or `null` when it has none: the
- * Stop of the one pass, "Stop the statistics of panel.vcf.gz"; of the PCA running,
- * "Stop the PCA"; while the PCA is about to start, "Stop
- * recalculating", named "Stop recalculating the PCA". "PCoA" under the
- * PCoA. None for the PCA while the PCA tab, which shows its own, is
- * shown.
+ * Stop of the one pass, "Stop the statistics of panel.vcf.gz"; of an
+ * analysis running, "Stop the PCA"; while one analysis alone is about to
+ * start, "Stop recalculating", named "Stop recalculating the PCA". "PCoA"
+ * under the PCoA. None for an analysis while its tab, which shows its
+ * own, is shown, nor for several about to start, which Stop all ends.
  */
 export function stopOf(line: BandLine): BandStop | null {
   switch (line.kind) {
@@ -119,38 +124,116 @@ export function stopOf(line: BandLine): BandStop | null {
         name: `Stop the statistics of ${escaped(line.name)}`,
         stops: "pass",
       };
-    case "pcaRunning":
+    case "running":
       if (!line.withStop) return null;
       return {
         label: "Stop",
-        name: `Stop the ${methodName(line.method)}`,
-        stops: "pca",
+        name: `Stop ${line.named.name}`,
+        stops: liveId(line.named),
       };
-    case "aboutToStart":
-      return line.withStop ? recalculating(line.method) : null;
+    case "aboutToStart": {
+      const [only] = line.named;
+      if (!line.withStop || only === undefined) return null;
+      return {
+        label: STOP_RECALCULATING,
+        name: `Stop recalculating ${only.name}`,
+        stops: liveId(only),
+      };
+    }
   }
 }
 
-/** Stop recalculating, named by the method `method`. */
-function recalculating(method: PcaMethod): BandStop {
+/** The Stop all after the words of `line`, or `null` when it has none:
+    while two or more analyses are live and one of them runs, waits or is
+    about to start, named by those it ends, "Stop all: the PCA and the
+    diversity". */
+export function stopAllOf(line: BandLine): BandStopAll | null {
+  if (line.kind !== "running" && line.kind !== "aboutToStart") return null;
+  if (line.stopAll === null) return null;
   return {
-    label: STOP_RECALCULATING,
-    name: `Stop recalculating the ${methodName(method)}`,
-    stops: "live",
+    label: STOP_ALL_LABEL,
+    name: `${STOP_ALL_LABEL}: ${joined(line.stopAll.map((one) => one.name))}`,
   };
 }
 
-/** The words of the link to the PCA tab: its `warnings`, or, `null`,
-    that it could not be calculated. */
-function resultWords(method: PcaMethod, warnings: number | null): LineWords {
-  const name = methodName(method);
+/** The id of `named`, an analysis that can be live; a defect for any
+    other, which the band never names. */
+function liveId(named: LiveAnalysisName): Popgen2LiveId {
+  if (named.id === "pca" || named.id === "diversity") return named.id;
+  throw new Error(
+    `popnei_web defect: the band named ${named.id}, which is not live.`,
+  );
+}
+
+/** The analysis `named` at the start of a line: "PCA", "PCoA",
+    "Diversity". */
+function titleOf(named: LiveAnalysisName): string {
+  return capitalized(named.name.replace(/^the /u, ""));
+}
+
+/** `words` with its first letter in capitals. */
+function capitalized(words: string): string {
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+}
+
+/** The analyses `names`, in their order, as a sentence names them: "the
+    PCA", "the PCA and the diversity", "the PCA, the diversity and the LD
+    decay". */
+function joined(names: readonly string[]): string {
+  const last = names.at(-1) ?? "";
+  return names.length < 2
+    ? last
+    : `${names.slice(0, -1).join(", ")} and ${last}`;
+}
+
+/** The words of the analyses `named`, one or more, about to start,
+    waiting for `waitsFor`, as their tabs say it with no "again" but
+    under the dialog of the download, whose words they are: "The PCA
+    starts in a moment", "The PCA and the diversity start in a moment";
+    "… starts again when the download is written or closed"; after a
+    crash, "The PCA starts after the next change". */
+function aboutToStartWords(
+  named: readonly LiveAnalysisName[],
+  waitsFor: AboutToStart,
+): LineWords {
+  const [only] = named;
+  const one = named.length === 1 && only !== undefined;
+  const subject = capitalized(joined(named.map((each) => each.name)));
+  const verb = one ? "starts" : "start";
+  const who = one ? titleOf(only) : "Analyses";
+  switch (waitsFor) {
+    case "download":
+      return {
+        full: `${subject} ${verb} again when the download is written or closed`,
+        short: `${who} later`,
+      };
+    case "afterCrash":
+      return {
+        full: `${subject} ${verb} after the next change`,
+        short: `${who} later`,
+      };
+    // Behind another calculation the line names the one running; the
+    // band says so only when that one is not live, as the one pass.
+    case "behind":
+    case "changes":
+      return { full: `${subject} ${verb} in a moment`, short: `${who} soon` };
+  }
+}
+
+/** The words of the link to the tab of `named`: its `warnings`, or,
+    `null`, that it could not be calculated. */
+function resultWords(
+  named: LiveAnalysisName,
+  warnings: number | null,
+): LineWords {
+  const title = titleOf(named);
   const what =
     warnings === null
       ? "could not be calculated"
       : `${String(warnings)} ${warnings === 1 ? "warning" : "warnings"}`;
   return {
-    full: `${name}: ${what}, in the PCA tab`,
-    short: warnings === null ? `${name}: failed` : `${name}: ${what}`,
+    full: `${title}: ${what}, in the ${named.tab} tab`,
+    short: warnings === null ? `${title}: failed` : `${title}: ${what}`,
   };
 }
 
@@ -162,7 +245,7 @@ function stoppingWords(what: Stopping): string {
     case "reading":
       return `Stopping the statistics of ${escaped(what.name)}…`;
     case "analysis":
-      return `Stopping the calculation of ${what.title}…`;
+      return `Stopping ${what.name}…`;
   }
 }
 

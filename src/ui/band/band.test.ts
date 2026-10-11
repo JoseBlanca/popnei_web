@@ -8,14 +8,23 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { POPGEN2_ANALYSES } from "../../core/apps.ts";
 import { setVariantFilter } from "../../core/project.ts";
 import { summaryResult } from "../../core/testSupport.ts";
+import { liveAnalysisOf } from "../analyses/status.ts";
+import { LIVE_QUIET_MS } from "../autoRuns.ts";
 import { createDefects } from "../defects.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 import { startWriting } from "../runs.ts";
 import { STOPPING_MAX_MS, bandOf } from "./bandLine.ts";
 import type { Band } from "./bandLine.ts";
-import { lineWords, stopOf } from "./bandWords.ts";
-import { flush, page, pageOf, pcaDone, pcaResult } from "./testSupport.ts";
-import type { WriteRequest } from "./testSupport.ts";
+import { lineWords, stopAllOf, stopOf } from "./bandWords.ts";
+import {
+  endLast,
+  flush,
+  page,
+  pageOf,
+  pcaDone,
+  pcaResult,
+} from "./testSupport.ts";
+import type { TestPage, WriteRequest } from "./testSupport.ts";
 
 /** The result of the one pass over panel.nei: 1,200 variants on the
     chromosome 1, of s000 and s001. */
@@ -122,7 +131,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     await flush();
 
     const band = testPage.band();
-    expect(band.line.kind).toBe("pcaRunning");
+    expect(band.line.kind).toBe("running");
     expect(words(band, 59)).toBe("PCA running · 0:59");
     expect(words(band, 61)).toBe("PCA running · 1:01");
     expect(lineWords(band.line, 61)?.short).toBe("PCA · 1:01");
@@ -189,7 +198,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     expect(words(pcoa.band())).toBe("Stopping the PCoA…");
   });
 
-  test("a Stop waiting for each analysis of the page says Stopping and what it stops; another analysis by its title", async () => {
+  test("a Stop waiting for each analysis of the page says Stopping and what it stops, the diversity by its words", async () => {
     const testPage = page(SUMMARY);
     await testPage.endPass();
     const shown = pageOf(testPage);
@@ -211,13 +220,8 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     ).toEqual([
       "Stopping the statistics of panel.nei…",
       "Stopping the PCA…",
-      // The band's words until work package 4 of
-      // docs/plans/population-tab.md, which names it "the diversity".
-      "Stopping the calculation of Diversity…",
+      "Stopping the diversity…",
     ]);
-    expect(stoppingWords("diversity")).toBe(
-      "Stopping the calculation of Diversity…",
-    );
   });
 
   test("the write of the filtered variants: its file's name and its share, with no Stop", async () => {
@@ -253,24 +257,24 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     );
     await flush();
 
-    expect(words(testPage.band())).toBe("The PCA starts again in a moment");
+    expect(words(testPage.band())).toBe("The PCA starts in a moment");
     expect(lineWords(testPage.band().line, 0)?.short).toBe("PCA soon");
     expect(stopOf(testPage.band().line)).toEqual({
       label: "Stop recalculating",
       name: "Stop recalculating the PCA",
-      stops: "live",
+      stops: "pca",
     });
 
     // The same words while the PCA tab is shown, without Stop
     // recalculating, which the tab shows.
     testPage.tab = "pca";
-    expect(words(testPage.band())).toBe("The PCA starts again in a moment");
+    expect(words(testPage.band())).toBe("The PCA starts in a moment");
     expect(stopOf(testPage.band().line)).toBeNull();
 
     const pcoa = await pcaDone(SUMMARY, "pcoa", 548);
     pcoa.setPca({ ld: { follow: false, maxAllowedR2: 0.2, maxDist: 50_000 } });
     await flush();
-    expect(words(pcoa.band())).toBe("The PCoA starts again in a moment");
+    expect(words(pcoa.band())).toBe("The PCoA starts in a moment");
     expect(lineWords(pcoa.band().line, 0)?.short).toBe("PCoA soon");
   });
 
@@ -364,7 +368,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
         },
         running.defects.getState(),
       ).line.kind,
-    ).toBe("pcaRunning");
+    ).toBe("running");
 
     const about = await pcaDone(SUMMARY, "pca", 1);
     about.store.apply("the missing data filter changed", (p) =>
@@ -397,11 +401,14 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       bandOf(
         {
           ...pageOf(linked),
-          pcaLive: {
-            kind: "live",
-            aboutToStart: "changes",
-            running: false,
-            after: null,
+          live: {
+            ...pageOf(linked).live,
+            pca: {
+              kind: "live",
+              aboutToStart: "changes",
+              running: false,
+              after: null,
+            },
           },
         },
         linked.defects.getState(),
@@ -435,7 +442,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     await testPage.endPass();
     testPage.auto.run("pca");
     await flush();
-    expect(testPage.band().line.kind).toBe("pcaRunning");
+    expect(testPage.band().line.kind).toBe("running");
     expect(testPage.band().error?.text).toBe(
       "The application met an error of its own: test. Reload the page, and open your files again.",
     );
@@ -467,20 +474,345 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
 });
 
 describe("PT1 the band while a crash holds the PCA", () => {
-  test("it says the PCA starts again after the next change", () => {
+  test("it says the PCA starts after the next change, with no again, as its tab does", () => {
     expect(
       lineWords(
         {
           kind: "aboutToStart",
-          method: "pca",
+          named: [liveAnalysisOf(page(SUMMARY).store.getState(), "pca")],
           waitsFor: "afterCrash",
           withStop: true,
+          stopAll: null,
         },
         0,
       ),
     ).toEqual({
-      full: "The PCA starts again after the next change",
+      full: "The PCA starts after the next change",
       short: "PCA later",
     });
+  });
+});
+
+/** The short words of the line of `band`, with the clock at `seconds`. */
+function short(band: Band, seconds = 0): string | null {
+  return lineWords(band.line, seconds)?.short ?? null;
+}
+
+/** The names of the band's two buttons for a screen reader, its Stop or
+    Stop recalculating and its Stop all, `null` for one it has not. */
+function buttons(band: Band): readonly (string | null)[] {
+  return [stopOf(band.line)?.name ?? null, stopAllOf(band.line)?.name ?? null];
+}
+
+/** Moves the missing data of the variants to `rate` in the Variants
+    tab, through the gate, which both analyses read. */
+function moveThreshold(testPage: TestPage, rate: number): void {
+  testPage.store.apply("the missing data filter changed", (p) =>
+    setVariantFilter(p, { kind: "missing_data", maxAllowedMissingRate: rate }),
+  );
+}
+
+/** The page with the one pass done, and the PCA and the diversity run
+    by their Run, one after the other, and done: both live and idle. */
+async function bothDone(method: "pca" | "pcoa" = "pca"): Promise<TestPage> {
+  const testPage = page(SUMMARY);
+  await testPage.endPass();
+  if (method === "pcoa") testPage.setPca({ method: "pcoa" });
+  expect(testPage.auto.run("pca")).toBe("started");
+  await flush();
+  await endLast(testPage, "pca");
+  expect(testPage.auto.run("diversity")).toBe("started");
+  await flush();
+  await endLast(testPage, "diversity");
+  return testPage;
+}
+
+/** Lets the quiet second run out, and the start it gives settle. */
+async function quietSecond(): Promise<void> {
+  vi.advanceTimersByTime(LIVE_QUIET_MS);
+  await flush();
+}
+
+describe("PT4 D1 the band with the PCA and the diversity", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("the PCA running and the diversity waiting after it: the words name both, with Stop and Stop all; the short form drops the one waiting", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    expect(testPage.auto.run("pca")).toBe("started");
+    await flush();
+    expect(testPage.auto.run("diversity")).toBe("waiting");
+    await flush();
+
+    const band = testPage.band();
+    expect(words(band, 80)).toBe("PCA running · 1:20 · then the diversity");
+    expect(short(band, 80)).toBe("PCA · 1:20");
+    expect(stopOf(band.line)).toEqual({
+      label: "Stop",
+      name: "Stop the PCA",
+      stops: "pca",
+    });
+    expect(stopAllOf(band.line)).toEqual({
+      label: "Stop all",
+      name: "Stop all: the PCA and the diversity",
+    });
+  });
+
+  test("the same after a threshold moved with both live, the PCA started by itself; the PCoA so named", async () => {
+    for (const method of ["pca", "pcoa"] as const) {
+      const testPage = await bothDone(method);
+      moveThreshold(testPage, 0.05);
+      await flush();
+      await quietSecond();
+      const name = method === "pca" ? "PCA" : "PCoA";
+      expect(words(testPage.band(), 12)).toBe(
+        `${name} running · 0:12 · then the diversity`,
+      );
+      expect(buttons(testPage.band())).toEqual([
+        `Stop the ${name}`,
+        `Stop all: the ${name} and the diversity`,
+      ]);
+    }
+  });
+
+  test("the PCA tab shown with the PCA running and the diversity waiting: the words with Stop all and no Stop", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    testPage.auto.run("pca");
+    await flush();
+    testPage.auto.run("diversity");
+    testPage.tab = "pca";
+
+    expect(words(testPage.band(), 80)).toBe(
+      "PCA running · 1:20 · then the diversity",
+    );
+    expect(buttons(testPage.band())).toEqual([
+      null,
+      "Stop all: the PCA and the diversity",
+    ]);
+  });
+
+  test("the diversity running and the PCA waiting after it, its Run pressed second", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    expect(testPage.auto.run("diversity")).toBe("started");
+    await flush();
+    expect(testPage.auto.run("pca")).toBe("waiting");
+
+    expect(words(testPage.band(), 12)).toBe(
+      "Diversity running · 0:12 · then the PCA",
+    );
+    expect(short(testPage.band(), 12)).toBe("Diversity · 0:12");
+    expect(buttons(testPage.band())).toEqual([
+      "Stop the diversity",
+      "Stop all: the PCA and the diversity",
+    ]);
+  });
+
+  test("the diversity running alone, the PCA not live: its words and its Stop, no Stop all; no button while the Populations tab is shown", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    expect(testPage.auto.run("diversity")).toBe("started");
+    await flush();
+
+    expect(words(testPage.band(), 12)).toBe("Diversity running · 0:12");
+    expect(stopOf(testPage.band().line)).toEqual({
+      label: "Stop",
+      name: "Stop the diversity",
+      stops: "diversity",
+    });
+    expect(stopAllOf(testPage.band().line)).toBeNull();
+
+    testPage.tab = "populations";
+    expect(words(testPage.band(), 12)).toBe("Diversity running · 0:12");
+    expect(buttons(testPage.band())).toEqual([null, null]);
+  });
+
+  test("the diversity running alone with the PCA live and idle, as after a change of its options: its words with Stop and Stop all", async () => {
+    const testPage = await bothDone();
+    testPage.setDiversity({ minNumIndividuals: 1 });
+    await flush();
+    await quietSecond();
+
+    expect(words(testPage.band(), 12)).toBe("Diversity running · 0:12");
+    expect(buttons(testPage.band())).toEqual([
+      "Stop the diversity",
+      "Stop all: the PCA and the diversity",
+    ]);
+  });
+
+  test("both about to start in the quiet second: the words of both and Stop all alone; while the dialog of the download holds them, its words", async () => {
+    const testPage = await bothDone();
+    moveThreshold(testPage, 0.05);
+    await flush();
+
+    expect(words(testPage.band())).toBe(
+      "The PCA and the diversity start in a moment",
+    );
+    expect(short(testPage.band())).toBe("Analyses soon");
+    expect(buttons(testPage.band())).toEqual([
+      null,
+      "Stop all: the PCA and the diversity",
+    ]);
+
+    const release = testPage.gate.holdChange("download");
+    await flush();
+    expect(words(testPage.band())).toBe(
+      "The PCA and the diversity start again when the download is written or closed",
+    );
+    expect(short(testPage.band())).toBe("Analyses later");
+    expect(buttons(testPage.band())).toEqual([
+      null,
+      "Stop all: the PCA and the diversity",
+    ]);
+    release();
+  });
+
+  test("the diversity about to start alone with the PCA live: its words with Stop recalculating and Stop all; the Populations tab shown, Stop all alone", async () => {
+    const testPage = await bothDone();
+    testPage.setDiversity({ minNumIndividuals: 1 });
+    await flush();
+
+    expect(words(testPage.band())).toBe("The diversity starts in a moment");
+    expect(short(testPage.band())).toBe("Diversity soon");
+    expect(stopOf(testPage.band().line)).toEqual({
+      label: "Stop recalculating",
+      name: "Stop recalculating the diversity",
+      stops: "diversity",
+    });
+    expect(stopAllOf(testPage.band().line)?.name).toBe(
+      "Stop all: the PCA and the diversity",
+    );
+
+    testPage.tab = "populations";
+    expect(buttons(testPage.band())).toEqual([
+      null,
+      "Stop all: the PCA and the diversity",
+    ]);
+  });
+
+  test("the diversity about to start alone, the PCA not live, the Populations tab shown: its words and no button", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    testPage.auto.run("diversity");
+    await flush();
+    await endLast(testPage, "diversity");
+    testPage.setDiversity({ minNumIndividuals: 1 });
+    await flush();
+    testPage.tab = "populations";
+
+    expect(words(testPage.band())).toBe("The diversity starts in a moment");
+    expect(buttons(testPage.band())).toEqual([null, null]);
+  });
+
+  test("both live and nothing running, waiting nor about to start: Popnei alone, no button, the Populations tab shown, whose result's warnings the band then does not link to", async () => {
+    const testPage = await bothDone();
+    testPage.tab = "populations";
+    expect(testPage.band().line).toEqual({ kind: "nothing" });
+    expect(buttons(testPage.band())).toEqual([null, null]);
+  });
+
+  test("a crash of the worker during the diversity holds the PCA: the PCA's words of the hold, Stop recalculating, and no Stop all, the diversity no longer live", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    testPage.auto.run("diversity");
+    await flush();
+    testPage.auto.run("pca");
+    testPage.lastDiversity().end({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "a crash of the test" },
+    });
+    await flush();
+
+    expect(words(testPage.band())).toBe("The PCA starts after the next change");
+    expect(buttons(testPage.band())).toEqual([
+      "Stop recalculating the PCA",
+      null,
+    ]);
+  });
+
+  test("Stopping the diversity while the store waits for the worker after its Stop", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    testPage.auto.run("diversity");
+    await flush();
+    testPage.auto.pause("diversity");
+    testPage.stoppingSince = 0;
+
+    expect(words(testPage.band())).toBe("Stopping the diversity…");
+    expect(short(testPage.band())).toBe("Stopping…");
+    expect(buttons(testPage.band())).toEqual([null, null]);
+  });
+
+  test("the link to the diversity's warnings while the PCA has none, and to the PCA's when both have them; each dropped while its tab is shown", async () => {
+    const testPage = await bothDone();
+    const warned = (
+      ids: readonly string[],
+    ): ReturnType<typeof pageOf>["state"] => {
+      const state = testPage.store.getState();
+      return {
+        ...state,
+        analyses: state.analyses.map((view) =>
+          ids.includes(view.id) && view.status.kind === "done"
+            ? {
+                ...view,
+                status: {
+                  ...view.status,
+                  warnings: [
+                    { code: "a", text: "A." },
+                    { code: "b", text: "B." },
+                  ],
+                },
+              }
+            : view,
+        ),
+      };
+    };
+    const bandWith = (ids: readonly string[]): Band =>
+      bandOf(
+        { ...pageOf(testPage), state: warned(ids) },
+        testPage.defects.getState(),
+      );
+
+    expect(words(bandWith(["diversity"]))).toBe(
+      "Diversity: 2 warnings, in the Populations tab",
+    );
+    expect(short(bandWith(["diversity"]))).toBe("Diversity: 2 warnings");
+    expect(buttons(bandWith(["diversity"]))).toEqual([null, null]);
+    expect(words(bandWith(["pca", "diversity"]))).toBe(
+      "PCA: 2 warnings, in the PCA tab",
+    );
+
+    testPage.tab = "pca";
+    expect(words(bandWith(["pca", "diversity"]))).toBe(
+      "Diversity: 2 warnings, in the Populations tab",
+    );
+    testPage.tab = "populations";
+    expect(bandWith(["diversity"]).line).toEqual({ kind: "nothing" });
+    expect(words(bandWith(["pca", "diversity"]))).toBe(
+      "PCA: 2 warnings, in the PCA tab",
+    );
+  });
+
+  test("the diversity that could not be calculated: the link to the Populations tab", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    testPage.auto.run("diversity");
+    await flush();
+    testPage.lastDiversity().end({
+      kind: "failed",
+      error: { kind: "popnei", message: "popnei refused it." },
+    });
+    await flush();
+
+    expect(words(testPage.band())).toBe(
+      "Diversity: could not be calculated, in the Populations tab",
+    );
+    expect(short(testPage.band())).toBe("Diversity: failed");
   });
 });

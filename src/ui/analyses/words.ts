@@ -610,8 +610,10 @@ export function eachInItsTab(named: readonly LiveAnalysisName[]): string {
 export const STOP_ALL_PLACE = "Stop all beside the heading Popnei";
 
 /** Whether the band offers Stop all, which the words of the locks of the
-    filters and of the populations, and of the download's wait, name when
-    another analysis is live beside the one running: not until work package 4 of
-    docs/plans/population-tab.md builds it in the band, which turns this
-    on; until then they name the Stop of each tab. */
-export const STOP_ALL_OFFERED = false;
+    filters and of the populations, of the download's wait and of a round
+    name when another analysis is live beside the one running: the band
+    offers it whenever two or more analyses are live and one of them
+    runs, waits or is about to start (docs/specs/steps/popgen2-band.md,
+    "Several live analyses"), from work package 4 of
+    docs/plans/population-tab.md; false names the Stop of each tab. */
+export const STOP_ALL_OFFERED = true;

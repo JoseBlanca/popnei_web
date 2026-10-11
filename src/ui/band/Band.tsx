@@ -45,14 +45,15 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
+import { pcaOptions } from "../../core/analyses/pca.ts";
+import type { AnalysisTabId } from "../../core/popgen2Tabs.ts";
 import type { PcaMethod } from "../../worker/protocol.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
 import type { Defects } from "../defects.ts";
 import { PANEL_HEADING_ATTRIBUTE } from "../analyses/AnalysisPanel.tsx";
 import { WARNINGS_HEADING_ATTRIBUTE } from "../analyses/Warnings.tsx";
-import { PCA_TAB_CONTENT_ID } from "../pageTab.ts";
+import { tabContentId } from "../pageTab.ts";
 import type { PageTabStore } from "../pageTab.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 import { useRunSeconds } from "../runSeconds.ts";
@@ -75,7 +76,7 @@ import { Button } from "../widgets/Button.tsx";
 import { Link } from "../widgets/Link.tsx";
 import { WideShort } from "../widgets/WideShort.tsx";
 import { isDialogOnPage, whenNoDialog } from "../widgets/dialogMark.ts";
-import { errorOf, lineOf } from "./bandLine.ts";
+import { errorOf, lineOf, liveStatesOf } from "./bandLine.ts";
 import type { BandLine } from "./bandLine.ts";
 import styles from "./Band.module.css";
 import {
@@ -83,12 +84,10 @@ import {
   DETAILS_LABEL,
   PAGE_HEADING,
   lineWords,
+  stopAllOf,
   stopOf,
 } from "./bandWords.ts";
 import type { BandStop, LineWords } from "./bandWords.ts";
-
-/** The id of the PCA of the page. */
-const PCA = pcaOnPopgen2.id;
 
 /** What the band reads and acts on once the store is made. */
 export interface BandWith {
@@ -226,8 +225,8 @@ export function Band({
               <Activity
                 page={page}
                 keepFocus={keepFocus}
-                onLink={(warnings) => {
-                  showPcaTab(page.pageTab, warnings, headingRef.current);
+                onLink={(tab, warnings) => {
+                  showTab(page.pageTab, tab, warnings, headingRef.current);
                 }}
               />
             </ErrorBoundary>
@@ -297,9 +296,9 @@ interface ActivityProps {
   /** Gives the focus to the heading when a control of the band that had
       it has gone by itself; called after each drawing of the line. */
   readonly keepFocus: () => void;
-  /** The link to the PCA tab was followed: to its warnings, or, `false`,
-      to its error. */
-  readonly onLink: (warnings: boolean) => void;
+  /** The link to the tab `tab` was followed: to the warnings of its
+      result, or, `false`, to its error. */
+  readonly onLink: (tab: AnalysisTabId, warnings: boolean) => void;
 }
 
 /** The line after "Popnei", worked out from the store, the live state of
@@ -313,12 +312,10 @@ function Activity({
   const state = useSyncExternalStore(page.store.subscribe, () =>
     page.store.getState(),
   );
-  // The live state, which autoRuns tells of at each change, of the store
-  // and of the gate as well as its own; and what it knows of the one
-  // pass, a Stop with no pass running among it, which the store does not.
-  const pcaLive = useSyncExternalStore(page.autoRuns.subscribe, () =>
-    page.autoRuns.liveState(PCA),
-  );
+  // The live state of each live analysis, which autoRuns tells of at
+  // each change, of the store and of the gate as well as its own, with
+  // one subscription, read below; and what it knows of the one pass, a
+  // Stop with no pass running among it, which the store does not.
   useSyncExternalStore(page.autoRuns.subscribe, () =>
     page.autoRuns.getVersion(),
   );
@@ -333,7 +330,7 @@ function Activity({
   const line = lineOf({
     state,
     startedUnder: (key) => page.autoRuns.startedUnder(key),
-    pcaLive,
+    live: liveStatesOf(page.autoRuns),
     tab,
     now: stopping?.now ?? 0,
     stoppingSince: stopping?.since ?? null,
@@ -346,26 +343,45 @@ function Activity({
 interface LineProps {
   readonly line: BandLine;
   readonly page: BandWith;
-  /** The link to the PCA tab was followed: to its warnings, or, `false`,
-      to its error. */
-  readonly onLink: (warnings: boolean) => void;
+  /** The link to the tab `tab` was followed: to the warnings of its
+      result, or, `false`, to its error. */
+  readonly onLink: (tab: AnalysisTabId, warnings: boolean) => void;
 }
 
 /** The line after "Popnei": its words or its link, and its Stop. */
 function Line({ line, page, onLink }: LineProps): React.JSX.Element | null {
   const stop = stopOf(line);
-  const control =
-    stop === null ? null : (
-      <span className={classOf(styles, "control")}>
-        <Button
-          label={stop.label}
-          ariaLabel={stop.name}
-          onPress={() => {
-            pressStop(stop, page);
-          }}
-        />
-      </span>
-    );
+  const stopAll = stopAllOf(line);
+  // Stop, then Stop all, each beside the words, so that the one that
+  // stops one analysis comes first, as in the tab.
+  const control = (
+    <>
+      {stop !== null && (
+        <span className={classOf(styles, "control")}>
+          <Button
+            label={stop.label}
+            ariaLabel={stop.name}
+            onPress={() => {
+              pressStop(stop, page);
+            }}
+          />
+        </span>
+      )}
+      {stopAll !== null && (
+        <span className={classOf(styles, "control")}>
+          <Button
+            label={stopAll.label}
+            ariaLabel={stopAll.name}
+            onPress={() => {
+              keepingFocus(() => {
+                page.autoRuns.pauseAll();
+              });
+            }}
+          />
+        </span>
+      )}
+    </>
+  );
   if (line.kind === "nothing") return null;
   if (line.kind === "result") {
     const words = lineWords(line, 0);
@@ -377,7 +393,7 @@ function Line({ line, page, onLink }: LineProps): React.JSX.Element | null {
               label={words.full}
               shortLabel={words.short}
               onPress={() => {
-                onLink(line.warnings !== null);
+                onLink(line.tab, line.warnings !== null);
               }}
             />
           )}
@@ -388,7 +404,7 @@ function Line({ line, page, onLink }: LineProps): React.JSX.Element | null {
   }
   return (
     <>
-      {line.kind === "pcaRunning" ? (
+      {line.kind === "running" ? (
         // A new request is a new clock.
         <Clocked key={line.runId} line={line} runId={line.runId} />
       ) : (
@@ -399,7 +415,7 @@ function Line({ line, page, onLink }: LineProps): React.JSX.Element | null {
   );
 }
 
-/** The words of the PCA running, with its clock. */
+/** The words of an analysis running, with its clock. */
 function Clocked({
   line,
   runId,
@@ -427,37 +443,34 @@ function Words({
 }
 
 /** The band's Stop `stop`: of the one pass, as the box's, said in the
-    status region as it; of the PCA, running or about to start, as the PCA tab's,
-    `pause`, which the page says. The button then goes, and the focus
+    status region as it; of an analysis, running or about to start, as
+    its tab's, `pause`, which the page says. The button then goes, and the focus
     goes to the heading "Popnei". */
 function pressStop(stop: BandStop, page: BandWith): void {
   keepingFocus(() => {
-    switch (stop.stops) {
-      case "pass":
-        page.autoRuns.stop(POPGEN2_CHAIN);
-        page.announcer.announce(stoppedText());
-        return;
-      case "pca":
-      case "live":
-        page.autoRuns.pause(PCA);
-        return;
+    if (stop.stops === "pass") {
+      page.autoRuns.stop(POPGEN2_CHAIN);
+      page.announcer.announce(stoppedText());
+      return;
     }
+    page.autoRuns.pause(stop.stops);
   });
 }
 
-/** Shows the PCA tab, as a click on its label would, and gives the focus
-    to the heading of its warnings, `warnings`, or to that of the tab,
-    once the application's root has drawn it; to the band's heading,
-    `bandHeading`, when the tab has none, as when an error has emptied
-    the application's root. */
-function showPcaTab(
+/** Shows the tab of the analyses `tab`, as a click on its label would,
+    and gives the focus to the heading of the warnings of its result,
+    `warnings`, or to that of its panel, once the application's root has
+    drawn it; to the band's heading, `bandHeading`, when the tab has
+    none, as when an error has emptied the application's root. */
+function showTab(
   pageTab: PageTabStore,
+  tab: AnalysisTabId,
   warnings: boolean,
   bandHeading: HTMLHeadingElement | null,
 ): void {
-  pageTab.show("pca");
+  pageTab.show(tab);
   requestAnimationFrame(() => {
-    const content = document.getElementById(PCA_TAB_CONTENT_ID);
+    const content = document.getElementById(tabContentId(tab));
     const heading = content?.querySelector(
       `[${warnings ? WARNINGS_HEADING_ATTRIBUTE : PANEL_HEADING_ATTRIBUTE}]`,
     );

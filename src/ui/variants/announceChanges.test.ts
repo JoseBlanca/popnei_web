@@ -285,7 +285,7 @@ describe("NU4 D2 the status region says the PCA started by itself and its Stop",
 
 describe("PT2 D2 the status region says a round of two analyses once, a Run that waited at its start, and the diversity's start, Stop and end", () => {
   const ROUND =
-    "Calculating the PCA and then the diversity again. To change the filters, stop each in its tab; to change the populations, stop the diversity in the Populations tab.";
+    "Calculating the PCA and then the diversity again. To change the filters, press Stop all beside the heading Popnei, or stop each in its tab; to change the populations, stop the diversity in the Populations tab.";
 
   test("the first start of a round of the PCA and the diversity names both, once; the diversity's start in the same round says nothing", () => {
     const { said, tell, toPcoa } = setUp();
@@ -295,7 +295,7 @@ describe("PT2 D2 the status region says a round of two analyses once, a Run that
     toPcoa();
     tell({ kind: "startedByItself", id: "pca", round: ["pca", "diversity"] });
     expect(said.at(-1)).toBe(
-      "Calculating the PCoA and then the diversity again. To change the filters, stop each in its tab; to change the populations, stop the diversity in the Populations tab.",
+      "Calculating the PCoA and then the diversity again. To change the filters, press Stop all beside the heading Popnei, or stop each in its tab; to change the populations, stop the diversity in the Populations tab.",
     );
     expect(said).toHaveLength(2);
   });

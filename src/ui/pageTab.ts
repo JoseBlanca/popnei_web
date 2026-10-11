@@ -7,16 +7,21 @@
  * is a small store of its own, which the entry makes once, because the
  * page is drawn in two roots: the row of tabs, in the application's,
  * and the band at the top, in `#defects`, both read it and both change
- * it, the band's link to the PCA's warnings showing the PCA tab.
+ * it, the band's link to the warnings of a result showing its tab.
  */
 import { useSyncExternalStore } from "react";
 
-import type { PageTab } from "../core/popgen2Tabs.ts";
+import type { AnalysisTabId, PageTab } from "../core/popgen2Tabs.ts";
 
-/** The id of the element that holds what the PCA tab shows, where the
-    band's link to the PCA's warnings or error finds the heading it gives
-    the focus to. */
-export const PCA_TAB_CONTENT_ID = "pca-tab-content";
+/** The id of the element that holds what the tab of the analyses `tab`
+    shows, where the band's link to the warnings or the error of its
+    result finds the heading it gives the focus to. */
+export function tabContentId(tab: AnalysisTabId): string {
+  return `${tab}-tab-content`;
+}
+
+/** The id of the element that holds what the PCA tab shows. */
+export const PCA_TAB_CONTENT_ID = tabContentId("pca");
 
 /** The tab shown, read and changed by the two roots of the page. */
 export interface PageTabStore {

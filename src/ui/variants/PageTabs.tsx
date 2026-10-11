@@ -33,7 +33,7 @@ import { DIVERSITY_TAB_TITLE } from "../analyses/diversity/tabLoadWords.ts";
 import { PcaTab } from "../analyses/pca/PcaTab.tsx";
 import { pcaTabTitle } from "../analyses/pca/tabWords.ts";
 import { classOf } from "../classOf.ts";
-import { PCA_TAB_CONTENT_ID } from "../pageTab.ts";
+import { tabContentId } from "../pageTab.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { useAppState } from "../store.tsx";
 import { Tabs } from "../widgets/Tabs.tsx";
@@ -191,7 +191,7 @@ function analysisTab(
         <div
           hidden={words !== null}
           className={classOf(styles, "tabContent")}
-          {...(id === "pca" && { id: PCA_TAB_CONTENT_ID })}
+          id={tabContentId(id)}
         >
           {content}
         </div>

@@ -456,8 +456,8 @@ describe("PT1 D7 the words of the lock of the filters, with and without another 
     );
   });
 
-  test("the band offers no Stop all yet: work package 4 turns it on", () => {
-    expect(STOP_ALL_OFFERED).toBe(false);
+  test("the band offers Stop all, so that the words name it", () => {
+    expect(STOP_ALL_OFFERED).toBe(true);
   });
 
   test("the PCA running with the diversity live adds Stop all, which stops the diversity too", () => {

@@ -367,7 +367,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     await workersListening(page);
   });
 
-  test("NU5 D3 the PCA live and a threshold moved in the Variants tab: The PCA starts again in a moment with Stop recalculating, then PCA running, with no line of nothing between, then Popnei alone", async ({
+  test("NU5 D3 the PCA live and a threshold moved in the Variants tab: The PCA starts in a moment with Stop recalculating, then PCA running, with no line of nothing between, then Popnei alone", async ({
     page,
   }) => {
     test.setTimeout(90_000);
@@ -405,7 +405,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       .slice(before)
       .map((state) => state.text);
     const about = texts.indexOf(
-      "Popnei The PCA starts again in a moment Stop recalculating",
+      "Popnei The PCA starts in a moment Stop recalculating",
     );
     const running = texts.findIndex((text) =>
       /^Popnei PCA running · 0:\d\d Stop$/u.test(text),
@@ -902,7 +902,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
         .toBe(
           width === 320
             ? "Popnei PCA soon"
-            : "Popnei The PCA starts again in a moment",
+            : "Popnei The PCA starts in a moment",
         );
       await expectAxeBothSchemes(page, makeAxeBuilder);
       await page.mouse.up();
@@ -934,7 +934,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
         .toBe(
           width === 320
             ? "Popnei PCA soon Stop recalculating"
-            : "Popnei The PCA starts again in a moment Stop recalculating",
+            : "Popnei The PCA starts in a moment Stop recalculating",
         );
       const fit = await heading(page).evaluate((h1) => {
         const line = h1.parentElement;

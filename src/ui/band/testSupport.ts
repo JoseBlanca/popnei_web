@@ -6,6 +6,11 @@
  * checked"). Not part of the page: the lint keeps a file named
  * testSupport out of every module but the tests.
  */
+import {
+  diversityOnPopgen2,
+  diversityOptions,
+} from "../../core/analyses/diversity.ts";
+import type { DiversityOptions } from "../../core/analyses/diversity.ts";
 import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
 import type { PcaOptions } from "../../core/analyses/pca.ts";
 import type { PageTab } from "../../core/popgen2Tabs.ts";
@@ -21,22 +26,23 @@ import type {
   WriteJob,
   Written,
 } from "../../worker/protocol.ts";
-import { failureEndsLive } from "../analyses/pca/liveEnd.ts";
 import { LIVE_QUIET_MS, createAutoRuns } from "../autoRuns.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { createDefects } from "../defects.ts";
 import type { Defects } from "../defects.ts";
 import { POPGEN2_LIVE } from "../../core/apps.ts";
+import type { Popgen2LiveId } from "../../core/apps.ts";
 import {
   POPGEN2_AUTO_GROUPS,
   createPopgen2Store,
   openVariantsFile,
+  popgen2EndsLive,
 } from "../popgen2Store.ts";
 import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
 import { createRunGate, gatedStore } from "../variants/thresholdRun.ts";
 import type { RunGate } from "../variants/thresholdRun.ts";
-import { bandOf } from "./bandLine.ts";
+import { bandOf, liveStatesOf } from "./bandLine.ts";
 import type { Band, BandPage } from "./bandLine.ts";
 
 /** The id of the load of `panel.nei` the test page opens. */
@@ -141,6 +147,11 @@ export interface TestPage {
   /** Changes the options of the PCA, through the gate, as the PCA tab
       does. */
   readonly setPca: (options: Partial<PcaOptions>) => void;
+  /** The last request of the diversity the fake worker was given. */
+  readonly lastDiversity: () => Request;
+  /** Changes the options of the diversity, through the gate, as the
+      Populations tab does. */
+  readonly setDiversity: (options: Partial<DiversityOptions>) => void;
 }
 
 /** Makes the test page, whose one pass ends with `summary`. */
@@ -171,7 +182,7 @@ export function page(summary: JobResult): TestPage {
       changes: gate,
       runStart: (id) => startAnalysis(gated, id),
       quietMs: LIVE_QUIET_MS,
-      endsLive: failureEndsLive,
+      endsLive: popgen2EndsLive,
     },
   });
   store.subscribe(() => {
@@ -203,6 +214,22 @@ export function page(summary: JobResult): TestPage {
     );
   };
   setPca({ ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 } });
+  const setDiversity = (options: Partial<DiversityOptions>): void => {
+    gated.apply("the options of the diversity changed", (p: Project) =>
+      setAnalysisOptions(p, diversityOnPopgen2, {
+        ...diversityOptions(p),
+        ...options,
+      }),
+    );
+  };
+  // The two individuals as one population, with a minimum and a draw
+  // they meet, so that the diversity's Run is enabled.
+  setDiversity({ minNumIndividuals: 2, numCalledAlleles: 4 });
+  const lastOf = (analysis: string): Request => {
+    const last = requests.filter((r) => r.job.analysis === analysis).at(-1);
+    if (last === undefined) throw new Error(`no ${analysis} was sent`);
+    return last;
+  };
   const testPage: TestPage = {
     store,
     auto,
@@ -226,15 +253,56 @@ export function page(summary: JobResult): TestPage {
       });
       await flush();
     },
-    lastPca: () => {
-      const found = requests.filter((r) => r.job.analysis === "pca");
-      const last = found.at(-1);
-      if (last === undefined) throw new Error("no PCA was sent");
-      return last;
-    },
+    lastPca: () => lastOf("pca"),
     setPca,
+    lastDiversity: () => lastOf("diversity"),
+    setDiversity,
   };
   return testPage;
+}
+
+/** A result of the diversity of `s000` and `s001` as one population. */
+export function diversityResult(): JobResult {
+  return {
+    analysis: "diversity",
+    pops: ["Unclassified"],
+    numIndividuals: Uint32Array.from([2]),
+    unbiasedExpHet: Float64Array.from([0.3]),
+    obsHet: Float64Array.from([0.3]),
+    polyRatio: Float64Array.from([0.9]),
+    numVarsWithValue: Uint32Array.from([548]),
+    // As popnei gives them for one population: no F of a population
+    // alone, no rarefied values at a draw none reaches, no private
+    // alleles (core/testSupport.ts's `noPopDiversity`, which this file,
+    // read by the band's tests alone, may not import).
+    fis: Float64Array.from([NaN]),
+    numAllelesMean: Float64Array.from([NaN]),
+    numAllelesInDraw: Float64Array.from([NaN]),
+    privateAllelesTotal: Float64Array.from([NaN]),
+    privateAllelesMean: Float64Array.from([NaN]),
+    privateAllelesInDraw: Float64Array.from([NaN]),
+    numVarsInDraw: new Uint32Array(1),
+    numVarsEveryPop: null,
+    numVarsEveryPopInDraw: null,
+    numCalledAlleles: 40,
+    foldedSfs: [null],
+    passStats: { numVars: 548, filtering: {} },
+  };
+}
+
+/** Ends the last request of `analysis` of `testPage` with its result. */
+export async function endLast(
+  testPage: TestPage,
+  analysis: Popgen2LiveId,
+): Promise<void> {
+  const last =
+    analysis === "pca" ? testPage.lastPca() : testPage.lastDiversity();
+  last.end({
+    kind: "done",
+    key: last.key,
+    result: analysis === "pca" ? pcaResult("pca", 548) : diversityResult(),
+  });
+  await flush();
 }
 
 /** What the band reads of `testPage`. */
@@ -242,7 +310,7 @@ export function pageOf(testPage: TestPage): BandPage {
   return {
     state: testPage.store.getState(),
     startedUnder: (key) => testPage.auto.startedUnder(key),
-    pcaLive: testPage.auto.liveState("pca"),
+    live: liveStatesOf(testPage.auto),
     tab: testPage.tab,
     now: testPage.now,
     stoppingSince: testPage.stoppingSince,
