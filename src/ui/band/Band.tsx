@@ -1,7 +1,7 @@
 /**
  * The band at the top of popgen2.html (docs/specs/steps/popgen2-band.md):
  * the page's heading, "Popnei", at its left, and after it, on the same
- * line, what the page is doing, with its Stop or its link, as `bandOf`
+ * line, what the page is doing, with its Stop, its Stop all or its link, as `bandOf`
  * works it out; under it, the line of an error of the application, in the
  * place of the error bar of popgen.html, with its words and buttons
  * taken from it (shell/barSave.ts). It is the page's banner, a `<header>`
@@ -33,8 +33,8 @@
  * Its line is not a live region: its percentage and its clock change
  * every second. What starts and ends is said by the page's status
  * region; the band says there only what its own Stop of the one pass
- * says, as the box's does, and the Stop of the PCA is said by the page
- * at every `pause`. Its alert and its own status region are live
+ * says, as the box's does, and the Stop of an analysis and Stop all are
+ * said by the page at every `pause` and `pauseAll`. Its alert and its own status region are live
  * announcers, which React Aria keeps readable while a dialog is open.
  */
 import {
