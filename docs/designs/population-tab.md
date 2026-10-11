@@ -22,9 +22,9 @@ section.
   it reads. An analysis whose Run was never pressed never runs.
 - After a change that several live analyses read, a threshold for
   instance, they run one after the other, a quiet second after the last
-  change: first the one of the tab shown, then the others in the order
-  of the tabs, PCA, Populations, Distances. Each tab whose analysis waits
-  says which analysis runs before it.
+  change, in the order of the tabs: the PCA, then the diversity, later
+  the LD decay, then the distances. Each tab whose analysis waits says
+  which analysis runs before it.
 - While an analysis runs, what it reads is greyed, as for the PCA
   today. The diversity reads more than the PCA: also the column of the
   populations and the individuals file, which are greyed only while the
@@ -41,7 +41,7 @@ section.
 - The code that starts the PCA by itself already keeps one live state
   per analysis, but six places assume the PCA is the only one; the last
   section names them.
-- Three open points are left for the owner, at the end.
+- Two open points are left for the owner, at the end.
 
 ## The words used below
 
@@ -149,18 +149,24 @@ several gigabytes reads it twice, and a pass over such a file takes
 minutes (`docs/specs/analyses/diversity.md`, "How it runs"); that time
 has not been measured in a browser.
 
-**(a) The tab shown first, then the order of the tabs.** The analysis
-the user looks at is not kept behind one in a tab they do not see; a
-user in the Variants tab gets PCA, then the diversity, then later the LD
-decay and the distances. The order is read each time an analysis is to
-start, so a user who turns to the Populations tab while the PCA runs
-gets the diversity next. About 20 lines of code: the code that starts
-the analyses reads the tab shown.
+Only a change of what several analyses read needs an order, and on this
+page that is a change of the filters: a threshold or the FILTER box,
+which are in the Variants tab. An option of the diversity, or the column
+of the populations, gives the diversity alone a new key; an option of
+the PCA gives the PCA alone one.
 
-**(b) A fixed order, the order of the tabs.** The same code without the
-tab. A user who changes a threshold in the Populations tab, with the PCA
-of 9,381 individuals live, waits up to 4 minutes for a diversity of a
-quarter of a second.
+**(a) A fixed order, the order of the tabs**: the PCA, the diversity,
+the LD decay after it in the same tab, then the distances. The user can
+tell in advance which comes first. A user with the PCA of 9,381
+individuals live waits up to 4 minutes after a change of a threshold for
+a diversity of a quarter of a second on a smaller file.
+
+**(b) The tab shown first, then the order of the tabs.** Since the
+filters are changed with the Variants tab shown, this gives the same
+order as (a) after almost every change. It differs only when the user
+turns to another tab within the quiet second, or while one analysis runs
+and two others wait. It costs about 20 lines more: the code that starts
+the analyses reads the tab shown, and the order changes with it.
 
 **(c) The analyses of the other tabs calculated only when their tab is
 shown.** Less work and a shorter lock when the user looks at one tab,
@@ -168,9 +174,11 @@ but a user who moves a threshold in the Variants tab finds every
 analysis still to calculate when they turn to it, unlike the PCA today,
 which the owner asked these analyses to follow.
 
-**Recommended: (a).** (b) would do as well if the PCA were always short;
-it is not past about 2,000 individuals. (c) would win if users of large
-files complained of waiting for analyses they did not look at.
+**Recommended: (a).** It is simpler and predictable, and (b) differs
+from it only in cases a user rarely makes. (b) would win if users often
+turned to an analysis's tab during the quiet second to see it first; (c)
+if users of large files complained of waiting for analyses they did not
+look at.
 
 ### 2. What the lock covers
 
@@ -252,7 +260,13 @@ others off again, so they calculate with the new value. A user who
 needs longer, with a screen reader or a switch, presses "Stop all", and
 then Run in each tab they want back (WCAG 2.2, success criterion 2.2.1,
 Timing Adjustable). Cost: a second button in the band while more than
-one analysis is live, and the lock's sentence names it then.
+one analysis is live, and the lock's sentence names it then. The second
+after a Stop does not come by itself: the code that starts the analyses
+counts the quiet second only from a change of the project or of a
+change under way, and a Stop is neither, so without more the waiting
+analysis would start at once, as in (c). Under (a) a Stop starts the
+quiet second again, as a change does (point 7 of "For the session that
+builds it").
 
 **(b) Every Stop ends the live state of every analysis.** One press
 frees the filters for good; the user presses Run again in every tab
@@ -273,7 +287,9 @@ and more; under (a) the diversity waiting would grow beside that memory
 a second after the Stop. A diversity holds few blocks of the file at a
 time and its result is a few hundred bytes
 (`docs/specs/analyses/diversity.md`, "How it runs"), but its memory in
-the browser has not been measured; M1 below measures it.
+the browser has not been measured; M1 below measures it, and "How it
+will be tested" gives the value that would call for more than a second
+after a Stop of a large PCA.
 
 ### 6. What the band shows with several analyses
 
@@ -403,7 +419,9 @@ choice 1, and that Stop all ends it everywhere.
   `docs/architecture.md`, section 13, point 16), and a worker ended after
   its result gave a PCA's memory back within 3 s in both engines
   (`docs/specs/steps/popgen2-pca.md`, "Stop"). So the next analysis grows
-  beside at most 3 s of the previous one's memory. The exception is a
+  beside at most 3 s of the previous one's memory. The worker is not
+  started again after a diversity, so what a diversity's peak leaves
+  stays under the analysis after it; M1 measures it. The exception is a
   Stop in WebKit, whose 3.7 to 4.2 GB after a PCA stay 40 s and more,
   beside which a waiting analysis starts a second later (choice 5). The
   results kept are the one pass's, at most one PCA, 0.90 MB at 9,381
@@ -441,11 +459,13 @@ choice 1, and that Stop all ends it everywhere.
 
 - **Without a browser**, on the real store of the page: with the PCA
   never run, a live diversity starts by itself after a change; with
-  both live, a change of a threshold starts the analysis of the tab
-  shown first and the other after it, and a change of the column starts
-  the diversity alone; a Run while the PCA runs sends nothing until it
-  ends; a Stop of the running one starts the waiting one a quiet second
-  later, and a change within that second puts it off; Stop all ends
+  both live, a change of a threshold starts the PCA first and the
+  diversity after it, whatever tab is shown, and a change of the column
+  starts the diversity alone; a Run while the PCA runs sends nothing
+  until it ends; a Stop of the running one starts the waiting one a
+  quiet second later, not at once, and a change within that second puts
+  it off; after a Stop of the PCA, which leaves it not live and ready,
+  a live diversity still starts by itself after a change; Stop all ends
   every live state; the lock greys the column and the individuals file
   while the diversity runs and not while the PCA runs; the download
   waits while either runs; a failure of the PCA, popnei's refusal among
@@ -456,18 +476,44 @@ choice 1, and that Stop all ends it everywhere.
   with two analyses; the order after a change made in each tab.
 - **Three measurements.** M1: the time and the peak memory of a
   diversity started through the page, and the memory left 3 s after its
-  end, on the VCF of 9,381 individuals of the PCA's measurements and on
-  a VCF of 100,000 variants of 1,000 individuals, the 403 MB file of
-  popnei's measurement of the one pass, in Chromium 153 and WebKit 26.6.
-  M2: the memory WebKit keeps 40 s after a Stop in the middle of such a
-  diversity. M3: the gzipped size of the Populations tab's code. They
-  go into the plan's first work package, before its screens.
-- **What would send the design back**: M2 showing that a diversity
-  stopped in WebKit keeps more than a gigabyte, which would make the
-  start a second after a Stop (choice 5) pile memory as a PCA does, and
-  call for (b) there; or the owner, trying the page with the PCA and
-  the diversity live on a large file, finding the wait after each change
-  too long, which would call for 1 (c).
+  end, in Chromium 153 and WebKit 26.6, on the VCF of 80,692,954 bytes,
+  of about 1,000 individuals, or a larger one. The VCF of 9,381
+  individuals of the PCA's measurements holds 300 variants, so a
+  diversity of it ends in well under a second and tells nothing. M2: the
+  memory WebKit keeps 40 s after a Stop in the middle of such a
+  diversity. M3: the gzipped size of the Populations tab's code. M1 and
+  M2 are being taken now; their numbers go where the placeholders below
+  stand.
+
+**What would send each choice back:**
+
+- **Choices 1 (a) and 2 (a).** A diversity of the largest file that
+  takes more than about a minute: [M1/M2, being measured]. The column of
+  the populations and the individuals file would be greyed that long
+  whenever the diversity runs, and after each change of a threshold the
+  filters would stay greyed for the PCA and then the diversity, one
+  after the other. Then 2 (c) and 1 (c) would be weighed again with the
+  owner.
+- **Choice 5 (a).** The diversity waiting starts 1 s after a Stop, and
+  after a Stop of a large PCA, WebKit still holds the stopped PCA's 3.7
+  to 4.2 GB for 40 s and more. The most a tab of this page is known to
+  have held and survived is 4.33 GB, WebKit's PCoA of 9,381 individuals
+  (`docs/architecture.md`, section 11). So a peak of the diversity of a
+  few hundred megabytes, [M1/M2, being measured], would call for a hold
+  after a Stop of a large PCA: the waiting analyses not started until
+  WebKit has given that memory back, or until the user's next change
+  after it.
+- **The worker after a diversity.** The calculation worker is not
+  started again after a diversity, only after a large write, a PCA of
+  more than 700 individuals and every LD decay
+  (`src/worker/client.ts`, lines 9 to 16), and the memory of wasm never
+  shrinks. A large peak of the diversity, [M1/M2, being measured], would
+  stay in the worker under a PCA of 9,381 individuals that runs next,
+  3.0 to 3.4 GB of its own. That would call for a restart after a
+  diversity, as after an LD decay.
+- **The wait after each change.** The owner, trying the page with the
+  PCA and the diversity live on a large file, finding the wait after
+  each change too long, which would call for 1 (c).
 
 ## Open points
 
@@ -484,11 +530,6 @@ choice 1, and that Stop all ends it everywhere.
    stop of the worker the user did not press. Recommended: (a), unless
    M2 finds that a stopped diversity keeps little memory in WebKit and
    the owner prefers them always open.
-3. **The order after a change** (choice 1). (a) The tab shown first,
-   then the order of the tabs. (b) The order of the tabs alone, which
-   can keep a diversity of a quarter of a second behind a PCA of 4
-   minutes. (c) Only the tab shown calculated, the others when shown.
-   Recommended: (a).
 
 ## For the session that builds it
 
@@ -502,9 +543,15 @@ The owner can stop reading here. What follows names the code.
    in another group. With the groups `[summary]`, `[pca]`,
    `[diversity]`, a PCA never run, `ready` in the store, or refused by
    popnei, keeps the diversity from ever starting by itself. A live
-   analysis waits for the groups that are not live, the one pass, and
-   for no other live analysis; the order among the live ones is choice
-   1, given to `createAutoRuns` as a function of the tab shown.
+   analysis waits for the group `POPGEN2_CHAIN`, the one pass, and for
+   no group of an analysis that can be live, whatever that analysis's
+   state: not live, stopped by the user and `ready`, done, locked,
+   running or failed. A PCA stopped by the user is not live and is
+   `ready`, and under a rule that held back behind any analysis not
+   live, the diversity would never start after it. The order among the
+   live ones is choice 1, the order of the groups in
+   `POPGEN2_AUTO_GROUPS`; one runs at a time because `sync` starts
+   nothing while any analysis runs (line 590).
 2. `run` of `autoRuns` (lines 655 to 666) calls `runStart` at once,
    refused only during a write: a Run while another analysis runs would
    send its request into the client's queue. It makes the analysis live
@@ -531,6 +578,15 @@ The owner can stop reading here. What follows names the code.
    `LiveDeps` dispatches by analysis, and the diversity's crash for
    memory and failures only a reload mends end its live state as the
    PCA's do.
+7. A Stop restarts no quiet second. The timer of the second is started
+   again only by a change of the project and by the gate's count of the
+   changes under way (`autoRuns.ts`, lines 567 to 584); `pause` (lines
+   667 to 673) cancels the run and ends the live state, and leaves
+   `quiet` true, so the `sync` after the store's change starts the
+   waiting analysis at once, the failure of choice 5 (c). `pause` calls
+   `quietAgain` before it cancels the run, so that the waiting analyses
+   start a quiet second after the Stop; Stop all needs none, since it
+   leaves nothing live.
 
 **The diversity of the page.** `diversity` of
 `src/core/analyses/diversity.ts` (line 283) speaks of the steps of
