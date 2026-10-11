@@ -27,7 +27,11 @@ import type { PanelLive } from "../AnalysisPanel.tsx";
 import { passLock } from "../pca/passLock.ts";
 import { POPULATIONS_TAB_PANEL } from "./populationsTabPanel.ts";
 import { prefetchPopulationsResults } from "./PopulationsTabResults.tsx";
-import { DIVERSITY_STOPPED_LINE, diversityTabLock } from "./tabWords.ts";
+import {
+  DIVERSITY_FAILURE_ENDED_LINE,
+  DIVERSITY_STOPPED_LINE,
+  diversityTabLock,
+} from "./tabWords.ts";
 
 /** The id of the diversity among the analyses started by themselves. */
 const DIVERSITY = diversityOnPopgen2.id;
@@ -47,6 +51,8 @@ function panelLive(state: LiveState): PanelLive {
       return { kind: "off" };
     case "stopped":
       return { kind: "stopped", line: DIVERSITY_STOPPED_LINE };
+    case "endedByFailure":
+      return { kind: "stopped", line: DIVERSITY_FAILURE_ENDED_LINE };
     case "live":
       return { kind: "live", aboutToStartLine: null };
   }

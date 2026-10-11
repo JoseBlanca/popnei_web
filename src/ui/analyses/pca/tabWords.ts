@@ -232,3 +232,13 @@ export function liveStoppedText(
 export function stoppedLine(method: PcaMethod): string {
   return `Stopped: the ${methodName(method)} no longer starts by itself after a change. Run calculates it and starts it again after each change.`;
 }
+
+/** The line after a failure that ended the live state, under the
+    failure's words, until Run or another variants file: "The PCA no
+    longer starts by itself after a change, since its calculation
+    failed. Run calculates it and starts it again after each change.";
+    "the PCoA" under the PCoA. The user pressed no Stop, so it does not
+    say "Stopped". */
+export function failureEndedLine(method: PcaMethod): string {
+  return `The ${methodName(method)} no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.`;
+}

@@ -29,6 +29,7 @@ import {
   liveStoppedText,
   pcaEndAnnouncement,
   startedByItselfText,
+  failureEndedLine,
   stoppedLine,
   LOADING_RESULT,
   pcaTabResultFailed,
@@ -388,6 +389,15 @@ describe("NU4 D2 the words of the PCA started again by itself, by the method", (
     );
     expect(stoppedLine("pcoa")).toBe(
       "Stopped: the PCoA no longer starts by itself after a change. Run calculates it and starts it again after each change.",
+    );
+  });
+
+  test("the line beside Run after a failure that ended the live state, which no Stop did", () => {
+    expect(failureEndedLine("pca")).toBe(
+      "The PCA no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.",
+    );
+    expect(failureEndedLine("pcoa")).toBe(
+      "The PCoA no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.",
     );
   });
 });

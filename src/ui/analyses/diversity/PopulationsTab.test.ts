@@ -66,6 +66,9 @@ declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
 }
 
+const FAILURE_ENDED =
+  "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.";
+
 const STOPPED =
   "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.";
 
@@ -524,6 +527,20 @@ describe("the Populations tab's Stop and its options while an analysis runs", ()
     expect(pause).toHaveBeenCalledTimes(2);
     expect(pause).toHaveBeenLastCalledWith(diversityOnPopgen2.id);
     expect(pauseAll).not.toHaveBeenCalled();
+  });
+
+  test("a crash of the diversity ends its live state: its words, Run, and the line of a failure under them, not that of a Stop", async () => {
+    const page = await readyTab();
+    await press(button("Run"));
+    page.diversityRequests()[0]?.end({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "the worker crashed" },
+    });
+    await settle();
+    expect(page.autoRuns.isLive(diversityOnPopgen2.id)).toBe(false);
+    expect(button("Run")).not.toBeNull();
+    expect(lines()).toContain(FAILURE_ENDED);
+    expect(lines()).not.toContain(STOPPED);
   });
 
   test("while the diversity runs, its three options are greyed with the words of the lock", async () => {

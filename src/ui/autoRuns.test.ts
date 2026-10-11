@@ -1465,7 +1465,8 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
       await page.endPca({ kind: "failed", error });
       expect(page.pca().kind).toBe("error");
       expect(page.auto.isLive("pca")).toBe(false);
-      expect(page.auto.liveState("pca")).toEqual({ kind: "stopped" });
+      expect(page.auto.liveState("pca")).toEqual({ kind: "endedByFailure" });
+      expect(page.auto.stoppedByUser("pca")).toBe(false);
       expect(page.events).toEqual(["startedByItself pca"]);
       page.setMissing(0.06);
       await wait(5000);
@@ -1484,7 +1485,7 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
       kind: "failed",
       error: { kind: "workerFailed", message: "out of memory" },
     });
-    expect(page.auto.liveState("pca")).toEqual({ kind: "stopped" });
+    expect(page.auto.liveState("pca")).toEqual({ kind: "endedByFailure" });
     page.setMissing(0.05);
     await wait(5000);
     expect(page.pcaRequests()).toHaveLength(1);
@@ -2119,7 +2120,7 @@ describe("PT1 D2 several analyses calculated again by themselves", () => {
     });
   });
 
-  test("a crash of the PCA for memory, 2,264 individuals, ends its live state and not the diversity's, which then starts", async () => {
+  test("a crash of the PCA for memory, 2,264 individuals, ends its live state and not the diversity's, which then starts by itself only after the next change", async () => {
     const individuals = Array.from(
       { length: 2264 },
       (_, i) => `s${String(i).padStart(4, "0")}`,
@@ -2131,9 +2132,57 @@ describe("PT1 D2 several analyses calculated again by themselves", () => {
       kind: "failed",
       error: { kind: "workerFailed", message: "out of memory" },
     });
-    expect(page.auto.liveState("pca")).toEqual({ kind: "stopped" });
+    expect(page.auto.liveState("pca")).toEqual({ kind: "endedByFailure" });
     expect(page.auto.isLive(DIV)).toBe(true);
+    await wait(10_000);
+    expect(diversityRequests(page)).toHaveLength(1);
+    const closeDialog = page.gate.holdChange("download");
+    closeDialog();
+    await wait(5000);
+    expect(diversityRequests(page)).toHaveLength(1);
+    page.setMissing(0.04);
+    await wait(999);
+    expect(diversityRequests(page)).toHaveLength(1);
+    await wait(1);
     expect(diversityRequests(page)).toHaveLength(2);
+    expect(page.pcaRequests()).toHaveLength(2);
+  });
+
+  test.each([
+    { kind: "couldNotStart", reason: "no ready" },
+    { kind: "protocolMismatch" },
+    { kind: "defect", message: "a message that did not validate" },
+  ] as const)(
+    "a failure of the PCA, $kind, that ends its live state lets the waiting diversity start a quiet second later, not at once",
+    async (error) => {
+      const page = await bothLiveDone();
+      page.setMissing(0.05);
+      await wait(1000);
+      await page.endPca({ kind: "failed", error });
+      expect(page.auto.liveState("pca")).toEqual({ kind: "endedByFailure" });
+      expect(diversityRequests(page)).toHaveLength(1);
+      await wait(999);
+      expect(diversityRequests(page)).toHaveLength(1);
+      await wait(1);
+      expect(diversityRequests(page)).toHaveLength(2);
+    },
+  );
+
+  test("a crash of the diversity Run before the PCA about to start ends the diversity's live state, and the PCA waits for the next change", async () => {
+    const page = await bothLiveDone();
+    page.setMissing(0.05);
+    await wait(500);
+    expect(page.auto.run(DIV)).toBe("started");
+    await endDiversity(page, {
+      kind: "failed",
+      error: { kind: "workerFailed", message: "the worker crashed" },
+    });
+    expect(page.auto.liveState(DIV)).toEqual({ kind: "endedByFailure" });
+    await wait(10_000);
+    expect(page.pcaRequests()).toHaveLength(1);
+    page.setMissing(0.04);
+    await wait(1000);
+    expect(page.pcaRequests()).toHaveLength(2);
   });
 
   test.each([
@@ -2148,7 +2197,7 @@ describe("PT1 D2 several analyses calculated again by themselves", () => {
       setMinIndividuals(page, 10);
       await wait(1000);
       await endDiversity(page, { kind: "failed", error });
-      expect(page.auto.liveState(DIV)).toEqual({ kind: "stopped" });
+      expect(page.auto.liveState(DIV)).toEqual({ kind: "endedByFailure" });
       expect(page.auto.isLive("pca")).toBe(true);
       page.setMissing(0.05);
       await wait(1000);

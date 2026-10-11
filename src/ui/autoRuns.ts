@@ -112,6 +112,9 @@ export type LiveState =
   | { readonly kind: "off" }
   /** The user's Stop ended its live state, and no Run since. */
   | { readonly kind: "stopped" }
+  /** A failure the page's `endsLive` names ended its live state, and no
+      Run since. */
+  | { readonly kind: "endedByFailure" }
   /** Live: what its start by itself waits for while it is about to
       start, `null` while it is not; whether it runs; and the analysis
       its line of waiting names, `after`. */
@@ -142,9 +145,13 @@ export interface LiveDeps {
   /** The quiet second, `LIVE_QUIET_MS` on the page. */
   readonly quietMs: number;
   /** Whether the failure of the live analysis `id` in `state` ends its
-      live state, as a Stop does: on popgen2.html `popgen2EndsLive` of
-      popgen2Store.ts, which gives each analysis its own rule; false for
-      a state that is not an error. */
+      live state: on popgen2.html `popgen2EndsLive` of popgen2Store.ts,
+      which gives each analysis its own rule; false for a state that is
+      not an error. After such a failure the other live analyses about to
+      start wait the quiet second, as after a Stop; after a crash of the
+      worker, which may be for lack of memory that WebKit still holds,
+      they start by themselves only after the next change of the
+      project. */
   readonly endsLive: (
     state: AppState<unknown, unknown>,
     id: AnalysisId,
@@ -303,6 +310,15 @@ function isMendable(status: AnalysisStatus<unknown>): boolean {
     status.kind === "error" &&
     status.error.kind === "failed" &&
     status.error.error.kind !== "reopenFailed"
+  );
+}
+
+/** Whether `status` is a crash of the calculation worker. */
+function isCrash(status: AnalysisStatus<unknown>): boolean {
+  return (
+    status.kind === "error" &&
+    status.error.kind === "failed" &&
+    status.error.error.kind === "workerFailed"
   );
 }
 
@@ -489,6 +505,8 @@ export function createAutoRuns(deps: {
   const liveFor = new Map<AnalysisId, string>();
   /** The load for which the user's Stop ended each one's live state. */
   const pausedFor = new Map<AnalysisId, string>();
+  /** The load for which a failure ended each one's live state. */
+  const failedFor = new Map<AnalysisId, string>();
   /** The key each live analysis was last started under, kept while the
       store gives it that key. */
   const liveStarted = new Map<AnalysisId, Key>();
@@ -509,6 +527,9 @@ export function createAutoRuns(deps: {
   /** Whether the quiet second has run out since the last change of the
       project and the end of the last change under way. */
   let quiet = true;
+  /** Whether a crash of the worker ended a live state since the last
+      change of the project: no quiet second runs until that change. */
+  let heldAfterCrash = false;
   let quietTimer: ReturnType<typeof setTimeout> | null = null;
   let lastProject = store.getState().project;
 
@@ -533,13 +554,16 @@ export function createAutoRuns(deps: {
     return fileId !== null && liveFor.get(id) === fileId;
   }
 
-  /** Starts the quiet second again, when no change is under way; with
-      one under way, the second waits for its end. */
+  /** Starts the quiet second again, when no change is under way and no
+      crash holds the starts; with one under way, the second waits for
+      its end, and after a crash for the next change of the project. */
   function quietAgain(): void {
     if (quietTimer !== null) clearTimeout(quietTimer);
     quietTimer = null;
     quiet = false;
-    if (live === null || live.changes.underWay() > 0) return;
+    if (live === null || heldAfterCrash || live.changes.underWay() > 0) {
+      return;
+    }
     quietTimer = setTimeout(() => {
       quietTimer = null;
       quiet = true;
@@ -606,18 +630,29 @@ export function createAutoRuns(deps: {
     return waitOf(id)?.waits ?? null;
   }
 
-  /** Ends the live state of `id` for the load open, as the user's Stop
-      does. */
-  function endLive(id: AnalysisId): void {
+  /** Ends the live state of `id` for the load open, by the user's Stop
+      or by a failure. */
+  function endLive(id: AnalysisId, by: "user" | "failure"): void {
     liveFor.delete(id);
     waitedRun.delete(id);
+    pausedFor.delete(id);
+    failedFor.delete(id);
     const fileId = fileIdNow();
-    if (fileId !== null) pausedFor.set(id, fileId);
+    if (fileId !== null) {
+      (by === "user" ? pausedFor : failedFor).set(id, fileId);
+    }
   }
 
   function stoppedByUser(id: AnalysisId): boolean {
     const fileId = fileIdNow();
     return fileId !== null && pausedFor.get(id) === fileId && !isLive(id);
+  }
+
+  /** Whether a failure ended the live state of `id` for the load open,
+      and no Run since. */
+  function endedByFailure(id: AnalysisId): boolean {
+    const fileId = fileIdNow();
+    return fileId !== null && failedFor.get(id) === fileId && !isLive(id);
   }
 
   /** The live state of `id` now, a new object. */
@@ -631,7 +666,8 @@ export function createAutoRuns(deps: {
         after: wait?.after ?? null,
       };
     }
-    return stoppedByUser(id) ? { kind: "stopped" } : { kind: "off" };
+    if (stoppedByUser(id)) return { kind: "stopped" };
+    return endedByFailure(id) ? { kind: "endedByFailure" } : { kind: "off" };
   }
 
   function sameLiveState(a: LiveState, b: LiveState): boolean {
@@ -671,16 +707,22 @@ export function createAutoRuns(deps: {
         if (liveStarted.has(id) && liveStarted.get(id) !== key) {
           liveStarted.delete(id);
         }
-        // A failure that ends the live state, when it comes: as a Stop,
-        // with nothing said, since the failure's own words are.
+        // A failure that ends the live state, when it comes, with nothing
+        // said, since the failure's own words are. The others about to
+        // start wait: after a crash, which may be for lack of memory
+        // that WebKit still holds, until the next change of the project;
+        // after any other failure, the quiet second, as after a Stop.
         const wasError = lastKinds.get(id) === "error";
         lastKinds.set(id, status.kind);
         if (!wasError && isLive(id) && live.endsLive(state, id)) {
-          endLive(id);
+          endLive(id, "failure");
+          if (isCrash(status)) heldAfterCrash = true;
+          quietAgain();
         }
       }
       if (state.project !== lastProject) {
         lastProject = state.project;
+        heldAfterCrash = false;
         quietAgain();
       }
       tellLiveChanges();
@@ -791,6 +833,7 @@ export function createAutoRuns(deps: {
       }
       liveFor.set(id, fileId);
       pausedFor.delete(id);
+      failedFor.delete(id);
       waitedRun.delete(id);
       // The calculation worker runs one request at a time: behind one
       // that runs, a Run waits, and `sync` starts it after
@@ -822,7 +865,7 @@ export function createAutoRuns(deps: {
     },
     pause: (id) => {
       liveDefect(id);
-      endLive(id);
+      endLive(id, "user");
       // The others live start a quiet second after the Stop, not at once
       // after the store's change that the cancel makes
       // (docs/designs/population-tab.md, choice 5).
@@ -833,7 +876,7 @@ export function createAutoRuns(deps: {
     },
     pauseAll: () => {
       const ended = liveOrder.filter((id) => isLive(id));
-      for (const id of ended) endLive(id);
+      for (const id of ended) endLive(id, "user");
       const running = runningId();
       if (running !== null && ended.includes(running)) {
         store.cancelRun(running);

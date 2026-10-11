@@ -47,6 +47,12 @@ export const DIVERSITY_TAB_NAME = "the diversity";
 export const DIVERSITY_STOPPED_LINE =
   "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.";
 
+/** The line after a failure that ended the live state, under the
+    failure's words, until Run or another variants file, in the place of
+    the bar; the user pressed no Stop. */
+export const DIVERSITY_FAILURE_ENDED_LINE =
+  "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.";
+
 /** The populations of `p` a run will take with the individuals kept
     `kept`: with their list when it is known, and before the thresholds,
     by the lists to keep and to remove alone, while a threshold waits for

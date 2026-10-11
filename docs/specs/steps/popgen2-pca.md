@@ -92,6 +92,10 @@ analysis live and nothing waits, so its next start by itself is told as
 any other. "refused" is kept for a Run during a write, which makes
 nothing live. A Run that waits asks for the key its analysis is ready
 under, also one it was stopped under, which it otherwise never started.
+A failure that ends a live state has its own line in the tab, not the
+line after a Stop, and lets the others about to start begin a quiet
+second later, or, after a crash of the worker, only after the next
+change ("A failure that ends a live state").
 
 The PCA tab is the panel of the old page, `popgen.html`, which is built
 and which the owner approved on 28 September 2026: its screen spec is
@@ -303,8 +307,12 @@ a PCA of 2,264 individuals or more (`crashText` of
 `src/core/analyses/pca.ts`), and at the failures only a reload mends:
 the calculations that could not start, the page out of date, and an
 error of the application's own. The tab then shows the failure's words
-and, under them, the line after a Stop ("Stop", below), and nothing
-starts until Run. The reasons: a worker ended in the middle of a
+and, under them, the line of a failure that ended the live state, "The
+PCA no longer starts by itself after a change, since its calculation
+failed. Run calculates it and starts it again after each change.", and
+not the line after a Stop, which the user did not press; nothing starts
+until Run (since 11 October 2026, from the review of work package 1 of
+`docs/plans/population-tab.md`; until then the line after a Stop). The reasons: a worker ended in the middle of a
 calculation keeps its memory in WebKit for 40 s and more
 (`docs/designs/no-undo.md`), and a PCA tried again a second after each
 change of a user who follows the crash's advice, to keep fewer
@@ -644,6 +652,19 @@ calculate with the new value (the design, choice 5, the owner's answer
 1a of 11 October 2026). Stop recalculating in a tab ends that
 analysis's live state alone too.
 
+**A failure that ends a live state**, by the rule of its analysis
+(below, `endsLive`), lets the other live analyses about to start begin
+a quiet second after it, as a Stop does, but for a crash of the
+calculation worker: after a crash, which may be one for lack of
+memory, which WebKit may still hold in the ended worker while the tab
+was at its limit, the others start by themselves only after the next
+change of the filters or the options, a quiet second after it, and not
+in a new worker at once. A Run starts its own analysis meanwhile. (The
+session's decision of 11 October 2026, from the review of work package
+1 of `docs/plans/population-tab.md`; until then the others started at
+once.) The tab of the analysis whose live state ended shows the line of
+a failure that ended it, as the PCA's ("Live", above).
+
 **Stop all**, in the band, whenever two or more analyses are live and
 one of them runs, waits or is about to start, stops the one running and
 ends the live state of every live analysis at once, so that nothing
@@ -720,7 +741,10 @@ lists the live ones in that order, the one list the page reads. In
   the PCA's; the diversity's crash has no words of the memory to tell
   one from another, so every crash ends it, and a crash is not tried
   again at each change, with the memory a stopped worker leaves in
-  WebKit.
+  WebKit. A failure that ends the live state starts the quiet second
+  again, `quietAgain`, for the others about to start; a crash of the
+  worker holds them instead until the next change of the project, which
+  starts the second.
 - The interface changes so:
 
 ```ts
@@ -734,6 +758,8 @@ export type AboutToStart = "changes" | "download" | "behind";
 export type LiveState =
   | { readonly kind: "off" }
   | { readonly kind: "stopped" }
+  /** A failure `endsLive` names ended it, and no Run since. */
+  | { readonly kind: "endedByFailure" }
   | {
       readonly kind: "live";
       readonly aboutToStart: AboutToStart | null;
@@ -1273,7 +1299,7 @@ greyed or shows its line of not built yet.
 | running | Stop, the bar and the clock, and the line under them; the options and the thresholds and FILTER box of the Variants tab greyed, with "Stop the PCA in the PCA tab to change the filters; then press Run there to calculate it again." (above, "While a PCA runs"); the same whether Run or a change started it | Stop; change the individuals file, its column of the populations and the colour of the points; turn to another tab, where the PCA goes on; open another variants file, which stops it |
 | done | the result, its warnings and notes, the downloads; "Loading the result…" in its place while its code downloads, or the words of its code that could not be downloaded, with "Try again"; above them, while the PCA is live, "Stop recalculating", with no line under it, and after a Stop the line of a Stop, with no button | colour, turn, highlight, sort, download; change the options; Try again; Stop recalculating |
 | results removed | not a state of its own on this page: a change that takes the result off the screen gives about to start while the PCA is live, and ready, with Run, while it is not (before its first Run is impossible, so only after a Stop); the page makes no notice, as the owner decided on 8 October 2026, and keeps no result to bring back, since 10 October 2026 | as in about to start, or as in ready |
-| error | what happened and what to do, the old panel's words with this page's names, below; while the failure leaves the PCA live, "Stop recalculating" under them, with Run before it after a crash not of the memory, and after a failure that ends it, the line of a Stop | Run again after a failure that is not popnei's refusal, once the PCA is not live; change the options or the thresholds after a refusal; open the variants file again after it could no longer be read |
+| error | what happened and what to do, the old panel's words with this page's names, below; while the failure leaves the PCA live, "Stop recalculating" under them, with Run before it after a crash not of the memory, and after a failure that ends it, Run with the line of a failure that ended the live state under it | Run again after a failure that is not popnei's refusal, once the PCA is not live; change the options or the thresholds after a refusal; open the variants file again after it could no longer be read |
 
 A change of the thresholds, of the FILTER box or of an option of the
 PCA that changes what the PCA reads, its key, takes a result off the
@@ -1363,6 +1389,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | under the button, in the place of the bar, during the quiet second | "The PCA starts again in a moment, once the filters and its options stop changing."; "The PCoA starts again in a moment, once the filters and its options stop changing."; while the dialog of the download is open, "The PCA starts again when the download is written or closed."; "The PCoA starts again when the download is written or closed." |
 | the button while the PCA is live and no PCA runs | "Stop recalculating" |
 | under the button, in the place of the bar, after a Stop, until Run or another variants file | "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change."; "Stopped: the PCoA …" |
+| under the words of a failure that ended the live state, until Run or another variants file | "The PCA no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change."; "The PCoA …" |
 | the status region, a PCA started by itself | "Calculating the PCA again. To change the filters, stop it in the PCA tab."; "Calculating the PCoA again. To change the filters, stop it in the PCA tab." |
 | the status region, a Stop of the PCA, in the tab or in the band | "PCA stopped. Press Run in the PCA tab to calculate it again."; "PCoA stopped. …"; with no Run to press, Run disabled or the result shown, "PCA stopped."; "PCoA stopped." |
 | the download of the filtered variants while a PCA runs | "Waits for the PCA to end; or stop it in the PCA tab." |

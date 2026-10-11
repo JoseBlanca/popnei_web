@@ -20,6 +20,12 @@ the one population and what "None" chosen does were settled by the session
 on 11 October 2026 from the owner's earlier decisions (below, "The
 populations it runs on").
 
+Corrected on 11 October 2026 after the review of work package 1 of
+the plan: a failure that ends the diversity's live state has its own
+line, which does not say "Stopped", since the user pressed no Stop
+("Its words"); and `autoRuns.run` answers "kept" when the store starts
+nothing for the diversity ("Accessibility" and "How it is checked").
+
 The tab is the diversity panel of the old page, `popgen.html`, which is
 built and which the owner tried and accepted on 1 October 2026: its
 screen spec is the second half of `docs/specs/analyses/diversity.md`,
@@ -317,7 +323,7 @@ population that would give the same name gets "_2" after it, then "_3".
 | running | Stop, the bar and the clock of the old panel, "Calculating · pass 1 of 2 · 17% · 0:12"; the options greyed; the filters and the box Individuals greyed, with their reasons | Stop; colour the PCA; turn to another tab, where it goes on; open another variants file, which stops it |
 | done | the warnings, the table and its "Download…", the line of the versions, the spectrum; "Loading the result…" in its place while its code downloads, or its words with "Try again"; above them, while live, Stop recalculating, and after a Stop the line of a Stop | download; change the options; Stop recalculating |
 | results removed | not a state of this page: a change that takes the result off the screen gives about to start while the diversity is live, and ready while it is not, as in the PCA tab | as in about to start, or ready |
-| error | the words of the failure, the old panel's with this page's names (`diversity.md`, "On popgen2.html"); while the failure leaves it live, popnei's refusal, Stop recalculating under them; after a failure that ends it, every crash of the worker and those only a reload mends, Run with the line of a Stop under it, or the line alone when Run is not offered (`popgen2-pca.md`, "For the implementer", `endsLive`) | Run again after a failure that is not popnei's refusal; change the options or the thresholds after a refusal; open the variants file again after it could no longer be read |
+| error | the words of the failure, the old panel's with this page's names (`diversity.md`, "On popgen2.html"); while the failure leaves it live, popnei's refusal, Stop recalculating under them; after a failure that ends it, every crash of the worker and those only a reload mends, Run with the line of a failure that ended the live state under it, or the line alone when Run is not offered (`popgen2-pca.md`, "For the implementer", `endsLive`) | Run again after a failure that is not popnei's refusal; change the options or the thresholds after a refusal; open the variants file again after it could no longer be read |
 
 About to start and waiting are two rows more than the seven states
 every screen spec has, as about to start is in the PCA tab; waiting is
@@ -361,7 +367,7 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 | the heading of the spectrum | "Site frequency spectrum" |
 | the line of the populations | the old panel's, with "the Variants tab"; "7 unclassified individuals kept are left out, as the box Individuals says."; "1 population, Unclassified: 200 individuals. No individual is assigned to a population, so the diversity is of every individual kept as one population." |
 | the locks | the table of "Run and Stop" |
-| the line in the place of the bar | the table of "Run and Stop"; after a Stop, "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change." |
+| the line in the place of the bar | the table of "Run and Stop"; after a Stop, "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change."; after a failure that ended the live state, "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change." |
 | the button while live and not running | "Stop recalculating" |
 | the filters, the options of the diversity, while it runs, as tooltip and description | "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again." |
 | the column, the zone, Remove and the lists of the reader, while it runs | "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again." |

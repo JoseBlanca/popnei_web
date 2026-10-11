@@ -34,7 +34,12 @@ import type { PanelLive } from "../AnalysisPanel.tsx";
 import { passLock } from "./passLock.ts";
 import { pcaTabPanel } from "./pcaTabPanel.ts";
 import { prefetchPcaResults } from "./PcaTabResults.tsx";
-import { aboutToStartLine, pcaTabLock, stoppedLine } from "./tabWords.ts";
+import {
+  aboutToStartLine,
+  failureEndedLine,
+  pcaTabLock,
+  stoppedLine,
+} from "./tabWords.ts";
 
 /** The id of the PCA among the analyses started by themselves. */
 const PCA = pcaOnPopgen2.id;
@@ -55,6 +60,8 @@ function panelLive(state: LiveState, method: PcaMethod): PanelLive {
       return { kind: "off" };
     case "stopped":
       return { kind: "stopped", line: stoppedLine(method) };
+    case "endedByFailure":
+      return { kind: "stopped", line: failureEndedLine(method) };
     case "live":
       return {
         kind: "live",

@@ -55,6 +55,9 @@ const ABOUT =
   "The PCA starts again in a moment, once the filters and its options stop changing.";
 const ABOUT_DIALOG =
   "The PCA starts again when the download is written or closed.";
+const FAILURE_ENDED =
+  "The PCA no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.";
+
 const STOPPED =
   "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change.";
 /** The line under Stop recalculating with the result shown until 11
@@ -487,6 +490,23 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
     expect(button("Stop recalculating")).toBeNull();
     expect(document.activeElement).toBe(button("Run"));
     expect(lineShown(STOPPED)).toBe(true);
+  });
+
+  test("a failure only a reload mends ends the live state: its words, Run, and the line of a failure under them, not that of a Stop", async () => {
+    const page = await drawTab();
+    await press(button("Run"));
+    page
+      .pcaRequests()
+      .at(-1)
+      ?.end({
+        kind: "failed",
+        error: { kind: "defect", message: "a message that did not validate" },
+      });
+    await settle();
+    expect(page.autoRuns.isLive("pca")).toBe(false);
+    expect(button("Run")).not.toBeNull();
+    expect(lineShown(FAILURE_ENDED)).toBe(true);
+    expect(lineShown(STOPPED)).toBe(false);
   });
 
   test("Stop during a run started by itself: Run with the line of a Stop", async () => {
