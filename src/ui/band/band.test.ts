@@ -118,7 +118,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
   test("the PCA running, by Run, with its clock at 59 and 61 seconds and the Stop of the PCA; the PCoA so named", async () => {
     const testPage = page(SUMMARY);
     await testPage.endPass();
-    expect(testPage.auto.run("pca")).toBe(true);
+    expect(testPage.auto.run("pca")).toBe("started");
     await flush();
 
     const band = testPage.band();
@@ -141,7 +141,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
 
     testPage.auto.pause("pca");
     testPage.setPca({ method: "pcoa" });
-    expect(testPage.auto.run("pca")).toBe(true);
+    expect(testPage.auto.run("pca")).toBe("started");
     await flush();
     expect(words(testPage.band(), 61)).toBe("PCoA running · 1:01");
     expect(stopOf(testPage.band().line)?.name).toBe("Stop the PCoA");
@@ -304,6 +304,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       kind: "live",
       aboutToStart: null,
       running: false,
+      after: null,
     });
 
     expect(testPage.band().line).toEqual({ kind: "nothing" });
@@ -396,7 +397,12 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       bandOf(
         {
           ...pageOf(linked),
-          pcaLive: { kind: "live", aboutToStart: "changes", running: false },
+          pcaLive: {
+            kind: "live",
+            aboutToStart: "changes",
+            running: false,
+            after: null,
+          },
         },
         linked.defects.getState(),
       ).line.kind,

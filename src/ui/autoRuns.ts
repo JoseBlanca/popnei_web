@@ -51,6 +51,20 @@
  * too; so does a failure the page's `endsLive` names, a crash of the
  * memory or one only a reload mends, while every other failure leaves
  * it live, for the next change of its key to try again.
+ *
+ * Several analyses can be live at once, each a group of its own, the PCA
+ * and then the diversity on popgen2.html, each live from its own Run
+ * (docs/specs/steps/popgen2-pca.md, "Several analyses calculated again by
+ * themselves"; docs/designs/population-tab.md). One quiet second serves
+ * them all: when it runs out, the first live analysis about to start
+ * starts, and each next one when the one before it ends, with no second
+ * more. A live analysis waits for the one pass and for a calculation
+ * running, and for nothing else: whatever the state of another live
+ * analysis, not live, stopped, locked, done or failed, it does not hold
+ * it back. A Run while a calculation runs makes its analysis live and
+ * waiting, and sends nothing until that calculation ends; a Stop of one
+ * starts the quiet second again, so that the others start a second
+ * after it; Stop all, `pauseAll`, ends every live state.
  */
 
 import type { Key } from "../core/keys.ts";
@@ -81,10 +95,13 @@ export type ChangesUnderWay = Pick<
 >;
 
 /** What the start by itself of a live analysis about to start waits
-    for: "download", the dialog of the download of the filtered variants
+    for: "behind", another calculation that runs, whether the quiet
+    second has run out or not, which wins over the two others;
+    "download", the dialog of the download of the filtered variants
     open, or the write it started running; "changes", the quiet second
-    after the last change, or a change under way of a control. */
-export type AboutToStart = "changes" | "download";
+    after the last change, or a change under way of a control, nothing
+    running. */
+export type AboutToStart = "changes" | "download" | "behind";
 
 /** The live state of an analysis that starts again by itself, for the
     load of the variants file open, as the page draws it. */
@@ -95,11 +112,17 @@ export type LiveState =
   /** The user's Stop ended its live state, and no Run since. */
   | { readonly kind: "stopped" }
   /** Live: what its start by itself waits for while it is about to
-      start, `null` while it is not; and whether it runs. */
+      start, `null` while it is not; whether it runs; and the analysis
+      its line of waiting names, `after`. */
   | {
       readonly kind: "live";
       readonly aboutToStart: AboutToStart | null;
       readonly running: boolean;
+      /** While it is about to start: under "behind", the live analysis
+          that runs; under "changes" or "download", the live analysis
+          about to start before it in the order; `null` when none, and
+          while it is not about to start. */
+      readonly after: AnalysisId | null;
     };
 
 /** The analyses a page starts again by itself once the user's Run made
@@ -117,23 +140,40 @@ export interface LiveDeps {
   /** The quiet second, `LIVE_QUIET_MS` on the page. */
   readonly quietMs: number;
   /** Whether the failure of the live analysis `id` in `state` ends its
-      live state, as a Stop does: `failureEndsLive` of
-      analyses/pca/liveEnd.ts on the page, a crash of the memory or a
-      failure only a reload mends; false for a state that is not an
-      error. */
+      live state, as a Stop does: on popgen2.html `popgen2EndsLive` of
+      popgen2Store.ts, which gives each analysis its own rule; false for
+      a state that is not an error. */
   readonly endsLive: (
     state: AppState<unknown, unknown>,
     id: AnalysisId,
   ) => boolean;
 }
 
-/** What the page is told of the live analyses beyond the store: one
-    started again by itself, which the status region says, and a Stop of
-    one, `pause`, wherever the user pressed it. */
-export interface LiveEvent {
-  readonly kind: "startedByItself" | "paused";
-  readonly id: AnalysisId;
-}
+/** What the page is told of the live analyses beyond the store, which
+    the status region says. */
+export type LiveEvent =
+  /** `id` started by itself; `round`, the live analyses about to start
+      at this start, in their order, `id` first, at the first start of a
+      round, the starts by themselves between two runs-out of the quiet
+      second; empty at a later start of the same round. */
+  | {
+      readonly kind: "startedByItself";
+      readonly id: AnalysisId;
+      readonly round: readonly AnalysisId[];
+    }
+  /** A Run that waited behind another calculation, at its start. */
+  | { readonly kind: "startedAfterWaiting"; readonly id: AnalysisId }
+  /** The user's Stop of `id`, `pause`, in its tab or in the band. */
+  | { readonly kind: "paused"; readonly id: AnalysisId }
+  /** Stop all, `pauseAll`: `ids`, the analyses whose live state it
+      ended, in their order. */
+  | { readonly kind: "pausedAll"; readonly ids: readonly AnalysisId[] };
+
+/** The answer to the user's Run of a live analysis: "started" at once;
+    "waiting", made live behind a calculation that runs, which it starts
+    after; "refused", while a write of the filtered variants runs, with
+    nothing made live, or when the store started nothing. */
+export type RunAnswer = "started" | "waiting" | "refused";
 
 /** The analyses a page starts by itself. */
 export interface AutoRuns {
@@ -179,25 +219,37 @@ export interface AutoRuns {
   readonly getVersion: () => number;
   /** The user's Run of the live analysis `id`: makes it live for the
       load of the variants file open and starts it at once, through the
-      gate. Returns whether it started it. Refused, false and nothing made
-      live, while a write of the filtered variants runs, since the
-      calculation worker runs one request at a time and the PCA would wait
-      behind the write shown as running (docs/specs/steps/
-      popgen2-download.md, "When the PCA starts by itself"). A defect for
-      an analysis that is not live. */
-  run(id: AnalysisId): boolean;
+      gate, "started", whatever else is about to start, which then waits
+      after it. While another calculation runs, it makes it live and
+      sends nothing, "waiting": it starts when that calculation ends, in
+      the order of the live analyses, with no quiet second more, and is
+      told then as `startedAfterWaiting`. Refused, "refused" and nothing
+      made live, while a write of the filtered variants runs, since the
+      calculation worker runs one request at a time and the analysis
+      would wait behind the write shown as running (docs/specs/steps/
+      popgen2-download.md, "When the PCA starts by itself"); "refused"
+      too when the store starts nothing for it, locked or done, which
+      leaves it live, as before. A defect for an analysis that is not
+      live. */
+  run(id: AnalysisId): RunAnswer;
   /** The user's Stop of the live analysis `id`, in its tab or in the
-      band: cancels its run, if one is in flight, and ends its live
-      state, so that nothing starts it again until Run. */
+      band: ends its live state, so that nothing starts it again until
+      Run, starts the quiet second again, so that the other live
+      analyses start a second after it and not at once, and then cancels
+      its run, if one is in flight. */
   pause(id: AnalysisId): void;
+  /** Stop all: ends the live state of every live analysis, and cancels
+      the run of the one running, if one is live; no quiet second, since
+      nothing is left live. */
+  pauseAll(): void;
   /** Whether `id` is live for the load of the variants file open. */
   isLive(id: AnalysisId): boolean;
   /** What `id` waits for while it is about to start by itself, live,
-      ready under a key it was not started under, and every analysis
-      before it done or locked: during the quiet second and for as long
-      as a change under way, or a write, holds it; "download" while the
-      dialog of the download is open or its write runs, "changes"
-      otherwise. `null` while it is not about to start. */
+      ready under a key it was not started under, and the one pass done:
+      "behind" while another calculation runs; during the quiet second and
+      for as long as a change under way, or a write, holds it, "download"
+      while the dialog of the download is open or its write runs,
+      "changes" otherwise. `null` while it is not about to start. */
   aboutToStart(id: AnalysisId): AboutToStart | null;
   /** The live state of `id` now, the same object for as long as it does
       not change, so that React's `useSyncExternalStore` reads it with
@@ -206,8 +258,9 @@ export interface AutoRuns {
   /** Whether the user's Stop ended the live state of `id` for the load
       open, and no Run since. */
   stoppedByUser(id: AnalysisId): boolean;
-  /** Calls `listener` at each start by itself of a live analysis, and at
-      each Stop of one; returns the function that stops it. */
+  /** Calls `listener` at each start by itself of a live analysis, at
+      the start of a Run that waited, at each Stop of one and at Stop
+      all; returns the function that stops it. */
   readonly onLive: (listener: (event: LiveEvent) => void) => () => void;
 }
 
@@ -335,10 +388,17 @@ export function createAutoRuns(deps: {
 
   /** The first analysis before `id`, at `index` of `ids`, that holds it
       back: one neither done nor locked, but for a mendable error of its
-      own group; `null` when none does. */
+      own group; `null` when none does. A live analysis is held back only
+      by the groups before it that hold no live analysis, the one pass,
+      and by no group of an analysis that can be live, whatever that
+      analysis's state (docs/designs/population-tab.md, "For the session
+      that builds it", point 1). */
   function holderOf(id: AnalysisId, index: number): AnalysisId | null {
     const own = groupOf.get(id);
     for (const before of ids.slice(0, index)) {
+      if (liveIds.has(id) && liveGroups.has(groupOf.get(before) ?? -1)) {
+        continue;
+      }
       const status = statusOf(before);
       if (isPassedOver(status)) continue;
       if (isMendable(status) && groupOf.get(before) === own) continue;
@@ -404,13 +464,19 @@ export function createAutoRuns(deps: {
 
   /** The live analyses, by id, and their state of their own. */
   const liveIds = new Set<AnalysisId>(live?.analyses ?? []);
+  /** The places in `groups` of the groups that hold a live analysis. */
+  const liveGroups = new Set<number>();
   for (const id of liveIds) {
-    if (!groupOf.has(id)) {
+    const place = groupOf.get(id);
+    if (place === undefined) {
       throw new Error(
         `popnei_web defect: the live analysis ${id} is in no group of the analyses started by themselves.`,
       );
     }
+    liveGroups.add(place);
   }
+  /** The live analyses in the order they start, that of the groups. */
+  const liveOrder = ids.filter((id) => liveIds.has(id));
   /** The load of the variants file each live analysis is live for. */
   const liveFor = new Map<AnalysisId, string>();
   /** The load for which the user's Stop ended each one's live state. */
@@ -426,6 +492,12 @@ export function createAutoRuns(deps: {
       one last given by `liveState`, by analysis. */
   const toldLive = new Map<AnalysisId, LiveState>();
   const givenLive = new Map<AnalysisId, LiveState>();
+  /** The live analyses a Run made live behind a calculation that ran,
+      not started since, whose start is told as `startedAfterWaiting`. */
+  const waitedRun = new Set<AnalysisId>();
+  /** Whether the first start by itself since the quiet second last ran
+      out has been told with its round. */
+  let roundTold = false;
   /** Whether the quiet second has run out since the last change of the
       project and the end of the last change under way. */
   let quiet = true;
@@ -463,6 +535,9 @@ export function createAutoRuns(deps: {
     quietTimer = setTimeout(() => {
       quietTimer = null;
       quiet = true;
+      // A new round: its first start by itself tells the analyses
+      // about to start.
+      roundTold = false;
       sync();
     }, live.quietMs);
   }
@@ -485,21 +560,49 @@ export function createAutoRuns(deps: {
     return holderOf(id, index) === null ? key : null;
   }
 
+  /** Whether the live analysis `id` is about to start: live, ready
+      under a key it was not started under, the one pass done. */
+  function isAboutToStart(id: AnalysisId): boolean {
+    return live !== null && liveKey(id, ids.indexOf(id), statusOf(id)) !== null;
+  }
+
+  /** The analysis of the groups that runs, `null` when none does. */
+  function runningId(): AnalysisId | null {
+    return ids.find((id) => statusOf(id).kind === "running") ?? null;
+  }
+
+  /** What the start of `id` about to start waits for, and the analysis
+      its line names; `null` when it is not about to start. */
+  function waitOf(id: AnalysisId): {
+    readonly waits: AboutToStart;
+    readonly after: AnalysisId | null;
+  } | null {
+    if (live === null || !isAboutToStart(id)) return null;
+    const running = runningId();
+    if (running !== null) {
+      return { waits: "behind", after: liveIds.has(running) ? running : null };
+    }
+    const waits =
+      live.changes.heldBy("download") || writeRunning()
+        ? "download"
+        : "changes";
+    const before = liveOrder
+      .slice(0, liveOrder.indexOf(id))
+      .find((other) => isAboutToStart(other));
+    return { waits, after: before ?? null };
+  }
+
   /** What the start of `id` about to start waits for; `null` when it is
       not about to start. */
   function aboutToStart(id: AnalysisId): AboutToStart | null {
-    if (live === null || liveKey(id, ids.indexOf(id), statusOf(id)) === null) {
-      return null;
-    }
-    return live.changes.heldBy("download") || writeRunning()
-      ? "download"
-      : "changes";
+    return waitOf(id)?.waits ?? null;
   }
 
   /** Ends the live state of `id` for the load open, as the user's Stop
       does. */
   function endLive(id: AnalysisId): void {
     liveFor.delete(id);
+    waitedRun.delete(id);
     const fileId = fileIdNow();
     if (fileId !== null) pausedFor.set(id, fileId);
   }
@@ -512,10 +615,12 @@ export function createAutoRuns(deps: {
   /** The live state of `id` now, a new object. */
   function liveStateNow(id: AnalysisId): LiveState {
     if (isLive(id)) {
+      const wait = waitOf(id);
       return {
         kind: "live",
-        aboutToStart: aboutToStart(id),
+        aboutToStart: wait?.waits ?? null,
         running: statusOf(id).kind === "running",
+        after: wait?.after ?? null,
       };
     }
     return stoppedByUser(id) ? { kind: "stopped" } : { kind: "off" };
@@ -526,7 +631,9 @@ export function createAutoRuns(deps: {
       a.kind === b.kind &&
       (a.kind !== "live" ||
         b.kind !== "live" ||
-        (a.aboutToStart === b.aboutToStart && a.running === b.running))
+        (a.aboutToStart === b.aboutToStart &&
+          a.running === b.running &&
+          a.after === b.after))
     );
   }
 
@@ -599,12 +706,28 @@ export function createAutoRuns(deps: {
           live.changes.underWay() === 0 &&
           !writeRunning()
         ) {
+          // The round, read before the start, while `id` is still about
+          // to start: those about to start after it, in their order.
+          const round = liveOrder
+            .slice(liveOrder.indexOf(id))
+            .filter((other) => other === id || isAboutToStart(other));
           liveStarted.set(id, key);
+          const waited = waitedRun.delete(id);
           // Told after the start, so that no listener reads the moment
           // between, neither about to start nor running.
           const sent = start(id);
           changed();
-          if (sent !== null) tellLive({ kind: "startedByItself", id });
+          if (sent === null) return;
+          if (waited) {
+            tellLive({ kind: "startedAfterWaiting", id });
+          } else {
+            const told = roundTold ? [] : round;
+            // A Run that waited and is named in the round is said there,
+            // and not again at its start.
+            for (const other of told) waitedRun.delete(other);
+            roundTold = true;
+            tellLive({ kind: "startedByItself", id, round: told });
+          }
           return;
         }
         continue;
@@ -655,21 +778,47 @@ export function createAutoRuns(deps: {
     run: (id) => {
       liveDefect(id);
       const fileId = fileIdNow();
-      if (live === null || fileId === null || writeRunning()) return false;
+      if (live === null || fileId === null || writeRunning()) {
+        return "refused";
+      }
       liveFor.set(id, fileId);
       pausedFor.delete(id);
+      // The calculation worker runs one request at a time: behind one
+      // that runs, a Run waits, and `sync` starts it after
+      // (docs/designs/population-tab.md, choice 3).
+      if (anyRunning()) {
+        waitedRun.add(id);
+        changed();
+        sync();
+        return "waiting";
+      }
+      waitedRun.delete(id);
       const sent = live.runStart(id);
       const status = statusOf(id);
       if (status.kind === "running") liveStarted.set(id, status.key);
       changed();
-      return sent !== null;
+      return sent === null ? "refused" : "started";
     },
     pause: (id) => {
       liveDefect(id);
       endLive(id);
+      // The others live start a quiet second after the Stop, not at once
+      // after the store's change that the cancel makes
+      // (docs/designs/population-tab.md, choice 5).
+      quietAgain();
       if (statusOf(id).kind === "running") store.cancelRun(id);
       changed();
       tellLive({ kind: "paused", id });
+    },
+    pauseAll: () => {
+      const ended = liveOrder.filter((id) => isLive(id));
+      for (const id of ended) endLive(id);
+      const running = runningId();
+      if (running !== null && ended.includes(running)) {
+        store.cancelRun(running);
+      }
+      changed();
+      if (ended.length > 0) tellLive({ kind: "pausedAll", ids: ended });
     },
     isLive: (id) => {
       liveDefect(id);

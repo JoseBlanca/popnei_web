@@ -18,6 +18,7 @@
  * Apart from the entry, so that a test in node makes the store with what
  * the page gives it.
  */
+import { diversityOnPopgen2 } from "../core/analyses/diversity.ts";
 import { pcaOnPopgen2 } from "../core/analyses/pca.ts";
 import { variantsSummary } from "../core/analyses/variantsSummary.ts";
 import {
@@ -32,12 +33,15 @@ import { loadVariants } from "../core/project.ts";
 import type { AnalysisId, VariantLoad } from "../core/project.ts";
 import { createStore } from "../core/store.ts";
 import type {
+  AppState,
   Popgen2Store,
   StopLeftBehindConfig,
   Store,
   StoreConfig,
 } from "../core/store.ts";
 import type { Job, JobResult } from "../worker/protocol.ts";
+import { diversityFailureEndsLive } from "./analyses/diversity/liveEnd.ts";
+import { failureEndsLive } from "./analyses/pca/liveEnd.ts";
 
 /** The first group of the analyses the page starts by itself, which the
     one Stop of the box stops and its Start again starts again: the
@@ -50,19 +54,44 @@ export const POPGEN2_CHAIN: readonly AnalysisId[] = Object.freeze([
 ]);
 
 /** The analyses the page starts again by itself once the user's Run made
-    them live, and only then: the PCA
+    each live, and only then, in the order they start after one change,
+    that of the tabs: the PCA and then the diversity
     (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by
-    itself"). A group of its own, after `POPGEN2_CHAIN`, so that it waits
-    for the one pass as its Run does. */
+    itself" and "Several analyses calculated again by themselves"). Each
+    is a group of its own, after `POPGEN2_CHAIN`, so that it waits for the
+    one pass as its Run does, and for no other live analysis. */
 export const POPGEN2_LIVE: readonly AnalysisId[] = Object.freeze([
   pcaOnPopgen2.id,
+  diversityOnPopgen2.id,
 ]);
 
 /** The analyses the page starts by itself, in the groups `createAutoRuns`
-    of autoRuns.ts takes: the one pass, `POPGEN2_CHAIN`, and then the
-    PCA, `POPGEN2_LIVE`, once live. */
+    of autoRuns.ts takes: the one pass, `POPGEN2_CHAIN`, and then a group
+    for each live analysis of `POPGEN2_LIVE`, in its order. */
 export const POPGEN2_AUTO_GROUPS: readonly (readonly AnalysisId[])[] =
-  Object.freeze([POPGEN2_CHAIN, POPGEN2_LIVE]);
+  Object.freeze([
+    POPGEN2_CHAIN,
+    ...POPGEN2_LIVE.map((id) => Object.freeze([id])),
+  ]);
+
+/** Whether the failure of the live analysis `id` in `s` ends its live
+    state, as a Stop does, by the rule of that analysis: the PCA's,
+    `failureEndsLive` of analyses/pca/liveEnd.ts, a crash of the memory
+    or a failure only a reload mends; the diversity's,
+    `diversityFailureEndsLive` of analyses/diversity/liveEnd.ts, every
+    crash and the failures only a reload mends. The `endsLive` the page
+    gives `createAutoRuns`. A defect for an analysis not in
+    `POPGEN2_LIVE`. */
+export function popgen2EndsLive(
+  s: AppState<unknown, unknown>,
+  id: AnalysisId,
+): boolean {
+  if (id === pcaOnPopgen2.id) return failureEndsLive(s, id);
+  if (id === diversityOnPopgen2.id) return diversityFailureEndsLive(s, id);
+  throw new Error(
+    `popnei_web defect: ${id} is not an analysis popgen2.html calculates again by itself.`,
+  );
+}
 
 /** The store of popgen2.html as its screens see it: no undo, no redo,
     so that a screen of that page that calls them does not compile, and

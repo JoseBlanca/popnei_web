@@ -192,6 +192,10 @@ export function aboutToStartLine(
   switch (waits) {
     case "download":
       return `The ${name} starts again when the download is written or closed.`;
+    // Behind another calculation, which no tab of the page starts yet
+    // beside the PCA: the line that names it comes with the Populations
+    // tab (docs/plans/population-tab.md, work package 2).
+    case "behind":
     case "changes":
       return `The ${name} starts again in a moment, once the filters and its options stop changing.`;
   }

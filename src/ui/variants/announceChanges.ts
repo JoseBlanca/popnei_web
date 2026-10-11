@@ -154,6 +154,12 @@ export function announceLive(
           liveStoppedText(method, runOffered(store.getState(), event.id)),
         );
         return;
+      // No Run waits and no Stop all is offered until the Populations
+      // tab makes a second analysis live; their words come with it
+      // (docs/plans/population-tab.md, work package 2).
+      case "startedAfterWaiting":
+      case "pausedAll":
+        return;
     }
   });
 }

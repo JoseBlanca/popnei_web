@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { individualChecks } from "../core/analyses/individualChecks.ts";
 import { variantChecks } from "../core/analyses/variantChecks.ts";
 import { variantsSummary } from "../core/analyses/variantsSummary.ts";
+import {
+  diversityOnPopgen2,
+  diversityOptions,
+} from "../core/analyses/diversity.ts";
 import { pcaOnPopgen2, pcaOptions } from "../core/analyses/pca.ts";
 import { countsOf, firstProject } from "../core/apps.ts";
 import { keyFromWire } from "../core/keys.ts";
@@ -16,8 +20,10 @@ import {
 import type { VariantLoad } from "../core/project.ts";
 import { createStore } from "../core/store.ts";
 import type { AnalysisDef, AnalysisStatus, Store } from "../core/store.ts";
-import { summaryResult } from "../core/testSupport.ts";
+import { noPopDiversity, summaryResult } from "../core/testSupport.ts";
 import type {
+  CsvOptions,
+  IndividualsTable,
   Job,
   JobResult,
   Outcome,
@@ -27,13 +33,14 @@ import type {
   WriteJob,
 } from "../worker/protocol.ts";
 import { LIVE_QUIET_MS, createAutoRuns } from "./autoRuns.ts";
-import type { AutoRuns } from "./autoRuns.ts";
+import type { AutoRuns, LiveEvent } from "./autoRuns.ts";
 import {
   POPGEN2_AUTO_GROUPS,
   POPGEN2_CHAIN,
   POPGEN2_LIVE,
   createPopgen2Store,
   openVariantsFile,
+  popgen2EndsLive,
 } from "./popgen2Store.ts";
 import type { Popgen2PageStore } from "./popgen2Store.ts";
 import { startAnalysis, startWriting } from "./runs.ts";
@@ -44,7 +51,6 @@ import {
 } from "./variants/thresholdRun.ts";
 import type { RunGate } from "./variants/thresholdRun.ts";
 import { SUMMARY_ID } from "./variants/words.ts";
-import { failureEndsLive } from "./analyses/pca/liveEnd.ts";
 
 const ID = SUMMARY_ID;
 
@@ -818,10 +824,10 @@ describe("one group of two, the summary and an analysis after it", () => {
 });
 
 describe("one-pass the chain of popgen2.html: the summary alone", () => {
-  test("the page's group of the one pass is the summary alone, and the PCA, live, comes after it", () => {
+  test("the page's group of the one pass is the summary alone, and the live analyses, the PCA first, come after it", () => {
     expect(POPGEN2_CHAIN).toEqual([ID]);
-    expect(POPGEN2_AUTO_GROUPS).toEqual([POPGEN2_CHAIN, POPGEN2_LIVE]);
-    expect(POPGEN2_LIVE).toEqual(["pca"]);
+    expect(POPGEN2_AUTO_GROUPS[0]).toBe(POPGEN2_CHAIN);
+    expect(POPGEN2_LIVE[0]).toBe("pca");
   });
 
   test("on a VCF the summary done ends the chain: nothing more is sent, and Start again is not offered", async () => {
@@ -962,6 +968,7 @@ async function livePage(
   readonly setMissing: (value: number) => void;
   readonly setDistance: (value: number | null) => void;
   readonly events: string[];
+  readonly told: LiveEvent[];
 }> {
   const requests: LiveRequest[] = [];
   const writes: LiveRequest[] = [];
@@ -1005,12 +1012,16 @@ async function livePage(
       changes: gate,
       runStart: (id) => startAnalysis(store, id),
       quietMs: LIVE_QUIET_MS,
-      endsLive: failureEndsLive,
+      endsLive: popgen2EndsLive,
     },
   });
   const events: string[] = [];
+  const told: LiveEvent[] = [];
   auto.onLive((event) => {
-    events.push(`${event.kind} ${event.id}`);
+    events.push(
+      `${event.kind} ${"id" in event ? event.id : event.ids.join(",")}`,
+    );
+    told.push(event);
   });
   raw.subscribe(() => {
     queueMicrotask(() => {
@@ -1081,6 +1092,7 @@ async function livePage(
     },
     setDistance,
     events,
+    told,
   };
 }
 
@@ -1093,7 +1105,7 @@ async function wait(ms: number): Promise<void> {
 /** The page with the PCA run by Run and ended with its result. */
 async function liveDone(): Promise<Awaited<ReturnType<typeof livePage>>> {
   const page = await livePage();
-  expect(page.auto.run("pca")).toBe(true);
+  expect(page.auto.run("pca")).toBe("started");
   await page.endPca();
   expect(page.pca().kind).toBe("done");
   return page;
@@ -1119,7 +1131,7 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
 
   test("Run makes the PCA live and starts it at once, through the gate", async () => {
     const page = await livePage();
-    expect(page.auto.run("pca")).toBe(true);
+    expect(page.auto.run("pca")).toBe("started");
     expect(page.pcaRequests()).toHaveLength(1);
     expect(page.pca().kind).toBe("running");
     expect(page.auto.isLive("pca")).toBe(true);
@@ -1136,7 +1148,7 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
       ended: () => undefined,
     });
     run.press(0.1, 0.099);
-    expect(page.auto.run("pca")).toBe(true);
+    expect(page.auto.run("pca")).toBe("started");
     expect(run.waiting()).toBe(false);
     expect(page.pcaRequests()).toHaveLength(1);
     expect(JSON.stringify(page.pcaRequests()[0]?.job)).toContain("0.099");
@@ -1254,7 +1266,7 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     const page = await livePage();
     void startWriting(page.store, "vcf");
     expect(page.writes).toHaveLength(1);
-    expect(page.auto.run("pca")).toBe(false);
+    expect(page.auto.run("pca")).toBe("refused");
     expect(page.pcaRequests()).toHaveLength(0);
     expect(page.auto.isLive("pca")).toBe(false);
     await wait(5000);
@@ -1341,7 +1353,7 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     expect(page.pcaRequests()).toHaveLength(2);
     expect(page.events).toEqual(["startedByItself pca", "paused pca"]);
 
-    expect(page.auto.run("pca")).toBe(true);
+    expect(page.auto.run("pca")).toBe("started");
     expect(page.pcaRequests()).toHaveLength(3);
     expect(page.auto.stoppedByUser("pca")).toBe(false);
   });
@@ -1436,7 +1448,7 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     await wait(5000);
     expect(page.pcaRequests()).toHaveLength(2);
     expect(page.auto.isLive("pca")).toBe(true);
-    expect(page.auto.run("pca")).toBe(true);
+    expect(page.auto.run("pca")).toBe("started");
     expect(page.pcaRequests()).toHaveLength(3);
     expect(page.pcaRequests()[2]?.key).toBe(page.pcaRequests()[1]?.key);
   });
@@ -1477,7 +1489,7 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     page.setMissing(0.05);
     await wait(5000);
     expect(page.pcaRequests()).toHaveLength(1);
-    expect(page.auto.run("pca")).toBe(true);
+    expect(page.auto.run("pca")).toBe("started");
     expect(page.auto.isLive("pca")).toBe(true);
   });
 
@@ -1524,22 +1536,30 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
       kind: "live",
       aboutToStart: null,
       running: true,
+      after: null,
     });
     await page.endPca();
     const done = page.auto.liveState("pca");
-    expect(done).toEqual({ kind: "live", aboutToStart: null, running: false });
+    expect(done).toEqual({
+      kind: "live",
+      aboutToStart: null,
+      running: false,
+      after: null,
+    });
     expect(page.auto.liveState("pca")).toBe(done);
     page.setMissing(0.05);
     expect(page.auto.liveState("pca")).toEqual({
       kind: "live",
       aboutToStart: "changes",
       running: false,
+      after: null,
     });
     const closeDialog = page.gate.holdChange("download");
     expect(page.auto.liveState("pca")).toEqual({
       kind: "live",
       aboutToStart: "download",
       running: false,
+      after: null,
     });
     closeDialog();
     page.auto.pause("pca");
@@ -1560,20 +1580,45 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
     });
     page.setMissing(0.05);
     expect(seen).toEqual([
-      { kind: "live", aboutToStart: "changes", running: false },
+      {
+        kind: "live",
+        aboutToStart: "changes",
+        running: false,
+        after: null,
+      },
     ]);
     const closeDialog = page.gate.holdChange("download");
     closeDialog();
     await wait(1000);
     expect(seen.slice(1)).toEqual([
-      { kind: "live", aboutToStart: "download", running: false },
-      { kind: "live", aboutToStart: "changes", running: false },
-      { kind: "live", aboutToStart: null, running: true },
+      {
+        kind: "live",
+        aboutToStart: "download",
+        running: false,
+        after: null,
+      },
+      {
+        kind: "live",
+        aboutToStart: "changes",
+        running: false,
+        after: null,
+      },
+      {
+        kind: "live",
+        aboutToStart: null,
+        running: true,
+        after: null,
+      },
     ]);
     await page.endPca();
     openVariantsFile(page.store, panelLoad(SECOND));
     expect(seen.slice(4)).toEqual([
-      { kind: "live", aboutToStart: null, running: false },
+      {
+        kind: "live",
+        aboutToStart: null,
+        running: false,
+        after: null,
+      },
       { kind: "off" },
     ]);
   });
@@ -1624,3 +1669,517 @@ describe("NU4 D1 the PCA calculated again by itself", () => {
 function keyOf(status: AnalysisStatus<JobResult>): string {
   return "key" in status ? status.key : "";
 }
+
+/** A result of the diversity of the one population of `s000` and
+    `s001`. */
+function diversityResult(): JobResult {
+  return {
+    analysis: "diversity",
+    pops: ["Unclassified"],
+    numIndividuals: Uint32Array.from([2]),
+    unbiasedExpHet: Float64Array.from([0.3]),
+    obsHet: Float64Array.from([0.3]),
+    polyRatio: Float64Array.from([0.9]),
+    numVarsWithValue: Uint32Array.from([548]),
+    ...noPopDiversity(1),
+    passStats: { numVars: 548, filtering: {} },
+  };
+}
+
+type LivePage = Awaited<ReturnType<typeof livePage>>;
+
+/** The requests of the diversity the fake worker was sent. */
+function diversityRequests(page: LivePage): readonly LiveRequest[] {
+  return page.requests.filter(
+    (r) => "analysis" in r.job && r.job.analysis === "diversity",
+  );
+}
+
+/** The status of the diversity in the page's store. */
+function diversityOf(page: LivePage): AnalysisStatus<JobResult> {
+  const view = page.raw
+    .getState()
+    .analyses.find((a) => a.id === diversityOnPopgen2.id);
+  if (view === undefined) throw new Error("no diversity in the store");
+  return view.status;
+}
+
+/** Ends the last request of the diversity with `outcome`, its result
+    when none is given. */
+async function endDiversity(
+  page: LivePage,
+  outcome?: Outcome<JobResult>,
+): Promise<void> {
+  const last = diversityRequests(page).at(-1);
+  if (last === undefined) throw new Error("no diversity was sent");
+  last.end(
+    outcome ?? { kind: "done", key: last.key, result: diversityResult() },
+  );
+  await flush();
+}
+
+/** The analyses of the page's store that run now. */
+function runningNow(page: LivePage): readonly string[] {
+  return page.raw
+    .getState()
+    .analyses.filter((a) => a.status.kind === "running")
+    .map((a) => a.id);
+}
+
+/** The minimum of individuals of the diversity set to `value`, as its
+    options part does. */
+function setMinIndividuals(page: LivePage, value: number): void {
+  page.store.apply("the options of the diversity changed", (p) =>
+    setAnalysisOptions(p, diversityOnPopgen2, {
+      ...diversityOptions(p),
+      minNumIndividuals: value,
+    }),
+  );
+}
+
+/** The method of the PCA set to `method`, as its options part does. */
+function setMethod(page: LivePage, method: "pca" | "pcoa"): void {
+  page.store.apply("the method of the PCA changed", (p) =>
+    setAnalysisOptions(p, pcaOnPopgen2, {
+      ...pcaOptions(p, "popgen2"),
+      method,
+    }),
+  );
+}
+
+/** An individuals file of `s000` and `s001` with two columns of
+    populations, `pop` and `site`, opened and read, `pop` chosen. */
+async function withPopulations(page: LivePage): Promise<void> {
+  const table: IndividualsTable = {
+    columns: ["id", "pop", "site"],
+    rows: [
+      ["s000", "A", "x"],
+      ["s001", "B", "x"],
+    ],
+  };
+  const csv: CsvOptions = {
+    encoding: "auto",
+    separator: "auto",
+    decimal: "auto",
+  };
+  page.store.applyAfresh((p) =>
+    loadIndividuals(p, { fileId: SECOND, name: "pops.csv", csv }),
+  );
+  page.raw.individualsRead(SECOND, csv, {
+    kind: "read",
+    table,
+    columns: [
+      { kind: "identifier" },
+      { kind: "categorical" },
+      { kind: "categorical" },
+    ],
+    found: {
+      encoding: "utf-8",
+      separator: ",",
+      decimal: ".",
+      undecodedLine: null,
+    },
+  });
+  page.store.apply("the column of the populations changed", (p) =>
+    setGrouping(p, { kind: "populations", column: "pop" }),
+  );
+  await flush();
+}
+
+/** The page with the PCA and then the diversity run by their Runs and
+    ended with their results, both live. */
+async function bothLiveDone(
+  individuals?: readonly string[],
+): Promise<LivePage> {
+  const page = await livePage(individuals);
+  expect(page.auto.run("pca")).toBe("started");
+  await page.endPca();
+  expect(page.auto.run(diversityOnPopgen2.id)).toBe("started");
+  await endDiversity(page);
+  expect(page.pca().kind).toBe("done");
+  expect(diversityOf(page).kind).toBe("done");
+  page.told.length = 0;
+  return page;
+}
+
+describe("PT1 D2 several analyses calculated again by themselves", () => {
+  const DIV = diversityOnPopgen2.id;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("the page's groups are the one pass, the PCA and the diversity, and its live analyses the PCA and then the diversity", () => {
+    expect(POPGEN2_LIVE).toEqual(["pca", "diversity"]);
+    expect(POPGEN2_AUTO_GROUPS).toEqual([
+      ["variantsSummary"],
+      ["pca"],
+      ["diversity"],
+    ]);
+  });
+
+  test("with the PCA never run, ready, a live diversity starts by itself a second after a change, and no PCA is sent", async () => {
+    const page = await livePage();
+    expect(page.pca().kind).toBe("ready");
+    expect(page.auto.run(DIV)).toBe("started");
+    await endDiversity(page);
+    page.setMissing(0.05);
+    expect(page.auto.liveState(DIV)).toEqual({
+      kind: "live",
+      aboutToStart: "changes",
+      running: false,
+      after: null,
+    });
+    await wait(999);
+    expect(diversityRequests(page)).toHaveLength(1);
+    await wait(1);
+    expect(diversityRequests(page)).toHaveLength(2);
+    expect(page.pcaRequests()).toHaveLength(0);
+    expect(page.told).toEqual([
+      { kind: "startedByItself", id: DIV, round: [DIV] },
+    ]);
+  });
+
+  test("after a Stop of the PCA, which leaves it not live and ready, a live diversity starts by itself after a change", async () => {
+    const page = await bothLiveDone();
+    page.setMissing(0.05);
+    await wait(1000);
+    expect(runningNow(page)).toEqual(["pca"]);
+    page.auto.pause("pca");
+    page.pcaRequests()[1]?.end({ kind: "cancelled" });
+    await flush();
+    expect(page.pca().kind).toBe("ready");
+    expect(page.auto.liveState("pca")).toEqual({ kind: "stopped" });
+    await wait(1000);
+    expect(diversityRequests(page)).toHaveLength(2);
+    await endDiversity(page);
+    page.setMissing(0.04);
+    await wait(1000);
+    expect(diversityRequests(page)).toHaveLength(3);
+    expect(page.pcaRequests()).toHaveLength(2);
+  });
+
+  test("with the PCA live and locked, the diversity starts by itself after a change", async () => {
+    const page = await bothLiveDone();
+    page.setDistance(null);
+    expect(page.pca().kind).toBe("locked");
+    page.setMissing(0.05);
+    await wait(1000);
+    expect(diversityRequests(page)).toHaveLength(2);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(page.auto.isLive("pca")).toBe(true);
+  });
+
+  test("with the PCA done and no longer live, by Stop recalculating, the diversity starts by itself after a change", async () => {
+    const page = await bothLiveDone();
+    page.auto.pause("pca");
+    await wait(1000);
+    page.setMissing(0.05);
+    await wait(1000);
+    expect(diversityRequests(page)).toHaveLength(2);
+    expect(page.pcaRequests()).toHaveLength(1);
+  });
+
+  test("a PCA refused by popnei does not keep the diversity from starting: it starts at the refusal, and the PCA stays live", async () => {
+    const page = await bothLiveDone();
+    page.setMissing(0.05);
+    await wait(1000);
+    await page.endPca({
+      kind: "failed",
+      error: { kind: "popnei", message: "no variant left" },
+    });
+    expect(page.pca().kind).toBe("error");
+    expect(diversityRequests(page)).toHaveLength(2);
+    expect(page.auto.isLive("pca")).toBe(true);
+    await endDiversity(page);
+    setMinIndividuals(page, 10);
+    await wait(1000);
+    expect(diversityRequests(page)).toHaveLength(3);
+    expect(page.pcaRequests()).toHaveLength(2);
+  });
+
+  test("a PCA crashed, not for memory, does not keep the diversity from starting, and stays live", async () => {
+    const page = await bothLiveDone();
+    page.setMissing(0.05);
+    await wait(1000);
+    await page.endPca({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "the worker crashed" },
+    });
+    expect(diversityRequests(page)).toHaveLength(2);
+    expect(page.auto.isLive("pca")).toBe(true);
+    expect(page.auto.isLive(DIV)).toBe(true);
+  });
+
+  test("with both live, a threshold changed starts the PCA a second later and the diversity at the PCA's end, never both at once", async () => {
+    const page = await bothLiveDone();
+    page.setMissing(0.05);
+    await wait(999);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(diversityRequests(page)).toHaveLength(1);
+    await wait(1);
+    expect(page.pcaRequests()).toHaveLength(2);
+    expect(diversityRequests(page)).toHaveLength(1);
+    expect(runningNow(page)).toEqual(["pca"]);
+    await wait(5000);
+    expect(diversityRequests(page)).toHaveLength(1);
+    await page.endPca();
+    expect(diversityRequests(page)).toHaveLength(2);
+    expect(runningNow(page)).toEqual([DIV]);
+    await endDiversity(page);
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(2);
+    expect(diversityRequests(page)).toHaveLength(2);
+    expect(JSON.stringify(diversityRequests(page)[1]?.job)).toContain("0.05");
+  });
+
+  test("a change of the column of the populations starts the diversity alone", async () => {
+    const page = await bothLiveDone();
+    await withPopulations(page);
+    await wait(1000);
+    expect(diversityRequests(page)).toHaveLength(2);
+    await endDiversity(page);
+    page.store.apply("the column of the populations changed", (p) =>
+      setGrouping(p, { kind: "populations", column: "site" }),
+    );
+    await wait(1000);
+    expect(diversityRequests(page)).toHaveLength(3);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(page.pca().kind).toBe("done");
+  });
+
+  test("a change of an option of the diversity starts the diversity alone, and one of the PCA the PCA alone", async () => {
+    const page = await bothLiveDone();
+    setMinIndividuals(page, 10);
+    await wait(1000);
+    expect(diversityRequests(page)).toHaveLength(2);
+    expect(page.pcaRequests()).toHaveLength(1);
+    await endDiversity(page);
+    setMethod(page, "pcoa");
+    await wait(1000);
+    expect(page.pcaRequests()).toHaveLength(2);
+    await page.endPca();
+    await wait(5000);
+    expect(diversityRequests(page)).toHaveLength(2);
+  });
+
+  test('liveState of the diversity: "changes" after the PCA in the quiet second, "behind" the PCA while it runs; the PCA\'s names none', async () => {
+    const page = await bothLiveDone();
+    page.setMissing(0.05);
+    expect(page.auto.liveState(DIV)).toEqual({
+      kind: "live",
+      aboutToStart: "changes",
+      running: false,
+      after: "pca",
+    });
+    expect(page.auto.liveState("pca")).toEqual({
+      kind: "live",
+      aboutToStart: "changes",
+      running: false,
+      after: null,
+    });
+    const closeDialog = page.gate.holdChange("download");
+    expect(page.auto.liveState(DIV)).toEqual({
+      kind: "live",
+      aboutToStart: "download",
+      running: false,
+      after: "pca",
+    });
+    closeDialog();
+    await wait(1000);
+    expect(page.auto.liveState(DIV)).toEqual({
+      kind: "live",
+      aboutToStart: "behind",
+      running: false,
+      after: "pca",
+    });
+    expect(page.auto.liveState("pca")).toEqual({
+      kind: "live",
+      aboutToStart: null,
+      running: true,
+      after: null,
+    });
+    await page.endPca();
+    expect(page.auto.liveState(DIV)).toEqual({
+      kind: "live",
+      aboutToStart: null,
+      running: true,
+      after: null,
+    });
+  });
+
+  test('a Run of the diversity while the PCA runs gives "waiting", sends nothing until the PCA ends, and then one request, told as startedAfterWaiting', async () => {
+    const page = await livePage();
+    expect(page.auto.run("pca")).toBe("started");
+    expect(page.auto.run(DIV)).toBe("waiting");
+    expect(page.auto.isLive(DIV)).toBe(true);
+    expect(page.auto.liveState(DIV)).toEqual({
+      kind: "live",
+      aboutToStart: "behind",
+      running: false,
+      after: "pca",
+    });
+    await wait(5000);
+    expect(diversityRequests(page)).toHaveLength(0);
+    await page.endPca();
+    expect(diversityRequests(page)).toHaveLength(1);
+    expect(runningNow(page)).toEqual([DIV]);
+    expect(page.told).toEqual([{ kind: "startedAfterWaiting", id: DIV }]);
+    await endDiversity(page);
+    await wait(5000);
+    expect(diversityRequests(page)).toHaveLength(1);
+  });
+
+  test("a Run of the diversity with nothing running starts it at once, though the PCA is about to start, and the PCA waits after it", async () => {
+    const page = await bothLiveDone();
+    page.setMissing(0.05);
+    await wait(500);
+    expect(page.auto.run(DIV)).toBe("started");
+    expect(diversityRequests(page)).toHaveLength(2);
+    expect(page.auto.liveState("pca")).toEqual({
+      kind: "live",
+      aboutToStart: "behind",
+      running: false,
+      after: DIV,
+    });
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(1);
+    await endDiversity(page);
+    expect(page.pcaRequests()).toHaveLength(2);
+    expect(diversityRequests(page)).toHaveLength(2);
+  });
+
+  test("a Stop of the running PCA starts the waiting diversity one second later, not at once, and a change within that second puts it off", async () => {
+    const page = await bothLiveDone();
+    page.setMissing(0.05);
+    await wait(1000);
+    expect(runningNow(page)).toEqual(["pca"]);
+    page.auto.pause("pca");
+    page.pcaRequests()[1]?.end({ kind: "cancelled" });
+    await flush();
+    expect(diversityRequests(page)).toHaveLength(1);
+    await wait(600);
+    page.setMissing(0.04);
+    await wait(600);
+    expect(diversityRequests(page)).toHaveLength(1);
+    await wait(400);
+    expect(diversityRequests(page)).toHaveLength(2);
+    expect(JSON.stringify(diversityRequests(page)[1]?.job)).toContain("0.04");
+    expect(page.pcaRequests()).toHaveLength(2);
+  });
+
+  test("Stop all during a run ends both live states, cancels the run, and a change then starts nothing", async () => {
+    const page = await bothLiveDone();
+    page.setMissing(0.05);
+    await wait(1000);
+    page.auto.pauseAll();
+    expect(page.pcaRequests()[1]?.cancelled).toBe(true);
+    page.pcaRequests()[1]?.end({ kind: "cancelled" });
+    await flush();
+    expect(page.auto.liveState("pca")).toEqual({ kind: "stopped" });
+    expect(page.auto.liveState(DIV)).toEqual({ kind: "stopped" });
+    expect(page.told.at(-1)).toEqual({ kind: "pausedAll", ids: ["pca", DIV] });
+    page.setMissing(0.04);
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(2);
+    expect(diversityRequests(page)).toHaveLength(1);
+  });
+
+  test("Stop all during the quiet second ends both live states before either starts", async () => {
+    const page = await bothLiveDone();
+    page.setMissing(0.05);
+    await wait(500);
+    page.auto.pauseAll();
+    await wait(5000);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(diversityRequests(page)).toHaveLength(1);
+    expect(page.auto.isLive("pca")).toBe(false);
+    expect(page.auto.isLive(DIV)).toBe(false);
+    expect(page.told).toEqual([{ kind: "pausedAll", ids: ["pca", DIV] }]);
+  });
+
+  test("the round is told once, with both in their order, at the PCA's start, and the diversity's start of the same round with an empty round", async () => {
+    const page = await bothLiveDone();
+    page.setMissing(0.05);
+    await wait(1000);
+    await page.endPca();
+    expect(page.told).toEqual([
+      { kind: "startedByItself", id: "pca", round: ["pca", DIV] },
+      { kind: "startedByItself", id: DIV, round: [] },
+    ]);
+    await endDiversity(page);
+    page.setMissing(0.04);
+    await wait(1000);
+    expect(page.told.at(-1)).toEqual({
+      kind: "startedByItself",
+      id: "pca",
+      round: ["pca", DIV],
+    });
+  });
+
+  test("a crash of the PCA for memory, 2,264 individuals, ends its live state and not the diversity's, which then starts", async () => {
+    const individuals = Array.from(
+      { length: 2264 },
+      (_, i) => `s${String(i).padStart(4, "0")}`,
+    );
+    const page = await bothLiveDone(individuals);
+    page.setMissing(0.05);
+    await wait(1000);
+    await page.endPca({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    expect(page.auto.liveState("pca")).toEqual({ kind: "stopped" });
+    expect(page.auto.isLive(DIV)).toBe(true);
+    expect(diversityRequests(page)).toHaveLength(2);
+  });
+
+  test.each([
+    { kind: "workerFailed", message: "the worker crashed" },
+    { kind: "couldNotStart", reason: "no ready" },
+    { kind: "protocolMismatch" },
+    { kind: "defect", message: "a message that did not validate" },
+  ] as const)(
+    "a failure of the diversity, $kind, of 2 individuals, ends its live state and leaves the PCA's live",
+    async (error) => {
+      const page = await bothLiveDone();
+      setMinIndividuals(page, 10);
+      await wait(1000);
+      await endDiversity(page, { kind: "failed", error });
+      expect(page.auto.liveState(DIV)).toEqual({ kind: "stopped" });
+      expect(page.auto.isLive("pca")).toBe(true);
+      page.setMissing(0.05);
+      await wait(1000);
+      expect(page.pcaRequests()).toHaveLength(2);
+      await page.endPca();
+      await wait(5000);
+      expect(diversityRequests(page)).toHaveLength(2);
+    },
+  );
+
+  test("popnei's refusal of the diversity leaves it live, and the next change of its key tries again", async () => {
+    const page = await bothLiveDone();
+    setMinIndividuals(page, 10);
+    await wait(1000);
+    await endDiversity(page, {
+      kind: "failed",
+      error: { kind: "popnei", message: "no population left" },
+    });
+    expect(page.auto.isLive(DIV)).toBe(true);
+    setMinIndividuals(page, 5);
+    await wait(1000);
+    expect(diversityRequests(page)).toHaveLength(3);
+  });
+
+  test('a Run of the diversity is "refused" while a write of the filtered variants runs, and not made live', async () => {
+    const page = await livePage();
+    void startWriting(page.store, "vcf");
+    expect(page.auto.run(DIV)).toBe("refused");
+    expect(page.auto.isLive(DIV)).toBe(false);
+    await wait(5000);
+    expect(diversityRequests(page)).toHaveLength(0);
+  });
+});

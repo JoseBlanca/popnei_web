@@ -184,7 +184,7 @@ describe("NU4 D2 the status region says the PCA started by itself and its Stop",
       const page = await setUpReady(announcer);
       announceChanges(page.store, announcer, () => null);
       const run = startAnalysis(page.store, "pca");
-      page.tell({ kind: "startedByItself", id: "pca" });
+      page.tell({ kind: "startedByItself", id: "pca", round: ["pca"] });
       page.endLast((key) => ({ kind: "done", key, result: pcaResult() }));
       await run;
       await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
@@ -201,7 +201,7 @@ describe("NU4 D2 the status region says the PCA started by itself and its Stop",
       const page = await setUpReady(announcer);
       announceChanges(page.store, announcer, () => null);
       const run = startAnalysis(page.store, "pca");
-      page.tell({ kind: "startedByItself", id: "pca" });
+      page.tell({ kind: "startedByItself", id: "pca", round: ["pca"] });
       await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
       expect(announcer.getState()).toBe(
         "Calculating the PCA again. To change the filters, stop it in the PCA tab.",
@@ -217,12 +217,12 @@ describe("NU4 D2 the status region says the PCA started by itself and its Stop",
 
   test("a start by itself is said once, by the method", () => {
     const { said, tell, toPcoa } = setUp();
-    tell({ kind: "startedByItself", id: "pca" });
+    tell({ kind: "startedByItself", id: "pca", round: ["pca"] });
     expect(said).toEqual([
       "Calculating the PCA again. To change the filters, stop it in the PCA tab.",
     ]);
     toPcoa();
-    tell({ kind: "startedByItself", id: "pca" });
+    tell({ kind: "startedByItself", id: "pca", round: ["pca"] });
     expect(said.at(-1)).toBe(
       "Calculating the PCoA again. To change the filters, stop it in the PCA tab.",
     );

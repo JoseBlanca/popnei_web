@@ -267,7 +267,9 @@ export async function pcaDone(
   if (pruningOff) {
     testPage.setPca({ ld: { follow: true, maxAllowedR2: 0.1, maxDist: null } });
   }
-  if (!testPage.auto.run("pca")) throw new Error("Run did not start the PCA");
+  if (testPage.auto.run("pca") !== "started") {
+    throw new Error("Run did not start the PCA");
+  }
   await flush();
   const last = testPage.lastPca();
   last.end({

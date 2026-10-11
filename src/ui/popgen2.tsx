@@ -17,7 +17,6 @@
 import "./tokens.css";
 import "./base.css";
 
-import { failureEndsLive } from "./analyses/pca/liveEnd.ts";
 import { LIVE_QUIET_MS, createAutoRuns } from "./autoRuns.ts";
 import type { AutoRuns } from "./autoRuns.ts";
 import type { Defects } from "./defects.ts";
@@ -36,6 +35,7 @@ import {
   POPGEN2_AUTO_GROUPS,
   POPGEN2_LIVE,
   createPopgen2Store,
+  popgen2EndsLive,
 } from "./popgen2Store.ts";
 import { choosePopulationColumns } from "./populationColumn.ts";
 import { startAnalysis } from "./runs.ts";
@@ -144,7 +144,7 @@ function startByThemselves(
       changes: gate,
       runStart: (id) => startAnalysis(gated, id),
       quietMs: LIVE_QUIET_MS,
-      endsLive: failureEndsLive,
+      endsLive: popgen2EndsLive,
     },
   });
   store.subscribe(() => {
