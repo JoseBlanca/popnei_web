@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
   diversity,
+  diversityOnPopgen2,
   diversityOptions,
 } from "../../../core/analyses/diversity.ts";
 import { setAnalysisOptions } from "../../../core/project.ts";
@@ -593,6 +594,29 @@ describe("PA7 D1 the table of the diversity, drawn by React", () => {
     );
     // The line of the options of stages 2 to 4 is gone: the fields say it.
     expect(container.textContent).not.toContain("A variant counts");
+  });
+
+  test("on popgen2.html the line of the versions and that of the draw are each a line of their own, under the table", () => {
+    draw(
+      createElement(DiversityResults, {
+        result: flowResult(96),
+        check: null,
+        analysis: diversityOnPopgen2,
+      }),
+    );
+    const lines = [...container.querySelectorAll("p")];
+    const versions = lines.find((line) =>
+      line.textContent.startsWith("Calculated with popnei"),
+    );
+    const rarefied = lines.find(
+      (line) => line.textContent === "Rarefied to 96 chromosomes.",
+    );
+    // Each line is a row of the column of the result, beside the table,
+    // and not a piece of a row that wraps, the versions first.
+    const column = versions?.parentElement;
+    expect(column?.querySelector("table")).not.toBeNull();
+    expect(rarefied?.parentElement).toBe(column);
+    expect(versions?.nextElementSibling).toBe(rarefied);
   });
 });
 

@@ -133,10 +133,12 @@ export function DiversityResults({
           {versions}
         </div>
       ) : (
-        <div className={classOf(styles, "download")}>
+        // Each a line of its own: side by side, the draw read as the end
+        // of the line of the versions.
+        <>
           {versions}
           {rarefied}
-        </div>
+        </>
       )}
       <SpectrumBlock result={result} variantsName={variantsName} page={page} />
     </div>

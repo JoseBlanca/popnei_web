@@ -27,8 +27,10 @@ line, which does not say "Stopped", since the user pressed no Stop
 when it stands for a file or a column the user opened ("The populations
 it runs on"); `autoRuns.run` answers "kept" when the store starts
 nothing for the diversity ("Accessibility" and "How it is checked");
-and until the band offers Stop all, the words of the locks name the
-Stop of each tab in its place ("While the diversity runs").
+until the band offers Stop all, the words of the locks name the
+Stop of each tab in its place ("While the diversity runs"); and the
+line of the draw is a line of its own, under that of the versions
+("The result").
 
 The tab is the diversity panel of the old page, `popgen.html`, which is
 built and which the owner tried and accepted on 1 October 2026: its
@@ -301,7 +303,9 @@ of the panel"), with these differences:
 - **The line of the versions**, under the line of the "Download…" of
   the table:
   "Calculated with popnei 0.2.2, in version 0.1.0 of the application."
-  and, for the rarefied columns, "Rarefied to 40 chromosomes."
+  and under it, on a line of its own, for the rarefied columns,
+  "Rarefied to 40 chromosomes." (on a line of its own since 11 October
+  2026: beside the versions, it read as their end).
 - **No comparison with check numbers**: the page opens no project file.
 - **The spectrum**, its heading, caption, one histogram per population
   with its heading and the line under it, the line under the
