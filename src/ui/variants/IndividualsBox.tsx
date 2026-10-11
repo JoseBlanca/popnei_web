@@ -340,21 +340,18 @@ interface CountsTableProps {
 
 /** The table of the counts, with no menu "Download…" and with its caption
     hidden from the screen and kept as its name for a screen reader: the
-    owner took both out of the box on 11 October 2026. The table widget
-    draws its caption first in its frame, and the style of the box hides
-    that first line, as words for a screen reader alone. */
+    owner took both out of the box on 11 October 2026. */
 function CountsTable({
   variantsName,
   rows,
 }: CountsTableProps): React.JSX.Element {
   return (
-    <div className={classOf(styles, "counts")}>
-      <Table
-        caption={countsCaption(variantsName)}
-        columns={COUNT_COLUMNS}
-        rows={rows}
-      />
-    </div>
+    <Table
+      caption={countsCaption(variantsName)}
+      captionHidden
+      columns={COUNT_COLUMNS}
+      rows={rows}
+    />
   );
 }
 

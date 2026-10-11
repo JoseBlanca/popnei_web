@@ -82,6 +82,11 @@ export type TableProps = TableLook &
 export interface TableLook {
   /** What the table is, shown above it; also its name. */
   readonly caption: string;
+  /** Whether the caption is for a screen reader alone: kept as the
+      table's name and hidden from the screen, as the counts of the box of
+      the individuals file of popgen2.html have it since 11 October 2026,
+      whose box names them by its heading. */
+  readonly captionHidden?: boolean;
   /** Its columns. */
   readonly columns: readonly TableColumn[];
   /** Whether its frame has a limited height and scrolls down, its
@@ -109,7 +114,13 @@ export function Table(props: TableProps): React.JSX.Element {
   const frame = useSidewaysFrame(scrollRef, limitedHeight);
   const scrolls = frame.scrolls;
   const captionLine = (
-    <p id={captionId} className={classOf(styles, "caption")}>
+    <p
+      id={captionId}
+      className={classOf(
+        styles,
+        props.captionHidden === true ? "visuallyHidden" : "caption",
+      )}
+    >
       {caption}
     </p>
   );

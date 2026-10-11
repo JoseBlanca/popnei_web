@@ -32,16 +32,3 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
-
-/* The table of the counts with its caption hidden from the screen and
-   kept as its name for a screen reader (IndividualsBox.tsx, CountsTable):
-   the caption is the first line of the frame Table.tsx draws. Out of the
-   flow, it takes no row of that frame's grid. */
-.counts > :first-child > :first-child {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
