@@ -549,21 +549,43 @@ export function minimumRefusedText(
     calculate it again." (docs/specs/steps/popgen2-pca.md, "While a PCA
     runs"; docs/specs/steps/popgen2-populations.md, "While the diversity
     runs"). With other analyses live beside it, `beside`, in their order,
-    the words add Stop all, since a Stop of the one running alone lets
+    the words name them too, since a Stop of the one running alone lets
     the others start a second after the next change and lock the filters
-    again: "Stop the PCA in the PCA tab to change the filters, or press
-    Stop all beside the heading Popnei to stop the diversity too; then
-    press Run in each tab to calculate them again." (popgen2-pca.md,
-    "Several analyses calculated again by themselves", "The lock"). */
+    again: with Stop all offered, `stopAllOffered`, "Stop the PCA in the
+    PCA tab to change the filters, or press Stop all beside the heading
+    Popnei to stop the diversity too; then press Run in each tab to
+    calculate them again." (popgen2-pca.md, "Several analyses calculated
+    again by themselves", "The lock"); until the band offers it, the
+    Stop of each tab: "Stop the PCA in the PCA tab and the diversity in
+    the Populations tab to change the filters; then press Run in each tab
+    to calculate them again." */
 export function filtersLockedText(
   running: LiveAnalysisName,
   beside: readonly LiveAnalysisName[],
+  stopAllOffered: boolean,
 ): string {
-  const stop = `Stop ${running.name} in the ${running.tab} tab to change the filters`;
-  return beside.length === 0
-    ? `${stop}; then press Run there to calculate it again.`
-    : `${stop}, or press ${STOP_ALL_PLACE} to stop ${bothOf(beside.map((one) => one.name))} too; then press Run in each tab to calculate them again.`;
+  if (beside.length === 0) {
+    return `Stop ${running.name} in the ${running.tab} tab to change the filters; then press Run there to calculate it again.`;
+  }
+  const again = "then press Run in each tab to calculate them again.";
+  return stopAllOffered
+    ? `Stop ${running.name} in the ${running.tab} tab to change the filters, or press ${STOP_ALL_PLACE} to stop ${bothOf(beside.map((one) => one.name))} too; ${again}`
+    : `Stop ${eachInItsTab([running, ...beside])} to change the filters; ${again}`;
+}
+
+/** The analyses `named`, each with its tab, as a Stop of each names
+    them: "the PCA in the PCA tab and the diversity in the Populations
+    tab". */
+export function eachInItsTab(named: readonly LiveAnalysisName[]): string {
+  return bothOf(named.map((one) => `${one.name} in the ${one.tab} tab`));
 }
 
 /** Stop all and where it is, in the words of a lock or of a wait. */
 export const STOP_ALL_PLACE = "Stop all beside the heading Popnei";
+
+/** Whether the band offers Stop all, which the words of the lock of the
+    filters and of the download's wait name when another analysis is
+    live beside the one running: not until work package 4 of
+    docs/plans/population-tab.md builds it in the band, which turns this
+    on; until then they name the Stop of each tab. */
+export const STOP_ALL_OFFERED = false;

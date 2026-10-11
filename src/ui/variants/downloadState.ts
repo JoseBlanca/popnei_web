@@ -21,9 +21,9 @@ import type {
   VariantsSummaryResult,
   Written,
 } from "../../worker/protocol.ts";
-import { runningAnalysisOf } from "../analyses/status.ts";
+import { runningAnalysisOf, waitingAfter } from "../analyses/status.ts";
+import { STOP_ALL_OFFERED } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
-import { waitingAfter } from "../analyses/status.ts";
 import type { FileHanded } from "./downloadWords.ts";
 import { summaryStatus } from "./words.ts";
 import {
@@ -59,7 +59,7 @@ export function downloadWaitOf(
   const running = runningAnalysisOf(s);
   return running === null
     ? null
-    : analysisWaitsText(running, waitingAfter(s, live));
+    : analysisWaitsText(running, waitingAfter(s, live), STOP_ALL_OFFERED);
 }
 
 /** What takes the place of the button. */

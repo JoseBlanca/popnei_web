@@ -95,7 +95,9 @@ under, also one it was stopped under, which it otherwise never started.
 A failure that ends a live state has its own line in the tab, not the
 line after a Stop, and lets the others about to start begin a quiet
 second later, or, after a crash of the worker, only after the next
-change ("A failure that ends a live state").
+change ("A failure that ends a live state"). Until the band offers Stop
+all, the words of the lock and of the download's wait name the Stop of
+each tab in its place ("The lock").
 
 The PCA tab is the panel of the old page, `popgen.html`, which is built
 and which the owner approved on 28 September 2026: its screen spec is
@@ -685,6 +687,13 @@ press Stop all beside the heading Popnei to stop the diversity too;
 then press Run in each tab to calculate them again." ("the PCoA" by the
 method), since a Stop of the PCA alone lets the diversity start a
 second after the next change and grey the filters again.
+Until the band offers Stop all, which work package 4 of
+`docs/plans/population-tab.md` builds, the words name the Stop of each
+tab in its place: "Stop the PCA in the PCA tab and the diversity in the
+Populations tab to change the filters; then press Run in each tab to
+calculate them again." (corrected on 11 October 2026 after the review
+of work package 1 of that plan: words that name a button the page does
+not show yet send the user looking for it).
 
 **The status region.** The first start of a round, the starts by
 themselves that one quiet second gives, says the analyses of the round

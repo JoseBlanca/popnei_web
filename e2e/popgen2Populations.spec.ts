@@ -645,20 +645,20 @@ test.describe("PT1 D3 the code of the result of the Populations tab", () => {
 const LOCKED_DIVERSITY =
   "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again.";
 const LOCKED_DIVERSITY_PCA_LIVE =
-  "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again.";
+  "Stop the diversity in the Populations tab and the PCA in the PCA tab to change the filters; then press Run in each tab to calculate them again.";
 
 /** The words of the lock of the thresholds while the PCA runs with the
     diversity live beside it. */
 const LOCKED_PCA_DIVERSITY_LIVE =
-  "Stop the PCA in the PCA tab to change the filters, or press Stop all beside the heading Popnei to stop the diversity too; then press Run in each tab to calculate them again.";
+  "Stop the PCA in the PCA tab and the diversity in the Populations tab to change the filters; then press Run in each tab to calculate them again.";
 
 /** The words of the download's wait. */
 const WAITS_DIVERSITY =
   "Waits for the diversity to end; or stop it in the Populations tab.";
 const WAITS_DIVERSITY_THEN_PCA =
-  "Waits for the diversity, and the PCA after it, to end; or press Stop all beside the heading Popnei.";
+  "Waits for the diversity, and the PCA after it, to end; or stop the diversity in the Populations tab and the PCA in the PCA tab.";
 const WAITS_PCA_THEN_DIVERSITY =
-  "Waits for the PCA, and the diversity after it, to end; or press Stop all beside the heading Popnei.";
+  "Waits for the PCA, and the diversity after it, to end; or stop the PCA in the PCA tab and the diversity in the Populations tab.";
 
 /** The statistics of the file, in the Variants tab. */
 function stats(page: Page): Locator {

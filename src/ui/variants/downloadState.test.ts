@@ -852,7 +852,7 @@ describe("PT1 D7 the lock of the filters and the download's wait, for any live a
       "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again.",
     );
     expect(filtersLockOf(state, liveOf(["pca", "diversity"]))).toBe(
-      "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again.",
+      "Stop the diversity in the Populations tab and the PCA in the PCA tab to change the filters; then press Run in each tab to calculate them again.",
     );
     store.cancelRun("diversity");
     expect(
@@ -868,7 +868,7 @@ describe("PT1 D7 the lock of the filters and the download's wait, for any live a
       "Stop the PCA in the PCA tab to change the filters; then press Run there to calculate it again.",
     );
     expect(filtersLockOf(store.getState(), liveOf(["pca", "diversity"]))).toBe(
-      "Stop the PCA in the PCA tab to change the filters, or press Stop all beside the heading Popnei to stop the diversity too; then press Run in each tab to calculate them again.",
+      "Stop the PCA in the PCA tab and the diversity in the Populations tab to change the filters; then press Run in each tab to calculate them again.",
     );
   });
 
@@ -912,7 +912,7 @@ describe("PT1 D7 the lock of the filters and the download's wait, for any live a
         liveOf(["pca", "diversity"], ["diversity"]),
       ),
     ).toBe(
-      "Waits for the PCA, and the diversity after it, to end; or press Stop all beside the heading Popnei.",
+      "Waits for the PCA, and the diversity after it, to end; or stop the PCA in the PCA tab and the diversity in the Populations tab.",
     );
     expect(downloadWaitOf(store.getState(), liveOf(["pca", "diversity"]))).toBe(
       "Waits for the PCA to end; or stop it in the PCA tab.",

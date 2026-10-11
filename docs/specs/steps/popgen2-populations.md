@@ -23,8 +23,10 @@ populations it runs on").
 Corrected on 11 October 2026 after the review of work package 1 of
 the plan: a failure that ends the diversity's live state has its own
 line, which does not say "Stopped", since the user pressed no Stop
-("Its words"); and `autoRuns.run` answers "kept" when the store starts
-nothing for the diversity ("Accessibility" and "How it is checked").
+("Its words"); `autoRuns.run` answers "kept" when the store starts
+nothing for the diversity ("Accessibility" and "How it is checked");
+and until the band offers Stop all, the words of the locks name the
+Stop of each tab in its place ("While the diversity runs").
 
 The tab is the diversity panel of the old page, `popgen.html`, which is
 built and which the owner tried and accepted on 1 October 2026: its
@@ -253,7 +255,12 @@ locks end with "…, or press Stop all beside the heading Popnei to stop
 the PCA too; then press Run in each tab to calculate them again." in
 place of "; then press Run there …"
 (`popgen2-pca.md`, "Several analyses calculated again by themselves",
-"The lock").
+"The lock"). Until the band offers Stop all, which work package 4 of
+`docs/plans/population-tab.md` builds, they name the Stop of each tab
+in its place: "Stop the diversity in the Populations tab and the PCA in
+the PCA tab to change the filters; then press Run in each tab to
+calculate them again." (corrected on 11 October 2026 after the review
+of work package 1).
 
 Not greyed: the options of the PCA, which a change while the diversity
 runs makes about to start, waiting after it; "Colour the points by";
@@ -371,7 +378,7 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 | the button while live and not running | "Stop recalculating" |
 | the filters, the options of the diversity, while it runs, as tooltip and description | "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again." |
 | the column, the zone, Remove and the lists of the reader, while it runs | "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again." |
-| either, while another analysis is live | "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again."; "… to change the populations, …" |
+| either, while another analysis is live | "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again."; "… to change the populations, …"; until the band offers Stop all, "Stop the diversity in the Populations tab and the PCA in the PCA tab to change the filters; then press Run in each tab to calculate them again." |
 | the caption of the table | "The diversity of each population, over the 1,200 variants of panel.nei the filters kept."; with unclassified left out, "… 7 unclassified individuals kept are not in it." |
 | the status region, a start by itself | "Calculating the diversity again. To change the filters, stop it in the Populations tab."; when it is the first start of a round of several, the words of `popgen2-pca.md`, "Several analyses calculated again by themselves" |
 | the status region, the start of a Run that waited | "Calculating the diversity of panel.nei." |
