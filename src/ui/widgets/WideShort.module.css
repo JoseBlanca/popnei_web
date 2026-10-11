@@ -1,7 +1,10 @@
 /* The tokens are those of src/ui/tokens.css. */
 
 /* The short form, shown under 30 rem, where the whole words are read by
-   a screen reader alone. */
+   a screen reader alone: the rule of the class of words for a screen
+   reader alone (VisuallyHidden.module.css), written again here because
+   it holds only under that width, which a class given by the component
+   cannot follow. */
 .short {
   display: none;
 }

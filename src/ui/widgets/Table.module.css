@@ -9,18 +9,6 @@
   margin: 0;
 }
 
-/* A caption for a screen reader alone (captionHidden of Table.tsx): still
-   the table's name, in a box of one pixel clipped to nothing, out of the
-   flow, so that it takes no row of the frame. */
-.visuallyHidden {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 .scrollLine {
   margin: 0;
   color: var(--color-text-muted);

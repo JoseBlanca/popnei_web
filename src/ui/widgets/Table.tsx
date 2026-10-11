@@ -34,6 +34,7 @@ import type { RowValues, TableDownload } from "./downloadItems.ts";
 import { DownloadMenu } from "./DownloadMenu.tsx";
 import { useSidewaysFrame } from "./sidewaysFrame.ts";
 import styles from "./Table.module.css";
+import { VISUALLY_HIDDEN } from "./visuallyHidden.ts";
 
 /** A column of the table. */
 export interface TableColumn {
@@ -116,10 +117,11 @@ export function Table(props: TableProps): React.JSX.Element {
   const captionLine = (
     <p
       id={captionId}
-      className={classOf(
-        styles,
-        props.captionHidden === true ? "visuallyHidden" : "caption",
-      )}
+      className={
+        props.captionHidden === true
+          ? VISUALLY_HIDDEN
+          : classOf(styles, "caption")
+      }
     >
       {caption}
     </p>

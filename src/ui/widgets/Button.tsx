@@ -31,6 +31,7 @@ import { Button as AriaButton } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
 import styles from "./Button.module.css";
+import { VISUALLY_HIDDEN } from "./visuallyHidden.ts";
 import { WithTooltip } from "./Tooltip.tsx";
 
 /** Whether the description takes the focus from a script: with its
@@ -167,9 +168,7 @@ export function Button({
             tabIndex={-1}
             className={classOf(styles, "description")}
           >
-            <span className={classOf(styles, "visuallyHidden")}>
-              {descriptionName}
-            </span>
+            <span className={VISUALLY_HIDDEN}>{descriptionName}</span>
             <span id={descriptionId}>{description}</span>
           </span>
         ))}

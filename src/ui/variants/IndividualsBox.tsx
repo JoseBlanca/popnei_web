@@ -41,6 +41,7 @@ import { FileZone } from "../widgets/FileZone.tsx";
 import { Problem } from "../widgets/Problem.tsx";
 import { Select } from "../widgets/Select.tsx";
 import { Table } from "../widgets/Table.tsx";
+import { VISUALLY_HIDDEN } from "../widgets/visuallyHidden.ts";
 import type { TableRow } from "../widgets/Table.tsx";
 import { Warning } from "../widgets/Warning.tsx";
 import styles from "./IndividualsBox.module.css";
@@ -372,9 +373,7 @@ function countCell(kept: number | null): string | React.JSX.Element {
   return (
     <span>
       <span aria-hidden="true">{WAITING_COUNT}</span>
-      <span className={classOf(styles, "visuallyHidden")}>
-        {NOT_COUNTED_YET}
-      </span>
+      <span className={VISUALLY_HIDDEN}>{NOT_COUNTED_YET}</span>
     </span>
   );
 }

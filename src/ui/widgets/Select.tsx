@@ -40,6 +40,7 @@ import { classOf } from "../classOf.ts";
 import { useHoldWhile } from "./changeHold.ts";
 import { ProblemIcon } from "./Problem.tsx";
 import styles from "./Select.module.css";
+import { VISUALLY_HIDDEN } from "./visuallyHidden.ts";
 import { WaitingTooltip } from "./WaitingTooltip.tsx";
 import { ariaDisabledRef } from "./waiting.ts";
 
@@ -196,7 +197,7 @@ export function Select<T extends string>({
               className={
                 labelShown === "whole"
                   ? classOf(styles, "label")
-                  : classOf(styles, "visuallyHidden")
+                  : VISUALLY_HIDDEN
               }
             >
               {start === null ? label : `${start}${label}`}

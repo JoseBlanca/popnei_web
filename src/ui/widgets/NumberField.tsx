@@ -104,6 +104,7 @@ import {
 } from "./committedNumber.ts";
 import type { NumberRefusal } from "./committedNumber.ts";
 import styles from "./NumberField.module.css";
+import { VISUALLY_HIDDEN } from "./visuallyHidden.ts";
 import { Problem } from "./Problem.tsx";
 import { WaitingTooltip } from "./WaitingTooltip.tsx";
 
@@ -510,7 +511,7 @@ export function NumberField({
             ) : (
               <>
                 {shownLabel}
-                <span className={classOf(styles, "visuallyHidden")}>
+                <span className={VISUALLY_HIDDEN}>
                   {hiddenRest(label, shownLabel)}
                 </span>
               </>

@@ -1,0 +1,17 @@
+/* Words a screen reader reads and the screen does not show: a box of one
+   pixel, clipped to nothing and out of the flow, so that it takes no room
+   and moves nothing, rather than display: none or visibility: hidden,
+   which take the words out of what a screen reader reads too. The one
+   copy of the page, which each component takes through visuallyHidden.ts
+   beside this file. */
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

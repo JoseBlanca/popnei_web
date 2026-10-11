@@ -238,6 +238,13 @@ style can be changed while knowing every place it applies.
   `.tab[data-selected]`, or a class inside a class of the same module.
   Specificity stays low and equal, so that the order in the file decides,
   and no `!important`, which would win over the user's own styles.
+- **Words for a screen reader alone** take the one class of the page
+  for them, `VISUALLY_HIDDEN` of `src/ui/widgets/visuallyHidden.ts`,
+  whose rule is in `VisuallyHidden.module.css` beside it, alone or
+  beside a class of the component's own; eight copies of the rule, one
+  per component, were made one on 11 October 2026. Only a rule that
+  holds under a width alone, as `WideShort.module.css` has, writes it
+  again, since a class cannot follow a media query.
 - **Global CSS is three files**: `tokens.css`; `src/ui/base.css`, which
   holds a small reset, the styles of `body` and of the text that comes
   from Markdown in the help, the default focus ring, and the `@font-face`

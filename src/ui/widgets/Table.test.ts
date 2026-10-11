@@ -15,8 +15,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { Table } from "./Table.tsx";
 import type { TableProps } from "./Table.tsx";
-import { classOf } from "../classOf.ts";
-import styles from "./Table.module.css";
+import { VISUALLY_HIDDEN } from "./visuallyHidden.ts";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -85,16 +84,12 @@ describe("NU8 R1 the caption of a table", () => {
   test("shown, by default, as the table's name", () => {
     const { name } = draw(COUNTS);
     expect(name.textContent).toBe(COUNTS.caption);
-    expect(name.classList.contains(classOf(styles, "visuallyHidden"))).toBe(
-      false,
-    );
+    expect(name.classList.contains(VISUALLY_HIDDEN)).toBe(false);
   });
 
   test("hidden from the screen with captionHidden, still the table's name", () => {
     const { name } = draw({ ...COUNTS, captionHidden: true });
     expect(name.textContent).toBe(COUNTS.caption);
-    expect(name.classList.contains(classOf(styles, "visuallyHidden"))).toBe(
-      true,
-    );
+    expect(name.classList.contains(VISUALLY_HIDDEN)).toBe(true);
   });
 });

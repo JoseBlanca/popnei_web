@@ -13,9 +13,8 @@
  */
 import { useSyncExternalStore } from "react";
 
-import { classOf } from "../classOf.ts";
+import { VISUALLY_HIDDEN } from "../widgets/visuallyHidden.ts";
 import { useAnnouncer } from "./announcer.tsx";
-import styles from "./StatusRegion.module.css";
 
 /** The status region, with the text of the announcer. */
 export function StatusRegion(): React.JSX.Element {
@@ -24,11 +23,7 @@ export function StatusRegion(): React.JSX.Element {
     announcer.getState(),
   );
   return (
-    <div
-      role="status"
-      data-live-announcer="true"
-      className={classOf(styles, "region")}
-    >
+    <div role="status" data-live-announcer="true" className={VISUALLY_HIDDEN}>
       {text}
     </div>
   );

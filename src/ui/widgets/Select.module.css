@@ -10,18 +10,6 @@
   font-weight: 600;
 }
 
-/* Read by a screen reader and not shown: a label whose purpose the page
-   shows otherwise, or one that says more than the words shown in its
-   place. Out of the flow of the grid, so it leaves no gap. */
-.visuallyHidden {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 .button {
   display: inline-flex;
   align-items: center;

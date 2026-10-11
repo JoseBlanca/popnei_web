@@ -37,16 +37,6 @@
   inline-size: calc(7ch + 2 * var(--space-2));
 }
 
-/* The rest of a label shown in part, read by a screen reader alone. */
-.visuallyHidden {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 .input {
   /* Wide enough for a threshold of two decimals or a ploidy of three
      digits, at any size of the text. */

@@ -60,6 +60,7 @@ import {
   typeCommand,
 } from "./commands.ts";
 import styles from "./IndividualsStep.module.css";
+import { VISUALLY_HIDDEN } from "../../widgets/visuallyHidden.ts";
 import {
   CODING_LABEL,
   FOLDER_DROPPED,
@@ -934,7 +935,11 @@ function PopulationList({
       {lines.map((line) => (
         <li key={line.read}>
           <span aria-hidden="true">{line.shown}</span>
-          <span className={classOf(styles, "visuallyHidden")}>{line.read}</span>
+          <span
+            className={`${VISUALLY_HIDDEN} ${classOf(styles, "unselectable")}`}
+          >
+            {line.read}
+          </span>
         </li>
       ))}
     </ul>
