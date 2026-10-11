@@ -13,6 +13,10 @@
  * table of the file, sortable, with its menu "Download…", whose CSV has
  * every row in the order sorted, with the cells as the file holds them.
  *
+ * While the diversity runs, the three options of a text file wait,
+ * greyed with the reason of the lock of the populations
+ * (popgen2-input.md, "While the diversity runs").
+ *
  * What the screen holds of its own: the format of the last read of each
  * load, and whether it started with the mark of UTF-16, which a read
  * under way does not tell; the sort of the table; and how far the table
@@ -60,6 +64,7 @@ import { Select } from "../widgets/Select.tsx";
 import { SortableTable } from "../widgets/SortableTable.tsx";
 import type { TableSort } from "../widgets/tableSort.ts";
 import { Warning } from "../widgets/Warning.tsx";
+import { usePopulationsLock } from "./filtersLock.ts";
 import styles from "./IndividualsTab.module.css";
 import {
   individualsTableColumns,
@@ -225,6 +230,7 @@ function ReadOptions({
   isUtf16,
 }: ReadOptionsProps): React.JSX.Element {
   const store = usePopgen2Store();
+  const lock = usePopulationsLock();
   const send = (
     option: "encoding" | "separator" | "decimal",
     next: CsvOptions,
@@ -239,6 +245,7 @@ function ReadOptions({
       ) : (
         <Select
           label="Encoding"
+          waiting={lock}
           items={encodingItems(detectedText("encoding", csv, found))}
           value={csv.encoding}
           onChange={(encoding) => {
@@ -248,6 +255,7 @@ function ReadOptions({
       )}
       <Select
         label="Separator"
+        waiting={lock}
         items={separatorItems(detectedText("separator", csv, found))}
         value={csv.separator}
         onChange={(separator) => {
@@ -256,6 +264,7 @@ function ReadOptions({
       />
       <Select
         label="Decimal mark"
+        waiting={lock}
         items={decimalItems(detectedText("decimal", csv, found))}
         value={csv.decimal}
         onChange={(decimal) => {

@@ -64,7 +64,7 @@ interface ButtonBaseProps {
   readonly label: string;
   /** What pressing it does, with the mouse, the keyboard or a touch;
       absent only inside a widget that gives the press itself, the
-      `FileTrigger` of `FileZone`. */
+      `FileTrigger` of the button that opens a project. */
   readonly onPress?: () => void;
   /** Whether it cannot be pressed now; false when absent. */
   readonly isDisabled?: boolean;

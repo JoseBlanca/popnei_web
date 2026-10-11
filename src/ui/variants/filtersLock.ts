@@ -11,11 +11,14 @@
  * analysis and its tab, and with Stop all when another analysis is live
  * beside it, so that no change leaves the running analysis behind.
  *
- * The column of the populations and the individuals file, which the
- * diversity reads too, are not locked yet: until work package 3 of
- * docs/plans/population-tab.md greys the box Individuals while the
- * diversity runs, a change of them stops the diversity, as the store of
- * the page stops every calculation a change leaves behind.
+ * While an analysis that reads the populations runs, the diversity, the
+ * column of the populations, the individuals file, its Remove and the
+ * lists of how a text file of it is read wait too, with the words "Stop
+ * the diversity in the Populations tab to change the populations; then
+ * press Run there to calculate it again."
+ * (docs/specs/steps/popgen2-input.md, "While the diversity runs"); while
+ * the PCA alone runs they stay open, as the owner decided on 10 October
+ * 2026.
  *
  * Which analyses are live, and which wait after the one running, is
  * known to `autoRuns` alone, which the entry of the page gives to every
@@ -25,7 +28,11 @@ import type { AnalysisId } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { liveBeside, runningAnalysisOf } from "../analyses/status.ts";
-import { STOP_ALL_OFFERED, filtersLockedText } from "../analyses/words.ts";
+import {
+  STOP_ALL_OFFERED,
+  filtersLockedText,
+  populationsLockedText,
+} from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { useLive } from "../autoRunsContext.ts";
 
@@ -59,6 +66,25 @@ export function optionsLockOf(
   return runningAnalysisOf(s)?.id === id ? filtersLockOf(s, live) : null;
 }
 
+/** The reason the column of the populations, the individuals file and
+    how it is read wait in `s`, while a live analysis that reads the
+    populations runs, with Stop all when another is live beside it;
+    `null` while none runs, or while the one running reads no
+    population, as the PCA. */
+export function populationsLockOf(
+  s: AppState<JobResult, unknown>,
+  live: Pick<AutoRuns, "isLive">,
+): string | null {
+  const running = runningAnalysisOf(s);
+  return running?.readsPopulations !== true
+    ? null
+    : populationsLockedText(
+        running,
+        liveBeside(s, running, live),
+        STOP_ALL_OFFERED,
+      );
+}
+
 /** The reason the thresholds and the FILTER box wait while a live
     analysis runs, or `null` while none runs; the component is drawn
     again only when it changes. */
@@ -71,4 +97,11 @@ export function useFiltersLock(): string | null {
     changes. */
 export function useOptionsLock(id: AnalysisId): string | null {
   return useLive((s, autoRuns) => optionsLockOf(s, autoRuns, id));
+}
+
+/** The reason the column of the populations, the individuals file and
+    how it is read wait while the diversity runs, or `null`; the
+    component is drawn again only when it changes. */
+export function usePopulationsLock(): string | null {
+  return useLive(populationsLockOf);
 }

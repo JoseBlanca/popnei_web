@@ -15,7 +15,13 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { loadVariants, setGrouping, setThreshold } from "../../core/project.ts";
+import { pcaOnPopgen2 } from "../../core/analyses/pca.ts";
+import {
+  loadVariants,
+  setAnalysisOptions,
+  setGrouping,
+  setThreshold,
+} from "../../core/project.ts";
 import type { IndividualsReadGiven } from "../../core/project.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import type {
@@ -1037,5 +1043,215 @@ describe("AP3 D3 the changes of the individuals file are no steps of Undo; the c
       column: null,
     });
     expect(undoNames(store)).toBe("the column of the populations changed");
+  });
+});
+
+/** The reason of the lock of the populations while the diversity runs
+    alone. */
+const POPULATIONS_LOCKED =
+  "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again.";
+
+/** Ends the one pass of panel.nei, the last request, with every
+    individual kept. */
+async function passEnded(
+  store: Popgen2PageStore<JobResult, Blob>,
+  requests: readonly Request[],
+): Promise<void> {
+  await act(async () => {
+    requests.at(-1)?.end({
+      kind: "done",
+      key: store.getState().runs.at(-1)?.key ?? "",
+      result: summaryResult(["1"], [1200], INDIVIDUALS),
+    });
+    await Promise.resolve();
+  });
+  await settled();
+}
+
+/** Starts the analysis `id`, which the fake worker never ends; the PCA
+    with its LD pruning set, which it has no default for. */
+async function running(
+  store: Popgen2PageStore<JobResult, Blob>,
+  id: "diversity" | "pca",
+): Promise<void> {
+  await act(async () => {
+    if (id === "pca") {
+      store.apply("the LD pruning of the PCA changed", (p) =>
+        setAnalysisOptions(p, pcaOnPopgen2, {
+          ...pcaOnPopgen2.defaults,
+          ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
+        }),
+      );
+    }
+    store.startRun(id);
+    await Promise.resolve();
+  });
+  await settled();
+  expect(store.getState().analyses.find((a) => a.id === id)?.status.kind).toBe(
+    "running",
+  );
+}
+
+/** panel.nei and pops.csv read on popcat, the one pass ended. */
+async function bothRead(): Promise<Drawn> {
+  const drawn = await drawPage();
+  await openVariants(drawn.store);
+  await passEnded(drawn.store, drawn.requests);
+  await pickIndividuals("pops.csv");
+  await recorded(drawn.store, readOf(POPS));
+  await choose(drawn.store, "popcat");
+  return drawn;
+}
+
+/** The name of `button`: its aria-label, or its words. */
+function nameOf(button: Element): string {
+  return button.getAttribute("aria-label") ?? button.textContent;
+}
+
+/** The names of the buttons of `element` marked aria-disabled. */
+function greyed(element: HTMLElement): string[] {
+  return [...element.querySelectorAll('button[aria-disabled="true"]')].map(
+    nameOf,
+  );
+}
+
+/** The words of the descriptions of `button`, joined. */
+function descriptionOf(button: Element): string {
+  return (button.getAttribute("aria-describedby") ?? "")
+    .split(/\s+/u)
+    .filter((id) => id !== "")
+    .map((id) => document.getElementById(id)?.textContent ?? "")
+    .join(" ");
+}
+
+/** The button of `element` named `name`. */
+function buttonNamed(element: HTMLElement, name: string): HTMLButtonElement {
+  const found = [...element.querySelectorAll("button")].find(
+    (b) => nameOf(b) === name,
+  );
+  if (found === undefined) throw new Error(`no button ${name}`);
+  return found;
+}
+
+/** Pastes a file named `name` into the zone's hidden button, which takes
+    a paste while it has the focus, as React Aria reads a paste. */
+async function pasteFile(name: string): Promise<void> {
+  const paste = buttonNamed(box(), "Paste an individuals file");
+  await act(async () => {
+    paste.focus();
+    await Promise.resolve();
+  });
+  const event = new Event("paste", { bubbles: true, cancelable: true });
+  const file = new File(["IID,pop\n"], name);
+  Object.defineProperty(event, "clipboardData", {
+    value: {
+      types: ["Files"],
+      items: [{ kind: "file", type: "text/csv", getAsFile: () => file }],
+      getData: () => "",
+    },
+  });
+  await act(async () => {
+    paste.dispatchEvent(event);
+    await Promise.resolve();
+  });
+  await settled();
+}
+
+describe("PT3 D2 the box Individuals and the Individuals tab greyed while the diversity runs", () => {
+  test("while the diversity runs: the list, the paste button, the zone's button and Remove of the box, and the three lists of the tab, greyed with the reason as description; after its Stop, none", async () => {
+    const { store } = await bothRead();
+    expect(greyed(box())).toEqual([]);
+    await running(store, "diversity");
+    expect(greyed(box())).toEqual([
+      "popcat",
+      "Paste an individuals file",
+      "Open another individuals file…",
+      "Remove pops.csv",
+    ]);
+    for (const button of box().querySelectorAll(
+      'button[aria-disabled="true"]',
+    )) {
+      expect(descriptionOf(button)).toContain(POPULATIONS_LOCKED);
+    }
+    expect(greyed(tab())).toEqual([
+      "Detected: UTF-8",
+      "Detected: comma",
+      "Detected: point",
+    ]);
+    for (const button of tab().querySelectorAll(
+      'button[aria-disabled="true"]',
+    )) {
+      expect(descriptionOf(button)).toContain(POPULATIONS_LOCKED);
+    }
+    // Greyed, each is still a stop of the Tab key.
+    for (const button of [
+      ...box().querySelectorAll('button[aria-disabled="true"]'),
+      ...tab().querySelectorAll('button[aria-disabled="true"]'),
+    ]) {
+      expect((button as HTMLButtonElement).disabled).toBe(false);
+      expect(button.getAttribute("tabindex")).not.toBe("-1");
+    }
+    // The counts and the table of the file are not greyed.
+    expect(greyed(tab())).not.toContain("Copy the name");
+
+    await act(async () => {
+      store.cancelRun("diversity");
+      await Promise.resolve();
+    });
+    await settled();
+    expect(greyed(box())).toEqual([]);
+    expect(greyed(tab())).toEqual([]);
+  });
+
+  test("while the PCA runs: nothing of the box or of the tab greyed", async () => {
+    const { store } = await bothRead();
+    await running(store, "pca");
+    expect(greyed(box())).toEqual([]);
+    expect(greyed(tab())).toEqual([]);
+  });
+
+  test("while the diversity runs, the column chosen, Remove, the zone's button, a separator chosen and a file pasted change nothing; the paste shows the reason in the box, until the diversity ends", async () => {
+    const { store } = await bothRead();
+    await running(store, "diversity");
+    const before = store.getState().project;
+    const clicks = vi.spyOn(HTMLInputElement.prototype, "click");
+
+    await pickInSelect(box(), 0, "none");
+    await pickInSelect(tab(), 1, ";");
+    await act(async () => {
+      buttonNamed(box(), "Remove pops.csv").click();
+      buttonNamed(box(), "Open another individuals file…").click();
+      await Promise.resolve();
+    });
+    expect(clicks).not.toHaveBeenCalled();
+    clicks.mockRestore();
+    expect(paragraphs(box())).not.toContain(POPULATIONS_LOCKED);
+
+    await pasteFile("other.csv");
+    expect(store.getState().project).toBe(before);
+    expect(paragraphs(box())).toContain(POPULATIONS_LOCKED);
+
+    await act(async () => {
+      store.cancelRun("diversity");
+      await Promise.resolve();
+    });
+    await settled();
+    expect(paragraphs(box())).not.toContain(POPULATIONS_LOCKED);
+  });
+
+  test("the zone not greyed: the zone's button opens the picker, and a file pasted opens it", async () => {
+    const { store } = await drawPage();
+    await openVariants(store);
+    const clicks = vi
+      .spyOn(HTMLInputElement.prototype, "click")
+      .mockImplementation(() => undefined);
+    await act(async () => {
+      buttonNamed(box(), "Open individuals file…").click();
+      await Promise.resolve();
+    });
+    expect(clicks).toHaveBeenCalledTimes(1);
+    clicks.mockRestore();
+    await pasteFile("pops.csv");
+    expect(store.getState().project.individuals?.name).toBe("pops.csv");
   });
 });

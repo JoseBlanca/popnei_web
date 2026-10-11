@@ -14,13 +14,20 @@
  * opens an individuals file, its button, a drop or a paste, and with a
  * file the button that removes it.
  *
+ * While the diversity runs, the list, the zone and Remove wait, greyed
+ * with the reason of the lock of the populations, so that no change
+ * leaves the running diversity behind; a file dropped or pasted then
+ * opens nothing, and the box shows the reason where it shows the words
+ * of a folder dropped (popgen2-input.md, "While the diversity runs").
+ *
  * The lines of the file are in a boundary of errors made again for each
  * file, as those of the variants file are; the zone is outside it, so
  * that the button the user pressed, which holds the focus, is not
  * replaced at each opening, and has a boundary of its own, made again at
  * each turn of the tabs, as the zone of the variants file has. The box
  * holds the words of the last drop or paste it did not open, until the
- * next opening.
+ * next opening; those of a drop refused by the lock, until the lock
+ * ends.
  */
 import { useId, useRef, useState } from "react";
 
@@ -38,6 +45,7 @@ import type { StepCommand } from "../steps/variants/commands.ts";
 import { useAppState, usePopgen2Store, useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { FileZone } from "../widgets/FileZone.tsx";
+import { usePopulationsLock } from "./filtersLock.ts";
 import { Problem } from "../widgets/Problem.tsx";
 import { Select } from "../widgets/Select.tsx";
 import { Table } from "../widgets/Table.tsx";
@@ -92,6 +100,12 @@ const COUNT_COLUMNS = [
   { id: "individuals", label: INDIVIDUALS_HEADER, isNumeric: true },
 ] as const;
 
+/** A drop or a paste the box did not open: of something that is not one
+    file, with its words; or refused by the lock of the populations. */
+type Refusal =
+  | { readonly kind: "words"; readonly text: string }
+  | { readonly kind: "locked" };
+
 /** What the box is drawn with. */
 export interface IndividualsBoxProps {
   /** The tab shown, whose turn draws the zone again after a throw. */
@@ -107,18 +121,26 @@ export function IndividualsBox({
   const files = useFiles();
   const announcer = useAnnouncer();
   const openButton = useRef<HTMLButtonElement>(null);
-  // The words of the last drop or paste not opened, until the next
-  // opening or removal.
-  const [refusal, setRefusal] = useState<string | null>(null);
+  // The last drop or paste not opened, until the next opening or
+  // removal: its words, or the mark of one refused by the lock, whose
+  // words are the lock's, until it ends.
+  const [refusal, setRefusal] = useState<Refusal | null>(null);
   const individuals = useAppState((s) => s.project.individuals);
+  const lock = usePopulationsLock();
+  // The lock ended: the words of a drop it refused go with it, set while
+  // drawing, as React keeps a state that follows another.
+  if (refusal?.kind === "locked" && lock === null) {
+    setRefusal(null);
+  }
+  const refusalShown = refusal?.kind === "locked" ? lock : refusal?.text;
 
   // An opening and a removal start the history afresh (popgen2-input.md, "What it sends and reads").
   const send = (step: StepCommand): void => {
     store.applyAfresh(step.command);
   };
 
-  const refuse = (text: string): void => {
-    setRefusal(text);
+  const refuse = (text: string, ofLock = false): void => {
+    setRefusal(ofLock ? { kind: "locked" } : { kind: "words", text });
     // The focus stays where it was, so a screen reader would not read the
     // words by themselves.
     announcer.announce(text);
@@ -156,7 +178,9 @@ export function IndividualsBox({
       >
         <FileLines individuals={individuals} />
       </ErrorBoundary>
-      {refusal !== null && <Problem>{refusal}</Problem>}
+      {refusalShown !== null && refusalShown !== undefined && (
+        <Problem>{refusalShown}</Problem>
+      )}
       {/* Its own boundary, made again at each turn of the tabs, as the
           zone of the variants file has. */}
       <ErrorBoundary
@@ -177,9 +201,17 @@ export function IndividualsBox({
             refuse(NOT_FILES_WORDS[dropped]);
           }}
           buttonRef={openButton}
+          waiting={lock}
+          onWaitingDrop={() => {
+            if (lock !== null) refuse(lock, true);
+          }}
           actions={
             individuals !== null && (
-              <Button label={removeLabel(individuals.name)} onPress={remove} />
+              <Button
+                label={removeLabel(individuals.name)}
+                onPress={remove}
+                waiting={lock}
+              />
             )
           }
         />
@@ -258,6 +290,7 @@ function ColumnAndCounts({ project }: ColumnAndCountsProps): React.JSX.Element {
   }
   const noColumn = noColumnQualifiedText(project);
   const shown = countsShown(project, counts, wait);
+  const lock = usePopulationsLock();
   return (
     <>
       <Select
@@ -265,6 +298,7 @@ function ColumnAndCounts({ project }: ColumnAndCountsProps): React.JSX.Element {
         items={columnItems(read)}
         value={chosenColumnItem(project)}
         {...(noColumn !== null && { description: noColumn })}
+        waiting={lock}
         onChange={(id) => {
           const step = columnItemCommand(id);
           store.apply(step.description, step.command);
