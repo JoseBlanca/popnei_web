@@ -279,6 +279,11 @@ export function diversityCsv(r: DiversityResult): string {
     locks the diversity when the lists leave no population. */
 const NO_POPULATION = "`pops` names no population";
 
+/** The end of a refusal on popgen2.html that leaves the diversity live,
+    once the user has changed what the words ask: it starts again by
+    itself after the change, which nothing else says. */
+const AGAIN_BY_ITSELF = "The diversity is then calculated again by itself.";
+
 /**
  * The words of a refusal of popnei, for the error state of the panel of
  * the project `p` on the page `page`, by the
@@ -311,23 +316,22 @@ export function refusalText(
     }
     return page === "popgen"
       ? `The thresholds of the filters of individuals leave none of the individuals of ${fileName} that have a population in ${shown(column)}, so no population is left. Loosen the thresholds in the Variants step.`
-      : `The thresholds of the individuals leave none of the individuals of ${fileName} that have a population in ${shown(column)}, so no population is left. Loosen the thresholds of the individuals in the Variants tab.`;
+      : `The thresholds of the individuals leave none of the individuals of ${fileName} that have a population in ${shown(column)}, so no population is left. Loosen the thresholds of the individuals in the Variants tab. ${AGAIN_BY_ITSELF}`;
   }
   if (page === "popgen2") {
-    return (
-      fileRefusalText(message, p, {
-        cannot: "the diversity cannot be calculated",
-        where: IN_BOX_VARIANTS,
-      }) ??
-      refusalWords(message, p, {
-        change: `Change the settings, or open the variants file again${IN_BOX_VARIANTS}`,
-        calculate: "calculate the diversity",
-        nothingLeft: "there is no variant to calculate the diversity over",
-        again: "to run it again",
-        emptyPass: (name) =>
-          `The thresholds of the Variants tab kept none of the variants of ${name}, so there is no variant to calculate the diversity over. Loosen them.`,
-      })
-    );
+    const fileWords = fileRefusalText(message, p, {
+      cannot: "the diversity cannot be calculated",
+      where: IN_BOX_VARIANTS,
+    });
+    if (fileWords !== null) return fileWords;
+    return `${refusalWords(message, p, {
+      change: `Change the settings, or open the variants file again${IN_BOX_VARIANTS}`,
+      calculate: "calculate the diversity",
+      nothingLeft: "there is no variant to calculate the diversity over",
+      again: "to run it again",
+      emptyPass: (name) =>
+        `The thresholds of the Variants tab kept none of the variants of ${name}, so there is no variant to calculate the diversity over. Loosen them.`,
+    })} ${AGAIN_BY_ITSELF}`;
   }
   return refusalWords(message, p, {
     change: CHANGE_SETTINGS,
@@ -484,7 +488,7 @@ export function popgen2OnePopulationLine(
     within each (docs/functionality.md: nothing misleads without
     warning). */
 const MIXED_POPULATIONS =
-  "If the individuals belong to several populations, the expected heterozygosity and F are those of their mixture, and F comes out higher than within the populations.";
+  "If the individuals belong to several populations, the expected heterozygosity and F are those of all of them pooled, and F comes out higher than within each population.";
 
 /** Whether the one population of the cause `cause` stands for an
     individuals file or a column of the populations the user opened, and
@@ -1286,8 +1290,8 @@ function tooFewOfOneText(
     return `${escaped(row.population)}, the one population, has ${counted(row.individuals, "individual")}, and ${rule}, so it has no values. ${end}`;
   }
   return row.individuals === 1
-    ? `The unclassified individual, taken as one population since it has no population, is 1, and ${rule}, so it has no values. ${end}`
-    : `The unclassified individuals, taken as one population since none has a population, are ${grouped(row.individuals)}, and ${rule}, so they have no values. ${end}`;
+    ? `The individual of the one population, ${escaped(row.population)}, is 1, and ${rule}, so it has no values. ${end}`
+    : `The individuals of the one population, ${escaped(row.population)}, are ${grouped(row.individuals)}, and ${rule}, so they have no values. ${end}`;
 }
 
 /** The text of `privateAllelesWithoutSmall`: the private alleles of the

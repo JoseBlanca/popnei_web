@@ -3238,7 +3238,7 @@ function sentPops(
 /** The sentence of the line of the one population when it stands for an
     individuals file or a column the user opened. */
 const MIXED =
-  "If the individuals belong to several populations, the expected heterozygosity and F are those of their mixture, and F comes out higher than within the populations.";
+  "If the individuals belong to several populations, the expected heterozygosity and F are those of all of them pooled, and F comes out higher than within each population.";
 
 /** The first sentence of the warning of the private alleles of the one
     population on popgen2.html. */
@@ -3447,7 +3447,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     expect(diversityOnPopgen2.warnings(r, p, null)).toEqual([
       {
         code: "tooFewIndividuals",
-        text: "The unclassified individuals, taken as one population since none has a population, are 12, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, lower the minimum number of individuals in the options of the diversity.",
+        text: "The individuals of the one population, Unclassified, are 12, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, lower the minimum number of individuals in the options of the diversity.",
       },
     ]);
     const fourteen = deepFreeze<Project>({
@@ -3457,7 +3457,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     expect(diversityOnPopgen2.warnings(r, fourteen, null)).toEqual([
       {
         code: "tooFewIndividuals",
-        text: "The unclassified individuals, taken as one population since none has a population, are 12, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, lower the minimum number of individuals in the options of the diversity, or loosen the thresholds of the individuals in the Variants tab.",
+        text: "The individuals of the one population, Unclassified, are 12, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, lower the minimum number of individuals in the options of the diversity, or loosen the thresholds of the individuals in the Variants tab.",
       },
     ]);
   });
@@ -3586,7 +3586,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     expect(
       refusalText("`pops` names no population once filtered", p, "popgen2"),
     ).toBe(
-      "The thresholds of the individuals leave none of the individuals of panel.nei that have a population in pop, so no population is left. Loosen the thresholds of the individuals in the Variants tab.",
+      "The thresholds of the individuals leave none of the individuals of panel.nei that have a population in pop, so no population is left. Loosen the thresholds of the individuals in the Variants tab. The diversity is then calculated again by itself.",
     );
     expect(
       refusalText(
@@ -3595,10 +3595,10 @@ describe("PT1 D1 the definition of popgen2.html", () => {
         "popgen2",
       ),
     ).toBe(
-      "The thresholds of the Variants tab kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen them.",
+      "The thresholds of the Variants tab kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen them. The diversity is then calculated again by itself.",
     );
     expect(refusalText("something else went wrong.", p, "popgen2")).toBe(
-      "popnei could not calculate the diversity: something else went wrong. Change the settings, or open the variants file again in the box Variants, to run it again.",
+      "popnei could not calculate the diversity: something else went wrong. Change the settings, or open the variants file again in the box Variants, to run it again. The diversity is then calculated again by itself.",
     );
     expect(
       refusalText(

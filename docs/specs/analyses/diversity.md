@@ -1907,14 +1907,19 @@ the result are the old ones.
   them. So `tooFewIndividuals` ends "merge it with another population
   in panel_pops.csv, or lower the minimum number of individuals in the
   options of the diversity."; `tooFewIndividuals` of the one
-  population reads "The unclassified individuals, taken as one
-  population since none has a population, are 12, and a variant has a
-  value in a population only when at least 20 of its individuals have
-  a called genotype there, so they have no values. To have them, lower
+  population reads "The individuals of the one population,
+  Unclassified, are 12, and a variant has a value in a population only
+  when at least 20 of its individuals have a called genotype there, so
+  they have no values. To have them, lower
   the minimum number of individuals in the options of the
   diversity.", with ", or loosen the thresholds of the individuals in
   the Variants tab" before the full stop when the thresholds removed
-  some; `privateAllelesNeedTwoPopulations` has three words on this
+  some (since 11 October 2026; it said "taken as one population since
+  none has a population", false for a file that could not be read or
+  a column of more than 20 values); a refusal of popnei that does not
+  ask to open the variants file again ends "The diversity is then
+  calculated again by itself.", since the diversity stays live after
+  it (since 11 October 2026); `privateAllelesNeedTwoPopulations` has three words on this
   page: of the one population with no individuals file, "With every
   individual in one population, no allele can be private, found in this
   population and in no other, so the table has no private alleles. Open

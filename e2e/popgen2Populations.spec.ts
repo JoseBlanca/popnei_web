@@ -92,7 +92,7 @@ const ONE_POPULATION =
 
 /** The same line when the one population stands for a column the user
     chose, which classifies nobody. */
-const ONE_POPULATION_OF_COLUMN = `${ONE_POPULATION} If the individuals belong to several populations, the expected heterozygosity and F are those of their mixture, and F comes out higher than within the populations.`;
+const ONE_POPULATION_OF_COLUMN = `${ONE_POPULATION} If the individuals belong to several populations, the expected heterozygosity and F are those of all of them pooled, and F comes out higher than within each population.`;
 
 /** What the page records, on `window`, of the calculations it asks of
     its workers and the results it gets back: "run diversity", "result

@@ -182,8 +182,9 @@ population stands for an individuals file or a column the user opened,
 a refused file, a column absent, not offered, of more than 20 values
 or that classifies nobody, a last sentence says what it does to the
 numbers: "If the individuals belong to several populations, the
-expected heterozygosity and F are those of their mixture, and F comes
-out higher than within the populations." With no individuals file and
+expected heterozygosity and F are those of all of them pooled, and F
+comes out higher than within each population." (worded so on 11
+October 2026, after a first reader found "their mixture" unclear.) With no individuals file and
 with "None", chosen to have one population, it is not said. (Added on
 11 October 2026 after the review of work package 1 of the plan: on
 `panel.nei` with `panel_pops.csv` the one population gives F 0.0564,
