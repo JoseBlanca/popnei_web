@@ -17,9 +17,13 @@
  *
  * In the Populations tab of popgen2.html, `page` "popgen2", the warning
  * is in that page's words and the old button of the download of the
- * spectrum is left out, since every plot and table of that page offers
- * its data in a "Download…" of its own (docs/specs/analyses/sfs.md, "On
- * popgen2.html").
+ * spectrum gives way to a "Download…" of each histogram, on a line of its
+ * own above it, "Image as SVG", "Image as PNG" and "Data as CSV", the
+ * population's rows of the spectrum, and one below the table, "Table as
+ * CSV", as every plot and table of that page offers its data
+ * (docs/specs/analyses/sfs.md, "On popgen2.html"). Their files are named
+ * after the variants file and the population, `panel.sfs.p0.svg`, the
+ * name made a part of a file name by `fileNameParts`.
  *
  * Each population's histogram is inside an error boundary of its own, so
  * that one that throws takes neither the others nor the table, the fields
@@ -42,9 +46,11 @@ import { diversityOptions } from "../../../core/analyses/diversity.ts";
 import type { DiversityPage } from "../../../core/analyses/diversity.ts";
 import {
   allSpectraCsv,
+  populationSpectrumCsv,
   spectraOf,
   spectrumWarnings,
 } from "../../../core/analyses/sfs.ts";
+import { fileNameParts, variantsStem } from "../../../core/fileNames.ts";
 import type { SpectrumOfPop } from "../../../core/analyses/sfs.ts";
 import { escaped } from "../../../core/project.ts";
 import type { DiversityResult } from "../../../worker/protocol.ts";
@@ -53,6 +59,7 @@ import { downloadText } from "../../download.ts";
 import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
 import { useAppState } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
+import type { PlotDownload } from "../../widgets/downloadItems.ts";
 import { HistogramPlot } from "../../widgets/HistogramPlot.tsx";
 import { Table } from "../../widgets/Table.tsx";
 import type { TableColumn, TableRow } from "../../widgets/Table.tsx";
@@ -66,12 +73,15 @@ import {
   SPECTRUM_HEADING,
   SPECTRUM_TABLE_CAPTION,
   SPECTRUM_TABLE_TAB,
+  SPECTRUM_TABLE_WHAT,
   SPECTRUM_TABS_LABEL,
   SPECTRUM_Y_LABEL,
   drawLineOf,
   noSpectrumLine,
   populationCells,
   populationColumns,
+  populationValues,
+  spectrumWhat,
   spectrumCaption,
   allSpectraCsvName,
   spectrumDescription,
@@ -121,6 +131,10 @@ export const SpectrumBlock = memo(function SpectrumBlock({
   const draw = spectra.numCalledAlleles;
   const tooMany = Math.floor(draw / 2) > MAX_HISTOGRAM_BINS;
   const anyShares = spectra.pops.some((pop) => pop.shares !== null);
+  // The part of the names of the files of each population, in the order
+  // of the result, so that two names that give the same part differ.
+  const parts = fileNameParts(spectra.pops.map((pop) => pop.population));
+  const stem = variantsStem(variantsName);
 
   const download = (): void => {
     downloadText(
@@ -136,8 +150,20 @@ export const SpectrumBlock = memo(function SpectrumBlock({
         <p className={classOf(styles, "line")}>{tooManyBarsLine(draw)}</p>
       )}
       <div className={classOf(styles, "plots")}>
-        {spectra.pops.map((pop) => {
+        {spectra.pops.map((pop, index) => {
           const noSpectrum = noSpectrumLine(pop, minimum, draw);
+          const part = parts[index] ?? "";
+          const download: PlotDownload | null =
+            page === "popgen2"
+              ? {
+                  what: spectrumWhat(pop.population),
+                  stem,
+                  imageWhat: `sfs.${part}`,
+                  csvWhat: `sfs.${part}`,
+                  csv: () => populationSpectrumCsv(result, pop.population),
+                  waiting: null,
+                }
+              : null;
           // Above the bars a histogram draws, a population with a
           // spectrum has no group: the line above says so for all.
           if (tooMany && noSpectrum === null) return null;
@@ -152,6 +178,7 @@ export const SpectrumBlock = memo(function SpectrumBlock({
                 numCalledAlleles={draw}
                 yMax={spectra.largestShare}
                 noSpectrum={noSpectrum}
+                download={download}
               />
             </ErrorBoundary>
           );
@@ -183,7 +210,14 @@ export const SpectrumBlock = memo(function SpectrumBlock({
           {
             id: TABLE_ID,
             label: SPECTRUM_TABLE_TAB,
-            content: <SpectrumTable result={result} />,
+            content: (
+              <SpectrumTable
+                result={result}
+                fileName={
+                  page === "popgen2" ? allSpectraCsvName(variantsName) : null
+                }
+              />
+            ),
           },
         ]}
       />
@@ -207,6 +241,9 @@ interface PopulationSpectrumProps {
   readonly yMax: number;
   /** The line in place of its histogram, or `null` when it has one. */
   readonly noSpectrum: string | null;
+  /** The download of its histogram, on popgen2.html; `null` on
+      popgen.html. */
+  readonly download: PlotDownload | null;
 }
 
 /** The group of one population: its heading, and its histogram with the
@@ -216,6 +253,7 @@ function PopulationSpectrum({
   numCalledAlleles,
   yMax,
   noSpectrum,
+  download,
 }: PopulationSpectrumProps): React.JSX.Element {
   const headingId = useId();
   const shares = pop.shares;
@@ -236,6 +274,7 @@ function PopulationSpectrum({
             shares={shares}
             numCalledAlleles={numCalledAlleles}
             yMax={yMax}
+            download={download}
           />
         </>
       ) : (
@@ -255,6 +294,8 @@ interface SpectrumHistogramProps {
   readonly numCalledAlleles: number;
   /** The top of every vertical axis. */
   readonly yMax: number;
+  /** The download of the histogram, or `null` for none. */
+  readonly download: PlotDownload | null;
 }
 
 /** The histogram of a population with shares, its data made once for
@@ -265,6 +306,7 @@ function SpectrumHistogram({
   shares,
   numCalledAlleles,
   yMax,
+  download,
 }: SpectrumHistogramProps): React.JSX.Element {
   const data = useMemo((): HistogramData => {
     // Each bar one count wide and centred on it, from 0.5 to n / 2 + 0.5.
@@ -284,16 +326,24 @@ function SpectrumHistogram({
       xWholeNumbers: true,
     };
   }, [pop, shares, numCalledAlleles, yMax]);
-  return <HistogramPlot data={data} shape="tall" />;
+  return download === null ? (
+    <HistogramPlot data={data} shape="tall" />
+  ) : (
+    <HistogramPlot data={data} shape="tall" download={download} />
+  );
 }
 
 /** The table of the spectra: a row per count of the rarer allele, 0 to
     n / 2, and two columns per population, "no value" in those of a
-    population not calculated, made once for the result. */
+    population not calculated, made once for the result; with its
+    "Download…" below it, "Table as CSV" of the values of its cells, saved
+    as `fileName`, on popgen2.html, and none with `fileName` `null`. */
 function SpectrumTable({
   result,
+  fileName,
 }: {
   readonly result: DiversityResult;
+  readonly fileName: string | null;
 }): React.JSX.Element {
   const { columns, rows } = useMemo(() => {
     const spectra = spectraOf(result);
@@ -307,19 +357,33 @@ function SpectrumTable({
         })),
       ),
     ];
-    const tableRows: TableRow[] = Array.from(
+    const tableRows = Array.from(
       { length: Math.floor(spectra.numCalledAlleles / 2) + 1 },
-      (_, count) => ({
+      (
+        _,
+        count,
+      ): TableRow & { readonly values: readonly (number | null)[] } => ({
         id: String(count),
         cells: [
           String(count),
           ...spectra.pops.flatMap((pop) => populationCells(pop, count)),
         ],
+        values: [
+          count,
+          ...spectra.pops.flatMap((pop) => populationValues(pop, count)),
+        ],
       }),
     );
     return { columns: tableColumns, rows: tableRows };
   }, [result]);
-  return (
+  return fileName === null ? (
     <Table caption={SPECTRUM_TABLE_CAPTION} columns={columns} rows={rows} />
+  ) : (
+    <Table
+      caption={SPECTRUM_TABLE_CAPTION}
+      columns={columns}
+      rows={rows}
+      download={{ what: SPECTRUM_TABLE_WHAT, fileName, waiting: null }}
+    />
   );
 }

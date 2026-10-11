@@ -4,7 +4,9 @@
  * steps/popgen2-populations.md, "The result"): the caption of the table,
  * with, in the Populations tab of popgen2.html, the sentence that counts
  * the unclassified individuals kept it leaves out; its headers and its
- * cells; the line of the draw; and the name of the download. Apart from
+ * cells, and their values as stored, which the CSV of its "Download…"
+ * holds on popgen2.html; the line of the draw; and the name of the
+ * download, and what its menu downloads. Apart from
  * the words of the options and of the tab, so that the code of the
  * result, which the Populations tab downloads when it is first shown,
  * carries them, and so that the result of the old page imports nothing
@@ -13,6 +15,7 @@
 
 import type { DiversityRow } from "../../../core/analyses/diversity.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
+import type { CellValue } from "../../../core/csv.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import type { IndividualsKept } from "../../../core/individualsKept.ts";
 import {
@@ -81,6 +84,30 @@ export function rowCells(row: DiversityRow): readonly string[] {
     cellText(row.privateAllelesPerVariantRarefied),
   ];
 }
+
+/** The values of the cells of a row as stored, in the order of its
+    cells, which the CSV of the table's "Download…" holds in the place of
+    the texts: the population, its individuals and its numbers as popnei
+    gave them, `null`, an empty field, where it gave none. */
+export function rowValues(row: DiversityRow): readonly CellValue[] {
+  return [
+    row.population,
+    row.individuals,
+    row.expectedHeterozygosity,
+    row.observedHeterozygosity,
+    row.polymorphic,
+    row.f,
+    row.allelesPerVariant,
+    row.allelesPerVariantRarefied,
+    row.privateAlleles,
+    row.privateAllelesPerVariant,
+    row.privateAllelesPerVariantRarefied,
+  ];
+}
+
+/** What the "Download…" of the table downloads, after "Download ", which
+    names its button for a screen reader. */
+export const DIVERSITY_TABLE_WHAT = "the table of the diversity";
 
 /** The line beside the download, which says the draw the rarefied
     columns are of, since the headers of the CSV do not: "Rarefied to 40

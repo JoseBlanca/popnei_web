@@ -176,6 +176,30 @@ export function populationCells(
   return [variantsText, share === undefined ? "no value" : fourDecimals(share)];
 }
 
+/** The values of the two cells of a population at the count `count` as
+    stored, which the CSV of the table's "Download…" holds: the expected
+    number of variants and the share, `null`, an empty field, for the
+    share of bin 0, which is not drawn, for a population with no shares,
+    and for both of a population not calculated. */
+export function populationValues(
+  pop: SpectrumOfPop,
+  count: number,
+): readonly [number | null, number | null] {
+  if (!pop.calculated) return [null, null];
+  const variants = pop.expected[count] ?? null;
+  const share = count === 0 ? undefined : pop.shares?.[count - 1];
+  return [variants, share ?? null];
+}
+
+/** What the "Download…" of the histogram of `population` downloads,
+    after "Download ": "the spectrum of p0". */
+export function spectrumWhat(population: string): string {
+  return `the spectrum of ${escaped(population)}`;
+}
+
+/** What the "Download…" of the table of the spectrum downloads. */
+export const SPECTRUM_TABLE_WHAT = "the table of the spectrum";
+
 /** The words of the button of the download. */
 export const SPECTRUM_CSV_LABEL = "Download the spectrum as CSV";
 

@@ -8,7 +8,10 @@ import { describe, expect, test } from "vitest";
 
 import type { SpectrumOfPop } from "../../../core/analyses/sfs.ts";
 import {
+  SPECTRUM_TABLE_WHAT,
   drawLineOf,
+  populationValues,
+  spectrumWhat,
   noSpectrumLine,
   populationCells,
   populationColumns,
@@ -132,5 +135,23 @@ describe("PA7 D2 the words of the block of the spectrum", () => {
       ),
     ).toEqual(["1,234.6", "not drawn"]);
     expect(allSpectraCsvName("panel.vcf.gz")).toBe("panel.sfs.csv");
+  });
+});
+
+describe("PT2 D1 the downloads of the spectrum on popgen2.html", () => {
+  test("what each menu downloads, for a screen reader", () => {
+    expect(spectrumWhat("p0")).toBe("the spectrum of p0");
+    expect(SPECTRUM_TABLE_WHAT).toBe("the table of the spectrum");
+  });
+
+  test("the file of the table of the spectrum", () => {
+    expect(allSpectraCsvName("panel.nei")).toBe("panel.sfs.csv");
+  });
+
+  test("the values of a population's cells as stored, which the CSV of the table holds: the expected number and the share, none for bin 0, for no shares, or for a population not calculated", () => {
+    expect(populationValues(P0, 0)).toEqual([1, null]);
+    expect(populationValues(P0, 1)).toEqual([2, 0.5]);
+    expect(populationValues(P1, 1)).toEqual([0, null]);
+    expect(populationValues(P3, 1)).toEqual([null, null]);
   });
 });

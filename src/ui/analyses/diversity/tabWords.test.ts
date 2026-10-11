@@ -28,7 +28,13 @@ import {
   diversityTabReadyLines,
   diversityWaitingLine,
 } from "./tabWords.ts";
-import { unclassifiedCaption, unclassifiedLeftOutOf } from "./resultWords.ts";
+import {
+  DIVERSITY_TABLE_WHAT,
+  csvName,
+  rowValues,
+  unclassifiedCaption,
+  unclassifiedLeftOutOf,
+} from "./resultWords.ts";
 import {
   POPULATIONS_TAB_LOADING,
   populationsTabFailed,
@@ -297,5 +303,42 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
       aboutToStartLine:
         "The diversity starts after the PCA, once the filters and the options stop changing.",
     });
+  });
+});
+
+describe("PT2 D1 the download of the table of the diversity", () => {
+  test("what its menu downloads, for a screen reader, and its file", () => {
+    expect(DIVERSITY_TABLE_WHAT).toBe("the table of the diversity");
+    expect(csvName("panel.nei")).toBe("panel.diversity.csv");
+  });
+
+  test("the values of a row as stored, which its CSV holds in the place of the texts: the numbers whole, none where popnei gave none", () => {
+    expect(
+      rowValues({
+        population: "p0",
+        individuals: 48,
+        expectedHeterozygosity: 0.35193160994408107,
+        observedHeterozygosity: 0.3564,
+        polymorphic: 0.9267,
+        f: -0.0128,
+        allelesPerVariant: 1.9775,
+        allelesPerVariantRarefied: 1.9627,
+        privateAlleles: 0,
+        privateAllelesPerVariant: 0,
+        privateAllelesPerVariantRarefied: null,
+      }),
+    ).toEqual([
+      "p0",
+      48,
+      0.35193160994408107,
+      0.3564,
+      0.9267,
+      -0.0128,
+      1.9775,
+      1.9627,
+      0,
+      0,
+      null,
+    ]);
   });
 });

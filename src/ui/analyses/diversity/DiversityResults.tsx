@@ -12,11 +12,11 @@
  * It is given the definition of the diversity the store of its page
  * runs, and takes the page from it (diversity.md, "On popgen2.html"): in
  * the Populations tab of popgen2.html the caption ends with the
- * unclassified individuals kept that the table leaves out, the line of
- * the versions comes before that of the draw, and the old button of the
- * download of the table is left out, since every table of that page has
- * its "Download…" below it (docs/specs/steps/popgen2-populations.md,
- * "The result").
+ * unclassified individuals kept that the table leaves out, the old
+ * button of the download of the table gives way to the "Download…" below
+ * it, "Table as CSV", as every table of that page has, and the line of
+ * the versions comes after it, before that of the draw
+ * (docs/specs/steps/popgen2-populations.md, "The result").
  */
 import {
   diversity,
@@ -37,11 +37,13 @@ import { versionsText } from "../words.ts";
 import styles from "./DiversityResults.module.css";
 import { SpectrumBlock } from "./SpectrumBlock.tsx";
 import {
+  DIVERSITY_TABLE_WHAT,
   captionText,
   csvName,
   numberHeaders,
   rarefiedText,
   rowCells,
+  rowValues,
   unclassifiedCaption,
   unclassifiedLeftOutOf,
 } from "./resultWords.ts";
@@ -99,6 +101,7 @@ export function DiversityResults({
   const rows = diversityRows(result).map((row) => ({
     id: row.population,
     cells: rowCells(row),
+    values: rowValues(row),
   }));
 
   const download = (): void => {
@@ -119,13 +122,26 @@ export function DiversityResults({
 
   return (
     <div className={classOf(styles, "results")}>
-      <Table
-        caption={
-          leftOut > 0 ? `${caption} ${unclassifiedCaption(leftOut)}` : caption
-        }
-        columns={columnsOf(result.numCalledAlleles)}
-        rows={rows}
-      />
+      {page === "popgen" ? (
+        <Table
+          caption={caption}
+          columns={columnsOf(result.numCalledAlleles)}
+          rows={rows}
+        />
+      ) : (
+        <Table
+          caption={
+            leftOut > 0 ? `${caption} ${unclassifiedCaption(leftOut)}` : caption
+          }
+          columns={columnsOf(result.numCalledAlleles)}
+          rows={rows}
+          download={{
+            what: DIVERSITY_TABLE_WHAT,
+            fileName: csvName(variantsName),
+            waiting: null,
+          }}
+        />
+      )}
       {check !== null && <p className={classOf(styles, "line")}>{check}</p>}
       {page === "popgen" ? (
         <div className={classOf(styles, "download")}>
