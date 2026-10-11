@@ -773,3 +773,42 @@ minute of its Stop, at about 4.97 GB in WebKit, is recorded as a known
 problem of the PCA in section 11 of `docs/architecture.md`, to be
 measured on a Mac with less memory and in Safari, and settled as a
 piece of its own.
+
+### Work packages 2 and 3, 11 October 2026
+
+Package 2, the tab whole: 3652071b, 7cea8c3a, b530af7f, f7e79158,
+40de4666. Package 3, the box Individuals greyed while the diversity
+runs: e9d238ce, 38e10041, 868180e6. A diversity that ends within the
+status region's 100 ms pause is said by its end alone, as the PCA's
+(the session's decision).
+
+The review of both, all eleven categories: 31 findings held, fixed in
+c5b5a76c to e9d1e84a (step A) and f221728e to 9cca2f50 (step B), test
+first; none set aside. The ones a user would meet: a file chosen in a
+picker opened before the lock still reached the page and stopped the
+running diversity; a file dropped outside a zone, on both pages and
+older than this plan, replaced the page with the user's files and
+results; after a crash, a Run pressed for the waiting analysis never
+started and nothing said so (the held analysis now offers Run, and the
+status region says it did not start); the lock of the populations told
+the user to stop the PCA, which reads no populations; Stop all named a
+Run no tab showed; the Stop line said "Run calculates it" with no Run
+on the screen (now "After the next change, Run…", both tabs); the
+diversity's lines spoke of the filters where the populations changed
+too; a refused file was not named; a refusal's words could come back
+at the next lock; a round's PCA ending within the pause swallowed the
+diversity's start; two populations named alike but for case gave two
+files the system saves as one name plus " (1)"; Tab left a Download
+menu open. The quiet second's line is now true after a Stop as after a
+change, for the PCA too: "The PCA starts in a moment, later if the
+filters or its options change." The status region's bare "0.05" after
+a threshold moved (a rule of popgen2-filters.md of 8 October) now
+says "This filter removes some variants of the plot." Not changed:
+the tab's code importing five things the page loads first (no chunk of
+its own would save bytes).
+
+Checks at 9cca2f50: typecheck, lint, format clean; Vitest 173 files,
+5,413 tests; Chromium and WebKit, every e2e/popgen2*.spec.ts and the
+old page's variants, individuals and openVariants, none flaky. First
+load: popgen2.html 331.22 KB, popgen.html 376.12 KB (sum of Vite's
+gzip sizes, the HTML included).
