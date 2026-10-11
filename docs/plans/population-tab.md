@@ -711,3 +711,58 @@ At 12991743: typecheck, lint and format clean; Vitest 163 files, 5,207
 tests; no test named `PT` and a digit (`npx vitest list`, `npx
 playwright test --list`); the flows of `popgen2.html`,
 `e2e/popgen2*.spec.ts`, 344 passed in Chromium and WebKit.
+
+### Work package 1, 11 October 2026
+
+Commits fe11d7ac, 620e0846 (1.1), e6edc9d8 (the definition in
+`POPGEN2_ANALYSES`, applied by the session with the owner's leave after
+the permission check refused the subagent's `git apply`), f5ab6f5c
+(1.2), 888981c4, 27b4d481, b0400d26 (1.3, 1.4), e965f871, 07af2663
+(1.6), 795cde76, 4c3387a5 (1.5).
+
+The review, all eleven categories: 39 findings held, fixed in
+6c911aa2 to 23393619 (steps A to E of the session's fix list), test
+first; none was set aside. The ones a user would meet: a diversity
+started by itself or stopped announced as the PCA's; a warning
+naming a file no longer open, since the key lacked the cause and the
+names its words read (the popgen2 key now holds them: such a change
+calculates again); after a crash the waiting analysis started at once
+in a tab at its limit (it now waits for the next change, with its own
+words, "starts again after the next change"); the words of a failure
+said "Stopped" though nobody pressed Stop; "Try again" never brought a
+tab's code back after a shared file failed once, the PCA tab's too
+(every file of a tab's code, and of the Variants tab's plots, is now
+fetched before its import, from a manifest.json the build writes);
+the lock's words naming a "Stop all" the band has not yet; a Run of a
+done analysis answered "waiting"; the lock of the draw before that of
+no individual kept; the F of the one population pooled with no
+warning (now said for a file or a column the user opened); the old
+page loading popgen2.html's code (6 KB). Also: the list of live
+analyses in one place in core; `AnalysisDef.warnings` given the
+individuals kept (an added argument, docs updated); one context for
+the automatic runs; one component for code downloaded apart;
+Playwright refusing a server it did not start; flows that fail with
+the guard of one calculation at a time removed. A flow that failed
+once under load (NU4 D3) was the test's: two sentences joined by the
+announcer within its 100 ms; fixed in 1d42355f, 40 of 40 after.
+
+The first load of `popgen2.html`: 327.48 KB in 12 files, against
+321.62 KB in 9 before this package, by the sum of Vite's gzip sizes;
+4.95 KB of it is code the page needs before the tab is shown (the
+definition the store reads, the automatic runs, the fetching of a
+tab's code), 0.9 KB the bundler's split. The Populations tab
+downloads 7.79 KB when first shown after the Variants tab's plots.
+
+Checks at 1d42355f: typecheck, lint, format clean; Vitest 169 files,
+5,344 tests; in Chromium and WebKit every `e2e/popgen2*.spec.ts`, 382,
+and `pcaResults`.
+
+Task 1.5, taken again after the review (dfab1394, 8c7905e4), samples
+81 to 98 ms apart: the diversity after a Stop on the PCA's peak and
+after a PCA that ended held the bound (WebKit at most 3.60 and 3.79
+GB). The case of two Stops did not: the PCA's Run, its Stop at 40 s,
+its Run again; WebKit's second PCA reached 4.957 and 4.966 GB in two
+runs, before the diversity started, the tab open in both; the
+diversity then started at 3.5 GB. A stop of the plan, put to the
+owner. The diversity's own increment could not be measured (0.1 s,
+one or two samples); with the new worker it is at most 0.09 GB.
