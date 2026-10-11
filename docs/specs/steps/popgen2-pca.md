@@ -714,9 +714,16 @@ same round say nothing; each end is said as the end of any run, "PCA
 of panel.nei calculated.", "Diversity of panel.nei calculated.". A Run
 that waited is said when it starts, "Calculating the diversity of
 panel.nei.", since the user pressed it earlier, and the bar then comes
-in a tab they may not see. Stop all is said once: "Stopped: the PCA and
+in a tab they may not see; the PCA's, "Calculating the PCA of
+panel.nei." ("the PCoA" by the method). Stop all is said once: "Stopped: the PCA and
 the diversity no longer start by themselves. Press Run in their tabs to
-calculate them again."
+calculate them again." Until the band offers Stop all, which work
+package 4 of `docs/plans/population-tab.md` builds, the round names the
+Stop of each tab alone: "Calculating the PCA and then the diversity
+again. To change the filters, stop each in its tab." (the session's
+decision of 11 October 2026, in work package 2 of that plan, as the
+words of the lock do: words that name a button the page does not show
+yet send the user looking for it).
 
 **The download of the filtered variants** waits for the calculation
 running and for those waiting after it, since each starts when the one
@@ -1417,6 +1424,8 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | under the button, in the place of the bar, after a Stop, until Run or another variants file | "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change."; "Stopped: the PCoA …" |
 | under the words of a failure that ended the live state, until Run or another variants file | "The PCA no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change."; "The PCoA …" |
 | the status region, a PCA started by itself | "Calculating the PCA again. To change the filters, stop it in the PCA tab."; "Calculating the PCoA again. To change the filters, stop it in the PCA tab." |
+| the status region, the first start of a round of two analyses or more, and a Run that waited, at its start | "Calculating the PCA and then the diversity again. To change the filters, press Stop all beside the heading Popnei, or stop each in its tab."; until the band offers Stop all, "Calculating the PCA and then the diversity again. To change the filters, stop each in its tab."; "Calculating the PCA of panel.nei."; "the PCoA" by the method |
+| the line in the place of the bar, while the PCA waits for the diversity | "The PCA starts once the diversity, which is running, ends."; "The PCoA …" |
 | the status region, a Stop of the PCA, in the tab or in the band | "PCA stopped. Press Run in the PCA tab to calculate it again."; "PCoA stopped. …"; with no Run to press, Run disabled or the result shown, "PCA stopped."; "PCoA stopped." |
 | the download of the filtered variants while a PCA runs | "Waits for the PCA to end; or stop it in the PCA tab." |
 | the thresholds and the FILTER box of the Variants tab and the PCA's options, while a PCA runs, as tooltip and description | "Stop the PCA in the PCA tab to change the filters; then press Run there to calculate it again."; under the PCoA, "Stop the PCoA in the PCA tab to change the filters; then press Run there to calculate it again." |
