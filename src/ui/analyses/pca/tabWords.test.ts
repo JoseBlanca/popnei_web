@@ -355,7 +355,7 @@ describe("PT2 D1 the line of the PCA tab while the PCA waits for the diversity",
 
   test("with nothing named before it, the line of the quiet second", () => {
     expect(aboutToStartLine("pca", "behind", null)).toBe(
-      "The PCA starts again in a moment, once the filters and its options stop changing.",
+      "The PCA starts in a moment, later if the filters or its options change.",
     );
   });
 });
@@ -363,10 +363,10 @@ describe("PT2 D1 the line of the PCA tab while the PCA waits for the diversity",
 describe("NU4 D2 the words of the PCA started again by itself, by the method", () => {
   test("the line of the quiet second names the filters and the options", () => {
     expect(aboutToStartLine("pca", "changes")).toBe(
-      "The PCA starts again in a moment, once the filters and its options stop changing.",
+      "The PCA starts in a moment, later if the filters or its options change.",
     );
     expect(aboutToStartLine("pcoa", "changes")).toBe(
-      "The PCoA starts again in a moment, once the filters and its options stop changing.",
+      "The PCoA starts in a moment, later if the filters or its options change.",
     );
   });
 
@@ -410,11 +410,15 @@ describe("NU4 D2 the words of the PCA started again by itself, by the method", (
   });
 
   test("the line beside Run after a Stop", () => {
-    expect(stoppedLine("pca")).toBe(
+    expect(stoppedLine("pca", false)).toBe(
       "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change.",
     );
-    expect(stoppedLine("pcoa")).toBe(
+    expect(stoppedLine("pcoa", false)).toBe(
       "Stopped: the PCoA no longer starts by itself after a change. Run calculates it and starts it again after each change.",
+    );
+    // With the result shown, no Run until a change takes it away.
+    expect(stoppedLine("pca", true)).toBe(
+      "Stopped: the PCA no longer starts by itself after a change. After the next change, Run calculates it and starts it again after each change.",
     );
   });
 

@@ -194,7 +194,9 @@ function fileIdOf(s: AppState<JobResult, Blob>): string | null {
  *
  * - the first start of a round of two analyses or more names them once,
  *   in their order, "Calculating the PCA and then the diversity again.
- *   To change the filters, stop each in its tab.", with Stop all named
+ *   To change the filters, stop each in its tab; to change the
+ *   populations, stop the diversity in the Populations tab.", with Stop
+ *   all named
  *   once the band offers it; the later starts of the round say nothing;
  *   only the end of its last analysis drops it within the region's
  *   pause;
@@ -229,7 +231,7 @@ export function announceLive(
           rest.length === 0
             ? liveSaidOf(first).startedAlone(s)
             : roundText(
-                event.round.map((id) => liveAnalysisOf(s, id).name),
+                event.round.map((id) => liveAnalysisOf(s, id)),
                 STOP_ALL_OFFERED,
               );
         // Of the kind of the round's last analysis, whose end alone drops

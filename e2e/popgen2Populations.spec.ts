@@ -1252,7 +1252,7 @@ const WAITS_FOR_DIVERSITY =
 /** What the status region says at the first start of a round of the PCA
     and the diversity, until the band offers Stop all. */
 const ROUND =
-  "Calculating the PCA and then the diversity again. To change the filters, stop each in its tab.";
+  "Calculating the PCA and then the diversity again. To change the filters, stop each in its tab; to change the populations, stop the diversity in the Populations tab.";
 
 /** The texts the status region took that hold `text`. */
 async function saidWith(page: Page, text: string): Promise<readonly string[]> {
@@ -1456,7 +1456,7 @@ test.describe("PT2 D3 the Populations tab while the diversity waits, and what th
     // so that the quiet second lasts for the checks.
     await minimum.press("Backspace");
     const line = shown(page).getByText(
-      "The diversity starts again in a moment, once the filters and its options stop changing.",
+      "The diversity starts in a moment, later if the filters, its options or the populations change.",
       { exact: true },
     );
     await expect(line).toBeVisible();

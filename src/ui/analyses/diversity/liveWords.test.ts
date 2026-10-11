@@ -102,7 +102,7 @@ function pageStore(): {
 describe("PT2 D2 the status region's words of the diversity", () => {
   test("its start by itself names the tab where it is stopped", () => {
     expect(DIVERSITY_STARTED_BY_ITSELF).toBe(
-      "Calculating the diversity again. To change the filters, stop it in the Populations tab.",
+      "Calculating the diversity again. To change the filters or the populations, stop it in the Populations tab.",
     );
   });
 

@@ -180,8 +180,9 @@ export function pcaTabResultFailed(
 
 /** The line in the place of the bar while the PCA is about to start by
     itself, waiting for `waits` (docs/specs/steps/popgen2-pca.md, "About
-    to start"): "The PCA starts again in a moment, once the filters and
-    its options stop changing."; while the dialog of the download of the
+    to start"): "The PCA starts in a moment, later if the filters or its
+    options change.", true also in the quiet second after a Stop of the
+    diversity it waited for, when nothing changed; while the dialog of the download of the
     filtered variants holds it, "download", "The PCA starts again when
     the download is written or closed."; after a crash ended another
     live state, "afterCrash", "The PCA starts again after the next
@@ -205,11 +206,11 @@ export function aboutToStartLine(
       if (before !== null) {
         return `The ${name} starts once ${before}, which is running, ends.`;
       }
-      return `The ${name} starts again in a moment, once the filters and its options stop changing.`;
+      return `The ${name} starts in a moment, later if the filters or its options change.`;
     // No live analysis comes before the PCA in the order of the tabs, so
     // none is named while the quiet second runs.
     case "changes":
-      return `The ${name} starts again in a moment, once the filters and its options stop changing.`;
+      return `The ${name} starts in a moment, later if the filters or its options change.`;
   }
 }
 
@@ -237,9 +238,15 @@ export function pcaStoppedText(method: PcaMethod, runOffered: boolean): string {
 /** The line after a Stop, until Run or another variants file, which
     says what Run does again: "Stopped: the PCA no longer starts by
     itself after a change. Run calculates it and starts it again after
-    each change."; "the PCoA" under the PCoA. */
-export function stoppedLine(method: PcaMethod): string {
-  return `Stopped: the ${methodName(method)} no longer starts by itself after a change. Run calculates it and starts it again after each change.`;
+    each change."; with the result shown, `resultShown`, which offers no
+    Run until a change takes it away, "… After the next change, Run
+    calculates it and starts it again after each change."; "the PCoA"
+    under the PCoA. */
+export function stoppedLine(method: PcaMethod, resultShown: boolean): string {
+  const stopped = `Stopped: the ${methodName(method)} no longer starts by itself after a change.`;
+  return resultShown
+    ? `${stopped} After the next change, Run calculates it and starts it again after each change.`
+    : `${stopped} Run calculates it and starts it again after each change.`;
 }
 
 /** The line after a failure that ended the live state, under the

@@ -40,9 +40,10 @@ export const DIVERSITY_TAB_ERRORS: PanelErrorWords = Object.freeze({
 });
 
 /** What the status region says when the diversity starts again by
-    itself, alone in its round, with the tab where it is stopped. */
+    itself, alone in its round, with the tab where it is stopped and what
+    it locks, the filters and the populations. */
 export const DIVERSITY_STARTED_BY_ITSELF =
-  "Calculating the diversity again. To change the filters, stop it in the Populations tab.";
+  "Calculating the diversity again. To change the filters or the populations, stop it in the Populations tab.";
 
 /** What the status region says at a Stop of the diversity, in its tab or
     in the band, which may leave the tab out of sight: "Diversity

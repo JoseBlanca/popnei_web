@@ -219,7 +219,12 @@ One button, in one place, as in the PCA tab
 After a Stop or a Stop recalculating, until Run or another variants
 file, the line "Stopped: the diversity no longer starts by itself after
 a change. Run calculates it and starts it again after each change."
-stands in the place of the bar, as in the PCA tab.
+stands in the place of the bar, as in the PCA tab; with the result
+shown, which offers no Run until a change takes it away, "Stopped: the
+diversity no longer starts by itself after a change. After the next
+change, Run calculates it and starts it again after each change."
+(corrected on 11 October 2026 after the review of work packages 2 and
+3: the line named a Run the screen did not show).
 
 **The line in the place of the bar**, in the page's normal text, while
 the diversity is live and does not run (the rules of
@@ -227,10 +232,18 @@ the diversity is live and does not run (the rules of
 
 | what it waits for | the line |
 |---|---|
-| the quiet second, or a change under way, with no live analysis before it about to start | "The diversity starts again in a moment, once the filters and its options stop changing." |
-| the same, with the PCA live and about to start before it | "The diversity starts after the PCA, once the filters and the options stop changing." |
+| the quiet second, or a change under way, with no live analysis before it about to start; also the quiet second after a Stop of the PCA it waited for | "The diversity starts in a moment, later if the filters, its options or the populations change." |
+| the same, with the PCA live and about to start before it | "The diversity starts after the PCA, once the filters, the options and the populations stop changing." |
 | the PCA, which runs, whether the quiet second has run out or not | "The diversity starts once the PCA, which is running, ends." ("the PCoA" by the method) |
 | the dialog of the download, or its write | "The diversity starts again when the download is written or closed." |
+
+The first two lines name the populations since 11 October 2026, after
+the review of work packages 2 and 3: a change of the column of the
+populations or of the individuals file puts the diversity's start off
+as a change of a filter does. The first said "starts again in a
+moment, once the filters and its options stop changing." until then,
+which was false in the quiet second after a Stop of the PCA, when
+nothing had changed.
 
 **The locks**, the first that holds, as text beside Run, which is then
 disabled, or beside Stop recalculating while the diversity is live:
@@ -422,13 +435,13 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 | the heading of the spectrum | "Site frequency spectrum" |
 | the line of the populations | the old panel's, with "the Variants tab"; "7 unclassified individuals kept are left out, as the box Individuals says."; "1 population, Unclassified: 200 individuals. No individual is assigned to a population, so the diversity is of every individual kept as one population." |
 | the locks | the table of "Run and Stop" |
-| the line in the place of the bar | the table of "Run and Stop"; after a crash of the worker ended the PCA's live state, until the next change or a Run, "The diversity starts again after the next change of the filters, of its options or of the populations." (`popgen2-pca.md`, "A failure that ends a live state"); after a Stop, "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change."; after a failure that ended the live state, "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change." |
+| the line in the place of the bar | the table of "Run and Stop"; after a crash of the worker ended the PCA's live state, until the next change or a Run, "The diversity starts again after the next change of the filters, of its options or of the populations." (`popgen2-pca.md`, "A failure that ends a live state"); after a Stop, "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.", or with the result shown "… After the next change, Run calculates it and starts it again after each change."; after a failure that ended the live state, "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change." |
 | the button while live and not running | "Stop recalculating" |
 | the filters, the options of the diversity, while it runs, as tooltip and description | "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again." |
 | the column, the zone, Remove and the lists of the reader, while it runs | "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again." |
 | the filters, while another analysis is live | "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again."; until the band offers Stop all, "Stop the diversity in the Populations tab and the PCA in the PCA tab to change the filters; then press Run in each tab to calculate them again." The words of the populations name only another live analysis that reads the populations, none today. |
 | the caption of the table | "The diversity of each population, over the 1,200 variants of panel.nei the filters kept."; with unclassified left out, "… 7 unclassified individuals kept are not in it." |
-| the status region, a start by itself | "Calculating the diversity again. To change the filters, stop it in the Populations tab."; when it is the first start of a round of several, the words of `popgen2-pca.md`, "Several analyses calculated again by themselves" |
+| the status region, a start by itself | "Calculating the diversity again. To change the filters or the populations, stop it in the Populations tab." ("To change the filters, …" until 11 October 2026); when it is the first start of a round of several, the words of `popgen2-pca.md`, "Several analyses calculated again by themselves" |
 | the status region, the start of a Run that waited | "Calculating the diversity of panel.nei." |
 | the status region, the end | "Diversity of panel.nei calculated."; a refusal or a failure, "The diversity of panel.nei could not be calculated: " and the words of its error |
 | the status region, a Stop | "Diversity stopped. Press Run in the Populations tab to calculate it again."; with no Run to press, "Diversity stopped." |

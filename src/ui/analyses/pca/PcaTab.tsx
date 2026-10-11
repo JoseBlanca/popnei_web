@@ -35,7 +35,7 @@ import { summaryStatus } from "../../variants/words.ts";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
 import type { PanelLive } from "../AnalysisPanel.tsx";
 import { runLive } from "../liveRun.ts";
-import { waitsAfterName } from "../status.ts";
+import { statusOf, waitsAfterName } from "../status.ts";
 import { passLock } from "./passLock.ts";
 import { pcaTabPanel } from "./pcaTabPanel.ts";
 import { prefetchPcaResults } from "./PcaTabResults.tsx";
@@ -59,17 +59,19 @@ export interface PcaTabProps {
 
 /** The live state `state` of the PCA as its panel draws it, with the
     words of its lines by the method `method`, the line of waiting naming
-    `before`. */
+    `before`, and the line of a Stop by whether the result is shown,
+    `resultShown`. */
 function panelLive(
   state: LiveState,
   method: PcaMethod,
   before: string | null,
+  resultShown: boolean,
 ): PanelLive {
   switch (state.kind) {
     case "off":
       return { kind: "off" };
     case "stopped":
-      return { kind: "stopped", line: stoppedLine(method) };
+      return { kind: "stopped", line: stoppedLine(method, resultShown) };
     case "endedByFailure":
       return { kind: "stopped", line: failureEndedLine(method) };
     case "live":
@@ -111,13 +113,14 @@ export function PcaTab({ shown }: PcaTabProps): React.JSX.Element {
     autoRuns.liveState(PCA),
   );
   const before = useAppState((s) => waitsAfterName(s, state));
+  const resultShown = useAppState((s) => statusOf(s, PCA).kind === "done");
   return (
     <AnalysisPanel
       id={PCA}
       ui={pcaTabPanel(method)}
       page={{
         lock,
-        live: panelLive(state, method, before),
+        live: panelLive(state, method, before, resultShown),
         onRun: () => {
           runLive(
             { autoRuns, announcer, getState: () => store.getState() },

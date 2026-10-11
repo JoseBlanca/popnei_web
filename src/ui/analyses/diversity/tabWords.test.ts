@@ -22,8 +22,8 @@ import { deepFreeze } from "../../../core/testSupport.ts";
 import {
   DIVERSITY_AFTER_CRASH_LINE,
   DIVERSITY_FAILURE_ENDED_LINE,
-  DIVERSITY_STOPPED_LINE,
   diversityPanelLive,
+  diversityStoppedLine,
   diversityTabLock,
   diversityTabReadyLines,
   diversityWaitingLine,
@@ -202,8 +202,12 @@ describe("PT1 D3 the words of the Populations tab", () => {
   });
 
   test("the line of a Stop, the caption's sentence of the unclassified, and the result that could not be loaded", () => {
-    expect(DIVERSITY_STOPPED_LINE).toBe(
+    expect(diversityStoppedLine(false)).toBe(
       "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.",
+    );
+    // With the result shown, no Run until a change takes it away.
+    expect(diversityStoppedLine(true)).toBe(
+      "Stopped: the diversity no longer starts by itself after a change. After the next change, Run calculates it and starts it again after each change.",
     );
     expect(DIVERSITY_AFTER_CRASH_LINE).toBe(
       "The diversity starts again after the next change of the filters, of its options or of the populations.",
@@ -227,16 +231,16 @@ describe("PT1 D3 the words of the Populations tab", () => {
 describe("PT2 D1 the lines of the Populations tab while the diversity is live and does not run", () => {
   test("the quiet second, or a change under way, with no live analysis before it about to start", () => {
     expect(diversityWaitingLine("changes", null)).toBe(
-      "The diversity starts again in a moment, once the filters and its options stop changing.",
+      "The diversity starts in a moment, later if the filters, its options or the populations change.",
     );
   });
 
   test("the quiet second with the PCA live and about to start before it, by the method", () => {
     expect(diversityWaitingLine("changes", "the PCA")).toBe(
-      "The diversity starts after the PCA, once the filters and the options stop changing.",
+      "The diversity starts after the PCA, once the filters, the options and the populations stop changing.",
     );
     expect(diversityWaitingLine("changes", "the PCoA")).toBe(
-      "The diversity starts after the PCoA, once the filters and the options stop changing.",
+      "The diversity starts after the PCoA, once the filters, the options and the populations stop changing.",
     );
   });
 
@@ -263,25 +267,35 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
   });
 
   test("each live state as the panel draws it: the line of a Stop, of a failure that ended it, none with nothing to wait for, and the line of what it waits for", () => {
-    expect(diversityPanelLive({ kind: "off" }, null)).toEqual({ kind: "off" });
-    expect(diversityPanelLive({ kind: "stopped" }, null)).toEqual({
-      kind: "stopped",
-      line: DIVERSITY_STOPPED_LINE,
+    expect(diversityPanelLive({ kind: "off" }, null, false)).toEqual({
+      kind: "off",
     });
-    expect(diversityPanelLive({ kind: "endedByFailure" }, null)).toEqual({
+    expect(diversityPanelLive({ kind: "stopped" }, null, false)).toEqual({
       kind: "stopped",
-      line: DIVERSITY_FAILURE_ENDED_LINE,
+      line: diversityStoppedLine(false),
     });
+    expect(diversityPanelLive({ kind: "stopped" }, null, true)).toEqual({
+      kind: "stopped",
+      line: diversityStoppedLine(true),
+    });
+    expect(diversityPanelLive({ kind: "endedByFailure" }, null, false)).toEqual(
+      {
+        kind: "stopped",
+        line: DIVERSITY_FAILURE_ENDED_LINE,
+      },
+    );
     expect(
       diversityPanelLive(
         { kind: "live", aboutToStart: null, running: false, after: null },
         null,
+        false,
       ),
     ).toEqual({ kind: "live", aboutToStartLine: null });
     expect(
       diversityPanelLive(
         { kind: "live", aboutToStart: "behind", running: false, after: "pca" },
         "the PCA",
+        false,
       ),
     ).toEqual({
       kind: "live",
@@ -297,11 +311,12 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
           after: "pca",
         },
         "the PCA",
+        false,
       ),
     ).toEqual({
       kind: "live",
       aboutToStartLine:
-        "The diversity starts after the PCA, once the filters and the options stop changing.",
+        "The diversity starts after the PCA, once the filters, the options and the populations stop changing.",
     });
   });
 });

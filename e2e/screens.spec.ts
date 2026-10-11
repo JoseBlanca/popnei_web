@@ -6235,7 +6235,7 @@ for (const theme of ["light", "dark"] as const) {
         await minimum.press("0");
         await expect(
           panel.getByText(
-            "The diversity starts again in a moment, once the filters and its options stop changing.",
+            "The diversity starts in a moment, later if the filters, its options or the populations change.",
             { exact: true },
           ),
         ).toBeVisible();
@@ -6378,7 +6378,7 @@ for (const theme of ["light", "dark"] as const) {
             exact: true,
           });
           await expect(
-            panel.getByText(/^The PCA starts again in a moment/u),
+            panel.getByText(/^The PCA starts in a moment/u),
           ).toBeVisible();
           if (shot === "stopped") {
             await stop.focus();

@@ -53,7 +53,7 @@ const HELD_MS = 3000;
 
 /** The line of the quiet second. */
 const ABOUT =
-  "The PCA starts again in a moment, once the filters and its options stop changing.";
+  "The PCA starts in a moment, later if the filters or its options change.";
 
 /** The line of the quiet second while the dialog of the download is
     open. */

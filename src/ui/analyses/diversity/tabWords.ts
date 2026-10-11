@@ -35,9 +35,18 @@ import { minimumAndDrawLines } from "./words.ts";
 export const DIVERSITY_TAB_NAME = "the diversity";
 
 /** The line after a Stop, until Run or another variants file, in the
-    place of the bar. */
-export const DIVERSITY_STOPPED_LINE =
-  "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.";
+    place of the bar: "Stopped: the diversity no longer starts by itself
+    after a change. Run calculates it and starts it again after each
+    change."; with the result shown, `resultShown`, which offers no Run
+    until a change takes it away, "… After the next change, Run
+    calculates it and starts it again after each change." */
+export function diversityStoppedLine(resultShown: boolean): string {
+  const stopped =
+    "Stopped: the diversity no longer starts by itself after a change.";
+  return resultShown
+    ? `${stopped} After the next change, Run calculates it and starts it again after each change.`
+    : `${stopped} Run calculates it and starts it again after each change.`;
+}
 
 /** The line in the place of the bar while a crash of the worker, which
     ended another live state, holds the diversity until the next change. */
@@ -158,18 +167,19 @@ export function diversityTabLock(
  * the place of the bar): "behind", the analysis that runs, "The
  * diversity starts once the PCA, which is running, ends."; "changes",
  * the quiet second, "The diversity starts after the PCA, once the
- * filters and the options stop changing." with one about to start before
- * it, or "The diversity starts again in a moment, once the filters and
- * its options stop changing."; "download", "The diversity starts again
- * when the download is written or closed."; "afterCrash",
- * `DIVERSITY_AFTER_CRASH_LINE`.
+ * filters, the options and the populations stop changing." with one
+ * about to start before it, or "The diversity starts in a moment, later
+ * if the filters, its options or the populations change.", true also in
+ * the quiet second after a Stop of the PCA it waited for, when nothing
+ * changed; "download", "The diversity starts again when the download is
+ * written or closed."; "afterCrash", `DIVERSITY_AFTER_CRASH_LINE`.
  */
 export function diversityWaitingLine(
   waits: AboutToStart,
   before: string | null,
 ): string {
   const inAMoment =
-    "The diversity starts again in a moment, once the filters and its options stop changing.";
+    "The diversity starts in a moment, later if the filters, its options or the populations change.";
   switch (waits) {
     case "behind":
       return before === null
@@ -178,7 +188,7 @@ export function diversityWaitingLine(
     case "changes":
       return before === null
         ? inAMoment
-        : `The diversity starts after ${before}, once the filters and the options stop changing.`;
+        : `The diversity starts after ${before}, once the filters, the options and the populations stop changing.`;
     case "download":
       return "The diversity starts again when the download is written or closed.";
     case "afterCrash":
@@ -188,17 +198,19 @@ export function diversityWaitingLine(
 
 /** The live state `state` of the diversity as its panel draws it, with
     `before`, the live analysis its line of waiting names, "the PCA",
-    or `null`: the line of a Stop, of a failure that ended it, or of
-    what it waits for while it is about to start. */
+    or `null`, and whether its result is shown, `resultShown`: the line
+    of a Stop, of a failure that ended it, or of what it waits for while
+    it is about to start. */
 export function diversityPanelLive(
   state: LiveState,
   before: string | null,
+  resultShown: boolean,
 ): PanelLive {
   switch (state.kind) {
     case "off":
       return { kind: "off" };
     case "stopped":
-      return { kind: "stopped", line: DIVERSITY_STOPPED_LINE };
+      return { kind: "stopped", line: diversityStoppedLine(resultShown) };
     case "endedByFailure":
       return { kind: "stopped", line: DIVERSITY_FAILURE_ENDED_LINE };
     case "live":

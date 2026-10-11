@@ -34,7 +34,7 @@ import { summaryStatus } from "../../variants/words.ts";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
 import { runLive } from "../liveRun.ts";
 import { passLock } from "../pca/passLock.ts";
-import { waitsAfterName } from "../status.ts";
+import { statusOf, waitsAfterName } from "../status.ts";
 import { POPULATIONS_TAB_PANEL } from "./populationsTabPanel.ts";
 import {
   diversityPanelLive,
@@ -64,13 +64,16 @@ export function PopulationsTabView(): React.JSX.Element {
     autoRuns.liveState(DIVERSITY),
   );
   const before = useAppState((s) => waitsAfterName(s, state));
+  const resultShown = useAppState(
+    (s) => statusOf(s, DIVERSITY).kind === "done",
+  );
   return (
     <AnalysisPanel
       id={DIVERSITY}
       ui={POPULATIONS_TAB_PANEL}
       page={{
         lock,
-        live: diversityPanelLive(state, before),
+        live: diversityPanelLive(state, before, resultShown),
         onRun: () => {
           runLive(
             { autoRuns, announcer, getState: () => store.getState() },

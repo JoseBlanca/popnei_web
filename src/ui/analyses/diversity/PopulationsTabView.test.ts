@@ -71,6 +71,11 @@ const FAILURE_ENDED =
 const STOPPED =
   "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.";
 
+/** The line of a Stop with the result shown, which offers no Run until
+    a change takes it away. */
+const STOPPED_WITH_RESULT =
+  "Stopped: the diversity no longer starts by itself after a change. After the next change, Run calculates it and starts it again after each change.";
+
 /** The ten individuals of the variants file. */
 const INDIVIDUALS = Array.from({ length: 10 }, (_, i) => `s00${String(i)}`);
 
@@ -409,7 +414,9 @@ describe("PT1 D3 the Populations tab", () => {
     await press(stop);
     expect(page.autoRuns.isLive(diversityOnPopgen2.id)).toBe(false);
     expect(button("Stop recalculating")).toBeNull();
-    expect(lines()).toContain(STOPPED);
+    expect(button("Run")).toBeNull();
+    expect(lines()).toContain(STOPPED_WITH_RESULT);
+    expect(lines()).not.toContain(STOPPED);
     expect(document.activeElement?.tagName).toBe("H2");
     expect(document.activeElement?.textContent).toBe("Diversity");
 
@@ -663,9 +670,9 @@ async function quietSecond(): Promise<void> {
 
 describe("PT2 D2 the Populations tab while the diversity is live and does not run", () => {
   const IN_A_MOMENT =
-    "The diversity starts again in a moment, once the filters and its options stop changing.";
+    "The diversity starts in a moment, later if the filters, its options or the populations change.";
   const AFTER_PCA =
-    "The diversity starts after the PCA, once the filters and the options stop changing.";
+    "The diversity starts after the PCA, once the filters, the options and the populations stop changing.";
   const BEHIND_PCA =
     "The diversity starts once the PCA, which is running, ends.";
 

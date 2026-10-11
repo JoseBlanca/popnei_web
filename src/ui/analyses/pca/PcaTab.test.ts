@@ -52,7 +52,7 @@ declare global {
 }
 
 const ABOUT =
-  "The PCA starts again in a moment, once the filters and its options stop changing.";
+  "The PCA starts in a moment, later if the filters or its options change.";
 const ABOUT_DIALOG =
   "The PCA starts again when the download is written or closed.";
 const FAILURE_ENDED =
@@ -60,6 +60,10 @@ const FAILURE_ENDED =
 
 const STOPPED =
   "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change.";
+/** The line of a Stop with the result shown, which offers no Run until
+    a change takes it away. */
+const STOPPED_WITH_RESULT =
+  "Stopped: the PCA no longer starts by itself after a change. After the next change, Run calculates it and starts it again after each change.";
 /** The line under Stop recalculating with the result shown until 11
     October 2026, when the owner took it away (round 1 of work package 8
     of docs/plans/no-undo.md). */
@@ -344,8 +348,15 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
     expect(page.autoRuns.isLive("pca")).toBe(false);
     expect(button("Run")).toBeNull();
     expect(button("Stop recalculating")).toBeNull();
-    expect(lineShown(STOPPED)).toBe(true);
+    expect(lineShown(STOPPED_WITH_RESULT)).toBe(true);
+    expect(lineShown(STOPPED)).toBe(false);
     expect(document.activeElement?.tagName).toBe("H2");
+
+    // A change takes the result away and gives Run, and the line says it.
+    await setMissing(page, 0.05);
+    expect(button("Run")).not.toBeNull();
+    expect(lineShown(STOPPED)).toBe(true);
+    expect(lineShown(STOPPED_WITH_RESULT)).toBe(false);
   });
 
   test("about to start: Stop recalculating in the place of Run, and the line of the quiet second under it, not its description; then Stop and the bar", async () => {

@@ -25,20 +25,35 @@ function joined(names: readonly string[], then: boolean): string {
 
 /**
  * What the status region says at the first start of a round of the live
- * analyses `names`, two or more in their order, "the PCA", "the
- * diversity": "Calculating the PCA and then the diversity again. To
+ * analyses `named`, two or more in their order, the PCA and the
+ * diversity: "Calculating the PCA and then the diversity again. To
  * change the filters, press Stop all beside the heading Popnei, or stop
- * each in its tab." when the band offers Stop all, `stopAllOffered`;
- * until then "… To change the filters, stop each in its tab."
+ * each in its tab; to change the populations, stop the diversity in the
+ * Populations tab." when the band offers Stop all, `stopAllOffered`;
+ * until then "… To change the filters, stop each in its tab; …". The
+ * populations are named with the analyses of the round that read them,
+ * since only those lock them, and with "or the populations" when all
+ * do.
  */
 export function roundText(
-  names: readonly string[],
+  named: readonly LiveAnalysisName[],
   stopAllOffered: boolean,
 ): string {
   const how = stopAllOffered
     ? "press Stop all beside the heading Popnei, or stop each in its tab"
     : "stop each in its tab";
-  return `Calculating ${joined(names, true)} again. To change the filters, ${how}.`;
+  const readers = named.filter((one) => one.readsPopulations);
+  const start = `Calculating ${joined(
+    named.map((one) => one.name),
+    true,
+  )} again.`;
+  if (readers.length === 0) {
+    return `${start} To change the filters, ${how}.`;
+  }
+  if (readers.length === named.length) {
+    return `${start} To change the filters or the populations, ${how}.`;
+  }
+  return `${start} To change the filters, ${how}; to change the populations, stop ${eachInItsTab(readers)}.`;
 }
 
 /** What the status region says when a Run of the analysis `name`, "the
