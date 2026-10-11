@@ -11,7 +11,6 @@ import {
   ANALYSES_TABS_LABEL,
   DISTANCES_NOT_BUILT,
   PAGE_TAB_LABELS,
-  POPULATIONS_NOT_BUILT,
 } from "./analysisTabsWords.ts";
 
 /** A reason of fewer than two populations of popcat in panel.nei. */
@@ -38,10 +37,7 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
     expect(ANALYSES_TABS_LABEL).toBe("Files and analyses");
   });
 
-  test("the lines of the tabs not built yet", () => {
-    expect(POPULATIONS_NOT_BUILT).toBe(
-      "Not built yet: the diversity of each population, its site frequency spectrum and its LD decay come in a later version of the page.",
-    );
+  test("the line of the tab not built yet", () => {
     expect(DISTANCES_NOT_BUILT).toBe(
       "Not built yet: the distances between the populations, Hudson's Fst or Jost's D, come in a later version of the page.",
     );

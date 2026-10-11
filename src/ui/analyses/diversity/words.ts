@@ -340,22 +340,7 @@ export function readyLines(
   draw: DrawFacts | null = null,
 ): readonly string[] {
   const [one] = kept.pops;
-  const { withMinimum, under } = populationsWithMinimum(
-    kept.pops,
-    minNumIndividuals,
-  );
   const onePopulation = kind !== "populations" && one !== undefined;
-  // Private alleles are counted among two populations of the minimum or
-  // more: with fewer, a population under it is left out of no count.
-  const noOthers = onePopulation || withMinimum.length < 2;
-  const shortOfDraw =
-    draw === null ||
-    holdNoDraw(
-      kept.pops.map(([, members]) => members.length),
-      draw.ploidy,
-    )
-      ? null
-      : shortOfDrawText(withMinimum, draw);
   return [
     ...(onePopulation
       ? [onePopulationText(one[1].length)]
@@ -363,6 +348,43 @@ export function readyLines(
         ? [populationsText(kept.pops)]
         : []),
     ...(kind === "noFile" ? [NO_METADATA_TEXT] : []),
+    ...minimumAndDrawLines(kept.pops, minNumIndividuals, onePopulation, draw),
+    ...(kept.emptied.length > 0 ? [emptiedText(kept.emptied)] : []),
+    ...(waitsForStatistics ? [WAITS_FOR_STATISTICS_TEXT] : []),
+  ];
+}
+
+/**
+ * The lines of the ready state that both pages give after the line of
+ * the populations: the populations of `pops` under `minNumIndividuals`,
+ * which will have no values, and, with `draw`, those of the minimum that
+ * hold fewer chromosomes than it, unless the populations hold fewer than
+ * 2 between them, when no draw is taken. `onePopulation`, whether `pops`
+ * is every individual as one population, which counts no private
+ * alleles.
+ */
+export function minimumAndDrawLines(
+  pops: PopulationsKept["pops"],
+  minNumIndividuals: number,
+  onePopulation: boolean,
+  draw: DrawFacts | null,
+): readonly string[] {
+  const { withMinimum, under } = populationsWithMinimum(
+    pops,
+    minNumIndividuals,
+  );
+  // Private alleles are counted among two populations of the minimum or
+  // more: with fewer, a population under it is left out of no count.
+  const noOthers = onePopulation || withMinimum.length < 2;
+  const shortOfDraw =
+    draw === null ||
+    holdNoDraw(
+      pops.map(([, members]) => members.length),
+      draw.ploidy,
+    )
+      ? null
+      : shortOfDrawText(withMinimum, draw);
+  return [
     ...(under.length > 0
       ? [
           underMinimumText(
@@ -373,7 +395,5 @@ export function readyLines(
         ]
       : []),
     ...(shortOfDraw === null ? [] : [shortOfDraw]),
-    ...(kept.emptied.length > 0 ? [emptiedText(kept.emptied)] : []),
-    ...(waitsForStatistics ? [WAITS_FOR_STATISTICS_TEXT] : []),
   ];
 }

@@ -15,6 +15,12 @@
  * histograms, and the lines of the populations with none under it. Which
  * tab is selected is the block's own state, kept while it is drawn.
  *
+ * In the Populations tab of popgen2.html, `page` "popgen2", the warning
+ * is in that page's words and the old button of the download of the
+ * spectrum is left out, since every plot and table of that page offers
+ * its data in a "Download…" of its own (docs/specs/analyses/sfs.md, "On
+ * popgen2.html").
+ *
  * Each population's histogram is inside an error boundary of its own, so
  * that one that throws takes neither the others nor the table, the fields
  * and the Run of the panel with it.
@@ -33,6 +39,7 @@ import { memo, useId, useMemo, useState } from "react";
 import type { HistogramData } from "../../../charts/histogram.ts";
 import { MAX_HISTOGRAM_BINS } from "../../../charts/limits.ts";
 import { diversityOptions } from "../../../core/analyses/diversity.ts";
+import type { DiversityPage } from "../../../core/analyses/diversity.ts";
 import {
   spectraCsv,
   spectraOf,
@@ -85,12 +92,16 @@ export interface SpectrumBlockProps {
   /** The name of the variants file, which the caption and the download
       name. */
   readonly variantsName: string;
+  /** The page it is drawn on, whose words its warning takes, and which
+      has the old button of the download on popgen.html alone. */
+  readonly page: DiversityPage;
 }
 
 /** The block of the spectrum of each population. */
 export const SpectrumBlock = memo(function SpectrumBlock({
   result,
   variantsName,
+  page,
 }: SpectrumBlockProps): React.JSX.Element {
   const headingId = useId();
   const [tab, setTab] = useState<SpectrumTab>(HISTOGRAMS_ID);
@@ -98,7 +109,7 @@ export const SpectrumBlock = memo(function SpectrumBlock({
   // under; their words and not the project, so that a change of the
   // project that keeps the result does not draw the block again.
   const warning = useAppState((s) =>
-    spectrumWarnings(result, s.project)
+    spectrumWarnings(result, s.project, page)
       .map((found) => found.text)
       .join(" "),
   );
@@ -172,9 +183,11 @@ export const SpectrumBlock = memo(function SpectrumBlock({
           },
         ]}
       />
-      <div>
-        <Button label={SPECTRUM_CSV_LABEL} onPress={download} />
-      </div>
+      {page === "popgen" && (
+        <div>
+          <Button label={SPECTRUM_CSV_LABEL} onPress={download} />
+        </div>
+      )}
     </section>
   );
 });

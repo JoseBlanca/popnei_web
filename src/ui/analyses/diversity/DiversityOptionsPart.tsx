@@ -14,6 +14,12 @@
  * the button can stand in it and be no part of what the field is
  * described by. A number typed that is the default's is kept as typed,
  * with a description of its own, since no number changed.
+ *
+ * In the Populations tab of popgen2.html the three fields and "Use the
+ * default" wait while the diversity runs, each with the reason as its
+ * tooltip and its description, `waiting`, so that no change leaves the
+ * diversity behind (docs/specs/steps/popgen2-populations.md, "While the
+ * diversity runs"); on popgen.html they never wait.
  */
 import { useId, useRef } from "react";
 
@@ -54,8 +60,17 @@ import {
 const THRESHOLD_STEP = 0.01;
 const THRESHOLD_DECIMALS = 2;
 
+/** What the options are drawn with. */
+export interface DiversityOptionsPartProps {
+  /** The reason every option waits, or `null` while none does; `null`
+      when absent, as on popgen.html. */
+  readonly waiting?: string | null;
+}
+
 /** The options of the diversity. */
-export function DiversityOptionsPart(): React.JSX.Element {
+export function DiversityOptionsPart({
+  waiting = null,
+}: DiversityOptionsPartProps): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
   // The same object while the options of the project are the same.
@@ -87,6 +102,7 @@ export function DiversityOptionsPart(): React.JSX.Element {
         maxValue={LARGEST_WHOLE_NUMBER}
         step={1}
         description={MINIMUM_LINE}
+        waiting={waiting}
         refusedText={minimumRefusedText}
         onRefused={announce}
         onChange={(value) => {
@@ -100,6 +116,7 @@ export function DiversityOptionsPart(): React.JSX.Element {
         maxValue={1}
         step={THRESHOLD_STEP}
         decimals={THRESHOLD_DECIMALS}
+        waiting={waiting}
         refusedText={thresholdRefusedText}
         onRefused={announce}
         onChange={(value) => {
@@ -116,6 +133,7 @@ export function DiversityOptionsPart(): React.JSX.Element {
           maxValue={LARGEST_WHOLE_NUMBER}
           step={1}
           describedBy={lineId}
+          waiting={waiting}
           refusedText={drawRefusedText}
           onRefused={announce}
           onChange={(value) => {
@@ -152,6 +170,7 @@ export function DiversityOptionsPart(): React.JSX.Element {
               <Button
                 label={USE_DEFAULT_LABEL}
                 look="link"
+                waiting={waiting}
                 onPress={() => {
                   // The button goes with the draw typed: the focus goes to
                   // the field of the draw, and not to the top of the page.

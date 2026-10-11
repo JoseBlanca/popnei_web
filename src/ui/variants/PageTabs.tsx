@@ -13,7 +13,9 @@
  *
  * The PCA tab holds the PCA's panel, `PcaTab`, in a boundary of errors
  * of its own, which keeps the tab's heading, "PCA" or "PCoA" by the
- * method chosen, after a defect.
+ * method chosen, after a defect; the Populations tab holds the panel of
+ * the diversity, `PopulationsTab`, in one of its own, which keeps the
+ * heading "Diversity".
  *
  * Its own component, so that the page draws it inside a boundary of
  * errors: a defect thrown by `analysisTabs` costs the row alone, and the
@@ -26,6 +28,8 @@ import type {
   TabGreyed,
 } from "../../core/popgen2Tabs.ts";
 import { pcaMethodOf } from "../../core/analyses/pca.ts";
+import { PopulationsTab } from "../analyses/diversity/PopulationsTab.tsx";
+import { DIVERSITY_TAB_TITLE } from "../analyses/diversity/tabWords.ts";
 import { PcaTab } from "../analyses/pca/PcaTab.tsx";
 import { pcaTabTitle } from "../analyses/pca/tabWords.ts";
 import { classOf } from "../classOf.ts";
@@ -40,7 +44,6 @@ import {
   ANALYSES_TABS_LABEL,
   DISTANCES_NOT_BUILT,
   PAGE_TAB_LABELS,
-  POPULATIONS_NOT_BUILT,
 } from "./analysisTabsWords.ts";
 import { IndividualsTab } from "./IndividualsTab.tsx";
 import { INDIVIDUALS_TAB_CONTENT_NAME } from "./individualsWords.ts";
@@ -156,7 +159,16 @@ export function PageTabs({
         analysisTab(
           "populations",
           tabReasons.populations,
-          <p className={classOf(styles, "boxLine")}>{POPULATIONS_NOT_BUILT}</p>,
+          <ErrorBoundary
+            heading={DIVERSITY_TAB_TITLE}
+            level={2}
+            resetOn={fileId ?? "none"}
+          >
+            <PopulationsTab
+              autoRuns={autoRuns}
+              shown={tab === "populations" && tabReasons.populations === null}
+            />
+          </ErrorBoundary>,
         ),
         analysisTab(
           "distances",

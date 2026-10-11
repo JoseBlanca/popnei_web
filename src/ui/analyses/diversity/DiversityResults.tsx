@@ -8,11 +8,24 @@
  * population, `SpectrumBlock.tsx`. The frame of `AnalysisPanel.tsx` draws the warnings
  * above it, and gives the words of the comparison with the check numbers,
  * drawn under the table.
+ *
+ * It is given the definition of the diversity the store of its page
+ * runs, and takes the page from it (diversity.md, "On popgen2.html"): in
+ * the Populations tab of popgen2.html the caption ends with the
+ * unclassified individuals kept that the table leaves out, the line of
+ * the versions comes before that of the draw, and the old button of the
+ * download of the table is left out, since every table of that page has
+ * its "Download…" below it (docs/specs/steps/popgen2-populations.md,
+ * "The result").
  */
 import {
+  diversity,
   diversityCsv,
+  diversityPageOf,
   diversityRows,
 } from "../../../core/analyses/diversity.ts";
+import type { AnalysisDef } from "../../../core/store.ts";
+import type { Job, JobResult } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { downloadText } from "../../download.ts";
 import { useAppState } from "../../store.tsx";
@@ -23,6 +36,7 @@ import type { ResultsProps } from "../panels.ts";
 import { versionsText } from "../words.ts";
 import styles from "./DiversityResults.module.css";
 import { SpectrumBlock } from "./SpectrumBlock.tsx";
+import { unclassifiedCaption, unclassifiedLeftOutOf } from "./tabWords.ts";
 import {
   captionText,
   csvName,
@@ -44,13 +58,30 @@ function columnsOf(numCalledAlleles: number): readonly TableColumn[] {
   ];
 }
 
+/** What the result of the diversity is drawn with. */
+export interface DiversityResultsProps extends ResultsProps {
+  /** The definition of the diversity the store of the page runs,
+      `diversity` or `diversityOnPopgen2`, whose page the words follow;
+      the old page's, `diversity`, when absent, as its panel draws it. */
+  readonly analysis?: AnalysisDef<Job, JobResult>;
+}
+
 /** The table of the diversity and its download. */
 export function DiversityResults({
   result,
   check,
-}: ResultsProps): React.JSX.Element {
+  analysis = diversity,
+}: DiversityResultsProps): React.JSX.Element {
+  const page = diversityPageOf(analysis);
   const variantsName = useAppState((s) => s.project.variants?.name ?? null);
   const popneiVersion = useAppState((s) => s.popneiVersion);
+  // The result is shown under the key of the populations and the
+  // individuals kept now, so those left out are those of now.
+  const leftOut = useAppState((s) =>
+    page === "popgen2"
+      ? unclassifiedLeftOutOf(s.project, s.individualsKept)
+      : 0,
+  );
   if (result.analysis !== "diversity") {
     throw new Error(
       `popnei_web defect: the table of the diversity was given a result of ${result.analysis}.`,
@@ -73,24 +104,41 @@ export function DiversityResults({
     downloadText(csvName(variantsName), diversityCsv(result), "text/csv");
   };
 
+  const caption = captionText(result.passStats.numVars, variantsName);
+  const versions = (
+    <p className={classOf(styles, "muted")}>
+      {versionsText(popneiVersion, APP_VERSION)}
+    </p>
+  );
+  const rarefied = (
+    <p className={classOf(styles, "muted")}>
+      {rarefiedText(result.numCalledAlleles)}
+    </p>
+  );
+
   return (
     <div className={classOf(styles, "results")}>
       <Table
-        caption={captionText(result.passStats.numVars, variantsName)}
+        caption={
+          leftOut > 0 ? `${caption} ${unclassifiedCaption(leftOut)}` : caption
+        }
         columns={columnsOf(result.numCalledAlleles)}
         rows={rows}
       />
       {check !== null && <p className={classOf(styles, "line")}>{check}</p>}
-      <div className={classOf(styles, "download")}>
-        <Button label="Download the table as CSV" onPress={download} />
-        <p className={classOf(styles, "muted")}>
-          {rarefiedText(result.numCalledAlleles)}
-        </p>
-        <p className={classOf(styles, "muted")}>
-          {versionsText(popneiVersion, APP_VERSION)}
-        </p>
-      </div>
-      <SpectrumBlock result={result} variantsName={variantsName} />
+      {page === "popgen" ? (
+        <div className={classOf(styles, "download")}>
+          <Button label="Download the table as CSV" onPress={download} />
+          {rarefied}
+          {versions}
+        </div>
+      ) : (
+        <div className={classOf(styles, "download")}>
+          {versions}
+          {rarefied}
+        </div>
+      )}
+      <SpectrumBlock result={result} variantsName={variantsName} page={page} />
     </div>
   );
 }
