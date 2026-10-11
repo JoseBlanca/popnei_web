@@ -146,10 +146,14 @@ would see:
   key until it ends. A task that runs on the page and grows with the
   data, a sort of a million points, a JSON of the project with its
   table, is measured or moved to a worker.
-- **Download size**, before anything runs and on first use: the wasm
-  package of popnei is 0.71 MB gzipped, release `js-v0.1.0-dev.2`, and
-  the files wasm 0.58 MB (`docs/architecture.md`, section 11), and a new dependency is set beside
-  those.
+- **Download size**, before anything runs and on first use: a new
+  dependency is set beside the wasm packages of popnei and of table_io
+  and the page's first load, whose sizes, with the release they were
+  measured on, are in `docs/architecture.md`, section 11, and
+  `docs/technology.md`. They are read there and not copied here, since
+  each release of popnei changes them: this paragraph gave 0.71 MB, the
+  size of `js-v0.1.0-dev.2`, until 11 October 2026, when the site used
+  popnei 0.2.2.
 - **The browsers.** The floor of the applications is Chrome 111,
   Firefox 115 and Safari 16.4, decided by the owner on 24 September 2026
   (`docs/technology.md`); popnei's own, lower floor is the library's. An API newer than
