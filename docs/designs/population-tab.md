@@ -1,6 +1,10 @@
 # The Populations tab of popgen2.html: several analyses that calculate again by themselves
 
-A design of 11 October 2026, in draft, not yet approved by the owner.
+A design of 11 October 2026, approved by the owner the same day with
+the recommendations of its two open points: Stop in a tab stops that
+analysis and the band adds "Stop all" (1a), and the column of the
+populations and the individuals file are greyed while the diversity
+runs (2a).
 It decides how `popgen2.html` runs several analyses that each calculate
 again by themselves after a change, with the one calculation worker it
 has: the PCA, which does so since 10 October 2026, and the diversity of
