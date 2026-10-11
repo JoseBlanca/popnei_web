@@ -2,7 +2,8 @@
  * What the entries of the pages of population genetics, `popgen.html`
  * and `popgen2.html`, share of the opening (docs/specs/entry.md, "At the
  * opening"): taking over from the start guard, the listeners of the
- * errors nothing else shows, the error bar, or the band of popgen2.html,
+ * errors nothing else shows and of a file dropped outside the zones of a
+ * file, the error bar, or the band of popgen2.html,
  * in its own root, the store
  * joined to the worker client, the reads the project waits for, and the
  * root of the application with its handlers of errors. Each entry calls
@@ -31,6 +32,7 @@ import { createReads } from "./reads.ts";
 import type { Saving } from "./saving.ts";
 import { ErrorBar } from "./shell/ErrorBar.tsx";
 import type { PageStore } from "./store.tsx";
+import { stopStrayDrops } from "./strayDrops.ts";
 
 declare global {
   /** The version of the application, the number in package.json, which
@@ -142,6 +144,7 @@ export function startPage<B>(
   if (guard?.tooOld === true) return;
   const defects = createDefects();
   listenForDefects(defects);
+  stopStrayDrops(window);
 
   const defectsRoot = createRoot(
     pageElement("defects"),

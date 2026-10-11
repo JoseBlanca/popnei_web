@@ -217,7 +217,8 @@ no shell:
 1. It calls `window.__startGuard.remove()`, stops there when `tooOld`
    is true, and puts its own listeners on the window (below, "The errors
    nothing else shows"), so that an error in the steps that follow is
-   shown.
+   shown, and those of a file dropped outside the zones (below, "A file
+   dropped outside a zone").
 2. It makes the log of the errors, `createDefects()`, and draws the error
    bar into `#defects`, with no store yet.
 3. It makes the store, with `createPopgenStore` of
@@ -752,6 +753,28 @@ individuals, meanwhile.
 `saveWritten` of a store whose `write` is not `done` is a defect: the
 Save button is shown only in that state.
 
+### A file dropped outside a zone
+
+A file dragged from the desktop and dropped on the page outside the
+zone of a file, on a heading, a margin or a table, is not opened, and
+the page stays as it was. Left to the browser, Chromium and WebKit
+opened the file in the tab in place of the page, and the files open and
+the results calculated were lost, on both pages (the review of work
+packages 2 and 3 of `docs/plans/population-tab.md`, 11 October 2026).
+So the page listens on the window for `dragover` and `drop`, the events
+of a drag that passes over the page and of its drop, when the drag
+holds files; a drag of text, which a text box takes, is left to the
+browser. A `dragover` that no zone took, whose default nothing has prevented, has its default
+prevented with the drop effect "none", so that the pointer shows that
+nothing can be dropped there and the browser gives no drop; and a
+`drop` that no zone took has its default prevented, so that nothing is
+opened in any case. A zone takes its own drags first, since it listens
+on its element, inside the window, and its drop effect is kept. Nothing
+is said: the zones are where the screen asks for a file, and a drop
+beside them changes nothing a user could miss. `stopStrayDrops(window)`
+of `src/ui/strayDrops.ts`, which `startPage` calls with the listeners of
+the errors.
+
 ### The errors nothing else shows
 
 An error of our own code that no error boundary of React sees, one
@@ -1073,6 +1096,12 @@ hand and whose cancels it records.
 - **`saveWritten`**, with a fake `downloadFile`: in `done`, the fake is
   given the name and the very `Blob` of the state, and then the store's
   `write` is `saved`, with no file; in `ready`, a defect.
+- **`stopStrayDrops`**, in jsdom, the browser's document emulated in
+  node: a `dragover` on the body has its default prevented and the drop
+  effect "none"; one a zone took, its default prevented and its drop
+  effect "copy", keeps "copy"; a `drop` on the body has its default
+  prevented; a drag of text over a text box has neither; and after the
+  function it returns, none is.
 
 With Playwright, which drives Chromium, Firefox and WebKit, the engines
 of the browsers the site supports, and can run code inside the page and
@@ -1100,6 +1129,10 @@ rules of accessibility that the tests run on the page:
 - The entry's file answered 404 shows "The application could not be
   loaded. Reload the page."; answered with a file of bad syntax, "The
   application could not start: …".
+- On each page, in Chromium and WebKit, a file dragged over a heading
+  and dropped there: the `dragover` and the `drop` have their defaults
+  prevented, and the page, its file and its heading are as before; the
+  same file dropped on the zone of the variants file still opens it.
 
 - A throw while React draws the Variants step, made by an
   `Intl.NumberFormat` that throws, which its number field calls, shows
