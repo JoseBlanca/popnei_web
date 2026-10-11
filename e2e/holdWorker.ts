@@ -32,6 +32,10 @@
  * worker that holds it, and the worker made after it holds the next PCA
  * again.
  *
+ * Asked to, it holds the diversity as the PCA, for the Populations tab
+ * of popgen2.html: its result kept back until a release of "diversity",
+ * which lets it through and holds no diversity after it.
+ *
  * A release sent before the worker's script has made its channel would
  * be lost, as right after a file is picked, while the page makes the
  * worker again: so the worker says "listening" on the channel once it
@@ -51,7 +55,7 @@ const CHANNEL = "e2e-hold";
     result so far, where crashWorker.ts crashes it at a message of the
     page. */
 export type Release =
-  "oneSoFar" | "allSoFar" | "result" | "crash" | "write" | "pca";
+  "oneSoFar" | "allSoFar" | "result" | "crash" | "write" | "pca" | "diversity";
 
 /** What a worker says on the channel once it listens. */
 const LISTENING = "listening";
@@ -84,14 +88,19 @@ function countWorkers([channelName, listening, counts]: readonly [
 
 /** The lines in front of the worker's script; `holdWrite`, whether a
     write is held after its first report of progress; `holdPca`, whether
-    the result of a PCA is held. */
-const front = (holdWrite: boolean, holdPca: boolean): string => `{
+    the result of a PCA is held; `holdDiversity`, that of a diversity. */
+const front = (
+  holdWrite: boolean,
+  holdPca: boolean,
+  holdDiversity: boolean,
+): string => `{
   const realNow = performance.now.bind(performance);
   performance.now = () => realNow() * 1e6;
   const realPost = self.postMessage.bind(self);
   const held = { soFar: [], result: [] };
-  const holding = { soFar: true, result: true, write: ${JSON.stringify(holdWrite)}, pca: ${JSON.stringify(holdPca)} };
+  const holding = { soFar: true, result: true, write: ${JSON.stringify(holdWrite)}, pca: ${JSON.stringify(holdPca)}, diversity: ${JSON.stringify(holdDiversity)} };
   const heldPca = [];
+  const heldDiversity = [];
   const writes = new Set();
   const heldWrite = [];
   const reported = new Set();
@@ -102,6 +111,9 @@ const front = (holdWrite: boolean, holdPca: boolean): string => `{
   const ofPca = (m) =>
     m !== null && typeof m === "object" && m.kind === "result" &&
     m.result !== null && typeof m.result === "object" && m.result.analysis === "pca";
+  const ofDiversity = (m) =>
+    m !== null && typeof m === "object" && m.kind === "result" &&
+    m.result !== null && typeof m.result === "object" && m.result.analysis === "diversity";
   const ofSummary = (m) =>
     m !== null && typeof m === "object" && m.result !== null &&
     typeof m.result === "object" && m.result.analysis === "variantsSummary";
@@ -115,6 +127,11 @@ const front = (holdWrite: boolean, holdPca: boolean): string => `{
     if (release === "pca") {
       holding.pca = false;
       for (const [m, t] of heldPca.splice(0)) realPost(m, t);
+      return;
+    }
+    if (release === "diversity") {
+      holding.diversity = false;
+      for (const [m, t] of heldDiversity.splice(0)) realPost(m, t);
       return;
     }
     if (release === "write") {
@@ -148,6 +165,10 @@ const front = (holdWrite: boolean, holdPca: boolean): string => `{
       heldPca.push([m, t]);
       return;
     }
+    if (holding.diversity && ofDiversity(m)) {
+      heldDiversity.push([m, t]);
+      return;
+    }
     if (ofSummary(m) && (m.kind === "soFar" || m.kind === "result") && holding[m.kind]) {
       held[m.kind].push([m, t]);
       return;
@@ -159,20 +180,29 @@ const front = (holdWrite: boolean, holdPca: boolean): string => `{
 
 /** Serves every calculation worker of the page with the results of the
     summary held, and, with `holdWrite`, each write held after its first
-    report of progress, and with `holdPca` the result of each PCA; to
-    call before the page is opened. */
+    report of progress, with `holdPca` the result of each PCA, and with
+    `holdDiversity` that of each diversity; to call before the page is
+    opened. */
 export async function holdSummary(
   page: Page,
   {
     holdWrite = false,
     holdPca = false,
-  }: { readonly holdWrite?: boolean; readonly holdPca?: boolean } = {},
+    holdDiversity = false,
+  }: {
+    readonly holdWrite?: boolean;
+    readonly holdPca?: boolean;
+    readonly holdDiversity?: boolean;
+  } = {},
 ): Promise<void> {
   await page.addInitScript(countWorkers, [CHANNEL, LISTENING, COUNTS] as const);
   await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
     const response = await route.fetch();
     const script = await response.text();
-    await route.fulfill({ response, body: front(holdWrite, holdPca) + script });
+    await route.fulfill({
+      response,
+      body: front(holdWrite, holdPca, holdDiversity) + script,
+    });
   });
 }
 

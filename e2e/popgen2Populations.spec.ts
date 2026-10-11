@@ -639,3 +639,205 @@ test.describe("PT1 D3 the code of the result of the Populations tab", () => {
 // PT1 D7: the flows of the lock of the filters and of the download's
 // wait while the diversity runs (task 1.6 of docs/plans/
 // population-tab.md) go below this line.
+
+/** The words of the lock of the thresholds while the diversity runs,
+    alone, and with the PCA live beside it. */
+const LOCKED_DIVERSITY =
+  "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again.";
+const LOCKED_DIVERSITY_PCA_LIVE =
+  "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again.";
+
+/** The words of the lock of the thresholds while the PCA runs with the
+    diversity live beside it. */
+const LOCKED_PCA_DIVERSITY_LIVE =
+  "Stop the PCA in the PCA tab to change the filters, or press Stop all beside the heading Popnei to stop the diversity too; then press Run in each tab to calculate them again.";
+
+/** The words of the download's wait. */
+const WAITS_DIVERSITY =
+  "Waits for the diversity to end; or stop it in the Populations tab.";
+const WAITS_DIVERSITY_THEN_PCA =
+  "Waits for the diversity, and the PCA after it, to end; or press Stop all beside the heading Popnei.";
+const WAITS_PCA_THEN_DIVERSITY =
+  "Waits for the PCA, and the diversity after it, to end; or press Stop all beside the heading Popnei.";
+
+/** The statistics of the file, in the Variants tab. */
+function stats(page: Page): Locator {
+  return page.getByRole("region", { name: "Statistics of the file" });
+}
+
+/** The button of the download of the filtered variants. */
+function downloadButton(page: Page): Locator {
+  return stats(page).getByRole("button", {
+    name: "Download filtered variants…",
+    exact: true,
+  });
+}
+
+/** The FILTER box of the Variants tab. */
+function filterBox(page: Page): Locator {
+  return stats(page).getByRole("checkbox", {
+    name: "Leave out the variants that failed their FILTER",
+  });
+}
+
+/** The five boxes and five lines of the thresholds of the Variants tab,
+    and the FILTER box of a VCF that records the FILTER, `withFilter`,
+    with the Variants tab shown. */
+async function filterControls(
+  page: Page,
+  withFilter: boolean,
+): Promise<readonly Locator[]> {
+  await tab(page, "Variants").click();
+  // The lines are drawn over the plots once they are laid out.
+  await expect(stats(page).getByRole("slider")).toHaveCount(5);
+  const boxes = await stats(page).getByRole("textbox").all();
+  expect(boxes).toHaveLength(5);
+  return [
+    ...boxes,
+    ...(await stats(page).getByRole("slider").all()),
+    ...(withFilter ? [filterBox(page)] : []),
+  ];
+}
+
+/** Expects each of the filters of the Variants tab greyed with
+    `words`, the FILTER box among them with `withFilter`, and the
+    download waiting with `waits`. */
+async function expectLocked(
+  page: Page,
+  {
+    words,
+    waits,
+    withFilter,
+  }: {
+    readonly words: string;
+    readonly waits: string;
+    readonly withFilter: boolean;
+  },
+): Promise<void> {
+  for (const control of await filterControls(page, withFilter)) {
+    await expect(control).toHaveAttribute("aria-disabled", "true");
+    await expect(control).toHaveAccessibleDescription(
+      new RegExp(words.replaceAll(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"),
+    );
+  }
+  await expect(downloadButton(page)).toBeDisabled();
+  await expect(downloadButton(page)).toHaveAccessibleDescription(waits);
+}
+
+/** Expects every filter of the Variants tab open, the FILTER box among
+    them with `withFilter`, and the download enabled. */
+async function expectOpen(page: Page, withFilter: boolean): Promise<void> {
+  for (const control of await filterControls(page, withFilter)) {
+    await expect(control).not.toHaveAttribute("aria-disabled");
+  }
+  await expect(downloadButton(page)).toBeEnabled();
+}
+
+test.describe("PT1 D7 the filters and the download while the diversity runs", () => {
+  test("PT1 D7 the diversity held running on panel.vcf.gz: the five thresholds and the FILTER box greyed with its words, the download waiting with its words, the PCA's options open; the PCA's Run pressed, which waits: the words name Stop all and the PCA after it; after the diversity's Stop, the PCA calculated and everything open; axe light and dark", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    test.setTimeout(150_000);
+    await holdSummary(page, { holdDiversity: true });
+    await openPage(page);
+    await pick(page, "panel.vcf.gz");
+    await release(page, "allSoFar");
+    await release(page, "result");
+    await tab(page, "Populations").click();
+    await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+    await button(page, "Run").click();
+    await expect(button(page, "Stop")).toBeVisible();
+    await expect.poll(() => runsOf(page, "diversity")).toBe(1);
+
+    await expectLocked(page, {
+      words: LOCKED_DIVERSITY,
+      waits: WAITS_DIVERSITY,
+      withFilter: true,
+    });
+    await stats(page).screenshot({
+      path: test.info().outputPath("thresholds-diversity-running.png"),
+    });
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+      expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+    }
+    // A press on the FILTER box changes nothing, and asks for nothing.
+    await filterBox(page)
+      .locator("xpath=ancestor::label[1]")
+      .click({ force: true });
+    await expect(filterBox(page)).toBeChecked();
+    expect(await runsOf(page, "diversity")).toBe(1);
+
+    // The PCA's options stay open while the diversity runs: a distance
+    // typed, and its Run, which waits after the diversity.
+    await tab(page, "PCA").click();
+    await expect(
+      shown(page).getByRole("button", { name: /Method$/u }),
+    ).not.toHaveAttribute("aria-disabled");
+    const distance = shown(page).getByRole("textbox", { name: DISTANCE });
+    await expect(distance).not.toHaveAttribute("aria-disabled");
+    await distance.fill("50000");
+    await distance.press("Enter");
+    await button(page, "Run").click();
+    await expect(button(page, "Stop recalculating")).toBeVisible();
+    expect(await runsOf(page, "pca")).toBe(0);
+    await expectLocked(page, {
+      words: LOCKED_DIVERSITY_PCA_LIVE,
+      waits: WAITS_DIVERSITY_THEN_PCA,
+      withFilter: true,
+    });
+
+    await tab(page, "Populations").click();
+    await button(page, "Stop").click();
+    await expect(button(page, "Run")).toBeVisible();
+    await tab(page, "PCA").click();
+    await expect(
+      page.getByText(/^The place of each of the 200 individuals/u),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expectOpen(page, true);
+    expect(await runsOf(page, "diversity")).toBe(1);
+    await workersListening(page);
+  });
+
+  test("PT1 D7 the PCA held running and the diversity's Run pressed, which waits: the filters name Stop all and the download the PCA and the diversity after it; at the PCA's end the diversity runs, and then everything is open", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await holdSummary(page, { holdPca: true });
+    await openPage(page);
+    await pick(page, "panel.nei");
+    await release(page, "allSoFar");
+    await release(page, "result");
+    await runPca(page, false);
+    await expect(button(page, "Stop")).toBeVisible();
+    await expectLocked(page, {
+      words:
+        "Stop the PCA in the PCA tab to change the filters; then press Run there to calculate it again.",
+      waits: "Waits for the PCA to end; or stop it in the PCA tab.",
+      withFilter: false,
+    });
+
+    await tab(page, "Populations").click();
+    await button(page, "Run").click();
+    await expect(button(page, "Stop recalculating")).toBeVisible();
+    await expectLocked(page, {
+      words: LOCKED_PCA_DIVERSITY_LIVE,
+      waits: WAITS_PCA_THEN_DIVERSITY,
+      withFilter: false,
+    });
+    expect(await runsOf(page, "diversity")).toBe(0);
+
+    await release(page, "pca");
+    await tab(page, "Populations").click();
+    await expect(table(page, CAPTION)).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expectOpen(page, false);
+    expect(await timeline(page)).toEqual([
+      "run pca",
+      "result pca",
+      "run diversity",
+      "result diversity",
+    ]);
+    await workersListening(page);
+  });
+});
