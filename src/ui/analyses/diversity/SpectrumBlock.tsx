@@ -327,10 +327,12 @@ function SpectrumHistogram({
       xWholeNumbers: true,
     };
   }, [pop, shares, numCalledAlleles, yMax]);
-  return download === null ? (
-    <HistogramPlot data={data} shape="tall" />
-  ) : (
-    <HistogramPlot data={data} shape="tall" download={download} />
+  return (
+    <HistogramPlot
+      data={data}
+      shape="tall"
+      {...(download !== null && { download })}
+    />
   );
 }
 
@@ -377,14 +379,14 @@ function SpectrumTable({
     );
     return { columns: tableColumns, rows: tableRows };
   }, [result]);
-  return fileName === null ? (
-    <Table caption={SPECTRUM_TABLE_CAPTION} columns={columns} rows={rows} />
-  ) : (
+  return (
     <Table
       caption={SPECTRUM_TABLE_CAPTION}
       columns={columns}
       rows={rows}
-      download={{ what: SPECTRUM_TABLE_WHAT, fileName, waiting: null }}
+      {...(fileName !== null && {
+        download: { what: SPECTRUM_TABLE_WHAT, fileName, waiting: null },
+      })}
     />
   );
 }

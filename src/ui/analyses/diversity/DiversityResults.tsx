@@ -122,26 +122,22 @@ export function DiversityResults({
 
   return (
     <div className={classOf(styles, "results")}>
-      {page === "popgen" ? (
-        <Table
-          caption={caption}
-          columns={columnsOf(result.numCalledAlleles)}
-          rows={rows}
-        />
-      ) : (
-        <Table
-          caption={
-            leftOut > 0 ? `${caption} ${unclassifiedCaption(leftOut)}` : caption
-          }
-          columns={columnsOf(result.numCalledAlleles)}
-          rows={rows}
-          download={{
+      <Table
+        caption={
+          page === "popgen2" && leftOut > 0
+            ? `${caption} ${unclassifiedCaption(leftOut)}`
+            : caption
+        }
+        columns={columnsOf(result.numCalledAlleles)}
+        rows={rows}
+        {...(page === "popgen2" && {
+          download: {
             what: DIVERSITY_TABLE_WHAT,
             fileName: csvName(variantsName),
             waiting: null,
-          }}
-        />
-      )}
+          },
+        })}
+      />
       {check !== null && <p className={classOf(styles, "line")}>{check}</p>}
       {page === "popgen" ? (
         <div className={classOf(styles, "download")}>
