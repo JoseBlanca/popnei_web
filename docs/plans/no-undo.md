@@ -1024,3 +1024,31 @@ the variants file in the Individuals tab, and only when there are any;
 the PCA tab's sentence of its filters as "PCA filters can be stricter
 than the general analysis ones."; no line "The PCA is calculated again
 after each change…"; the Download of each table below it.
+
+Built in 9a648468 (the PCA tab and the Download below the tables), and
+b8d7f1d2 to b5c33ab7 (the boxes and the Individuals tab, each spec
+first): the boxes hold the name, Individuals, Variants and FILTER
+failures; the size, the chromosomes and the ploidy are one line at the
+top of the Variants tab; every sentence names the boxes "Variants" and
+"Individuals", a refusal of `src/core/project.ts` among them; the
+tally's caption is for a screen reader alone (`captionHidden` of
+`Table.tsx`). The review, `accessibility`, `react` and `ux`: the
+findings that held were fixed in a69acf7e to e0b64d19, test first: the
+tally's caption read twice; the facts of the Variants tab under no
+heading (now a region, "About the file") and inside the statistics'
+error boundary; their columns past the tab with the text enlarged at
+320 px; a Stop in the quiet second untested for them; a column that
+classifies nobody shown as a sentence where no file shows the tally; a
+sentence naming "the box of panel.nei"; a file popnei cannot read
+leaving the Variants tab empty (now one line); the rows that match no
+individual announced to a screen reader, since they left the box; one
+shared class for the text a screen reader alone reads. Not taken: the
+names of those rows (beyond what the owner asked); a line saying what
+"Stop recalculating" stops before the first change (the owner removed
+it); the PCA's results moving by a line in the quiet second (they are
+off the screen then).
+
+Checks at e0b64d19: typecheck, lint, format clean; Vitest 163 files,
+5,207 tests; in Chromium and WebKit the flows of `popgen2*`,
+`openVariants` and `fileStats`, 424; the screens of `popgen2.html`,
+380.
