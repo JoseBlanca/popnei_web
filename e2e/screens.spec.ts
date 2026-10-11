@@ -6125,20 +6125,213 @@ for (const theme of ["light", "dark"] as const) {
         );
       });
 
-      for (const shot of ["done", "one-population-done"] as const) {
-        test(`the Populations tab done: ${shot === "done" ? "the table of the three populations" : "the one row Unclassified"} and the spectrum`, async ({
+      for (const shot of [
+        "done",
+        "done-live",
+        "one-population-done",
+      ] as const) {
+        test(`the Populations tab done: ${shot === "one-population-done" ? "the one row Unclassified" : "the table of the three populations"} and the spectrum, each with its "Download…"${shot === "done" ? ", after Stop recalculating, with the line of a Stop" : ", live, Stop recalculating above them"}`, async ({
           page,
         }) => {
-          const panel = await populationsReady(page, shot === "done");
+          const panel = await populationsReady(
+            page,
+            shot !== "one-population-done",
+          );
           await panel.getByRole("button", { name: "Run", exact: true }).click();
           await expect(panel.locator("svg.chart")).toHaveCount(
-            shot === "done" ? 3 : 1,
+            shot === "one-population-done" ? 1 : 3,
             { timeout: 20_000 },
           );
+          if (shot === "done") {
+            await panel
+              .getByRole("button", { name: "Stop recalculating", exact: true })
+              .click();
+            await expect(
+              panel.getByText(/^Stopped: the diversity/u),
+            ).toBeVisible();
+          }
           await page.mouse.click(1, 1);
           await save(page, `popgen2-populations-${shot}${at}-${theme}`);
         });
       }
+
+      test("the Populations tab locked while the one pass reads panel.nei: Run disabled with its words", async ({
+        page,
+      }) => {
+        await holdSummary(page);
+        await page.goto("popgen2.html");
+        await pickOnNewPage(page, "panel.nei");
+        await release(page, "allSoFar");
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "Populations", exact: true })
+          .click();
+        const panel = page.getByRole("tabpanel");
+        await expect(
+          panel.getByRole("button", { name: "Run", exact: true }),
+        ).toHaveAccessibleDescription(
+          /^Run once panel\.nei is read to the end/u,
+          {
+            timeout: 20_000,
+          },
+        );
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-populations-locked-pass${at}-${theme}`);
+      });
+
+      test("the Populations tab waiting: its Run pressed while the PCA runs, Stop recalculating and the line that names the PCA", async ({
+        page,
+      }) => {
+        await holdSummary(page, { holdPca: true });
+        await page.goto("popgen2.html");
+        await pickOnNewPage(page, "panel.nei");
+        await release(page, "allSoFar");
+        await release(page, "result");
+        await pickIndividualsOnNewPage(page, "panel_pops.csv");
+        const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+        await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+        const panel = page.getByRole("tabpanel");
+        const field = panel.getByRole("textbox", {
+          name: /^Distance within which variants are compared/u,
+        });
+        await expect(field).toBeVisible({ timeout: 20_000 });
+        await field.fill("50000");
+        await field.press("Enter");
+        const run = panel.getByRole("button", { name: "Run", exact: true });
+        await expect(run).toBeEnabled({ timeout: 20_000 });
+        await run.click();
+        await expect(
+          panel.getByRole("button", { name: "Stop", exact: true }),
+        ).toBeVisible();
+        await tabs
+          .getByRole("tab", { name: "Populations", exact: true })
+          .click();
+        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(
+          panel.getByText(
+            "The diversity starts once the PCA, which is running, ends.",
+            { exact: true },
+          ),
+        ).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-populations-waiting${at}-${theme}`);
+      });
+
+      test("the Populations tab about to start: the minimum changed after a result, a key held in its box, Stop recalculating and the line of the quiet second", async ({
+        page,
+      }) => {
+        const panel = await populationsReady(page);
+        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(panel.locator("svg.chart")).toHaveCount(3, {
+          timeout: 20_000,
+        });
+        const minimum = panel.getByRole("textbox", {
+          name: /^Individuals with a called genotype needed in each population, per variant/u,
+        });
+        await minimum.fill("10");
+        await minimum.press("Enter");
+        // A key typed and not yet given holds the start.
+        await minimum.press("Backspace");
+        await minimum.press("0");
+        await expect(
+          panel.getByText(
+            "The diversity starts again in a moment, once the filters and its options stop changing.",
+            { exact: true },
+          ),
+        ).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-populations-about-to-start${at}-${theme}`);
+      });
+
+      for (const shot of ["stopped", "failed"] as const) {
+        test(`the Populations tab ${shot === "stopped" ? "after its Stop while it ran: Run and the line of a Stop" : "after a crash of the worker: the words of the failure, Run and the line of a failure that ended the live state"}`, async ({
+          page,
+        }) => {
+          await holdSummary(page, { holdDiversity: true });
+          await page.goto("popgen2.html");
+          await pickOnNewPage(page, "panel.nei");
+          await release(page, "allSoFar");
+          await release(page, "result");
+          await pickIndividualsOnNewPage(page, "panel_pops.csv");
+          await page
+            .getByRole("tablist", { name: "Files and analyses" })
+            .getByRole("tab", { name: "Populations", exact: true })
+            .click();
+          const panel = page.getByRole("tabpanel");
+          const run = panel.getByRole("button", { name: "Run", exact: true });
+          await expect(run).toBeEnabled({ timeout: 20_000 });
+          await run.click();
+          const stop = panel.getByRole("button", { name: "Stop", exact: true });
+          await expect(stop).toBeVisible();
+          if (shot === "stopped") {
+            await stop.click();
+            await expect(
+              panel.getByText(/^Stopped: the diversity/u),
+            ).toBeVisible();
+          } else {
+            await release(page, "crash");
+            await expect(
+              panel.getByText(/^The diversity no longer starts by itself/u),
+            ).toBeVisible({ timeout: 20_000 });
+          }
+          await page.mouse.move(0, 0);
+          await save(page, `popgen2-populations-${shot}${at}-${theme}`);
+        });
+      }
+
+      test("the Populations tab ready with 7 unclassified individuals left out", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        const [header, ...rows] = (
+          await readFile(join(FIXTURES, "panel_pops.csv"), "utf8")
+        )
+          .trimEnd()
+          .split("\n");
+        // The first four rows removed and the popcat of the next three
+        // emptied: 7 individuals of panel.nei with no population.
+        const made = rows
+          .slice(4)
+          .map((line, i) => (i < 3 ? `${line.split(",")[0] ?? ""},` : line));
+        await pickIndividualsOnNewPage(page, {
+          name: "panel_some.csv",
+          text: [header ?? "", ...made, ""].join("\n"),
+        });
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "Populations", exact: true })
+          .click();
+        const panel = page.getByRole("tabpanel");
+        await expect(
+          panel.getByText(/^7 unclassified individuals kept are left out/u),
+        ).toBeVisible({ timeout: 20_000 });
+        await expect(
+          panel.getByRole("button", { name: "Run", exact: true }),
+        ).toBeEnabled({ timeout: 20_000 });
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-populations-unclassified${at}-${theme}`);
+      });
+
+      test("the Populations tab while its code downloads: Loading the Populations tab…", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        // The file of the tab's code held, so that the line stays.
+        await page.route(/\/PopulationsTabView-[^/]*\.js(\?.*)?$/u, () => {
+          // Never answered.
+        });
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "Populations", exact: true })
+          .click();
+        await expect(
+          page
+            .getByRole("tabpanel")
+            .getByText("Loading the Populations tab…", { exact: true }),
+        ).toBeVisible({ timeout: 20_000 });
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-populations-loading-tab${at}-${theme}`);
+      });
 
       /** Opens panel.nei, shows the PCA tab, types the distance, presses
           Run and waits for the result: the PCA is live. */
