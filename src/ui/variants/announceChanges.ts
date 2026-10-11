@@ -11,8 +11,8 @@ import type { AnalysisId } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import { buttonOf, statusOf } from "../analyses/status.ts";
 import type { AutoRuns } from "../autoRuns.ts";
-import type { JobResult } from "../../worker/protocol.ts";
-import { pcaOptions } from "../../core/analyses/pca.ts";
+import type { JobResult, PcaMethod } from "../../worker/protocol.ts";
+import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
 import {
   liveStoppedText,
   pcaEndAnnouncement,
@@ -128,13 +128,16 @@ function fileIdOf(s: AppState<JobResult, Blob>): string | null {
  * Says with `announcer` what `live`, the analyses started by themselves,
  * tells of the PCA beyond the store (docs/specs/steps/popgen2-pca.md,
  * "Running" and "Stop"): "Calculating the PCA again. To change the
- * filters, stop it in the PCA tab." once at each start by itself, and does not move the
- * focus, so that a user who changed a threshold and then finds it greyed
- * learns why; and "PCA stopped. Press Run in the PCA tab to calculate it
- * again." at a Stop, in the tab or in the band, which leaves the tab out
- * of sight, or "PCA stopped." alone when the tab then offers no Run to
- * press. "PCoA" under the PCoA, the method read from `store` then.
- * It listens for as long as the page lives.
+ * filters, stop it in the PCA tab." once at each start by itself, and
+ * does not move the focus, so that a user who changed a threshold and
+ * then finds it greyed learns why; and "PCA stopped. Press Run in the PCA
+ * tab to calculate it again." at a Stop, in the tab or in the band, which
+ * leaves the tab out of sight, or "PCA stopped." alone when the tab then
+ * offers no Run to press. "PCoA" under the PCoA, the method read from
+ * `store` then. Of the diversity it says nothing yet: its words, and
+ * those of a round of several analyses, of a Run that waited and of Stop
+ * all, come with work package 2 of docs/plans/population-tab.md. It
+ * listens for as long as the page lives.
  */
 export function announceLive(
   store: Pick<PageStore, "getState">,
@@ -142,24 +145,30 @@ export function announceLive(
   announcer: Announcer,
 ): void {
   live.onLive((event) => {
-    const method = pcaOptions(store.getState().project, "popgen2").method;
     switch (event.kind) {
       case "startedByItself":
-        announcer.announce(startedByItselfText(method), {
+        if (event.id !== pcaOnPopgen2.id) return;
+        announcer.announce(startedByItselfText(methodOf(store)), {
           replaces: PCA_RUN_KIND,
         });
         return;
       case "paused":
+        if (event.id !== pcaOnPopgen2.id) return;
         announcer.announce(
-          liveStoppedText(method, runOffered(store.getState(), event.id)),
+          liveStoppedText(
+            methodOf(store),
+            runOffered(store.getState(), event.id),
+          ),
         );
         return;
-      // No Run waits and no Stop all is offered until the Populations
-      // tab makes a second analysis live; their words come with it
-      // (docs/plans/population-tab.md, work package 2).
       case "startedAfterWaiting":
       case "pausedAll":
         return;
     }
   });
+}
+
+/** The method of the PCA of the project in `store`. */
+function methodOf(store: Pick<PageStore, "getState">): PcaMethod {
+  return pcaOptions(store.getState().project, "popgen2").method;
 }

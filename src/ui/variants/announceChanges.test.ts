@@ -239,6 +239,13 @@ describe("NU4 D2 the status region says the PCA started by itself and its Stop",
     expect(said.at(-1)).toBe("PCoA stopped.");
   });
 
+  test("the diversity started by itself and its Stop are not said as the PCA's: nothing is said of them until their own words come", () => {
+    const { said, tell } = setUp();
+    tell({ kind: "startedByItself", id: "diversity", round: ["diversity"] });
+    tell({ kind: "paused", id: "diversity" });
+    expect(said).toEqual([]);
+  });
+
   test("a Stop is said with what to press to calculate it again", async () => {
     const { said, tell, toPcoa } = await setUpReady();
     tell({ kind: "paused", id: "pca" });
