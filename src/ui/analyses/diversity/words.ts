@@ -2,23 +2,19 @@
  * The words of the panel of the diversity (docs/specs/analyses/diversity.md,
  * "The panel"): its three options, the lines under the field of the draw
  * and the refusals of the fields, the descriptions of their commands, the
- * lines of its ready state, the caption of its table, its headers and its
- * cells, the line of the draw beside the download, and the name of the
- * download; the line of the versions and the words of the ready state
- * that other panels share are in `../words.ts`. Pure, so that a test in
- * node checks them; the panel draws them.
+ * lines of its ready state; the words of its result, the caption of its
+ * table, its headers and cells, the line of the draw and the name of the
+ * download, are in `resultWords.ts`, and the line of the versions and the
+ * words of the ready state that other panels share in `../words.ts`.
+ * Pure, so that a test in node checks them; the panel draws them.
  */
 
 import { holdNoDraw } from "../../../core/analyses/diversity.ts";
-import type { DiversityRow } from "../../../core/analyses/diversity.ts";
-import { fourDecimals } from "../../../core/analyses/words.ts";
-import { variantsStem } from "../../../core/fileNames.ts";
 import {
   MAX_NAMED,
   ONE_POPULATION,
   bothOf,
   counted,
-  escaped,
   grouped,
   namesOf,
 } from "../../../core/project.ts";
@@ -172,79 +168,6 @@ export function drawRefusedText(refusal: NumberRefusal, kept: number): string {
   return Number.isNaN(kept)
     ? `${why}; the number of chromosomes stays the default.`
     : `${why}; the number of chromosomes stays ${grouped(kept)}.`;
-}
-
-/** The caption of the table: "The diversity of each population, over the
-    1,152 variants of panel.nei the filters kept." */
-export function captionText(numVars: number, variantsName: string): string {
-  return `The diversity of each population, over the ${counted(numVars, "variant")} of ${escaped(variantsName)} the filters kept.`;
-}
-
-/** The headers of the table after the population, in the order of its
-    cells, the rarefied ones naming the draw of the result: "Alleles per
-    variant, rarefied to 40 chromosomes". */
-export function numberHeaders(numCalledAlleles: number): readonly string[] {
-  const rarefied = `rarefied to ${counted(numCalledAlleles, "chromosome")}`;
-  return [
-    "Individuals",
-    "Expected heterozygosity (unbiased)",
-    "Observed heterozygosity",
-    "Proportion of polymorphic variants",
-    "F",
-    "Alleles per variant",
-    `Alleles per variant, ${rarefied}`,
-    "Private alleles",
-    "Private alleles per variant",
-    `Private alleles per variant, ${rarefied}`,
-  ];
-}
-
-/** A number of the table, to four decimals with a point and a negative
-    one with the minus sign U+2212, "−0.0113", or "no value" where popnei
-    gave none. */
-export function cellText(value: number | null): string {
-  return value === null ? "no value" : fourDecimals(value);
-}
-
-/** A count of the table, with a comma between groups of three digits, or
-    "no value" where popnei gave none. */
-function countText(value: number | null): string {
-  return value === null ? "no value" : grouped(value);
-}
-
-/** The cells of a row of the table: the population as a text shows a
-    name of the user's files, so that two names that differ by a hidden
-    character look different; its individuals and its private alleles as
-    whole numbers with a comma between groups of three digits; its other
-    numbers to four decimals. */
-export function rowCells(row: DiversityRow): readonly string[] {
-  return [
-    escaped(row.population),
-    grouped(row.individuals),
-    cellText(row.expectedHeterozygosity),
-    cellText(row.observedHeterozygosity),
-    cellText(row.polymorphic),
-    cellText(row.f),
-    cellText(row.allelesPerVariant),
-    cellText(row.allelesPerVariantRarefied),
-    countText(row.privateAlleles),
-    cellText(row.privateAllelesPerVariant),
-    cellText(row.privateAllelesPerVariantRarefied),
-  ];
-}
-
-/** The line beside the download, which says the draw the rarefied
-    columns are of, since the headers of the CSV do not: "Rarefied to 40
-    chromosomes." */
-export function rarefiedText(numCalledAlleles: number): string {
-  return `Rarefied to ${counted(numCalledAlleles, "chromosome")}.`;
-}
-
-/** The name of the download of the table: the stem of the variants
-    file, `variantsStem`, then `.diversity.csv`; `panel.vcf.gz` gives
-    `panel.diversity.csv`. */
-export function csvName(variantsName: string): string {
-  return `${variantsStem(variantsName)}.diversity.csv`;
 }
 
 /** The one population a run will take, "All individuals", with its

@@ -36,14 +36,15 @@ import type { ResultsProps } from "../panels.ts";
 import { versionsText } from "../words.ts";
 import styles from "./DiversityResults.module.css";
 import { SpectrumBlock } from "./SpectrumBlock.tsx";
-import { unclassifiedCaption, unclassifiedLeftOutOf } from "./tabWords.ts";
 import {
   captionText,
   csvName,
   numberHeaders,
   rarefiedText,
   rowCells,
-} from "./words.ts";
+  unclassifiedCaption,
+  unclassifiedLeftOutOf,
+} from "./resultWords.ts";
 
 /** The columns of the table, the rarefied ones naming the draw
     `numCalledAlleles` (the spec, "What it shows"). */

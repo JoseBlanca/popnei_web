@@ -3,12 +3,14 @@ import { describe, expect, test } from "vitest";
 import {
   captionText,
   cellText,
-  drawLine,
-  drawRefusedText,
+  csvName,
   numberHeaders,
   rarefiedText,
   rowCells,
-  csvName,
+} from "./resultWords.ts";
+import {
+  drawLine,
+  drawRefusedText,
   readyLines,
   thresholdRefusedText,
 } from "./words.ts";

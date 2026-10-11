@@ -25,9 +25,8 @@ import {
   diversityTabLock,
   diversityTabReadyLines,
   diversityTabResultFailed,
-  unclassifiedCaption,
-  unclassifiedLeftOutOf,
 } from "./tabWords.ts";
+import { unclassifiedCaption, unclassifiedLeftOutOf } from "./resultWords.ts";
 
 /** The ten individuals of the variants file, s000 to s009. */
 const INDIVIDUALS = Array.from({ length: 10 }, (_, i) => `s00${String(i)}`);

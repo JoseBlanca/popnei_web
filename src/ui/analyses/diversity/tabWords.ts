@@ -6,9 +6,10 @@
  * from `popgen2PopulationsKept` of core, the one function every part of
  * the tab that counts the populations reads, so that the line and the
  * table never disagree; the locks of Run by the one pass; the line of a
- * Stop; the words of its errors, in this page's words; the sentence of
- * the caption of the table that counts the unclassified; and the words
- * of a result whose code could not be downloaded. Pure, so that a test
+ * Stop; the words of its errors, in this page's words; and the words of
+ * a result whose code could not be downloaded. The sentence of the
+ * caption of the table that counts the unclassified is with the words of
+ * the result, in `resultWords.ts`. Pure, so that a test
  * in node checks them; `populationsTabPanel` and the result draw them.
  */
 
@@ -67,32 +68,12 @@ function populationsOf(
   );
 }
 
-/** The number of the unclassified individuals of `p` kept, `kept`, that
-    the table leaves out; 0 with none, for the one population, and with
-    no individuals kept known. */
-export function unclassifiedLeftOutOf(
-  p: Project,
-  kept: IndividualsKept | null,
-): number {
-  if (kept === null) return 0;
-  return populationsOf(p, kept)?.unclassifiedLeftOut ?? 0;
-}
-
 /** The line of the unclassified left out: "7 unclassified individuals
     kept are left out, as the box Individuals says." */
 function unclassifiedLine(numLeftOut: number): string {
   return numLeftOut === 1
     ? "1 unclassified individual kept is left out, as the box Individuals says."
     : `${counted(numLeftOut, "unclassified individual")} kept are left out, as the box Individuals says.`;
-}
-
-/** The sentence that ends the caption of the table when unclassified
-    individuals are left out: "7 unclassified individuals kept are not
-    in it." */
-export function unclassifiedCaption(numLeftOut: number): string {
-  return numLeftOut === 1
-    ? "1 unclassified individual kept is not in it."
-    : `${counted(numLeftOut, "unclassified individual")} kept are not in it.`;
 }
 
 /** The populations the thresholds of the individuals leave empty, which
