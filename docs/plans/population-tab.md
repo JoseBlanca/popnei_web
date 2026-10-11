@@ -4,68 +4,88 @@
 
 ## For the owner
 
-What you will try at the end, on `popgen2.html`, with a variants file
-and an individuals file: the Populations tab shows, after one Run, the
-diversity of each population, its table with "Download…" below it, and
-the site frequency spectrum of each population, each plot with its own
-"Download…". From that Run on, a change of a threshold, of an option of
-the diversity or of the column of the populations calculates it again
-by itself a second after you stop changing things, as the PCA does.
-With the PCA live too, a change of a threshold calculates the PCA first
-and the diversity after it, and the Populations tab says that the
-diversity waits for the PCA. While the diversity runs, the thresholds,
-its options, the column of the populations and the opening of another
-individuals file are greyed, each saying why. The band at the top
-names what runs and what waits, and offers "Stop all" while it names
-more than one analysis.
+This plan builds the Populations tab of `popgen2.html`: the diversity of
+each population and its site frequency spectrum, calculated again by
+itself after each change, as the PCA tab is since 10 October 2026. It
+builds the design you approved today, `docs/designs/population-tab.md`.
+What is asked of you now is to approve it and its specs; no decision is
+left open in them.
 
-**Two decisions are asked of you now**, besides the approval of this
-plan and its specs. Each changes one constant and its words, so the
-work goes on meanwhile with the recommendation.
+**The words used here.** An analysis is **live** once you press its
+Run: from then on it is calculated again by itself after each change of
+what it reads, until you press its **Stop recalculating**, the button
+that ends that. It starts one second after you stop changing things,
+**the quiet second**; during that second its tab says it is **about to
+start**. The page calculates one thing at a time, so after a change of a
+threshold, with the PCA and the diversity both live, the PCA runs first
+and the diversity, **waiting**, after it. While an analysis runs, the
+controls of what it reads are greyed with the reason, **the lock**, so
+that no change ever meets a running calculation. **The band** is the
+line at the top of the page, beside the heading "Popnei", that says
+what runs and offers its Stop; it gains **Stop all**, which ends every
+live analysis at once. **The one pass** is the reading of the variants
+file the page makes by itself when the file is opened. **The status
+region** is what a screen reader reads aloud without moving the
+keyboard's place on the page. **WebKit** is the engine of Safari, which
+the tests drive.
 
-1. **The name of the one population.** When no individual of the
-   variants file has a population, with no individuals file for
-   instance, the table has one row of every individual, and its CSV the
-   same name. (a) "All individuals", as on the old page; the tab adds
-   "No individual is assigned to a population, so the diversity is of
-   every individual kept." (b) "Unclassified", the name the box
-   Individuals gives that row of its counts. Recommended: (a). The row
-   is the diversity of the whole collection, and "Unclassified" in a
-   table of results reads as a leftover group beside populations that
-   are not there.
-2. **"None" chosen in the list "Column of the populations".** Your
-   answer of 9 October 2026 says that with no column chosen every
-   individual is unclassified and the analyses per population take
-   them as one population. The design of 11 October 2026 says, in its
-   choice 8, that no column chosen locks the diversity. (a) As your
-   answer of 9 October: "None" gives the one population, as no
-   individuals file does. (b) As the design's sentence: "None" locks
-   the diversity, "Choose a column of the populations in the box
-   Individuals.", and no individuals file gives the one population.
-   Recommended: (a), one rule wherever no individual is classified, and
-   the one the list already tells ("None: every individual
-   unclassified").
+**What you will try at the end**, with a variants file and an
+individuals file: in the Populations tab, Run gives the table of the
+diversity of each population, with "Download…" below it, and the
+spectrum of each population, each plot with its own "Download…". A
+change of a threshold, of an option of the diversity or of the column
+of the populations then calculates it again by itself. With the PCA
+live too, the Populations tab says that the diversity waits for the
+PCA. While the diversity runs, the thresholds, its options, the column
+of the populations and the opening of another individuals file are
+greyed, each saying why. The band names what runs and what waits.
 
-The order of the seven packages:
+**Two things settled from your earlier decisions**, which you may
+change:
 
-1. The diversity in the Populations tab, the PCA and the diversity run
-   one after the other, and the memory of a diversity started after a
-   Stop of a large PCA, measured.
-2. The tab whole: its lines while it waits, the downloads, the words
-   said to a screen reader.
-3. What the diversity reads greyed while it runs, and the download of
-   the filtered variants waiting for it.
+- When no individual of the variants file has a population, with no
+  individuals file, with "None" chosen in the list of the column, or
+  with a column that gives none of them a population, the table has
+  one row of every individual, named "Unclassified", the name the box
+  Individuals gives that row of its counts, as you accepted it on 11
+  October 2026.
+- That "None" gives this row follows your answer of 9 October 2026 on
+  the unclassified (`docs/designs/input-page.md`). The design you
+  approved today said, in its section on a change of the populations,
+  that no column chosen locks the diversity; that sentence was
+  corrected to your earlier answer, with a dated line saying why.
+
+**The packages, by what each gives:**
+
+1. The diversity in the Populations tab, the PCA and the diversity
+   calculated one after the other, what the diversity reads greyed
+   while it runs, and two measurements of memory (below).
+2. The tab whole: what it says while it waits, the downloads, what a
+   screen reader hears.
+3. The box Individuals and the Individuals tab greyed while the
+   diversity runs.
 4. The band with two analyses, and Stop all.
 5. The documents and the instructions brought up to date.
 6. The session looks at every screenshot and runs every check.
 7. You try the page.
 
-You are stopped before package 7 only if: the measurement of package 1
-finds the tab closed, or its memory above 4.33 GB, after a diversity
-started a second after a Stop of a PCA of 9,381 individuals in WebKit,
-which the design says calls for a hold after such a Stop; one change
-starts two calculations at once; a result is shown for other values
-than those on the screen; or a package fails three times.
+You see the tab first after package 1, in its first form, if you wish;
+its pictures in every state come in package 2, after the measurements.
+
+**The measurements of package 1.** In WebKit, a Stop of the PCA of
+9,381 individuals near its peak leaves 3.7 to 4.2 GB in the tab for
+40 s and more, and the most a tab of this page is known to have held
+and survived is 4.33 GB, on your Apple M5 Pro with 64 GB on 10 October
+2026; above that WebKit may close the tab, and the user loses the open
+files and every result. Package 1 measures a diversity started a second
+after such a Stop, and a diversity started at once after a PCA of 9,381
+individuals that ended normally. If either closes the tab or passes
+4.33 GB, you are asked whether the page should wait longer, after a
+Stop or the end of a large PCA, before it starts the next analysis.
+
+You are also stopped if the browser tests show a result for other
+values than those on the screen, which you would see as a table that
+does not match the thresholds shown; or if a package fails three times.
 
 You can stop reading here. The rest is for the sessions that build it.
 
@@ -128,10 +148,13 @@ for values left behind as it does for every analysis of the page.
   for the Populations tab). No test name on this branch starts with
   `PT` and a digit (a search of `src/` and `e2e/` on 11 October 2026),
   so on the commit the plan starts from every check below selects no
-  test, falls short of its count, and fails. A Vitest count is read from
-  the summary line of `npx vitest run <path> -t "<tag>"`, "Tests N
-  passed", since a tag that selects nothing exits 0; a Playwright count
-  from the summary of the browser check, half in each engine.
+  test. Each check asks for at least a number of tests, and a run that
+  selects none is short of that number, so the check fails there, as
+  it must before the work. A Vitest count is read from the summary line
+  of `npx vitest run <path> -t "<tag>"`, "Tests N passed", since a tag
+  that selects nothing exits 0; a Playwright count from the summary of
+  the browser check, which runs each flow once in Chromium and once in
+  WebKit, so the count is twice the number of flows.
 - **A command in the foreground** lasts at most 600,000 ms; nothing
   runs in the background. A browser run that would last longer is split
   into runs of a few spec files.
@@ -142,10 +165,10 @@ for values left behind as it does for every analysis of the page.
 
 ## In and out
 
-In: the seven work packages below. Two measurements are in work
+In: the seven work packages below. Three measurements are in work
 package 1: the memory of a diversity started a second after a Stop of
-the PCA of 9,381 individuals, and the size of the Populations tab's
-code.
+the PCA of 9,381 individuals near its peak, and at once after such a
+PCA that ended; and the size of the Populations tab's code.
 
 Out, each with where it goes:
 
@@ -161,13 +184,11 @@ Out, each with where it goes:
 
 ## The open points of the specs
 
-The screen spec has two, both at the top of this plan for the owner,
-each with a meanwhile: **Open 1**, the name of the one population,
-meanwhile "All individuals", which an answer (b) changes in task 1.1
-(the constant the definition sends, and the words of the line of the
-populations) and in the numbers of deliverable 1.4; **Open 2**, "None"
-chosen, meanwhile the one population, which an answer (b) changes in
-task 1.1 (one reason of `needs`) and in a case of deliverable 1.1.
+None. The screen spec's two points of its first draft were settled by
+the session on 11 October 2026 from the owner's earlier decisions: the
+one population is named "Unclassified", and "None" chosen gives it; the
+design's choice 8, which said "None" locks, was corrected the same day.
+The report to the owner (task 6.3) names the correction.
 
 ## The stops
 
@@ -180,18 +201,20 @@ the checks passing and everything committed, writes the question under
 goes on with every work package that does not stand on the answer, and
 puts the question first in the report.
 
-- **The measurement of deliverable 1.5** finds WebKit's tab closed, or
+- **The measurements of deliverable 1.5** find WebKit's tab closed, or
   the memory of its engine above 4.33 GB, the most a tab of this page
-  is known to have held and survived. The design's choice 5 (a) then
-  calls for a hold after a Stop of a large PCA: the waiting analyses not
-  started until WebKit has given that memory back, or until the user's
-  next change. The options go to the owner; work packages 2 and 3 go on
+  is known to have held and survived (`docs/architecture.md`, section
+  11), in either case of it. The design's choice 5 (a) then calls for a
+  hold: the waiting analyses not started, after a Stop or the end of a
+  large PCA, until WebKit has given that memory back, or until the
+  user's next change. The options go to the owner; work packages 2 and 3 go on
   meanwhile, and 4 waits, since the band shows what Stop leads to.
 - **Two calculations sent at once**, or a start the user's change did
   not ask for, in the flows of work package 1 after their fixes: the
   design's rule 5, one calculation at a time, does not hold.
 - **A result shown for other values** than those on the screen, in any
-  flow: the first of the design's rules does not hold.
+  flow: the design's first rule, that a result is never shown stale,
+  does not hold.
 - **Stop and Stop all that do not fit at 320 px** with "Popnei" and the
   short form of the band, in work package 4: the band spec decides only
   what fits; the session proposes the change, a short form of fewer
@@ -232,23 +255,25 @@ puts the question first in the report.
 ## The order, and what may run side by side
 
 The core and the order of the live analyses come first, since a start
-missed, doubled or under a key left behind is silent unless a test
-counts the requests, and the measurement, which could send the design's
-choice 5 back, needs them and the tab's Run. The tab whole and the
-lock come next and may run side by side, since they touch different
+missed, doubled or made for values left behind shows nothing on any
+screen and is caught only by a test that counts the requests sent to
+the worker; and the measurements, which could send the design's choice
+5 back, need them and the tab's Run. The lock of the filters comes with
+them, so that no package leaves a running diversity without it. The tab
+whole and the lock of the box Individuals come next and may run side by side, since they touch different
 files; the band comes last, since it names what the others make.
 
 - Work package 1 runs first. Its tasks 1.1 and 1.2 may run side by
   side: 1.1 touches `src/core/`, 1.2 `src/ui/autoRuns.ts`,
-  `src/ui/popgen2Store.ts` and their tests. 1.3 stands on both, 1.4 and
-  1.5 on 1.3; 1.5 runs alone on the machine.
+  `src/ui/popgen2Store.ts` and their tests. 1.3 stands on both, 1.6 on
+  1.2 and may run beside 1.3, 1.4 on 1.3, 1.5 on 1.3 and 1.6; 1.5 runs
+  alone on the machine.
 - 2 and 3 stand on 1 and may run side by side: 2 touches
   `src/ui/analyses/diversity/`, the tab's files and
-  `src/ui/variants/announceChanges.ts`; 3 touches
-  `src/ui/analyses/status.ts`, `src/ui/variants/filtersLock.ts`,
-  `IndividualsBox.tsx`, `IndividualsTab.tsx`, `downloadState.ts`,
-  `downloadWords.ts` and `src/ui/widgets/FileZone.tsx`. Only one of
-  them runs a browser at a time.
+  `src/ui/variants/announceChanges.ts`; 3 touches `IndividualsBox.tsx`,
+  `IndividualsTab.tsx`, `src/ui/widgets/FileZone.tsx` and the words of
+  `src/ui/analyses/words.ts`. Only one of them runs a browser at a
+  time.
 - 4 stands on 1 to 3. 5, 6 and 7 run after everything, in order.
 
 At most three agents run at once, the reviewers among them.
@@ -273,10 +298,13 @@ and then the table of the diversity with its warnings and the spectrum
 of each population. With the PCA and the diversity live, a change of a
 threshold calculates the PCA a second later and the diversity at its
 end; a Run of the diversity while the PCA runs waits for it; a Stop of
-the PCA lets the diversity start a second later. The lines of waiting,
-the downloads of the page's kind and the lock of the populations come
-in packages 2 and 3; until then the tab shows no line while it waits,
-and the table and the spectrum have no "Download…".
+the PCA lets the diversity start a second later. While the diversity
+runs, the thresholds are greyed with its words and the download of the
+filtered variants waits. The lines of waiting, the downloads of the
+page's kind and the lock of the box Individuals come in packages 2 and
+3; until then the tab shows no line while it waits, the table and the
+spectrum have no "Download…", and a change of the populations during a
+diversity stops it, as the store does with any change left behind.
 
 Deliverables:
 
@@ -316,27 +344,53 @@ Deliverables:
    tab is changed to the tab's heading, "Diversity", and the screen of
    that line in `e2e/screens.spec.ts` removed, each named in the commit
    message.
-5. The memory of a diversity started a second after a Stop of the PCA
-   of `popgen2.html`, by the measurement run, alone on the machine, in
-   WebKit and then Chromium, on the gzipped VCF of 300 variants and
-   9,381 diploid individuals that `e2e/bigVcf.ts` writes, with its CSV
-   of three populations of 3,127 individuals: the LD pruning of the PCA
-   off; Run of the PCA; Run of the diversity while the PCA runs, which
-   waits; the PCA's Stop pressed 10 s into the PCA; the diversity
-   started by itself about 1 s later. The memory of the engine's
-   processes summed every 250 ms from before the PCA's Run to 11 s after
-   the diversity's table, in GB: before, at the PCA's peak, at the
-   Stop, at the diversity's peak, 11 s after; the time from the Stop to
-   the diversity's request, and of the diversity; whether the tab held.
-   Under `PT1 D5` in `e2e/measure.spec.ts`. The bound: the tab holds and
-   the engine stays at or under 4.33 GB in WebKit; beyond it, the stop
-   above. Written under "What was done" and into section 11 of
-   `docs/architecture.md`.
+5. Two measurements of memory, by the measurement run, alone on the
+   machine, in WebKit and then Chromium, on the gzipped VCF of 300
+   variants and 9,381 diploid individuals that `e2e/bigVcf.ts` writes,
+   with its CSV of three populations of 3,127 individuals, the LD
+   pruning of the PCA off. In each, the memory of the engine's
+   processes summed every 250 ms, in GB, and whether the tab held,
+   under `PT1 D5` in `e2e/measure.spec.ts`:
+   - **After a Stop near the PCA's peak.** Run of the PCA; Run of the
+     diversity while the PCA runs, which waits; the PCA's Stop pressed
+     40 s into the PCA, or at the peak the memory reaches if the flow
+     reads it first, as `docs/architecture.md`, section 5, measured
+     4.22 GB at a Stop at 40 s; the diversity started by itself about
+     1 s later. Recorded: before, at the Stop, at the diversity's peak,
+     11 s after its table; the time from the Stop to the diversity's
+     request, and of the diversity. The run counts only when the
+     engine held at least 3.7 GB at the Stop in WebKit, the case the
+     design leaves to measure; a run below it is repeated with a later
+     Stop.
+   - **After a PCA that ended.** Both live after a first round; a
+     threshold moved; the PCA calculated again to its end, after which
+     the client ends its worker, as after every PCA of more than 700
+     individuals (`PCA_RESTART_INDIVIDUALS` of `src/worker/client.ts`),
+     while WebKit gives back up to 3.4 GB; the diversity started at once,
+     with no second more. Recorded: the PCA's peak, the memory when the
+     diversity's request is sent, the diversity's peak, 11 s after.
+   The bound, in both: the tab holds and the engine stays at or under
+   4.33 GB in WebKit; beyond it, the stop above. Written under "What
+   was done" and into section 11 of `docs/architecture.md`.
 6. The gzipped size of the Populations tab's code, the sum of Vite's
    gzip sizes of the files it downloads when it is first shown, and of
    the first load of `popgen2.html`, which must not grow by more than
-   the few lines of the tab's frame: 321.11 KB at 93659177. Written
-   under "What was done".
+   the few lines of the tab's frame: 321.11 KB at the commit 93659177
+   of `main`, the last measured. Written under "What was done".
+7. The lock of the filters and the download's wait while the diversity
+   runs, so that from this package on a threshold moved during a
+   diversity is greyed and never stops the worker unasked, and a
+   download never queues behind it: `runningAnalysisOf` of
+   `src/ui/analyses/status.ts` giving the live analysis running, the
+   words of the lock of the PCA and of the diversity, with and without
+   an analysis waiting after it, and the words of the download's wait,
+   under `PT1 D7` in the tests of `status.ts`, `src/ui/analyses/words.ts`
+   and `src/ui/variants/downloadWords.ts`, at least 8 tests; and the
+   flows under `PT1 D7` in `e2e/popgen2Populations.spec.ts`: the
+   diversity held running, the thresholds and the FILTER box greyed
+   with the diversity's words; the bullet of 11 October 2026 of
+   `popgen2-download.md`'s "How it is checked". `popgen2Live.spec.ts`
+   and `popgen2Download.spec.ts` pass.
 
 Tasks:
 
@@ -354,11 +408,13 @@ Tasks:
   `holderOf`, `run`'s answer and its waiting, `pause` with the quiet
   second again, `pauseAll`, `after`, `"behind"`, the events of a round
   and of a Run that waited, and the page's `endsLive` dispatching by
-  analysis, the diversity's in a module beside the PCA's `liveEnd.ts`
-  (the live section, "For the implementer"). Deliverable 2. May run
-  beside 1.1. A start missed or doubled is silent in node unless a test
-  counts the requests, so this is a commit of its own, guarded by
-  deliverable 2.
+  analysis: the PCA's rule is `failureEndsLive` of
+  `src/ui/analyses/pca/liveEnd.ts`, and the diversity's is a function
+  of its own in a new module of `src/ui/analyses/diversity/` (the live
+  section, "For the implementer"). Deliverable 2. May run beside 1.1. A
+  start missed or doubled shows nothing in a test of node, where no
+  screen is drawn, unless the test counts the requests sent to the
+  worker; so this is a commit of its own, guarded by deliverable 2.
 - [ ] 1.3 The Populations tab in the place of its line "Not built yet":
   the options part, the line of the populations, Run, Stop and Stop
   recalculating through `autoRuns`, the locks with the one pass's from
@@ -372,8 +428,19 @@ Tasks:
   3, 4 and 6. Stands on 1.1 and 1.2.
 - [ ] 1.4 The flows of deliverable 4. Stands on 1.3. May be the same
   subagent's as 1.3.
-- [ ] 1.5 The measurement of deliverable 5, alone on the machine.
-  Stands on 1.3.
+- [ ] 1.5 The measurements of deliverable 5, alone on the machine.
+  Stands on 1.3 and 1.6.
+- [ ] 1.6 `runningAnalysisOf`, the lock of the filters
+  (`src/ui/variants/filtersLock.ts`) and the download's wait
+  (`downloadState.ts`, `downloadWords.ts`, `DownloadVariants.tsx`) for
+  any live analysis and those waiting after it (the live section, "The
+  lock" and "For the implementer"; the screen spec, "While the
+  diversity runs", its first two bullets; `popgen2-download.md`, "While
+  an analysis runs"). Deliverable 7. Stands on 1.2; may run beside
+  1.3, whose files it does not touch. Until it, a threshold moved
+  during a diversity would stop the worker, a stop the user did not
+  press, and a download would wait in the worker's queue shown as a
+  write.
 
 What could go wrong: the PCA's Run and the diversity's Run pressed in
 two tabs within the quiet second; Run starts its analysis at once when
@@ -381,9 +448,11 @@ nothing runs, so the PCA about to start waits after the diversity, the
 spec's choice, and deliverable 2 has the case. A PCA tried again after a
 failure, while the diversity is live, could hold the diversity back if
 `holderOf` keeps any rule of the old one; deliverable 2 has the PCA
-refused, crashed and locked. In the measurement, WebKit's memory after
-the Stop falls slowly over 40 s and more; the bound is read at the
-diversity's peak, not after it.
+refused, crashed and locked. In the measurements, WebKit's memory
+after the Stop or the end of the PCA falls slowly over 40 s and more;
+the bound is read at the diversity's peak, not after it, and a Stop
+pressed before the PCA's memory has grown measures nothing, hence the
+3.7 GB the first case asks at the Stop.
 
 ## Work package 2: the tab whole
 
@@ -438,25 +507,21 @@ charts' histogram, not with `HistogramPlot`, which carries the menu of
 a plot; the menu needs the handle of each plot, as the PCA's result
 gives its own (`docs/specs/widgets/downloads.md`, "A plot").
 
-## Work package 3: the lock and the download with two analyses
+## Work package 3: the box Individuals greyed while the diversity runs
 
-What it gives, on `popgen2.html`: while the diversity runs, the
-thresholds and the FILTER box say to stop the diversity in the
-Populations tab; the list of the column, the zone of the individuals
-file, its Remove and the three lists of how a text file is read are
-greyed with their reason, and a file dropped or pasted on the zone opens
-nothing; while the PCA runs, the box Individuals stays open, as now.
-With another analysis waiting after the one running, the reasons name
-Stop all. The download of the filtered variants waits for the diversity
-as for the PCA, and for those waiting.
+What it gives, on `popgen2.html`: while the diversity runs, the list of
+the column, the zone of the individuals file, its Remove and the three
+lists of how a text file is read are greyed with their reason, and a
+file dropped or pasted on the zone opens nothing; while the PCA runs,
+the box Individuals stays open, as now. With another analysis waiting
+after the one running, the reasons name Stop all. The lock of the
+filters and the download's wait are package 1's (task 1.6).
 
 Deliverables:
 
-1. `runningAnalysisOf` and the words of the lock, the PCA's and the
-   diversity's, with and without an analysis waiting, and the words of
-   the download's wait, under `PT3 D1` in the tests of
-   `src/ui/analyses/status.ts`, `src/ui/analyses/words.ts` and
-   `src/ui/variants/downloadWords.ts`. At least 8 tests.
+1. The words of the lock of the populations, with and without an
+   analysis waiting, under `PT3 D1` in the tests of
+   `src/ui/analyses/words.ts`. At least 2 tests.
 2. The box Individuals, the Individuals tab and the zone in jsdom,
    under `PT3 D2`: greyed while the diversity runs and not while the PCA
    runs; the zone's greyed state takes no drop and no paste and shows the
@@ -464,27 +529,18 @@ Deliverables:
 3. The flows under `PT3 D3` in `e2e/popgen2Populations.spec.ts`: "The
    lock" of the screen spec's "How it is checked", every check of it;
    the bullet of 11 October 2026 of `popgen2-input.md`'s "How it is
-   checked"; the bullet of 11 October 2026 of `popgen2-download.md`'s
-   "How it is checked"; axe in each, light and dark.
-4. The flows that were there pass: `e2e/popgen2Live.spec.ts`,
-   `popgen2Download.spec.ts`, `popgen2Input.spec.ts` and the old
-   page's individuals flows.
+   checked"; axe in each, light and dark.
+4. The flows that were there pass: `e2e/popgen2Input.spec.ts` and the
+   old page's individuals flows.
 5. The screen `popgen2-individuals-box-locked`, at 1280 and 320 px,
    light and dark.
 
 Tasks:
 
-- [ ] 3.1 `runningAnalysisOf`, the lock of the filters and the words
-  with Stop all, from the store and `autoRuns` (the live section, "The
-  lock" and "For the implementer"; the screen spec, "While the
-  diversity runs"). Deliverable 1, but the download's words.
-- [ ] 3.2 The greyed box Individuals, the Individuals tab's lists, and
-  the greyed state of `FileZone.tsx` (`popgen2-input.md`, "While the
-  diversity runs"). Deliverables 2, 3 but the download's, and 5. Stands
-  on 3.1.
-- [ ] 3.3 The download's wait for any analysis and those waiting
-  (`popgen2-download.md`, "While an analysis runs"). The rest of
-  deliverables 1 and 3, and 4. Stands on 3.1; may run beside 3.2.
+- [ ] 3.1 The greyed box Individuals, the Individuals tab's lists, the
+  greyed state of `FileZone.tsx` and the words of the lock of the
+  populations (`popgen2-input.md`, "While the diversity runs"; the
+  screen spec, "While the diversity runs"). Deliverables 1 to 5.
 
 What could go wrong: the zone of a file also takes a drop on the whole
 page while it is shown; a drop meant for the greyed zone must not fall
@@ -566,7 +622,10 @@ change, as the flow of the PCA's band does.
   each chunk recorded below; a flaky test run again three times and
   named.
 - [ ] 6.3 The report to the owner, as the `building` skill says: the
-  stops met, if any; the measurements of 1.5 and 1.6; what the review
+  stops met, if any; the correction of the design's choice 8 to the
+  owner's answer of 9 October 2026, "None" giving the one population,
+  and the name "Unclassified" of the one population, both decided by
+  the session; the measurements of 1.5 and 1.6; what the review
   found and fixed and what it did not take; the browsers the screens
   were seen in, Chromium in the screenshots and Chromium and WebKit in
   the flows, and those not seen, Safari, Firefox and Chrome; the
@@ -613,13 +672,16 @@ package that changes code, with:
 
 - 1: `api`, `architecture` (a second live analysis started in
   `src/ui`, one calculation at a time, a definition of core shared by
-  two pages), `react`, `ux`, `browser`, `bundle` (the tab's code loaded
-  apart, the first load unchanged), with its screenshots of the tab
-  ready, running and done;
+  two pages, the lock and the download's wait for any analysis),
+  `react`, `accessibility` (the tab's Run, Stop and Stop recalculating,
+  where the focus goes, the locks as text), `ux`, `browser`, `bundle`
+  (the tab's code loaded apart, the first load unchanged), with its
+  screenshots of the tab ready, running and done;
 - 2: `api`, `react`, `accessibility`, `ux`, `browser` (the menus of the
   histograms, the status region in WebKit), with its screenshots;
-- 3: `api`, `react`, `accessibility`, `ux`, `browser` (a drop and a
-  paste on a greyed zone in WebKit), with its screenshots;
+- 3: `api`, `architecture` (what the lock covers, a drop refused by a
+  widget of every page), `react`, `accessibility`, `ux`, `browser` (a
+  drop and a paste on a greyed zone in WebKit), with its screenshots;
 - 4: `api`, `react`, `accessibility`, `ux`, `browser` (the band at 320
   px), `bundle` (the band's code in the first load), with its
   screenshots;
