@@ -627,7 +627,7 @@ line carries no live role.
   spec files that each end within a foreground command; the counts of
   each chunk recorded below; a flaky test run again three times and
   named.
-- [ ] 7.3 The report to the owner, as the `building` skill says: the
+- [x] 7.3 The report to the owner, as the `building` skill says: the
   stops met, if any; the band's height; the time of "Stopping"; what the review found and
   fixed and what it did not take; the browsers the screens were seen
   in, Chromium in the screenshots and Chromium and WebKit in the flows,
@@ -639,7 +639,7 @@ line carries no live role.
 
 ## Work package 8: the owner tries the page
 
-- [ ] 8.1 The owner tries the page and answers: whether the screen is
+- [x] 8.1 The owner tries the page and answers: whether the screen is
   accepted; whether the quiet second is long enough to go from one
   control to the next, and the two seconds after the arrow keys on a
   threshold; the choices of the band spec's and the screen spec's
@@ -647,13 +647,13 @@ line carries no live role.
   among them; whether Safari and Firefox show the band at the top
   with no control reached by Tab under it, what Cmd+Z does in Safari,
   and what VoiceOver says after the band's Stop.
-- [ ] 8.2 The rounds. Two are expected. Each change the owner asks for
+- [x] 8.2 The rounds. Two are expected. Each change the owner asks for
   goes into the spec first, then into the code, with its commit and its
   screenshots taken again; a change that reaches `src/core/`, the
   worker or `docs/functionality.md` is said to the owner as such and
   becomes a task of its own. After a round that changed the markup, the
   `accessibility`, `react` and `ux` reviewers run again.
-- [ ] 8.3 The owner accepts the screen, and the specs say what the
+- [x] 8.3 The owner accepts the screen, and the specs say what the
   screen now is. The branch is merged into `main` when the owner says
   so.
 
@@ -1052,3 +1052,6 @@ Checks at e0b64d19: typecheck, lint, format clean; Vitest 163 files,
 5,207 tests; in Chromium and WebKit the flows of `popgen2*`,
 `openVariants` and `fileStats`, 424; the screens of `popgen2.html`,
 380.
+
+The owner accepted the page on 11 October 2026 and ordered the branch
+`pca-tab` merged into `main` and pushed.
