@@ -18,6 +18,7 @@ import {
   diversityOnPopgen2,
   diversityOptions,
 } from "../../../core/analyses/diversity.ts";
+import { pcaOnPopgen2, pcaOptions } from "../../../core/analyses/pca.ts";
 import {
   loadIndividuals,
   setAnalysisOptions,
@@ -495,5 +496,70 @@ describe("PT1 D3 the Populations tab", () => {
     expectLocked(
       "The rarefaction draws 30 chromosomes, and the one population, Unclassified, holds 20, those of its 10 individuals at a ploidy of 2. Type a number of chromosomes of at most 20 in the options of the diversity.",
     );
+  });
+});
+
+describe("the Populations tab's Stop and its options while an analysis runs", () => {
+  const LOCK =
+    "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again.";
+
+  /** The fields of the diversity's options, its three number fields. */
+  function optionInputs(): readonly HTMLInputElement[] {
+    return [...container.querySelectorAll("input")];
+  }
+
+  test("Stop and Stop recalculating call pause of the diversity alone, never Stop all", async () => {
+    const page = await readyTab();
+    const pause = vi.spyOn(page.autoRuns, "pause");
+    const pauseAll = vi.spyOn(page.autoRuns, "pauseAll");
+    await press(button("Run"));
+    await press(button("Stop"));
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(pause).toHaveBeenCalledWith(diversityOnPopgen2.id);
+    page.diversityRequests()[0]?.end({ kind: "cancelled" });
+    await settle();
+    await press(button("Run"));
+    await page.endDiversity();
+    await press(button("Stop recalculating"));
+    expect(pause).toHaveBeenCalledTimes(2);
+    expect(pause).toHaveBeenLastCalledWith(diversityOnPopgen2.id);
+    expect(pauseAll).not.toHaveBeenCalled();
+  });
+
+  test("while the diversity runs, its three options are greyed with the words of the lock", async () => {
+    await readyTab();
+    for (const input of optionInputs()) {
+      expect(input.getAttribute("aria-disabled")).toBeNull();
+    }
+    await press(button("Run"));
+    expect(optionInputs()).toHaveLength(3);
+    for (const input of optionInputs()) {
+      expect(input.getAttribute("aria-disabled")).toBe("true");
+      expect(descriptionOf(input)).toContain(LOCK);
+    }
+  });
+
+  test("while only the PCA runs, the options of the diversity stay open", async () => {
+    const page = await readyTab();
+    // The PCA's LD pruning given a distance, which it has no default of.
+    await apply(page, (p) =>
+      setAnalysisOptions(p, pcaOnPopgen2, {
+        ...pcaOptions(p, "popgen2"),
+        ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
+      }),
+    );
+    await act(async () => {
+      expect(page.autoRuns.run("pca")).toBe("started");
+      await Promise.resolve();
+    });
+    await settle();
+    expect(page.requests.filter((r) => r.job.analysis === "pca")).toHaveLength(
+      1,
+    );
+    expect(optionInputs()).toHaveLength(3);
+    for (const input of optionInputs()) {
+      expect(input.getAttribute("aria-disabled")).toBeNull();
+      expect(descriptionOf(input)).not.toContain("Stop the");
+    }
   });
 });
