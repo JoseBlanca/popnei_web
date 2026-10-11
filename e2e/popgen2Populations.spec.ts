@@ -1533,6 +1533,16 @@ test.describe("PT2 D3 the Populations tab while the diversity waits, and what th
   });
 });
 
+/** The rows of counts 0 and 1 of p0's spectrum, as its CSV writes them,
+    at the missing data of 0.1, which keeps the 1,200 variants of
+    panel.nei: popnei 0.2.2 under node, `calcPopDiversity` with
+    `numCalledAlleles` 40, `minNumIndividuals` 20 and `folded_sfs`, the
+    command of docs/specs/analyses/sfs.md, "The numbers of popnei", whose
+    table has the same values; the share is bin 1 over the sum of bins 1
+    to 20. */
+const P0_SPECTRUM_0 = "p0,0,44.79323144486922,";
+const P0_SPECTRUM_1 = "p0,1,38.07795856907602,0.03296202862168288";
+
 /** The button "Download…" of `what` in the tab shown. */
 function menuButton(page: Page, what: string): Locator {
   return shown(page).getByRole("button", {
@@ -1614,10 +1624,12 @@ test.describe("PT2 D3 the downloads of the Populations tab", () => {
       const p0File = await chooseByKeys(page, "Data as CSV");
       expect(p0File.suggestedFilename()).toBe("panel.sfs.p0.csv");
       const p0Lines = (await textOf(p0File)).trimEnd().split("\n");
-      expect(p0Lines.length).toBeGreaterThan(2);
-      expect(p0Lines.slice(1).every((line) => line.startsWith("p0,"))).toBe(
-        true,
-      );
+      expect(p0Lines.slice(0, 3)).toEqual([
+        "population,rarer_allele,variants,share",
+        P0_SPECTRUM_0,
+        P0_SPECTRUM_1,
+      ]);
+      expect(p0Lines).toHaveLength(22);
       await p0Menu.focus();
       const p0Svg = await chooseByKeys(page, "Image as SVG");
       expect(p0Svg.suggestedFilename()).toBe("panel.sfs.p0.svg");
@@ -1649,7 +1661,56 @@ test.describe("PT2 D3 the downloads of the Populations tab", () => {
       expect(spectrumLines[0]).toBe(
         'Copies of the rarer allele,"p0, variants","p0, share","p2, variants","p2, share","p1, variants","p1, share"',
       );
+      expect(spectrumLines.slice(1, 3)).toEqual([
+        "0,44.79323144486922,,48.34836722710054,,49.419228567305325,",
+        "1,38.07795856907602,0.03296202862168288,49.07990431264654,0.042616971066566346,43.859352021499134,0.03811931601019699",
+      ]);
       expect(spectrumLines).toHaveLength(22);
     });
   }
+
+  test("PT2 D3 the files of the histograms of populations a/b and A?b are named with a_b and A_b_2, and hold their population's rows", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await openPage(page);
+    await pick(page, "panel.nei");
+    const [header, ...rows] = panelPopsRows();
+    // p0 renamed a/b and p1 renamed A?b: both give a_b as a part of a
+    // file name, which macOS and Windows hold as one name in any case.
+    await pickIndividuals(page, {
+      name: "panel_slash.csv",
+      text: [
+        header ?? "",
+        ...rows.map((line) =>
+          line.replace(/,p0$/u, ",a/b").replace(/,p1$/u, ",A?b"),
+        ),
+        "",
+      ].join("\n"),
+    });
+    await runDiversity(page);
+
+    const slashMenu = menuButton(page, "the spectrum of a/b");
+    await slashMenu.focus();
+    const slashCsv = await chooseByKeys(page, "Data as CSV");
+    expect(slashCsv.suggestedFilename()).toBe("panel.sfs.a_b.csv");
+    expect((await textOf(slashCsv)).trimEnd().split("\n").slice(1, 3)).toEqual([
+      P0_SPECTRUM_0.replace(/^p0,/u, "a/b,"),
+      P0_SPECTRUM_1.replace(/^p0,/u, "a/b,"),
+    ]);
+    await slashMenu.focus();
+    const slashPng = await chooseByKeys(page, "Image as PNG");
+    expect(slashPng.suggestedFilename()).toBe("panel.sfs.a_b.png");
+
+    const questionMenu = menuButton(page, "the spectrum of A?b");
+    await questionMenu.focus();
+    const questionSvg = await chooseByKeys(page, "Image as SVG");
+    expect(questionSvg.suggestedFilename()).toBe("panel.sfs.A_b_2.svg");
+    await questionMenu.focus();
+    const questionCsv = await chooseByKeys(page, "Data as CSV");
+    expect(questionCsv.suggestedFilename()).toBe("panel.sfs.A_b_2.csv");
+    expect((await textOf(questionCsv)).trimEnd().split("\n")[2]).toBe(
+      "A?b,1,43.859352021499134,0.03811931601019699",
+    );
+  });
 });
