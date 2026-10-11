@@ -17,9 +17,14 @@ section.
 
 ## The design in short, for the owner
 
+Approving the design means approving its recommended choices, 1 to 9
+below, as a whole, and answering its two open points, at the end; any
+choice may also be changed. In short:
+
 - Each analysis is live on its own: the Run of its tab makes it live,
   and from then on it calculates again by itself after a change of what
-  it reads. An analysis whose Run was never pressed never runs.
+  it reads, until its Stop. An analysis whose Run was never pressed
+  never runs.
 - After a change that several live analyses read, a threshold for
   instance, they run one after the other, a quiet second after the last
   change, in the order of the tabs: the PCA, then the diversity, later
@@ -126,8 +131,8 @@ force a design:
    starts, and the filters are greyed again before the user reaches
    them.
 4. **The page assumes one live analysis in six places**, read in the
-   code of 11 October 2026: a live analysis that is not live, or that
-   failed, keeps every later one from starting by itself (choice 1
+   code of 11 October 2026: an analysis whose Run was never pressed, or
+   that failed, keeps every later one from starting by itself (choice 1
    below); a Run pressed while another analysis runs sends its request
    into the queue (choice 3); the lock, the download and the band name
    the PCA alone; the status region speaks only of the PCA. The section
@@ -149,10 +154,16 @@ calculation worker to its answer. Each file had three populations, of
 334, 333 and 333 individuals out of 1,000, or of 3,127 each out of
 9,381. Each value is the median of two or three runs.
 
-The table gives the time of a Run and the memory before it, at its peak,
-and 3 s after its end, in GB.
+The totals below are to be read against the most a tab of this page is
+known to have held and survived: 4.33 GB in WebKit, a PCoA of 9,381
+individuals on `popgen2.html` (`docs/architecture.md`, section 11,
+measured on 10 October 2026 on the same Mac). WebKit has closed no tab
+of this page; what it does above that is not known.
 
-| file | Chromium: time, memory | WebKit: time, memory |
+The table gives, in each cell, the time of a Run, and then the memory
+of the engine before the Run, at its peak and 3 s after its end, in GB.
+
+| file | Chromium: time; GB before, peak, 3 s after | WebKit: time; GB before, peak, 3 s after |
 |---|---|---|
 | gzipped VCF, 300 variants of 9,381 individuals | 0.10 s; 0.18, 0.24, 0.24 | 0.10 s; 0.25, 0.47, 0.25 |
 | `.nei`, 19,161,818 bytes, 20,000 variants of 1,000 | 0.27 s; 0.17, 0.25, 0.25 | 0.27 s; 0.26, 0.58, 0.36 |
@@ -194,8 +205,9 @@ filters a new key. Whatever the order, they run one after the other,
 and the last ends after the sum of their times. The times differ by
 up to three orders of magnitude: a diversity took 0.10 s to 23.8 s on
 the files measured above, in Chromium 153 and WebKit 26.6, the engine
-of Safari; a PCA of 9,381 individuals took 226 s and 134 s
-(`docs/architecture.md`, section 11, 10 October 2026).
+of Safari; a PCA of 9,381 individuals on `popgen2.html` took 226 s in
+Chromium 153 and 134 s in WebKit 26.6, up to 4 minutes, on the owner's
+Apple M5 Pro on 10 October 2026 (`docs/architecture.md`, section 11).
 
 Only a change of what several analyses read needs an order, and on this
 page that is a change of the filters: a threshold or the FILTER box,
@@ -206,7 +218,7 @@ the PCA gives the PCA alone one.
 **(a) A fixed order, the order of the tabs**: the PCA, the diversity,
 the LD decay after it in the same tab, then the distances. The user can
 tell in advance which comes first. A user with the PCA of 9,381
-individuals live waits up to 4 minutes after a change of a threshold for
+individuals live waits up to 4 minutes (226 s in Chromium, above) after a change of a threshold for
 a diversity of a quarter of a second on a smaller file.
 
 **(b) The tab shown first, then the order of the tabs.** Since the
@@ -256,8 +268,9 @@ a worker ended in the middle of a PCA of 9,381 individuals keeps its 3
 to 4 GB in the tab for 40 s and more (`docs/designs/no-undo.md`). A
 worker ended in the middle of a diversity leaves about 0.2 GB in WebKit,
 on the largest file measured, and the new worker is ready in 0.07 s
-(above). So (c) is within the bound this design set for it: a stop at
-each change of the populations would cost little memory.
+(above). This design would have set (c) aside had a stopped diversity
+kept more than 1 GB in WebKit; at about 0.2 GB, a stop at each change
+of the populations during a run would cost little memory.
 
 Under (a) the column and the individuals file are greyed for as long as
 the diversity runs: half a second on the VCF of 80 MB, 2.5 s on the VCF
@@ -313,8 +326,9 @@ ends the live state of every analysis.** The user who stopped to change
 a filter has the second to start changing it, and each change puts the
 others off again, so they calculate with the new value. A user who
 needs longer, with a screen reader or a switch, presses "Stop all", and
-then Run in each tab they want back (WCAG 2.2, success criterion 2.2.1,
-Timing Adjustable). Cost: a second button in the band while more than
+then Run in each tab they want back. That is what WCAG 2.2, success
+criterion 2.2.1, Timing Adjustable, requires of a page that acts after a
+time: that the user can turn the time limit off, extend it or adjust it. Cost: a second button in the band while more than
 one analysis is live, and the lock's sentence names it then. The second
 after a Stop does not come by itself: the code that starts the analyses
 counts the quiet second only from a change of the project or of a
@@ -371,7 +385,8 @@ popnei 0.2.2 gives the spectrum as one of the five statistics of
 and 225), and the heterozygosities of the diversity table from a second
 call, `calcPerVarDistribs`, each a pass over the file
 (`runDiversity` of `src/worker/runner.ts`, lines 903 to 950), until
-popnei issue #4 gives them in one. popnei's `calcVariantsSummary`, which
+popnei issue #4, which asks for the heterozygosities in the same call,
+makes the two passes one. popnei's `calcVariantsSummary`, which
 makes the one pass, joins three statistics in one pass but not
 `calcPopDiversity` (`stats.d.ts`, lines 491 to 519), so the diversity
 cannot ride on the one pass either.
@@ -405,8 +420,8 @@ The diversity's key holds the populations, so:
   as it stays for a locked PCA.
 
 None of these ends the live state, and none of them reaches a running
-diversity under choice 2 (a). This needs no choice of its own: it
-follows from the keys as they are. The one alternative, ending the live
+diversity under choice 2 (a); the page does it with the keys and locks
+it already has, and nothing is added for it. The one alternative, ending the live
 state at a new individuals file as a new variants file ends it, would
 make the user press Run again after correcting a typo in the file; it is
 not recommended.
@@ -507,7 +522,8 @@ choice 1, and that Stop all ends it everywhere.
   the diversity again."), and each end as now. Stop all is reached by the
   keyboard in the band, which is the first stop of the Tab key on the
   page, so the automatic runs of every analysis can be ended from any
-  tab (WCAG 2.2.1). A greyed column or file zone says why when it has
+  tab, as WCAG 2.2.1 requires: the user can turn off the time after
+  which the page acts. A greyed column or file zone says why when it has
   the focus, as the greyed filters do.
 - **What is lost when a worker restarts.** As now: a Stop loses the
   running analysis's time so far, and the new worker opens the variants
@@ -539,8 +555,8 @@ choice 1, and that Stop all ends it everywhere.
   PCA of `popgen2.html` of 9,381 individuals, in WebKit; and the gzipped
   size of the Populations tab's code.
 
-**What would send each choice back.** The measurements above send none
-back.
+**What would send each choice back**, with what the measurements above
+show for each.
 
 - **Choices 1 (a) and 2 (a).** A diversity of the largest file that
   takes more than about a minute would grey the column of the
@@ -643,8 +659,9 @@ The owner can stop reading here. What follows names the code.
    memory and failures only a reload mends end its live state as the
    PCA's do.
 7. A Stop restarts no quiet second. The timer of the second is started
-   again only by a change of the project and by the gate's count of the
-   changes under way (`autoRuns.ts`, lines 567 to 584); `pause` (lines
+   again only by a change of the project and by the page's count of the
+   controls in the middle of a change, a slider held, a list open, a
+   number typed and not confirmed (`autoRuns.ts`, lines 567 to 584); `pause` (lines
    667 to 673) cancels the run and ends the live state, and leaves
    `quiet` true, so the `sync` after the store's change starts the
    waiting analysis at once, the failure of choice 5 (c). `pause` calls
