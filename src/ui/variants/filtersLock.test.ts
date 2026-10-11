@@ -12,7 +12,9 @@ import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { POPGEN2_LIVE } from "../../core/apps.ts";
-import type { Run } from "../../worker/protocol.ts";
+import { keyFromWire } from "../../core/keys.ts";
+import type { AppState } from "../../core/store.ts";
+import type { JobResult, Run } from "../../worker/protocol.ts";
 import { LIVE_QUIET_MS, createAutoRuns } from "../autoRuns.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { AutoRunsProvider } from "../autoRunsContext.ts";
@@ -23,7 +25,12 @@ import {
   popgen2EndsLive,
 } from "../popgen2Store.ts";
 import { StoreProvider } from "../store.tsx";
-import { useFiltersLock, useOptionsLock } from "./filtersLock.ts";
+import {
+  filtersLockOf,
+  populationsLockOf,
+  useFiltersLock,
+  useOptionsLock,
+} from "./filtersLock.ts";
 import { createRunGate } from "./thresholdRun.ts";
 
 declare global {
@@ -118,5 +125,45 @@ describe("the lock hooks draw again only when the lock changes", () => {
       autoRuns.stop(POPGEN2_CHAIN);
     });
     expect(draws()).toBe(before);
+  });
+});
+
+describe("PT3 D1 the lock of the populations names only the live analyses that read them", () => {
+  /** The state of the page's store with the diversity running. */
+  function diversityRunning(): AppState<JobResult, unknown> {
+    const base = createPopgen2Store({
+      send: () => runOf(1),
+      sendWrite: () => runOf(2),
+      appVersion: "0.1.0",
+    }).getState();
+    return {
+      ...base,
+      analyses: base.analyses.map((one) =>
+        one.id === "diversity"
+          ? {
+              ...one,
+              status: {
+                kind: "running",
+                key: keyFromWire("d".repeat(64)),
+                runId: 1,
+                progress: null,
+                waitsForStatistics: false,
+                soFar: null,
+              },
+            }
+          : one,
+      ),
+    };
+  }
+  const bothLive = { isLive: () => true };
+
+  test("with the PCA live beside the running diversity, the populations' words name the diversity alone, the filters' both", () => {
+    const s = diversityRunning();
+    expect(populationsLockOf(s, bothLive)).toBe(
+      "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again.",
+    );
+    expect(filtersLockOf(s, bothLive)).toBe(
+      "Stop the diversity in the Populations tab and the PCA in the PCA tab to change the filters; then press Run in each tab to calculate them again.",
+    );
   });
 });

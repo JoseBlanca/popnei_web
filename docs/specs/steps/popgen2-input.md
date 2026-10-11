@@ -484,8 +484,9 @@ the Tab key, as the greyed thresholds are (`popgen2-pca.md`, "While a
 PCA runs"); its tooltip, on the mouse, the focus and a press, and its
 description for a screen reader, are "Stop the diversity in the
 Populations tab to change the populations; then press Run there to
-calculate it again.", or, while another analysis is live, the
-words of `popgen2-populations.md` with Stop all. A file dropped or
+calculate it again.", also while the PCA is live, since the PCA does
+not read the populations (`popgen2-populations.md`, "While the
+diversity runs", corrected on 11 October 2026). A file dropped or
 pasted on the greyed zone opens nothing and the box shows the same
 words where it shows the words of a folder dropped, and the status
 region says them; a drop elsewhere on the page opens nothing, as now.

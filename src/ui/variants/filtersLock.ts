@@ -68,9 +68,13 @@ export function optionsLockOf(
 
 /** The reason the column of the populations, the individuals file and
     how it is read wait in `s`, while a live analysis that reads the
-    populations runs, with Stop all when another is live beside it;
-    `null` while none runs, or while the one running reads no
-    population, as the PCA. */
+    populations runs, with Stop all when another that reads them is live
+    beside it; `null` while none runs, or while the one running reads no
+    population, as the PCA. A live analysis that reads no population,
+    the PCA, is not named: a change of the populations sends it no
+    request, and stopping it would end its live state for nothing
+    (docs/specs/steps/popgen2-populations.md, "While the diversity
+    runs"). */
 export function populationsLockOf(
   s: AppState<JobResult, unknown>,
   live: Pick<AutoRuns, "isLive">,
@@ -80,7 +84,7 @@ export function populationsLockOf(
     ? null
     : populationsLockedText(
         running,
-        liveBeside(s, running, live),
+        liveBeside(s, running, live).filter((one) => one.readsPopulations),
         STOP_ALL_OFFERED,
       );
 }

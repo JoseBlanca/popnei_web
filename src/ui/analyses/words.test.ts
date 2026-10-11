@@ -413,6 +413,14 @@ const PCA: LiveAnalysisName = {
   readsPopulations: false,
 };
 const PCOA: LiveAnalysisName = { ...PCA, name: "the PCoA" };
+/** A live analysis that reads the populations, as the distances between
+    populations will. */
+const DISTANCES: LiveAnalysisName = {
+  id: "popDists",
+  name: "the distances",
+  tab: "Distances",
+  readsPopulations: true,
+};
 const DIVERSITY: LiveAnalysisName = {
   id: "diversity",
   name: "the diversity",
@@ -490,18 +498,15 @@ describe("PT3 D1 the words of the lock of the populations, with and without anot
     );
   });
 
-  test("until the band offers Stop all, the words name the Stop of each tab", () => {
-    expect(populationsLockedText(DIVERSITY, [PCA], false)).toBe(
-      "Stop the diversity in the Populations tab and the PCA in the PCA tab to change the populations; then press Run in each tab to calculate them again.",
+  test("until the band offers Stop all, the words name the Stop of each tab of an analysis beside that reads the populations", () => {
+    expect(populationsLockedText(DIVERSITY, [DISTANCES], false)).toBe(
+      "Stop the diversity in the Populations tab and the distances in the Distances tab to change the populations; then press Run in each tab to calculate them again.",
     );
   });
 
-  test("with Stop all offered and the PCA live beside it, the words name Stop all, which stops the PCA too", () => {
-    expect(populationsLockedText(DIVERSITY, [PCA], true)).toBe(
-      "Stop the diversity in the Populations tab to change the populations, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again.",
-    );
-    expect(populationsLockedText(DIVERSITY, [PCOA], true)).toBe(
-      "Stop the diversity in the Populations tab to change the populations, or press Stop all beside the heading Popnei to stop the PCoA too; then press Run in each tab to calculate them again.",
+  test("with Stop all offered and an analysis that reads the populations live beside it, the words name Stop all, which stops it too", () => {
+    expect(populationsLockedText(DIVERSITY, [DISTANCES], true)).toBe(
+      "Stop the diversity in the Populations tab to change the populations, or press Stop all beside the heading Popnei to stop the distances too; then press Run in each tab to calculate them again.",
     );
   });
 });
