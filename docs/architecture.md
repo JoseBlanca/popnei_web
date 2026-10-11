@@ -3764,6 +3764,78 @@ tests of the application are the same with it.
   worker's popnei ready at 0.013 s and 0.042 s, with a load average of
   3.3 over the last minute (10 October 2026, `NU5 D6` of
   `e2e/measure.spec.ts`).
+- **The diversity started after a large PCA**, on `popgen2.html` from
+  11 October 2026, where the diversity of the Populations tab and the
+  PCA are both live and a diversity asked for while the PCA runs waits
+  for it (`docs/designs/population-tab.md`). The question was whether
+  the diversity, started on a new calculation worker a second after a
+  Stop of the PCA, or at once after a PCA that ended, grows on top of
+  the memory the PCA's worker leaves, and takes a WebKit tab past 4.33
+  GB, the most a tab of this page is known to have held and survived
+  (above). It does not: the engine held at most 3.71 GB in WebKit and
+  3.31 GB in Chromium from the Stop or the PCA's end on, and no tab
+  closed. Measured on 11 October 2026 (`docs/plans/population-tab.md`,
+  work package 1, deliverable 5, the measurement `PT1 D5` of
+  `e2e/measure.spec.ts`) on the owner's Apple M5 Pro with 64 GB, macOS
+  27.0.1, WebKit 26.6 and Chromium 153.0.8010.12 under Playwright
+  1.63.0, with a macOS virtual machine running beside them, at the load
+  averages over the last minute given below; on the VCF of `NU4 D6`, 300
+  variants and 9,381 individuals, with a CSV of three populations of
+  3,127, the LD pruning of the PCA off. The memory is that of the
+  engine's processes summed, read every 250 ms, in GB.
+
+  After a Stop: the PCA's Run, the diversity's Run, which waited, and
+  the PCA's Stop on its peak. The memory of a PCA of 9,381 individuals
+  rises in two steps, to about 2.4 GB in the first seconds and by about
+  1 GB more when the decomposition starts, 58 to 82 s into the run in
+  WebKit and 166 s into it in Chromium (after more than 190 s in an
+  earlier run there), and holds there to the end; the Stop was pressed once that second step had held still for
+  3 s. The diversity was sent 1.02 to 1.05 s after the Stop in every
+  run, and none was sent before it. The third WebKit run is of an
+  earlier version of the measurement, whose Stop came at 110 s, on the
+  same step.
+
+  | | WebKit, 1 | WebKit, 2 | WebKit, 3 | Chromium |
+  |---|---|---|---|---|
+  | load average before | 2.73 | 9.24 | 2.16 | 7.52 |
+  | before the PCA's Run | 0.576 | 0.577 | 0.569 | 0.283 |
+  | the PCA's run before the Stop | 68.9 s | 87.5 s | 110.1 s | 171.0 s |
+  | at the Stop | 3.389 | 3.286 | 3.498 | 3.024 |
+  | at the diversity's request | 3.416 | 3.304 | 3.519 | 3.058 |
+  | peak of the diversity | 3.621 | 3.390 | 3.623 | 3.292 |
+  | the most from the Stop on | 3.712 | 3.418 | 3.623 | 3.306 |
+  | 11 s after the diversity's answer | 1.168 | 1.068 | 3.424 | 0.228 |
+  | the diversity | 0.11 s | 0.17 s | 0.10 s | 0.09 s |
+
+  After a PCA that ended: the PCA and the diversity calculated once by
+  their Runs, a threshold of the variants moved 2 s after, the PCA
+  calculated again to its end, after which the client ends its worker,
+  and the diversity sent at once, on a new worker.
+
+  | | WebKit | Chromium |
+  |---|---|---|
+  | load average before | 3.82 | 4.46 |
+  | at the threshold moved | 0.609 | 0.549 |
+  | peak of the PCA | 3.709 | 3.307 |
+  | the PCA | 170.3 s | 280.5 s |
+  | from the PCA's answer to the diversity's request | 0.30 s | 0.28 s |
+  | at the diversity's request | 3.705 | 3.304 |
+  | peak of the diversity | 0.734 | 0.499 |
+  | 11 s after the diversity's answer | 0.512 | 0.406 |
+  | the diversity | 0.10 s | 0.09 s |
+
+  The plan asked for a Stop at which WebKit's engine held at least 3.7
+  GB, the case the design left to measure; no Stop of one PCA reaches
+  it on this page, whose PCA held 3.29 to 3.50 GB at its peak in
+  WebKit. The 4.22 GB of section 5 were two PCAs, a stopped one and the
+  next, one on top of the other. A diversity of 300 variants adds about
+  0.1 to 0.3 GB for a tenth of a second, so the most the tab held was
+  the PCA's own memory and the diversity's on top of it. What a
+  diversity over many more variants adds, after a Stop, was not
+  measured. WebKit gave the stopped worker's memory back within 2 s of
+  the diversity's answer in two runs of three, and in the third still
+  held 3.42 GB 11 s after it, as section 5 found over 40 s; Chromium
+  gave it back within 1 s.
 - **The page frozen.** The key of every analysis is made on the page after
   every command, from the canonical form of its inputs, and the
   individuals table of 10,000 rows is among them. Since the project is
@@ -3890,6 +3962,11 @@ what the branch `pca-tab` built and measured (`docs/plans/no-undo.md`,
 work packages 4 and 5): the bullets "A PCA started by itself after a
 finished one", with its memory in Chromium and WebKit, and "A Stop,
 said in the band of `popgen2.html`", with the time of its line.
+
+What was revised on 11 October 2026, with the measurement of the plan of
+the Populations tab (`docs/plans/population-tab.md`, work package 1,
+deliverable 5): the bullet "The diversity started after a large PCA" is
+new.
 
 ## 12. What is hard to undo
 
