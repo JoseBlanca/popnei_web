@@ -1833,21 +1833,35 @@ the result are the old ones.
 - **The populations**, by the owner's answer 3 of 9 October 2026
   (`docs/designs/input-page.md`, "The unclassified in the analyses per
   population"). The key holds those of `popgen2Populations(p)`: `"all"`,
-  the one population, with no individuals file and with "None" chosen
-  (**Open 2** of `popgen2-populations.md`, meanwhile so); the populations
+  the one population, with no individuals file and with "None" chosen,
+  the grouping `{ kind: "populations", column: null }`, for which
+  `populationsOf` gives `null`; the populations
   of the column chosen, as `populationsOf` gives them, otherwise; and
   `null`, which locks, while the file is read, after it was refused,
   and for a column the file does not have or its list does not offer,
-  a column of booleans among them. `run` sends the populations of the
-  column narrowed to the individuals of the variants file and to those
-  the filters keep, as on the old page (`populationsKept`), so the
+  a column of booleans among them.
+- **The populations to run**, `popgen2PopulationsToRun(p)` and
+  `popgen2PopulationsKept(p, kept)` of `src/core/project.ts`, the
+  counterparts on this page of `populationsToRun` and `populationsKept`:
+  the populations of `popgen2Populations(p)` narrowed to the individuals
+  of the variants file, and then to those the filters keep, so the
   unclassified, an empty cell or an individual not in the file, are in
-  none and left out; and when none of the individuals of the variants
-  file is classified, a column that gives none of them a population, it
-  sends the one population of every individual kept, as for `"all"`.
-  The one population is named `ONE_POPULATION` of `src/core/project.ts`,
-  "All individuals" (**Open 1** of `popgen2-populations.md`, meanwhile
-  so).
+  none and left out; and the one population of every individual of the
+  variants file, then of every one kept, for `"all"` and when the
+  column gives none of the individuals of the variants file a
+  population, where `populationsToRun` gives `[]` and `populationsNeeds`
+  locks. Every reader of the diversity on this page reads these and not
+  the old ones: `run`, the line of the populations of the tab, the
+  lines of the populations under the minimum and of the draw, `drawNeeds`,
+  `populationsKeptNeeds` and the warnings, so that no part counts other
+  populations than the table's.
+- **The name of the one population** is "Unclassified" on this page,
+  the name the box Individuals and the PCA give the individuals of no
+  population, decided by the session on 11 October 2026; the old page,
+  its Python script, its PCA and its LD decay keep `ONE_POPULATION` of
+  `src/core/project.ts`, "All individuals", which this page does not
+  change. The definition takes the name from its page,
+  `onePopulationName(page)`, and `popgen2PopulationsToRun` gives it.
 - **`needs`**, without `individualsNeeds` of
   `docs/specs/core/project.md`, which locks on an individual missing
   from the file, and without `populationsNeeds`, which locks with no
@@ -1874,12 +1888,31 @@ the result are the old ones.
   `popgen2FailureText` of `src/ui/analyses/words.ts`, as the PCA tab has
   them. So `tooFewIndividuals` ends "merge it with another population
   in panel_pops.csv, or lower the minimum number of individuals in the
-  options of the diversity."; `privateAllelesNeedTwoPopulations` of the
-  one population ends "Choose a column of the populations in the box
-  Individuals to count them.", or, with no individuals file, "Open an
-  individuals file that assigns the individuals to populations in the
-  box Individuals to count them."; the refusal of no population left
-  ends "Loosen the thresholds of the individuals in the Variants tab.".
+  options of the diversity."; `tooFewIndividuals` of the one
+  population reads "The unclassified individuals, taken as one
+  population since none has a population, are 12, and a variant has a
+  value in a population only when at least 20 of its individuals have
+  a called genotype there, so they have no values. To have them, lower
+  the minimum number of individuals in the options of the
+  diversity.", with ", or loosen the thresholds of the individuals in
+  the Variants tab" before the full stop when the thresholds removed
+  some; `privateAllelesNeedTwoPopulations` has three words on this
+  page: of the one population with no individuals file, "With every
+  individual in one population, no allele can be private, found in this
+  population and in no other, so the table has no private alleles. Open
+  an individuals file that assigns the individuals to populations in the
+  box Individuals to count them."; of the one population with a file,
+  "None" or a column that classifies nobody, the same first sentence
+  and "Choose a column of the populations in the box Individuals to
+  count them."; of one classified population, with or without
+  unclassified individuals left out, when the runner sends that one
+  alone and asks for no private alleles, "Only p0 has a population in
+  popcat among the individuals kept, and an allele is private when one
+  population has it and no other does, so the table has no private
+  alleles. The unclassified individuals are not a population to compare
+  it with."; the last sentence left out when none is unclassified; the
+  refusal of no population left ends "Loosen the thresholds of the
+  individuals in the Variants tab.".
 - **`individualsWithoutPopulation` is not raised.** An unclassified
   individual is no fault on this page, and the tab says how many are
   left out (`popgen2-populations.md`, "The populations it runs on").
@@ -1920,6 +1953,23 @@ export function diversityPageOf(def: AnalysisDef<Job, JobResult>): DiversityPage
     read, refused, or for a column its list does not offer. Never reads p.variants. The same
     frozen value for the same frozen table and column. */
 export function popgen2Populations(p: Project): Pops | "all" | null;
+
+/** In src/core/project.ts: popgen2Populations(p) narrowed to the individuals of the variants
+    file, the empty ones dropped; the one population, named "Unclassified", of every individual
+    of the variants file for "all" and when none is classified; null when popgen2Populations is
+    null or the variants file is not read. The same frozen value for the same inputs. */
+export function popgen2PopulationsToRun(p: Project): Pops | null;
+
+/** In src/core/project.ts: popgen2PopulationsToRun narrowed to the individuals kept, with the
+    populations emptied apart, as populationsKept; and the number of unclassified individuals
+    kept that were left out, for the line of the tab. */
+export function popgen2PopulationsKept(
+  p: Project, kept: readonly string[] | null,
+): (PopulationsKept & { readonly unclassifiedLeftOut: number }) | null;
+
+/** The name of the one population by the page: "All individuals" on popgen, "Unclassified" on
+    popgen2. */
+export function onePopulationName(page: DiversityPage): string;
 
 /** The words of a refusal, of the statistics that failed and of a warning, by the page. */
 export function refusalText(message: string, p: Project, page: DiversityPage): string;
@@ -1964,12 +2014,26 @@ cases, which stay:
   the column `pop` of the worked example, its populations; the file
   pending, refused, a column absent and a column of booleans, `null`;
   none reads `p.variants`, which the test makes a getter that throws.
-- `run`, with a fake client: the worked example with `i4`, of no
-  population, and `i5`, not in the variants file, sends `[["A", ["i1",
-  "i3"]], ["B", ["i2"]]]`, as the old page; a variants file with an
-  individual `i6` not in the table sends the same; a column whose
-  populations hold none of the variants file's individuals sends
-  `[["All individuals", every individual kept]]`; "None" the same.
+- `popgen2PopulationsToRun` and `popgen2PopulationsKept`, and `run`
+  with a fake client, which sends what they give: the worked example
+  with `i4`, of no population, and `i5`, not in the variants file,
+  `[["A", ["i1", "i3"]], ["B", ["i2"]]]`, as the old page, with
+  `unclassifiedLeftOut` 1; a variants file with an individual `i6` not
+  in the table, the same with 2; a column whose populations hold none
+  of the variants file's individuals, `[["Unclassified", every
+  individual kept]]`; "None" and no individuals file the same, with 0
+  left out; with `c.individuals` `["i1", "i3"]`, "None",
+  `[["Unclassified", ["i1", "i3"]]]`. The old page's `run` still sends
+  `"All individuals"`.
+- The lines and locks that count the populations read the same: the
+  draw's reason with "None" and a draw larger than the chromosomes of
+  every individual kept names "Unclassified"; `populationsKeptNeeds`
+  with only unclassified individuals kept while the column classifies
+  some, its lock.
+- The words of the one population and of one classified population:
+  `tooFewIndividuals` of "Unclassified" at `minNumIndividuals` 20 with
+  12 individuals, its text above whole; `privateAllelesNeedTwoPopulations`
+  in its three cases on this page, each whole.
 - `needs` of `diversityOnPopgen2`: each row of "The locks" of
   `popgen2-populations.md` but those of the one pass, which are the
   screen's, with its words whole; a project with an individual missing
@@ -1990,7 +2054,7 @@ which holds no FILTER, `filtersApplied`): with `panel_pops.csv` and
 `popcat`, the numbers of "How it is verified" above with the filter at
 1, p0 He 0.35193160994408107, Ho 0.35642172473116646, polymorphic
 0.9266666666666666, F −0.012758486763376542; with no individuals file,
-the one population of the 200, He 0.3754712450806149, Ho
+the one population of the 200, "Unclassified", He 0.3754712450806149, Ho
 0.35429523451520484, polymorphic 0.9791666666666666, F
 0.05639848814751047, alleles per variant 2, rarefied
 1.9926031027785522 at the draw of 40, from
@@ -1998,9 +2062,9 @@ the one population of the 200, He 0.3754712450806149, Ho
 ```js
 const v = openVars(new Uint8Array(readFileSync("e2e/fixtures/panel.nei")));
 v.filterByMissingData(0.1);
-calcPerVarDistribs(v, { pops: { "All individuals": the200 },
+calcPerVarDistribs(v, { pops: { Unclassified: the200 },
   stats: ["obs_het", "unbiased_exp_het", "poly_vars_ratio"], minNumIndividuals: 20, polyThreshold: 0.95 });
-calcPopDiversity(v, { pops: { "All individuals": the200 },
+calcPopDiversity(v, { pops: { Unclassified: the200 },
   stats: ["num_alleles", "fis", "folded_sfs"], numCalledAlleles: 40, minNumIndividuals: 20 });
 ```
 

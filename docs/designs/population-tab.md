@@ -420,8 +420,17 @@ The diversity's key holds the populations, so:
   a lock does on this page (`docs/architecture.md`, section 3, "No
   result kept for values left behind"); with other populations it is
   calculated again a quiet second after the read ends;
-- no column chosen locks it until one is chosen; the live state stays,
-  as it stays for a locked PCA.
+- "None" chosen in the list of the column, or a column that gives no
+  individual of the variants file a population, gives the one
+  population, "Unclassified", of every individual kept, and the
+  diversity is calculated again for it a quiet second later. Corrected
+  on 11 October 2026, after the approval, by the session that wrote the
+  specs: this bullet said that no column chosen locks the diversity
+  until one is chosen, against the owner's answer 3 of 9 October 2026
+  (`docs/designs/input-page.md`, "The unclassified in the analyses per
+  population"), that the unclassified are one population whenever no
+  individual is classified; the earlier answer prevails, and the plan
+  `docs/plans/population-tab.md` reports the correction to the owner.
 
 None of these ends the live state, and none of them reaches a running
 diversity under choice 2 (a); the page does it with the keys and locks

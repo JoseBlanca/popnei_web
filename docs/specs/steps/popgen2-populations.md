@@ -13,8 +13,10 @@ the diversity runs), and section 6 of `docs/functionality.md`,
 6 of case 4 of `docs/use-cases.md`, "Characterise populations and the
 distances between them", the first of the three pieces of that case.
 Written on 11 October 2026, before any code; its plan is
-`docs/plans/population-tab.md`. Not yet approved by the owner: its two
-open points are at the end.
+`docs/plans/population-tab.md`. Not yet approved by the owner. It has no open point: the name of the
+one population and what "None" chosen does were settled by the session
+on 11 October 2026 from the owner's earlier decisions (below, "The
+populations it runs on").
 
 The tab is the diversity panel of the old page, `popgen.html`, which is
 built and which the owner tried and accepted on 1 October 2026: its
@@ -56,10 +58,13 @@ And these:
   population, as `popgen2-input.md` defines it: no individuals file, no
   column chosen, an empty cell, or not in the file.
 - **The one population**: every individual kept taken as one
-  population, which the diversity runs on when no individual of the
-  variants file is classified, as the owner decided on 9 October 2026
-  (answer 3 of `docs/designs/input-page.md`). Its name in the table is
-  **Open 1**, below; this spec writes "All individuals" meanwhile.
+  population, named "Unclassified", which the diversity runs on when no
+  individual of the variants file is classified, as the owner decided
+  on 9 October 2026 (answer 3 of `docs/designs/input-page.md`). The
+  name is the one the box Individuals gives that row of its counts, as
+  the owner accepted it on 11 October 2026, and the one the PCA gives
+  its points of no population, so that the page calls the same
+  individuals by one name; the old page keeps "All individuals".
 - **Stop all**, a button of the band that ends the live state of every
   analysis and stops the one running (`popgen2-band.md`).
 
@@ -123,8 +128,17 @@ owner's of 9 October 2026:
   left out of the table;
 - none classified, with no individuals file, with "None" chosen, or
   with a column that gives none of the individuals of the variants file
-  a population: the table has the one population, every individual
-  kept.
+  a population: the table has the one population, "Unclassified", every
+  individual kept. The design's choice 8 said that no column chosen
+  locks the diversity; it was corrected on 11 October 2026 to the
+  owner's answer of 9 October, which came first.
+
+Every part of the tab that names or counts the populations, the line
+below, the lines of the populations under the minimum and of the draw,
+the locks of the draw and of no population kept, and the warnings,
+reads them from one function of core, `popgen2PopulationsKept` (the
+definition, `diversity.md`, "On popgen2.html"), so that the line and
+the table never disagree.
 
 The line under the options says what Run will take, the old panel's
 line with this page's words (`diversity.md`, "The states", ready): "3
@@ -134,9 +148,9 @@ unclassified individuals kept are left out, as the box Individuals
 says."; then the old panel's lines of the populations the filters
 empty, of those under the minimum and of those that hold fewer
 chromosomes than the draw, with "the Variants tab" for "the Variants
-step". For the one population: "1 population, All individuals: 200
+step". For the one population: "1 population, Unclassified: 200
 individuals. No individual is assigned to a population, so the
-diversity is of every individual kept." With a threshold of the
+diversity is of every individual kept as one population." With a threshold of the
 individuals on and the one pass not finished, the counts are not known;
 Run is then locked by the one pass anyway (below), and the line gives
 the populations before the thresholds, with "The thresholds of the
@@ -332,7 +346,7 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 |---|---|
 | the heading of the tab | "Diversity" |
 | the heading of the spectrum | "Site frequency spectrum" |
-| the line of the populations | the old panel's, with "the Variants tab"; "7 unclassified individuals kept are left out, as the box Individuals says."; "1 population, All individuals: 200 individuals. No individual is assigned to a population, so the diversity is of every individual kept." |
+| the line of the populations | the old panel's, with "the Variants tab"; "7 unclassified individuals kept are left out, as the box Individuals says."; "1 population, Unclassified: 200 individuals. No individual is assigned to a population, so the diversity is of every individual kept as one population." |
 | the locks | the table of "Run and Stop" |
 | the line in the place of the bar | the table of "Run and Stop"; after a Stop, "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change." |
 | the button while live and not running | "Stop recalculating" |
@@ -354,7 +368,7 @@ The page has no help drawer yet. The help of this tab would be the old
 panel's (`diversity.md`, "Its words", the help, and `sfs.md`), with
 what is new here: that the unclassified are left out when any
 individual has a population, that with none the table is of every
-individual as one population, and that the diversity is calculated
+individual as one population, "Unclassified", and that the diversity is calculated
 again after each change once its Run is pressed.
 
 ## Accessibility
@@ -401,7 +415,10 @@ Individuals.
 
 **In Vitest, in node**: the words of the tab, by state and by what it
 waits for, from the functions of its words; the line of the
-populations, with the unclassified and with the one population; the
+populations, at `popgen2PopulationsKept` and the function of the tab's
+words that writes it, with the unclassified, with the one population of
+no file, of "None" and of a column that classifies nobody, and with one
+classified population and some unclassified; the
 locks, each row, from the definition and `passLock`; the file names of
 the downloads, with a name that holds "/" and two names that become
 the same.
@@ -422,13 +439,16 @@ page has them, the missing data of the variants at 0.1, which keeps all
   `diversity.md` with the filter at 1, which keeps the same 1,200
   variants; the missing data moved to 0.05 with the diversity live: the
   row p0 48, 0.3527, 0.3567, 0.9288, −0.0113, with no Run pressed.
-  With no individuals file, the one row "All individuals", 200,
+  With no individuals file, the one row "Unclassified", 200,
   0.3755, 0.3543, 0.9792, 0.0564, 2.0000, 1.9926, and "no value" in its
   three cells of private alleles (He 0.3754712450806149, Ho
   0.35429523451520484, polymorphic 0.9791666666666666, F
   0.05639848814751047, rarefied alleles 1.9926031027785522, from
   `calcPerVarDistribs` and `calcPopDiversity` over the 200 individuals
-  as one population, the missing data at 0.1, the draw 40).
+  as one population, the missing data at 0.1, the draw 40); the same
+  row with `panel_pops.csv` and "None" chosen in the list of the
+  column, and with a column of the file that gives none of the
+  individuals of `panel.nei` a population.
 - **The unclassified**: `panel_pops.csv` with four rows removed and
   three cells of popcat emptied: the caption and the line say 7
   unclassified, and the table has three rows.
@@ -491,31 +511,12 @@ while it scrolls sideways.
 
 ## Open points
 
-1. **Open 1: the name of the one population.** When no individual is
-   classified, the table has one row of every individual kept, and the
-   CSV the same name in its first column. (a) "All individuals", the
-   name the old page gives it and popnei's result carries; the line of
-   the populations says why. (b) "Unclassified", the name the box
-   Individuals gives that row of its counts, so that the box and the
-   table agree; `docs/designs/input-page.md` foresaw the word in the
-   tables of the analyses per population. Recommended: (a), since the
-   row is the diversity of the whole collection, and a row named
-   "Unclassified" in a table of results reads as a leftover group
-   beside populations that are not there. Meanwhile (a); the answer
-   changes one constant and the words that name it (task 1.1 of the
-   plan).
-2. **Open 2: "None" chosen in the list of the column.** The design said, in
-   its choice 8, that no column chosen locks the diversity until one is
-   chosen. The owner's answer 3 of 9 October 2026 says that with no
-   column chosen the unclassified are one population, and this spec
-   follows it. (a) As the answer of 9 October: "None", like no
-   individuals file, gives the one population. (b) As the design's
-   sentence: "None" locks, "Choose a column of the populations in the
-   box Individuals.", while no individuals file still gives the one
-   population. Recommended: (a), one rule for every case where no
-   individual is classified, and the one the box Individuals already
-   tells ("None: every individual unclassified"). Meanwhile (a); the
-   answer changes one row of the locks (task 1.1).
+None. The two points of the first draft were settled by the session on
+11 October 2026 from the owner's earlier decisions: the one population
+is named "Unclassified", as the box Individuals names that row; and
+"None" chosen, like a column that classifies nobody, gives the one
+population, by the owner's answer of 9 October 2026 (the design's
+choice 8, which said otherwise, corrected the same day).
 
 ## Not in this spec
 
