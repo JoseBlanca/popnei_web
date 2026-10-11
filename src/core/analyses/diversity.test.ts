@@ -9,11 +9,11 @@ import {
   diversityPageOf,
   diversityRows,
   drawOf,
-  popgen2OnePopulationLine,
   onePopulationName,
   refusalText,
   statisticsFailedText,
 } from "./diversity.ts";
+import { popgen2OnePopulationLine } from "./diversityOnePopulation.ts";
 import { pcaOnPopgen2 } from "./pca.ts";
 import {
   POPGEN2_ANALYSES,

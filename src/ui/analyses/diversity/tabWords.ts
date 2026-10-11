@@ -16,10 +16,10 @@
 import {
   diversityOptions,
   drawOf,
-  popgen2OnePopulationLine,
   refusalText,
   statisticsFailedText,
 } from "../../../core/analyses/diversity.ts";
+import { popgen2OnePopulationLine } from "../../../core/analyses/diversityOnePopulation.ts";
 import type { Failure } from "../../../core/analyses/individualChecks.ts";
 import type { IndividualsKept } from "../../../core/individualsKept.ts";
 import {

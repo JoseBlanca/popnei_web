@@ -69,6 +69,10 @@ describe("what the pages load first", () => {
     const reached = reachedFrom("ui/popgen2.tsx");
     expect(reached).toContain("ui/analyses/diversity/PopulationsTab.tsx");
     expect(reached).toContain("ui/analyses/diversity/tabLoadWords.ts");
+    // The line of the one population, which only the tab draws, apart
+    // from the definition the store loads.
+    expect(reached).toContain("core/analyses/diversity.ts");
+    expect(reached).not.toContain("core/analyses/diversityOnePopulation.ts");
     for (const module of [
       "PopulationsTabView.tsx",
       "populationsTabPanel.ts",
