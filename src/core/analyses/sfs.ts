@@ -14,6 +14,7 @@ import { grouped } from "../project.ts";
 import { filtersApplied } from "../filtersApplied.ts";
 import type { Project } from "../project.ts";
 import type { Warning } from "../store.ts";
+import type { DiversityPage } from "./diversity.ts";
 import { csvField, defect } from "./words.ts";
 import type { DiversityResult } from "../../worker/protocol.ts";
 
@@ -148,19 +149,58 @@ const CSV_HEADER = "population,rarer_allele,variants,share";
  * new line.
  */
 export function spectraCsv(r: DiversityResult): string {
-  const lines = spectraOf(r).pops.flatMap((pop) =>
-    [...pop.expected].map((variants, count) => {
-      const share = count === 0 ? undefined : pop.shares?.[count - 1];
-      return [
-        csvField(pop.population),
-        String(count),
-        String(variants),
-        share === undefined ? "" : String(share),
-      ].join(",");
-    }),
-  );
+  return csvOf(spectraOf(r).pops.flatMap(spectrumLines));
+}
+
+/**
+ * The rows of the population `population` of `spectraCsv(r)`, after its
+ * header, the CSV of one histogram of popgen2.html (sfs.md, "On
+ * popgen2.html"); the header alone for a population not calculated.
+ * Throws a defect for a population not in the result.
+ */
+export function spectrumCsv(r: DiversityResult, population: string): string {
+  const pop = spectraOf(r).pops.find((p) => p.population === population);
+  if (pop === undefined) {
+    throw defect(
+      `the spectrum of ${population} was asked of a result without it.`,
+    );
+  }
+  return csvOf(spectrumLines(pop));
+}
+
+/** The lines of the CSV of one population's spectrum, with no header. */
+function spectrumLines(pop: SpectrumOfPop): readonly string[] {
+  return [...pop.expected].map((variants, count) => {
+    const share = count === 0 ? undefined : pop.shares?.[count - 1];
+    return [
+      csvField(pop.population),
+      String(count),
+      String(variants),
+      share === undefined ? "" : String(share),
+    ].join(",");
+  });
+}
+
+/** The CSV of the spectra of `lines`, after its header, each line ended
+    by a new line. */
+function csvOf(lines: readonly string[]): string {
   return [CSV_HEADER, ...lines].map((line) => `${line}\n`).join("");
 }
+
+/** How the warning of the spectrum names the MAF filter, after "The
+    MAF", and how it is turned off, by the page. */
+const MAF_PLACES: Readonly<
+  Record<DiversityPage, { readonly filter: string; readonly turnOff: string }>
+> = Object.freeze({
+  popgen: Object.freeze({
+    filter: "filter of the Variants step",
+    turnOff: "turn off the MAF filter in the Variants step",
+  }),
+  popgen2: Object.freeze({
+    filter: "threshold of the Variants tab",
+    turnOff: "turn the MAF threshold off in the Variants tab",
+  }),
+});
 
 /** The threshold of the MAF filter at which it removes only the variants
     with no called allele, which the warning does not count. */
@@ -171,9 +211,14 @@ const MAF_KEEPS_ALL = 1;
  * at the end of its caption, given the project `p` the request of `r`
  * was made from: a MAF filter with a threshold below 1 that removed at
  * least one of the variants it was given, as the counts of the pass of
- * `r` have them.
+ * `r` have them, in the words of the page `page` of the diversity's
+ * definition, the old page's by default (sfs.md, "On popgen2.html").
  */
-export function spectrumWarnings(r: DiversityResult, p: Project): Warning[] {
+export function spectrumWarnings(
+  r: DiversityResult,
+  p: Project,
+  page: DiversityPage = "popgen",
+): Warning[] {
   const filter = filtersApplied(p).find((f) => f.kind === "maf");
   const counts = r.passStats.filtering.maf;
   if (
@@ -185,10 +230,11 @@ export function spectrumWarnings(r: DiversityResult, p: Project): Warning[] {
     return [];
   }
   const removed = counts.varsProcessed - counts.varsKept;
+  const place = MAF_PLACES[page];
   return [
     {
       code: "mafFilterOnSpectrum",
-      text: `The MAF filter of the Variants step removes the variants whose commonest allele is above ${String(filter.maxAllowedMaf)} in the individuals kept, taken together, and it removed ${grouped(removed)} of the ${grouped(counts.varsProcessed)} it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn off the MAF filter in the Variants step.`,
+      text: `The MAF ${place.filter} removes the variants whose commonest allele is above ${String(filter.maxAllowedMaf)} in the individuals kept, taken together, and it removed ${grouped(removed)} of the ${grouped(counts.varsProcessed)} it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, ${place.turnOff}.`,
     },
   ];
 }

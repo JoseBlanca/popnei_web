@@ -12,6 +12,13 @@
  * the calculation worker; this module computes none of them. The populations are those of `project.ts`, which every
  * analysis per population shares: those of a column of the metadata
  * file, or one population of every individual, "All individuals".
+ *
+ * Two definitions are made by the same code: `diversity`, of the old
+ * page, and `diversityOnPopgen2`, of the Populations tab of popgen2.html,
+ * where an individual of no population is unclassified and left out, or,
+ * when none has a population, every individual is one population,
+ * "Unclassified", and whose words name the tabs and the boxes of that
+ * page (docs/specs/analyses/diversity.md, "On popgen2.html").
  */
 
 import { hasIndividualThreshold, individualsKept } from "../individualsKept.ts";
@@ -32,18 +39,29 @@ import {
   populationsToRun,
   shown,
   LARGEST_WHOLE_NUMBER,
+  MAX_LISTED_POPULATIONS,
   MAX_NAMED,
+  UNCLASSIFIED_POPULATION,
   bothOf,
+  popgen2OnePopulationCause,
+  popgen2Populations,
+  popgen2PopulationsKept,
+  popgen2PopulationsToRun,
 } from "../project.ts";
 import { filtersApplied } from "../filtersApplied.ts";
 import {
+  allEmptiedText,
   populationListsNeeds,
   populationsColumnOf,
   populationsKeptNeeds,
   populationsWithMinimum,
   populationsByLists,
 } from "../populations.ts";
-import type { Project } from "../project.ts";
+import type {
+  OnePopulationCause,
+  PopulationsKept,
+  Project,
+} from "../project.ts";
 import type { Result } from "../result.ts";
 import type {
   AnalysisDef,
@@ -51,6 +69,7 @@ import type {
   Warning,
   WorkerClient,
 } from "../store.ts";
+import { fileRefusalText, passRefusalText } from "./fileRefusals.ts";
 import { statisticsFailedWords } from "./individualChecks.ts";
 import type { Failure } from "./individualChecks.ts";
 import {
@@ -60,6 +79,7 @@ import {
   defect,
   orNull,
   percentOf,
+  populationNotInResult,
   populationWarnings,
   refusalWords,
 } from "./words.ts";
@@ -69,11 +89,46 @@ import type {
   DiversityResult,
   Job,
   JobResult,
+  Pops,
   Run,
 } from "../../worker/protocol.ts";
 
 /** The id of the analysis. */
 const ID = "diversity";
+
+/** The page a definition is for, which picks the populations and the
+    words: the old page, popgen.html, or popgen2.html (the spec, "On
+    popgen2.html"). */
+export type DiversityPage = "popgen" | "popgen2";
+
+/** The places a sentence of the module names, by the page. */
+interface PlaceWords {
+  /** The filters of the individuals: "the filters of individuals" on the
+      old page, "the thresholds of the individuals" on popgen2.html. */
+  readonly individualFilters: string;
+  /** Where the filters are: "the Variants step", "the Variants tab". */
+  readonly filtersPlace: string;
+}
+
+/** The places of each page. */
+const PLACES: Readonly<Record<DiversityPage, PlaceWords>> = Object.freeze({
+  popgen: Object.freeze({
+    individualFilters: "the filters of individuals",
+    filtersPlace: "the Variants step",
+  }),
+  popgen2: Object.freeze({
+    individualFilters: "the thresholds of the individuals",
+    filtersPlace: "the Variants tab",
+  }),
+});
+
+/** The name of the one population of every individual by the page: "All
+    individuals" on the old page, its `ONE_POPULATION`, and "Unclassified"
+    on popgen2.html, the name the box Individuals and the PCA give the
+    individuals of no population. */
+export function onePopulationName(page: DiversityPage): string {
+  return page === "popgen" ? ONE_POPULATION : UNCLASSIFIED_POPULATION;
+}
 
 /** What the diversity calls itself and its result in the warnings of the
     populations. */
@@ -226,19 +281,27 @@ const NO_POPULATION = "`pops` names no population";
 
 /**
  * The words of a refusal of popnei, for the error state of the panel of
- * the project `p`, by the start of popnei's message: no population, which
- * the thresholds of the filters of individuals leave; the variants file
- * holds no variant, or, for a VCF read with only the passed variants,
- * none that passed; the filters kept none; a genotype of another ploidy
- * than the one the VCF was read with; a line of the VCF it cannot read, or
- * a gzipped file damaged or cut short; any other. Throws a defect on a
- * project with no variants file, and on a refusal of no population for a
- * project with no column of the populations.
+ * the project `p` on the page `page`, the old page by default, by the
+ * start of popnei's message: no population, which the thresholds of the
+ * filters of individuals leave; on popgen2.html, the refusals of the
+ * variants file itself, in the words of the box Variants,
+ * `fileRefusalText`; the variants file holds no variant, or, for a VCF
+ * read with only the passed variants, none that passed; the filters kept
+ * none; a genotype of another ploidy than the one the VCF was read with;
+ * a line of the VCF it cannot read, or a gzipped file damaged or cut
+ * short; any other. Throws a defect on a project with no variants file,
+ * and on a refusal of no population for a project with no column of the
+ * populations.
  */
-export function refusalText(message: string, p: Project): string {
+export function refusalText(
+  message: string,
+  p: Project,
+  page: DiversityPage = "popgen",
+): string {
   if (p.variants === null) {
     throw defect("refusalText was given a project with no variants file.");
   }
+  const fileName = escaped(p.variants.name);
   if (message.startsWith(NO_POPULATION)) {
     const column = populationsColumn(p);
     if (column === null) {
@@ -246,7 +309,25 @@ export function refusalText(message: string, p: Project): string {
         "the diversity was refused for no population with no column of the populations.",
       );
     }
-    return `The thresholds of the filters of individuals leave none of the individuals of ${escaped(p.variants.name)} that have a population in ${shown(column)}, so no population is left. Loosen the thresholds in the Variants step.`;
+    return page === "popgen"
+      ? `The thresholds of the filters of individuals leave none of the individuals of ${fileName} that have a population in ${shown(column)}, so no population is left. Loosen the thresholds in the Variants step.`
+      : `The thresholds of the individuals leave none of the individuals of ${fileName} that have a population in ${shown(column)}, so no population is left. Loosen the thresholds of the individuals in the Variants tab.`;
+  }
+  if (page === "popgen2") {
+    return (
+      fileRefusalText(message, p, {
+        cannot: "the diversity cannot be calculated",
+        where: IN_BOX_VARIANTS,
+      }) ??
+      refusalWords(message, p, {
+        change: `Change the settings, or open the variants file again${IN_BOX_VARIANTS}`,
+        calculate: "calculate the diversity",
+        nothingLeft: "there is no variant to calculate the diversity over",
+        again: "to run it again",
+        emptyPass: (name) =>
+          `The thresholds of the Variants tab kept none of the variants of ${name}, so there is no variant to calculate the diversity over. Loosen them.`,
+      })
+    );
   }
   return refusalWords(message, p, {
     change: CHANGE_SETTINGS,
@@ -258,44 +339,155 @@ export function refusalText(message: string, p: Project): string {
   });
 }
 
+/** Where the variants file is opened again on popgen2.html, after "open
+    it again". */
+const IN_BOX_VARIANTS = " in the box Variants";
+
 /**
  * The words of the error state of the panel when the statistics of each
  * individual that a Run waited for were refused or failed, the store's
  * error with `ofStatistics`: `statisticsFailedWords` of the statistics,
  * with "the diversity was not run" when its own Run waited for them,
  * `waited`, and "the diversity cannot run" when it did not (stop C 4).
+ * On popgen2.html, whose one pass gives the statistics, a refusal is in
+ * the words of a refusal of that pass, `passRefusalText`.
  */
 export function statisticsFailedText(
   error: AnalysisError,
   p: Project,
   failureText: (failure: Failure) => string,
   waited: boolean,
+  page: DiversityPage = "popgen",
 ): string {
-  return statisticsFailedWords(
-    error,
-    p,
-    failureText,
-    waited ? "the diversity was not run" : "the diversity cannot run",
+  const notDone = waited
+    ? "the diversity was not run"
+    : "the diversity cannot run";
+  return page === "popgen"
+    ? statisticsFailedWords(error, p, failureText, notDone)
+    : statisticsFailedWords(error, p, failureText, notDone, (message, q) =>
+        passRefusalText(message, q, {
+          cannot: "the statistics of each individual cannot be calculated",
+          where: IN_BOX_VARIANTS,
+        }),
+      );
+}
+
+/** The definition of the diversity on the page `page`, as the store
+    knows it: the same key, request and numbers on both pages, with the
+    populations and the words of the page. */
+function definitionOf(page: DiversityPage): AnalysisDef<Job, JobResult> {
+  return Object.freeze({
+    id: ID,
+    app: Object.freeze(["popgen"] as const),
+    defaults: DIVERSITY_DEFAULTS,
+    keyVersion: 3,
+    filtersRead: Object.freeze({ variants: true, individuals: true }),
+    parseOptions,
+    keyInputs: (p: Project) => keyInputs(p, page),
+    needs: (p: Project) => (page === "popgen" ? needs(p) : popgen2Needs(p)),
+    keptNeeds: (p: Project, kept: IndividualsKept) => keptNeeds(p, kept, page),
+    run: (p: Project, c: WorkerClient<Job, JobResult>) => run(p, c, page),
+    warnings: (result: JobResult, p: Project) => warnings(result, p, page),
+    checkNumbers,
+    numCheckNumbers: (p: Project) => numCheckNumbers(p, page),
+    script: (p: Project) => script(p, page),
+  });
+}
+
+/** The diversity of the old page, listed by POPGEN_ANALYSES of
+    src/core/apps.ts. */
+export const diversity: AnalysisDef<Job, JobResult> = definitionOf("popgen");
+
+/** The diversity of the Populations tab of popgen2.html, of the same id,
+    listed by POPGEN2_ANALYSES of src/core/apps.ts after pcaOnPopgen2. */
+export const diversityOnPopgen2: AnalysisDef<Job, JobResult> =
+  definitionOf("popgen2");
+
+/** The page of the definition `def` that a store runs, "popgen" for
+    `diversity` and "popgen2" for `diversityOnPopgen2`, from which the
+    parts of the panel take the populations and the words they show.
+    Throws a defect on the definition of another analysis. */
+export function diversityPageOf(
+  def: AnalysisDef<Job, JobResult>,
+): DiversityPage {
+  if (def === diversity) {
+    return "popgen";
+  }
+  if (def === diversityOnPopgen2) {
+    return "popgen2";
+  }
+  throw defect(
+    `the page of the diversity was asked of the analysis ${def.id}.`,
   );
 }
 
-/** The definition of the diversity, as the store knows it. */
-export const diversity: AnalysisDef<Job, JobResult> = Object.freeze({
-  id: ID,
-  app: Object.freeze(["popgen"] as const),
-  defaults: DIVERSITY_DEFAULTS,
-  keyVersion: 3,
-  filtersRead: Object.freeze({ variants: true, individuals: true }),
-  parseOptions,
-  keyInputs,
-  needs,
-  keptNeeds,
-  run,
-  warnings,
-  checkNumbers,
-  numCheckNumbers,
-  script,
-});
+/** The populations to run on the page `page`. */
+function populationsToRunOf(p: Project, page: DiversityPage): Pops | null {
+  return page === "popgen" ? populationsToRun(p) : popgen2PopulationsToRun(p);
+}
+
+/** The populations to run on the page `page` narrowed to the individuals
+    kept, `kept`. */
+function populationsKeptOf(
+  p: Project,
+  kept: readonly string[] | null,
+  page: DiversityPage,
+): PopulationsKept | null {
+  return page === "popgen"
+    ? populationsKept(p, kept)
+    : popgen2PopulationsKept(p, kept);
+}
+
+/** Whether the page `page` runs every individual as one population. */
+function isOnePopulation(p: Project, page: DiversityPage): boolean {
+  return page === "popgen"
+    ? populationsOf(p) === "all"
+    : popgen2OnePopulationCause(p) !== null;
+}
+
+/**
+ * The line of the populations of the Populations tab of popgen2.html for
+ * the one population of `numIndividuals` individuals: "1 population,
+ * Unclassified: 200 individuals. No individual is assigned to a
+ * population, so the diversity is of every individual kept as one
+ * population.", and a sentence that says why and how to get populations
+ * for a refused file, a column absent and a column of too many values
+ * (docs/specs/steps/popgen2-populations.md, "The populations it runs
+ * on"). Throws a defect when popgen2.html runs populations of a column.
+ */
+export function onePopulationLine(p: Project, numIndividuals: number): string {
+  const cause = popgen2OnePopulationCause(p);
+  if (cause === null) {
+    throw defect(
+      "the line of the one population was asked of populations of a column.",
+    );
+  }
+  const line = `1 population, ${UNCLASSIFIED_POPULATION}: ${counted(numIndividuals, "individual")}. No individual is assigned to a population, so the diversity is of every individual kept as one population.`;
+  const why = onePopulationWhy(p, cause);
+  return why === null ? line : `${line} ${why}`;
+}
+
+/** The sentence of the line of the one population that says why, for
+    the cause `cause`, or `null` for a cause the first sentence says. */
+function onePopulationWhy(
+  p: Project,
+  cause: OnePopulationCause,
+): string | null {
+  const fileName = escaped(p.individuals?.name ?? "");
+  switch (cause.kind) {
+    case "refused":
+      return `${fileName} could not be read, as the box Individuals says; open it again, or another file, there to get populations.`;
+    case "noSuchColumn":
+      return `${fileName} has no column ${shown(cause.column)}; choose a column of the populations in the box Individuals.`;
+    case "tooMany":
+      return `${shown(cause.column)} has ${grouped(cause.numValues)} values, more than the ${String(MAX_LISTED_POPULATIONS)} a column of populations can have; choose another column in the box Individuals to get populations.`;
+    case "noFile":
+    case "noColumn":
+    case "notOffered":
+    case "noneClassified":
+      return null;
+  }
+}
 
 /**
  * Checks the options of the diversity read from a project file and gives
@@ -401,17 +593,18 @@ export function defaultDrawOf(p: Project): number | null {
 
 /**
  * What the key holds beyond the load and the filters: the populations of
- * the table and the options, with the draw only when it was typed. The
+ * the table, `populationsOf` on the old page and `popgen2Populations` on
+ * popgen2.html, and the options, with the draw only when it was typed. The
  * default draw is left out, and not written `null`, since the ploidy of
  * the load and the minimum beside it fix it, and a project file saved by
  * stage 4, whose options had no draw, then has the fingerprint of its
  * settings that stage 5 makes, so that its check numbers are compared.
  * Reads nothing of `p.variants`.
  */
-function keyInputs(p: Project): JsonObject {
+function keyInputs(p: Project, page: DiversityPage): JsonObject {
   const options = diversityOptions(p);
   return {
-    pops: populationsOf(p),
+    pops: page === "popgen" ? populationsOf(p) : popgen2Populations(p),
     options: {
       minNumIndividuals: options.minNumIndividuals,
       polyThreshold: options.polyThreshold,
@@ -462,16 +655,54 @@ function needs(p: Project): string | null {
     p.variants.read.kind === "read" &&
     kept.byLists.length < p.variants.read.individuals.length;
   return listed
-    ? drawNeeds(p, kept.byLists, {
-        individuals: "the lists of individuals keep",
-        population: " the lists of individuals keep",
-        orElse: ", or change the lists in the Variants step",
-      })
-    : drawNeeds(p, kept.byLists, {
-        individuals: `of ${escaped(p.variants.name)}`,
-        population: "",
-        orElse: "",
-      });
+    ? drawNeeds(
+        p,
+        kept.byLists,
+        {
+          individuals: "the lists of individuals keep",
+          population: " the lists of individuals keep",
+          orElse: ", or change the lists in the Variants step",
+        },
+        "popgen",
+      )
+    : drawNeeds(p, kept.byLists, unfilteredWords(p.variants.name), "popgen");
+}
+
+/** The words of a lock of the draw over every individual of the
+    variants file `variantsName`. */
+function unfilteredWords(variantsName: string): DrawWords {
+  return {
+    individuals: `of ${escaped(variantsName)}`,
+    population: "",
+    orElse: "",
+  };
+}
+
+/** The first reason the diversity of popgen2.html cannot run beyond
+    those every analysis shares, or `null` (the spec, "On popgen2.html"):
+    the individuals file being read, and last a draw larger than the
+    chromosomes of the largest population. An individual of the variants
+    file not in the individuals file, a refused file and a column that
+    gives no population do not lock: their individuals are unclassified.
+    Throws a defect on a project of association. */
+function popgen2Needs(p: Project): string | null {
+  const individuals = p.individuals;
+  if (individuals?.read.kind === "pending") {
+    return `The diversity waits for ${escaped(individuals.name)} to be read.`;
+  }
+  if (p.grouping.kind === "roles") {
+    throw defect("the diversity was given a project of association.");
+  }
+  const kept = individualsKept(p, null);
+  if (kept === null || p.variants === null) {
+    return null;
+  }
+  return drawNeeds(
+    p,
+    kept.byLists,
+    unfilteredWords(p.variants.name),
+    "popgen2",
+  );
 }
 
 /**
@@ -484,8 +715,15 @@ function needs(p: Project): string | null {
  * keep and to remove keep, which `needs` counts. `null` while the list
  * is not known.
  */
-function keptNeeds(p: Project, kept: IndividualsKept): string | null {
-  const noPopulation = populationsKeptNeeds(p, kept);
+function keptNeeds(
+  p: Project,
+  kept: IndividualsKept,
+  page: DiversityPage,
+): string | null {
+  const noPopulation =
+    page === "popgen"
+      ? populationsKeptNeeds(p, kept)
+      : popgen2PopulationsKeptNeeds(p, kept);
   if (noPopulation !== null) {
     return noPopulation;
   }
@@ -493,11 +731,43 @@ function keptNeeds(p: Project, kept: IndividualsKept): string | null {
   if (list === null || list.length >= kept.byLists.length) {
     return null;
   }
-  return drawNeeds(p, list, {
-    individuals: "the filters of individuals keep",
-    population: " the filters of individuals keep",
-    orElse: ", or loosen the filters of individuals in the Variants step",
-  });
+  const { individualFilters, filtersPlace } = PLACES[page];
+  return drawNeeds(
+    p,
+    list,
+    {
+      individuals: `${individualFilters} keep`,
+      population: ` ${individualFilters} keep`,
+      orElse: `, or loosen ${individualFilters} in ${filtersPlace}`,
+    },
+    page,
+  );
+}
+
+/** `populationsKeptNeeds` on popgen2.html: the individuals kept, once
+    known, leave none of the populations of the column, whose individuals
+    are then all unclassified, in the words of the Variants tab; `null`
+    for the one population, which takes every individual kept. */
+function popgen2PopulationsKeptNeeds(
+  p: Project,
+  kept: IndividualsKept,
+): string | null {
+  const list = kept.list.kind === "known" ? kept.list.individuals : null;
+  const column = populationsColumnOf(p);
+  if (list === null || column === null) {
+    return null;
+  }
+  const left = popgen2PopulationsKept(p, list);
+  if (left === null || left.pops.length > 0 || left.emptied.length === 0) {
+    return null;
+  }
+  return allEmptiedText(
+    list.length,
+    column,
+    left.emptied,
+    (one) =>
+      `Loosen the thresholds of the individuals in the Variants tab to keep ${one ? "it" : "them"}.`,
+  );
 }
 
 /** The words of a lock of the draw that say whose chromosomes it
@@ -526,19 +796,22 @@ interface DrawWords {
  * `null` when no population of the request made of them has the minimum
  * of individuals, since `calcPopDiversity` is then not called, and when
  * the populations hold fewer than 2 chromosomes between them,
- * `holdNoDraw`, when it is not called either. For the one population,
- * and when the largest population holds fewer than 2 chromosomes, where
- * "at most 1" is a number the field refuses, the lock counts the
- * individuals, and its words name them and not a population.
+ * `holdNoDraw`, when it is not called either. For the one population of
+ * the old page, and when the largest population holds fewer than 2
+ * chromosomes, where "at most 1" is a number the field refuses, the lock
+ * counts the individuals, and its words name them and not a population;
+ * the one population of popgen2.html is named, "the one population,
+ * Unclassified". The populations are those of the page `page`.
  */
 function drawNeeds(
   p: Project,
   individuals: readonly string[],
   words: DrawWords,
+  page: DiversityPage,
 ): string | null {
   const read = p.variants?.read;
   const draw = drawOf(p);
-  const left = populationsKept(p, individuals);
+  const left = populationsKeptOf(p, individuals, page);
   if (read?.kind !== "read" || draw === null || left === null) {
     return null;
   }
@@ -555,8 +828,9 @@ function drawNeeds(
   const largest = left.pops.find(([, members]) => members.length === size);
   const start = `The rarefaction draws ${grouped(draw)} chromosomes, and`;
   const ploidy = `at a ploidy of ${String(read.ploidy)}`;
+  const onePopulation = isOnePopulation(p, page);
   if (
-    populationsOf(p) === "all" ||
+    (onePopulation && page === "popgen") ||
     largest === undefined ||
     size * read.ploidy < MIN_DRAW
   ) {
@@ -576,7 +850,8 @@ function drawNeeds(
   }
   const its =
     size === 1 ? "its one individual" : `its ${grouped(size)} individuals`;
-  return `${start} the largest population${words.population}, ${namesOf([largest[0]])}, holds ${grouped(chromosomes)}, those of ${its} ${ploidy}. ${atMost(chromosomes, words)}`;
+  const which = onePopulation ? "the one population" : "the largest population";
+  return `${start} ${which}${words.population}, ${namesOf([largest[0]])}, holds ${grouped(chromosomes)}, those of ${its} ${ploidy}. ${atMost(chromosomes, words)}`;
 }
 
 /** What a lock of the draw tells the user to do: "Type a number of
@@ -592,8 +867,12 @@ function atMost(chromosomes: number, words: DrawWords): string {
     runner, or none when the populations hold fewer than 2 chromosomes
     between them, `holdNoDraw`. Throws a defect when the variants file is not read or there
     are no populations to run, which `needs` rules out. */
-function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
-  const kept = populationsKept(p, c.individuals);
+function run(
+  p: Project,
+  c: WorkerClient<Job, JobResult>,
+  page: DiversityPage,
+): Run<JobResult> {
+  const kept = populationsKeptOf(p, c.individuals, page);
   if (p.variants === null || kept === null) {
     throw defect("the diversity was run with no populations to run.");
   }
@@ -643,7 +922,11 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
  * `calcPopDiversity` are found as `run` chose them, from
  * `numIndividuals`, the minimum and the ploidy.
  */
-function warnings(result: JobResult, p: Project): readonly Warning[] {
+function warnings(
+  result: JobResult,
+  p: Project,
+  page: DiversityPage,
+): readonly Warning[] {
   const r = diversityResultOf(result);
   const read = p.variants?.read;
   if (p.variants === null || read?.kind !== "read") {
@@ -652,8 +935,8 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   const min = diversityOptions(p).minNumIndividuals;
   const found: Warning[] = [];
   const rows = diversityRows(r);
-  const toRun = populationsToRun(p) ?? [];
-  const onePopulation = populationsOf(p) === "all";
+  const toRun = populationsToRunOf(p, page) ?? [];
+  const onePopulation = isOnePopulation(p, page);
   const tooFew = rows.filter((row) => row.individuals < min);
   if (tooFew.length > 0) {
     // A population the filters of individuals took individuals from has
@@ -667,8 +950,8 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
     found.push({
       code: "tooFewIndividuals",
       text: onePopulation
-        ? tooFewOfOneText(tooFew, min, filtered)
-        : tooFewText(tooFew, min, filtered),
+        ? tooFewOfOneText(tooFew, min, filtered, page)
+        : tooFewText(tooFew, min, filtered, p, page),
     });
   }
   const counts = rows.map((row, i) => ({
@@ -686,7 +969,21 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
       text: withoutValueText(withoutValue, r.passStats.numVars, min),
     });
   }
-  found.push(...populationWarnings(r.pops, p, DIVERSITY_WORDS));
+  if (page === "popgen") {
+    found.push(...populationWarnings(r.pops, p, DIVERSITY_WORDS));
+  } else {
+    // An unclassified individual is no fault on popgen2.html, whose tab
+    // says how many are left out.
+    const notInResult = onePopulation
+      ? null
+      : populationNotInResult(
+          r.pops,
+          toRun,
+          escaped(p.variants.name),
+          DIVERSITY_WORDS.notIn,
+        );
+    found.push(...(notInResult === null ? [] : [notInResult]));
+  }
   const notCalled =
     rows.some((row) => row.individuals >= min) &&
     holdNoDraw(
@@ -699,7 +996,7 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
       text: `The diversity was calculated over one individual of ploidy 1, which holds 1 chromosome, and the rarefaction and the spectrum draw ${String(MIN_DRAW)} or more. So the alleles per variant, the private alleles, their rarefied values and the spectrum, which are calculated together, have no value.`,
     });
   } else {
-    found.push(...privateAllelesWarnings(r, rows, min, onePopulation));
+    found.push(...privateAllelesWarnings(r, rows, min, p, page));
     const notInDraw = counts.filter(
       ({ row, withValue, inDraw }) =>
         row.individuals >= min && inDraw < withValue,
@@ -724,14 +1021,17 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
  * The warnings of the private alleles, from stage 5, in this order:
  * counted without the populations of fewer than `min` individuals, which
  * `run` left out of `calcPopDiversity`; not counted, with one population
- * given to it, in the words of the one population when `onePopulation`;
+ * given to it, in the words of the one population of the page `page`
+ * when every individual is one population, and, on popgen2.html, in the
+ * words of one classified population when the result has no other;
  * counted over fewer variants than the filters kept.
  */
 function privateAllelesWarnings(
   r: DiversityResult,
   rows: readonly DiversityRow[],
   min: number,
-  onePopulation: boolean,
+  p: Project,
+  page: DiversityPage,
 ): readonly Warning[] {
   const called = rows.filter((row) => row.individuals >= min);
   const tooFew = rows.filter((row) => row.individuals < min);
@@ -746,9 +1046,11 @@ function privateAllelesWarnings(
   if (called.length === 1 && only !== undefined) {
     found.push({
       code: "privateAllelesNeedTwoPopulations",
-      text: onePopulation
-        ? "With every individual in one population, no allele can be private, found in this population and in no other, so the table has no private alleles. Choose a column that defines the populations in the Individuals step to count them."
-        : `Only ${namesOf([only.population])} has ${grouped(min)} individuals or more, and private alleles are counted among such populations, so the table has none: an allele is private when one population has it and no other does.`,
+      text: isOnePopulation(p, page)
+        ? onePopulationPrivateText(p, page)
+        : page === "popgen2" && rows.length === 1
+          ? onlyClassifiedText(p, only.population)
+          : `Only ${namesOf([only.population])} has ${grouped(min)} individuals or more, and private alleles are counted among such populations, so the table has none: an allele is private when one population has it and no other does.`,
     });
   }
   const everyPop = r.numVarsEveryPop;
@@ -765,17 +1067,66 @@ function privateAllelesWarnings(
   return found;
 }
 
-/** The text of `tooFewIndividuals`, for its populations; `filtered` when
-    the filters of individuals took individuals from one of them, which
-    the text then offers to loosen. */
+/** The text of `privateAllelesNeedTwoPopulations` for the one population
+    on the page `page`: no allele can be private, and how to get
+    populations, on popgen2.html by why there is one population. */
+function onePopulationPrivateText(p: Project, page: DiversityPage): string {
+  const first =
+    "With every individual in one population, no allele can be private, found in this population and in no other, so the table has no private alleles.";
+  if (page === "popgen") {
+    return `${first} Choose a column that defines the populations in the Individuals step to count them.`;
+  }
+  const cause = popgen2OnePopulationCause(p);
+  if (cause === null) {
+    throw defect("the one population has no cause on popgen2.html.");
+  }
+  switch (cause.kind) {
+    case "noFile":
+    case "refused":
+      return `${first} Open an individuals file that assigns the individuals to populations in the box Individuals to count them.`;
+    case "noColumn":
+    case "noSuchColumn":
+    case "notOffered":
+    case "tooMany":
+      return `${first} Choose a column of the populations in the box Individuals to count them.`;
+    case "noneClassified": {
+      const column = shown(cause.column);
+      return `${first} ${column} gives none of the individuals of ${escaped(p.variants?.name ?? "")} a population. Choose another column of the populations in the box Individuals, or fill in ${column} in ${escaped(p.individuals?.name ?? "")} and open it again, to count them.`;
+    }
+  }
+}
+
+/** The text of `privateAllelesNeedTwoPopulations` on popgen2.html when
+    `population` is the one population of the column in the result, with
+    a last sentence when the variants file has unclassified individuals,
+    which the runner left out. */
+function onlyClassifiedText(p: Project, population: string): string {
+  const column = populationsColumnOf(p) ?? "";
+  const text = `Only ${namesOf([population])} has a population in ${shown(column)} among the individuals kept, and an allele is private when one population has it and no other does, so the table has no private alleles.`;
+  const unclassified =
+    popgen2PopulationsKept(p, null)?.unclassifiedLeftOut ?? 0;
+  return unclassified > 0
+    ? `${text} The unclassified individuals are not a population to compare it with.`
+    : text;
+}
+
+/** The text of `tooFewIndividuals`, for its populations, on the page
+    `page`; `filtered` when the filters of individuals took individuals
+    from one of them, which the text then offers to loosen. */
 function tooFewText(
   rows: readonly DiversityRow[],
   min: number,
   filtered: boolean,
+  p: Project,
+  page: DiversityPage,
 ): string {
   const rule = `a variant has a value in a population only when at least ${grouped(min)} of its individuals have a called genotype there`;
   const names = namesOf(rows.map((row) => row.population));
-  const end = `in the metadata file, ${LOWER_MINIMUM}${filtered ? LOOSEN_FILTERS : "."}`;
+  const file =
+    page === "popgen"
+      ? "the metadata file"
+      : escaped(p.individuals?.name ?? "");
+  const end = `in ${file}, ${LOWER_MINIMUM}${filtered ? loosenFilters(page) : "."}`;
   const [first] = rows;
   if (rows.length === 1 && first !== undefined) {
     return `Population ${names} has ${counted(first.individuals, "individual")}, and ${rule}, so ${names} has no values. To have them, merge it with another population ${end}`;
@@ -792,25 +1143,36 @@ function tooFewText(
 const LOWER_MINIMUM =
   "or lower the minimum number of individuals in the options of the diversity";
 
-/** The end of `tooFewIndividuals` when the filters of individuals took
-    individuals from a population it names. */
-const LOOSEN_FILTERS =
-  ", or loosen the filters of individuals in the Variants step.";
+/** The end of `tooFewIndividuals` on the page `page` when the filters
+    of individuals took individuals from a population it names. */
+function loosenFilters(page: DiversityPage): string {
+  const { individualFilters, filtersPlace } = PLACES[page];
+  return `, or loosen ${individualFilters} in ${filtersPlace}.`;
+}
 
 /** The text of `tooFewIndividuals` for the one population, `rows` its
-    one row, which has no metadata file to merge it in; `filtered` when
-    the filters of individuals took individuals from it. */
+    one row, which has no metadata file to merge it in, on the page
+    `page`, which on popgen2.html calls it the unclassified individuals;
+    `filtered` when the filters of individuals took individuals from
+    it. */
 function tooFewOfOneText(
   rows: readonly DiversityRow[],
   min: number,
   filtered: boolean,
+  page: DiversityPage,
 ): string {
   const [row] = rows;
   if (row === undefined || rows.length !== 1) {
     throw defect("the one population has another number of rows than one.");
   }
-  const end = `To have them, lower the minimum number of individuals in the options of the diversity${filtered ? LOOSEN_FILTERS : "."}`;
-  return `${escaped(row.population)}, the one population, has ${counted(row.individuals, "individual")}, and a variant has a value in a population only when at least ${grouped(min)} of its individuals have a called genotype there, so it has no values. ${end}`;
+  const end = `To have them, lower the minimum number of individuals in the options of the diversity${filtered ? loosenFilters(page) : "."}`;
+  const rule = `a variant has a value in a population only when at least ${grouped(min)} of its individuals have a called genotype there`;
+  if (page === "popgen") {
+    return `${escaped(row.population)}, the one population, has ${counted(row.individuals, "individual")}, and ${rule}, so it has no values. ${end}`;
+  }
+  return row.individuals === 1
+    ? `The unclassified individual, taken as one population since it has no population, is 1, and ${rule}, so it has no values. ${end}`
+    : `The unclassified individuals, taken as one population since none has a population, are ${grouped(row.individuals)}, and ${rule}, so they have no values. ${end}`;
 }
 
 /** The text of `privateAllelesWithoutSmall`: the private alleles of the
@@ -972,12 +1334,22 @@ function checkNumbers(result: JobResult): readonly (number | null)[] {
     `null` when `populationsToRun` is, when the project holds a threshold
     on the individuals, whose list needs the statistics of each
     individual, and when a list is one popnei would refuse. */
-function numCheckNumbers(p: Project): number | null {
-  if (populationsToRun(p) === null || hasIndividualThreshold(p)) {
+function numCheckNumbers(p: Project, page: DiversityPage): number | null {
+  if (populationsToRunOf(p, page) === null || hasIndividualThreshold(p)) {
     return null;
   }
-  const left = populationsByLists(p);
+  const left =
+    page === "popgen" ? populationsByLists(p) : popgen2PopulationsByLists(p);
   return left === null ? null : 1 + NUMBERS_PER_POPULATION * left.length;
+}
+
+/** The populations of popgen2.html that the lists of individuals to keep
+    and to remove leave, as `populationsByLists`. */
+function popgen2PopulationsByLists(p: Project): Pops | null {
+  const kept = individualsKept(p, null);
+  return kept === null
+    ? null
+    : (popgen2PopulationsKept(p, kept.byLists)?.pops ?? null);
 }
 
 /** The check numbers of each population: its expected heterozygosity, its
@@ -995,7 +1367,7 @@ const NUMBERS_PER_POPULATION = 3;
  * the populations or no draw, since it is asked only of an analysis that
  * has run.
  */
-function script(p: Project): string {
+function script(p: Project, page: DiversityPage): string {
   const options = diversityOptions(p);
   const min = String(options.minNumIndividuals);
   const drawn = drawOf(p);
@@ -1004,7 +1376,7 @@ function script(p: Project): string {
   }
   const draw = String(drawn);
   return [
-    ...scriptPops(p),
+    ...scriptPops(p, page),
     "per_var = popnei.calc_per_var_distribs(",
     `    variants, pops=pops, min_num_individuals=${min}, poly_threshold=${String(options.polyThreshold)}`,
     ")",
@@ -1061,15 +1433,16 @@ function spectrumScript(draw: string): readonly string[] {
 
 /** The lines of the script that make the dict of the populations: from
     the column of the metadata file, narrowed to the individuals of the
-    variants file; or, for the one population, the individuals of the
-    variants, which are those the filters of individuals keep once
-    `filter_individuals` is put on `variants`, so no narrowing follows.
-    Throws a defect on a project with no populations. */
-function scriptPops(p: Project): readonly string[] {
-  if (populationsOf(p) === "all") {
+    variants file; or, for the one population, named as on the page
+    `page`, the individuals of the variants, which are those the filters
+    of individuals keep once `filter_individuals` is put on `variants`,
+    so no narrowing follows. Throws a defect on a project with no
+    populations. */
+function scriptPops(p: Project, page: DiversityPage): readonly string[] {
+  if (isOnePopulation(p, page)) {
     return [
       "# The diversity of every individual, as one population",
-      `pops = {${JSON.stringify(ONE_POPULATION)}: list(variants.individuals)}`,
+      `pops = {${JSON.stringify(onePopulationName(page))}: list(variants.individuals)}`,
     ];
   }
   const column = populationsColumn(p);

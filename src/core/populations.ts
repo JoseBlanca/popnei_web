@@ -41,11 +41,13 @@ import type { IndividualsTable, LeftOut, Pops } from "../worker/protocol.ts";
     individuals kept have no population in the column `column`, which
     leaves every population, `emptied`, empty: "The 34 individuals kept
     have no population in popcat, so none of the 2 populations has an
-    individual left. Loosen …", with one population by its name. */
+    individual left. Loosen …", with one population by its name, and what
+    to do in the words of `loosen`, the old page's by default. */
 export function allEmptiedText(
   numKept: number,
   column: string,
   emptied: readonly string[],
+  loosen: (one: boolean) => string = loosenText,
 ): string {
   const kept =
     numKept === 1
@@ -54,8 +56,8 @@ export function allEmptiedText(
   const [only] = emptied;
   const left =
     emptied.length === 1 && only !== undefined
-      ? `${escaped(only)} has no individual left. ${loosenText(true)}`
-      : `none of the ${counted(emptied.length, "population")} has an individual left. ${loosenText(false)}`;
+      ? `${escaped(only)} has no individual left. ${loosen(true)}`
+      : `none of the ${counted(emptied.length, "population")} has an individual left. ${loosen(false)}`;
   return `${kept} no population in ${shown(column)}, so ${left}`;
 }
 

@@ -5,8 +5,12 @@ import {
   diversity,
   diversityCsv,
   diversityOptions,
+  diversityOnPopgen2,
+  diversityPageOf,
   diversityRows,
   drawOf,
+  onePopulationLine,
+  onePopulationName,
   refusalText,
   statisticsFailedText,
 } from "./diversity.ts";
@@ -3123,5 +3127,468 @@ describe("SF2 D4 the diversity reads the filters that apply to the file", () => 
     diversity.run(keeping, client);
     expect(jobs[2]?.filters[0]).toEqual({ kind: "passed" });
     expect(keyOfDiversity(keeping)).not.toBe(keyOfDiversity(project()));
+  });
+});
+
+// popgen2.html (the spec, "On popgen2.html").
+
+/** The `keptNeeds` of the diversity of popgen2.html, which it has. */
+function keptNeeds2(p: Project, kept: IndividualsKept): string | null {
+  if (diversityOnPopgen2.keptNeeds === undefined) {
+    throw new Error("the diversity of popgen2.html has a keptNeeds");
+  }
+  return diversityOnPopgen2.keptNeeds(p, kept);
+}
+
+/** The worked example with "None" chosen in the list of the column. */
+function noneProject(): Project {
+  return project({ column: null });
+}
+
+/** The worked example with the individuals file refused by the
+    reader. */
+function refusedProject(): Project {
+  const p = project();
+  if (p.individuals === null) {
+    throw new Error("the project of the test has an individuals file");
+  }
+  return deepFreeze<Project>({
+    ...p,
+    individuals: {
+      ...p.individuals,
+      read: { kind: "failed", error: { kind: "empty" }, format: "text" },
+    },
+  });
+}
+
+/** A project whose column pop has 21 values, one per individual of the
+    variants file, s000 to s020. */
+function tooManyProject(): Project {
+  const names = individualsNamed("s", 21);
+  return project({
+    table: tableOf(
+      names,
+      names.map((_, i) => `v${String(i)}`),
+    ),
+    individuals: names,
+  });
+}
+
+/** A project whose column pop gives none of the individuals of the
+    variants file, i1 to i4, a population: only i9 has one. */
+function noneClassifiedProject(): Project {
+  return project({
+    table: tableOf(
+      ["i1", "i2", "i3", "i4", "i9"],
+      [null, null, null, null, "A"],
+    ),
+  });
+}
+
+/** The jobs `run` of the definition `def` sends for `p` with the
+    individuals kept `individuals`. */
+function sentPops(
+  def: typeof diversity,
+  p: Project,
+  individuals: readonly string[] | null = null,
+): readonly DiversityJob["pops"][] {
+  const { client, jobs } = keptClient(individuals);
+  def.run(p, client);
+  return jobs.map((job) => job.pops);
+}
+
+/** The first sentence of the warning of the private alleles of the one
+    population on popgen2.html. */
+const NO_PRIVATE_ONE =
+  "With every individual in one population, no allele can be private, found in this population and in no other, so the table has no private alleles.";
+
+/** The one population with no individuals file, of 4 individuals, run
+    at a minimum of 2, and the warnings of its result. */
+function oneResult(): DiversityResult {
+  return result({ pops: ["Unclassified"], numIndividuals: [4], numVars: 1000 });
+}
+
+describe("PT1 D1 the definition of popgen2.html", () => {
+  test("diversityPageOf gives each definition's page, both of the id diversity and key version 3; onePopulationName by the page", () => {
+    expect(diversityPageOf(diversity)).toBe("popgen");
+    expect(diversityPageOf(diversityOnPopgen2)).toBe("popgen2");
+    expect(diversityOnPopgen2.id).toBe("diversity");
+    expect(diversityOnPopgen2.keyVersion).toBe(3);
+    expect(() => diversityPageOf(POPGEN_ANALYSES[0] ?? diversity)).toThrow(
+      "popnei_web defect",
+    );
+    expect(onePopulationName("popgen")).toBe("All individuals");
+    expect(onePopulationName("popgen2")).toBe("Unclassified");
+  });
+
+  test("run sends the worked example as the old page does, i4, unclassified, left out with no lock", () => {
+    const p = project();
+    expect(diversityOnPopgen2.needs(p)).toBeNull();
+    expect(sentPops(diversityOnPopgen2, p)).toEqual([
+      [
+        ["A", ["i1", "i3"]],
+        ["B", ["i2"]],
+      ],
+    ]);
+    expect(sentPops(diversityOnPopgen2, p)).toEqual(sentPops(diversity, p));
+  });
+
+  test("an individual i6 of the variants file not in the table: no lock, and run sends the same populations", () => {
+    const p = project({ individuals: ["i1", "i2", "i3", "i4", "i6"] });
+    expect(diversity.needs(p)).not.toBeNull();
+    expect(diversityOnPopgen2.needs(p)).toBeNull();
+    expect(sentPops(diversityOnPopgen2, p)).toEqual([
+      [
+        ["A", ["i1", "i3"]],
+        ["B", ["i2"]],
+      ],
+    ]);
+  });
+
+  test("a column that classifies none of the individuals of the variants file: no lock, run sends Unclassified of every individual kept", () => {
+    const p = noneClassifiedProject();
+    expect(diversityOnPopgen2.needs(p)).toBeNull();
+    expect(sentPops(diversityOnPopgen2, p)).toEqual([
+      [["Unclassified", ["i1", "i2", "i3", "i4"]]],
+    ]);
+    expect(sentPops(diversityOnPopgen2, p, ["i2", "i4"])).toEqual([
+      [["Unclassified", ["i2", "i4"]]],
+    ]);
+  });
+
+  test("None and no individuals file send Unclassified, narrowed to the individuals kept; the old page still sends All individuals", () => {
+    const noFile = deepFreeze<Project>({ ...project(), individuals: null });
+    for (const p of [noneProject(), noFile]) {
+      expect(diversityOnPopgen2.needs(p)).toBeNull();
+      expect(sentPops(diversityOnPopgen2, p)).toEqual([
+        [["Unclassified", ["i1", "i2", "i3", "i4"]]],
+      ]);
+    }
+    expect(sentPops(diversityOnPopgen2, noneProject(), ["i1", "i3"])).toEqual([
+      [["Unclassified", ["i1", "i3"]]],
+    ]);
+    expect(sentPops(diversity, noFile)).toEqual([
+      [["All individuals", ["i1", "i2", "i3", "i4"]]],
+    ]);
+  });
+
+  test("needs: the individuals file being read locks with the words of the tab; a missing individual, a refused file and a column of 21 values do not lock", () => {
+    const p = project();
+    if (p.individuals === null) {
+      throw new Error("the project of the test has an individuals file");
+    }
+    const reading = deepFreeze<Project>({
+      ...p,
+      individuals: { ...p.individuals, read: { kind: "pending" } },
+    });
+    expect(diversityOnPopgen2.needs(reading)).toBe(
+      "The diversity waits for pops.csv to be read.",
+    );
+    expect(
+      diversityOnPopgen2.needs(
+        project({ individuals: ["i1", "i2", "i3", "i4", "i6"] }),
+      ),
+    ).toBeNull();
+    expect(diversityOnPopgen2.needs(refusedProject())).toBeNull();
+    expect(diversityOnPopgen2.needs(tooManyProject())).toBeNull();
+    expect(
+      diversityOnPopgen2.needs(
+        deepFreeze<Project>({
+          ...project(),
+          grouping: { kind: "populations", column: "country" },
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  test("needs: the draw larger than the chromosomes of the largest population locks with the old words, which name no list", () => {
+    expect(diversityOnPopgen2.needs(withDiversity(project(), 2, 5))).toBe(
+      "The rarefaction draws 5 chromosomes, and the largest population, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity.",
+    );
+    expect(diversityOnPopgen2.needs(withDiversity(project(), 2, 4))).toBeNull();
+  });
+
+  test("needs: with None, a draw larger than the chromosomes of every individual names Unclassified", () => {
+    expect(diversityOnPopgen2.needs(withDiversity(noneProject(), 2, 9))).toBe(
+      "The rarefaction draws 9 chromosomes, and the one population, Unclassified, holds 8, those of its 4 individuals at a ploidy of 2. Type a number of chromosomes of at most 8 in the options of the diversity.",
+    );
+    expect(
+      diversityOnPopgen2.needs(withDiversity(noneProject(), 2, 8)),
+    ).toBeNull();
+  });
+
+  test("keptNeeds: the thresholds keep only unclassified individuals while the column classifies some, the lock of populationsKeptNeeds in the words of the Variants tab", () => {
+    const kept: IndividualsKept = {
+      list: { kind: "known", individuals: ["i4"] },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    };
+    expect(keptNeeds2(project(), kept)).toBe(
+      "The one individual kept has no population in pop, so none of the 2 populations has an individual left. Loosen the thresholds of the individuals in the Variants tab to keep them.",
+    );
+    expect(keptNeeds(project(), kept)).toBe(
+      "The one individual kept has no population in pop, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.",
+    );
+  });
+
+  test("keptNeeds: the draw over the individuals the thresholds keep, in the words of the Variants tab, and of the one population", () => {
+    const p = withDiversity(
+      filteredProject([{ kind: "missing_data", maxAllowedMissingRate: 0.2 }]),
+      2,
+      5,
+    );
+    const kept: IndividualsKept = {
+      list: { kind: "known", individuals: ["i1", "i3"] },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    };
+    expect(keptNeeds2(p, kept)).toBe(
+      "The rarefaction draws 5 chromosomes, and the largest population the thresholds of the individuals keep, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity, or loosen the thresholds of the individuals in the Variants tab.",
+    );
+    const none = withDiversity(
+      deepFreeze<Project>({
+        ...p,
+        grouping: { kind: "populations", column: null },
+      }),
+      1,
+      3,
+    );
+    const one: IndividualsKept = {
+      ...kept,
+      list: { kind: "known", individuals: ["i1"] },
+    };
+    expect(keptNeeds2(none, one)).toBe(
+      "The rarefaction draws 3 chromosomes, and the one population the thresholds of the individuals keep, Unclassified, holds 2, those of its one individual at a ploidy of 2. Type a number of chromosomes of at most 2 in the options of the diversity, or loosen the thresholds of the individuals in the Variants tab.",
+    );
+  });
+
+  test("tooFewIndividuals of Unclassified, 12 individuals at the minimum of 20, whole, and with the thresholds that removed some", () => {
+    const names = individualsNamed("s", 12);
+    const p = deepFreeze<Project>({
+      ...project({ individuals: names }),
+      individuals: null,
+    });
+    const r = result({
+      pops: ["Unclassified"],
+      numIndividuals: [12],
+      numVarsWithValue: [0],
+      numVars: 1000,
+    });
+    expect(diversityOnPopgen2.warnings(r, p)).toEqual([
+      {
+        code: "tooFewIndividuals",
+        text: "The unclassified individuals, taken as one population since none has a population, are 12, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, lower the minimum number of individuals in the options of the diversity.",
+      },
+    ]);
+    const fourteen = deepFreeze<Project>({
+      ...project({ individuals: individualsNamed("s", 14) }),
+      individuals: null,
+    });
+    expect(diversityOnPopgen2.warnings(r, fourteen)).toEqual([
+      {
+        code: "tooFewIndividuals",
+        text: "The unclassified individuals, taken as one population since none has a population, are 12, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, lower the minimum number of individuals in the options of the diversity, or loosen the thresholds of the individuals in the Variants tab.",
+      },
+    ]);
+  });
+
+  test("privateAllelesNeedTwoPopulations of the one population: with no individuals file, with None, and with a column that classifies nobody", () => {
+    const noFile = withDiversity(
+      deepFreeze<Project>({ ...project(), individuals: null }),
+      2,
+      null,
+    );
+    expect(diversityOnPopgen2.warnings(oneResult(), noFile)).toEqual([
+      {
+        code: "privateAllelesNeedTwoPopulations",
+        text: `${NO_PRIVATE_ONE} Open an individuals file that assigns the individuals to populations in the box Individuals to count them.`,
+      },
+    ]);
+    expect(
+      diversityOnPopgen2.warnings(
+        oneResult(),
+        withDiversity(noneProject(), 2, null),
+      ),
+    ).toEqual([
+      {
+        code: "privateAllelesNeedTwoPopulations",
+        text: `${NO_PRIVATE_ONE} Choose a column of the populations in the box Individuals to count them.`,
+      },
+    ]);
+    expect(
+      diversityOnPopgen2.warnings(
+        oneResult(),
+        withDiversity(noneClassifiedProject(), 2, null),
+      ),
+    ).toEqual([
+      {
+        code: "privateAllelesNeedTwoPopulations",
+        text: `${NO_PRIVATE_ONE} pop gives none of the individuals of panel.nei a population. Choose another column of the populations in the box Individuals, or fill in pop in pops.csv and open it again, to count them.`,
+      },
+    ]);
+  });
+
+  test("privateAllelesNeedTwoPopulations of one classified population, with unclassified individuals left out and with none", () => {
+    const r = result({ pops: ["A"], numIndividuals: [2], numVars: 1000 });
+    const withUnclassified = withDiversity(
+      project({
+        table: tableOf(["i1", "i2", "i3", "i4"], ["A", null, "A", null]),
+      }),
+      2,
+      null,
+    );
+    const only =
+      "Only A has a population in pop among the individuals kept, and an allele is private when one population has it and no other does, so the table has no private alleles.";
+    expect(diversityOnPopgen2.warnings(r, withUnclassified)).toEqual([
+      {
+        code: "privateAllelesNeedTwoPopulations",
+        text: `${only} The unclassified individuals are not a population to compare it with.`,
+      },
+    ]);
+    const allA = withDiversity(
+      project({
+        table: tableOf(["i1", "i2", "i3", "i4"], ["A", "A", "A", "A"]),
+      }),
+      2,
+      null,
+    );
+    expect(diversityOnPopgen2.warnings(r, allA)).toEqual([
+      { code: "privateAllelesNeedTwoPopulations", text: only },
+    ]);
+  });
+
+  test("the warnings of the worked example name pops.csv, raise no individualsWithoutPopulation, and keep populationNotInResult", () => {
+    const p = project();
+    const r = result({
+      pops: ["A", "B"],
+      numIndividuals: [2, 1],
+      numVarsWithValue: [0, 0],
+      numVars: 1000,
+    });
+    expect(diversityOnPopgen2.warnings(r, p)).toEqual([
+      {
+        code: "tooFewIndividuals",
+        text: "Populations A and B have fewer than 20 individuals, 2 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in pops.csv, or lower the minimum number of individuals in the options of the diversity.",
+      },
+    ]);
+    const aAlone = result({
+      pops: ["A"],
+      numIndividuals: [2],
+      numVarsWithValue: [0],
+      numVars: 1000,
+    });
+    expect(diversityOnPopgen2.warnings(aAlone, p).map((w) => w.code)).toEqual([
+      "tooFewIndividuals",
+      "populationNotInResult",
+    ]);
+    expect(
+      diversityOnPopgen2
+        .warnings(oneResult(), noneProject())
+        .map((w) => w.code),
+    ).toEqual(["tooFewIndividuals"]);
+  });
+
+  test("the refusals that name a place, in the words of popgen2.html; the old page's unchanged", () => {
+    const p = project();
+    expect(
+      refusalText("`pops` names no population once filtered", p, "popgen2"),
+    ).toBe(
+      "The thresholds of the individuals leave none of the individuals of panel.nei that have a population in pop, so no population is left. Loosen the thresholds of the individuals in the Variants tab.",
+    );
+    expect(
+      refusalText(
+        "the pass gave no variant: its source gave 1200 and the steps kept none of them",
+        p,
+        "popgen2",
+      ),
+    ).toBe(
+      "The thresholds of the Variants tab kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen them.",
+    );
+    expect(refusalText("something else went wrong.", p, "popgen2")).toBe(
+      "popnei could not calculate the diversity: something else went wrong. Change the settings, or open the variants file again in the box Variants, to run it again.",
+    );
+    expect(
+      refusalText(
+        "the pass gave no variant and its source holds none",
+        p,
+        "popgen2",
+      ),
+    ).toBe(
+      "panel.nei has no variants. Open another variants file in the box Variants.",
+    );
+    expect(refusalText("`pops` names no population once filtered", p)).toBe(
+      "The thresholds of the filters of individuals leave none of the individuals of panel.nei that have a population in pop, so no population is left. Loosen the thresholds in the Variants step.",
+    );
+  });
+
+  test("statisticsFailedText of a refusal on popgen2.html gives the words of the one pass", () => {
+    expect(
+      statisticsFailedText(
+        { kind: "refused", message: "something else went wrong." },
+        project(),
+        () => {
+          throw new Error("a refusal was given the words of a failure");
+        },
+        false,
+        "popgen2",
+      ),
+    ).toBe(
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity cannot run. popnei could not read panel.nei: something else went wrong. Open the file again in the box Variants, or another file.",
+    );
+  });
+
+  test("the line of the one population, and its second sentence for a refused file, a column absent and a column of 21 values", () => {
+    const first =
+      "No individual is assigned to a population, so the diversity is of every individual kept as one population.";
+    expect(
+      onePopulationLine(
+        deepFreeze<Project>({ ...project(), individuals: null }),
+        200,
+      ),
+    ).toBe(`1 population, Unclassified: 200 individuals. ${first}`);
+    expect(onePopulationLine(noneProject(), 1)).toBe(
+      `1 population, Unclassified: 1 individual. ${first}`,
+    );
+    expect(onePopulationLine(refusedProject(), 4)).toBe(
+      `1 population, Unclassified: 4 individuals. ${first} pops.csv could not be read, as the box Individuals says; open it again, or another file, there to get populations.`,
+    );
+    expect(
+      onePopulationLine(
+        deepFreeze<Project>({
+          ...project(),
+          grouping: { kind: "populations", column: "country" },
+        }),
+        4,
+      ),
+    ).toBe(
+      `1 population, Unclassified: 4 individuals. ${first} pops.csv has no column country; choose a column of the populations in the box Individuals.`,
+    );
+    expect(onePopulationLine(tooManyProject(), 21)).toBe(
+      `1 population, Unclassified: 21 individuals. ${first} pop has 21 values, more than the 20 a column of populations can have; choose another column in the box Individuals to get populations.`,
+    );
+    expect(() => onePopulationLine(project(), 3)).toThrow("popnei_web defect");
+  });
+
+  test("the key: None and no individuals file give the same key, a column and None different keys, and the same table opened again the same key", () => {
+    const none = keyOfDiversity(noneProject(), "0.2.2", diversityOnPopgen2);
+    const noFile = keyOfDiversity(
+      deepFreeze<Project>({ ...project(), individuals: null }),
+      "0.2.2",
+      diversityOnPopgen2,
+    );
+    expect(none).toBe(noFile);
+    expect(keyOfDiversity(refusedProject(), "0.2.2", diversityOnPopgen2)).toBe(
+      none,
+    );
+    const column = keyOfDiversity(project(), "0.2.2", diversityOnPopgen2);
+    expect(column).not.toBe(none);
+    expect(keyOfDiversity(project(), "0.2.2", diversityOnPopgen2)).toBe(column);
+    expect(diversityOnPopgen2.keyInputs(noneProject())).toEqual({
+      pops: "all",
+      options: KEY_OPTIONS,
+    });
+    expect(
+      diversityOnPopgen2.keyInputs(withVariantsUnreadable(project())),
+    ).toEqual(diversity.keyInputs(project()));
   });
 });

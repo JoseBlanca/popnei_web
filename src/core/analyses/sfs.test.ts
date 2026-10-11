@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { spectraCsv, spectraOf, spectrumWarnings } from "./sfs.ts";
+import { spectraCsv, spectraOf, spectrumCsv, spectrumWarnings } from "./sfs.ts";
 import type { Project } from "../project.ts";
 import {
   deepFreeze,
@@ -344,5 +344,54 @@ describe("SF2 D4 the warning of the spectrum reads the filters that apply to the
     expect(spectrumWarnings(r, withPassedOn(base, false))).toEqual(
       spectrumWarnings(r, base),
     );
+  });
+});
+
+describe("PT1 D1 the spectrum on popgen2.html", () => {
+  test("spectrumCsv of p0 gives the header and p0's rows of spectraCsv, in their order", () => {
+    const r = workedExample();
+    const [header = "", ...rows] = spectraCsv(r).split("\n");
+    const p0 = rows.filter((row) => row.startsWith("p0,"));
+    expect(p0).toHaveLength(3);
+    expect(spectrumCsv(r, "p0")).toBe(
+      [header, ...p0].map((line) => `${line}\n`).join(""),
+    );
+    expect(spectrumCsv(r, "p1")).toBe(
+      "population,rarer_allele,variants,share\np1,0,3,\np1,1,0,\np1,2,0,\n",
+    );
+  });
+
+  test("spectrumCsv of a population not calculated gives the header alone, and of one not in the result a defect", () => {
+    const r = result({
+      pops: ["p0", "p3"],
+      numCalledAlleles: 4,
+      numVarsInDraw: [5, 0],
+      foldedSfs: [[1, 2, 2], null],
+    });
+    expect(spectrumCsv(r, "p3")).toBe(
+      "population,rarer_allele,variants,share\n",
+    );
+    expect(() => spectrumCsv(r, "p9")).toThrow("popnei_web defect");
+  });
+
+  test("spectrumWarnings with the page popgen2 names the MAF threshold of the Variants tab, to the letter; the old page's words unchanged", () => {
+    const p = projectWith([
+      { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+      { kind: "maf", maxAllowedMaf: 0.95 },
+    ]);
+    const r = result({
+      pops: ["p0"],
+      numCalledAlleles: 2,
+      numVarsInDraw: [2],
+      foldedSfs: [[1, 1]],
+      maf: { varsProcessed: 1152, varsKept: 1128 },
+    });
+    expect(spectrumWarnings(r, p, "popgen2")).toEqual([
+      {
+        code: "mafFilterOnSpectrum",
+        text: "The MAF threshold of the Variants tab removes the variants whose commonest allele is above 0.95 in the individuals kept, taken together, and it removed 24 of the 1,152 it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn the MAF threshold off in the Variants tab.",
+      },
+    ]);
+    expect(spectrumWarnings(r, p, "popgen")).toEqual(spectrumWarnings(r, p));
   });
 });

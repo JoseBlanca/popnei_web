@@ -25,6 +25,7 @@ import { populationsColumnOf } from "../populations.ts";
 import type { Project, VariantSource } from "../project.ts";
 import type { Result } from "../result.ts";
 import type { Warning } from "../store.ts";
+import type { Pops } from "../../worker/protocol.ts";
 
 /** The start of popnei's refusal of a pass over a source that holds no
     variant, whatever the filters. */
@@ -507,18 +508,35 @@ export function populationWarnings(
       text: `${counted(noPopulation.length, "individual")} of ${fileName} ${one ? "has" : "have"} no population, and ${one ? "is" : "are"} left out of ${words.leftOutOf}: ${namesOf(noPopulation)}. If ${one ? "it belongs" : "they belong"} to one, fill in ${one ? "its" : "their"} population in the metadata file and load it again.`,
     });
   }
+  const notInResult = populationNotInResult(
+    pops,
+    populationsToRun(p) ?? [],
+    fileName,
+    words.notIn,
+  );
+  return notInResult === null ? found : [...found, notInResult];
+}
+
+/** populationNotInResult: the populations of `toRun`, those sent with an
+    individual of the variants file `fileName`, escaped, that are not
+    among `pops`, those the result accounts for, "…, so it is not in
+    ‹notIn›."; `null` when none is missing. */
+export function populationNotInResult(
+  pops: readonly string[],
+  toRun: Pops,
+  fileName: string,
+  notIn: string,
+): Warning | null {
   const inResult = new Set(pops);
-  const missing = (populationsToRun(p) ?? [])
-    .map(([pop]) => pop)
-    .filter((pop) => !inResult.has(pop));
-  if (missing.length > 0) {
-    const one = missing.length === 1;
-    found.push({
-      code: "populationNotInResult",
-      text: `${one ? "Population" : "Populations"} ${namesOf(missing)} ${one ? "has" : "have"} no individual among the individuals of ${fileName} that the filters kept, so ${one ? "it is" : "they are"} not in ${words.notIn}.`,
-    });
+  const missing = toRun.map(([pop]) => pop).filter((pop) => !inResult.has(pop));
+  if (missing.length === 0) {
+    return null;
   }
-  return found;
+  const one = missing.length === 1;
+  return {
+    code: "populationNotInResult",
+    text: `${one ? "Population" : "Populations"} ${namesOf(missing)} ${one ? "has" : "have"} no individual among the individuals of ${fileName} that the filters kept, so ${one ? "it is" : "they are"} not in ${notIn}.`,
+  };
 }
 
 /** The individuals of the table whose cell in `column` is missing, who
