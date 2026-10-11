@@ -1718,6 +1718,39 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     await expect(shown(page).getByText(words, { exact: true })).toHaveCount(0);
   });
 
+  test("AP6 D3 a file the plots of the Variants tab share with the result fails once while the plots download: the result, with Try again if it is asked, is drawn", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const sharedFile =
+      /\/shared~popgen~PopulationsTabView~SectionPlots~PcaTabResultView-[^~/]*\.js(\?.*)?$/u;
+    let failed = 0;
+    await page.route(sharedFile, async (route) => {
+      if (failed === 0) {
+        failed += 1;
+        await route.abort();
+      } else {
+        await route.continue();
+      }
+    });
+    await page.goto("popgen2.html");
+    await pick(page, "panel.nei");
+    // The plots of the Variants tab ask for the file first.
+    await expect.poll(() => failed).toBe(1);
+    await tab(page, "PCA").click();
+    await expect(run(page)).toHaveAccessibleDescription(NO_DISTANCE, {
+      timeout: 30_000,
+    });
+    await typeDistance(page, "50000");
+    await run(page).click();
+    const tryAgain = shown(page).getByRole("button", { name: "Try again" });
+    await expect(tableCaptionOf(page).or(tryAgain)).toBeVisible({
+      timeout: RESULT_TIMEOUT,
+    });
+    if (await tryAgain.isVisible()) await tryAgain.click();
+    await expect(tableCaptionOf(page)).toBeVisible({ timeout: RESULT_TIMEOUT });
+  });
+
   for (const kind of ["js", "css"] as const) {
     test(`AP6 D3 a file the result imports, shared with popgen.html, fails until Try again is shown, its ${kind === "js" ? "script" : "styles"}: Try again draws the result with its styles`, async ({
       page,

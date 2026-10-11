@@ -743,6 +743,41 @@ test.describe("PT1 D3 the code of the Populations tab", () => {
       ).toBe(true);
     });
   }
+
+  for (const shared of [
+    "shared~popgen~PopulationsTabView~SectionPlots",
+    "shared~popgen~PopulationsTabView~SectionPlots~PcaTabResultView",
+  ]) {
+    test(`PT1 D3 a file the plots of the Variants tab share with the tab, ${shared}, fails once while the plots download: the tab, with Try again if it is asked, draws its table`, async ({
+      page,
+    }) => {
+      test.setTimeout(90_000);
+      const sharedFile = new RegExp(`/${shared}-[^~/]*\\.js(\\?.*)?$`, "u");
+      let failed = 0;
+      await page.route(sharedFile, async (route) => {
+        if (failed === 0) {
+          failed += 1;
+          await route.abort();
+        } else {
+          await route.continue();
+        }
+      });
+      await openPage(page);
+      await pick(page, "panel.nei");
+      // The plots of the Variants tab ask for the file first.
+      await expect.poll(() => failed).toBe(1);
+      await tab(page, "Populations").click();
+      const run = button(page, "Run");
+      const tryAgain = shown(page).getByRole("button", { name: "Try again" });
+      await expect(run.or(tryAgain)).toBeVisible({ timeout: RESULT_TIMEOUT });
+      if (await tryAgain.isVisible()) await tryAgain.click();
+      await expect(run).toBeEnabled({ timeout: RESULT_TIMEOUT });
+      await run.click();
+      await expect(table(page, CAPTION)).toBeVisible({
+        timeout: RESULT_TIMEOUT,
+      });
+    });
+  }
 });
 
 // PT1 D7: the flows of the lock of the filters and of the download's

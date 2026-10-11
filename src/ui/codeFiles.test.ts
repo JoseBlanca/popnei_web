@@ -74,6 +74,7 @@ describe("PT1 D3 the files of the code of a source", () => {
     for (const wrapper of [
       "src/ui/analyses/pca/PcaTabResults.tsx",
       "src/ui/analyses/diversity/PopulationsTab.tsx",
+      "src/ui/variants/FileStats.tsx",
     ]) {
       const text = readFileSync(resolve(src, wrapper), { encoding: "utf8" });
       const named = [...text.matchAll(/codeFilesReady\("([^"]+)"\)/gu)].map(

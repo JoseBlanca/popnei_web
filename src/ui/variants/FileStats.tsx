@@ -63,8 +63,9 @@
  * status region says nothing of the statistics. A download that fails is
  * caught by the boundary of StatsSection.tsx, which gives it to the error
  * bar, whose words say to reload the page; the next file picked asks for
- * it again, which WebKit 26.6 downloads, and Chromium 153 does not,
- * keeping the failure until the page is reloaded.
+ * it again. Its files are asked of the network before its import()
+ * (src/ui/codeFiles.ts), so that no browser keeps the failure of one,
+ * which the code of the PCA tab and of the Populations tab shares.
  */
 import { Suspense, lazy, useLayoutEffect, useRef } from "react";
 
@@ -75,6 +76,7 @@ import type {
 } from "../../worker/protocol.ts";
 import { progressShare } from "../analyses/words.ts";
 import { useAutoRuns } from "../autoRunsContext.ts";
+import { codeFilesReady } from "../codeFiles.ts";
 import { individualChecksCsv } from "../../core/analyses/individualChecks.ts";
 import { downloadText } from "../download.ts";
 import { DownloadVariants } from "./DownloadVariants.tsx";
@@ -177,15 +179,21 @@ let download: PlotsDownload | null = null;
     asked for before, under way or done, which every file after draws at
     once, or failed for this same load; or a new one, the first, or after
     a download that failed for another load, so that the next file picked
-    asks for the code again, which WebKit 26.6 downloads, and Chromium 153
-    does not, keeping the failure until the page is reloaded. A lazy
+    asks for the code again, its files first, so that no browser has kept
+    a failure (src/ui/codeFiles.ts). A lazy
     component made for each file would wait for its code each time, even
     once downloaded, and React then holds what it draws back 300 ms
     (React 19.3). Called as the section is drawn, as lazy() itself asks
     for its code. */
 function plotsDownload(fileId: string): PlotsDownload {
   if (download === null || (download.failed && download.fileId !== fileId)) {
-    const code = import("./SectionPlots.tsx");
+    // Its files are asked of the network first: the plots share files
+    // with the code of the tabs, and a browser keeps the failure an
+    // import() met for the life of the page (src/ui/codeFiles.ts), so a
+    // file that failed here would fail the tabs' Try again too.
+    const code = codeFilesReady("src/ui/variants/SectionPlots.tsx").then(
+      () => import("./SectionPlots.tsx"),
+    );
     const made: PlotsDownload = {
       fileId,
       failed: false,
