@@ -564,13 +564,39 @@ export function filtersLockedText(
   beside: readonly LiveAnalysisName[],
   stopAllOffered: boolean,
 ): string {
+  return lockedText("the filters", running, beside, stopAllOffered);
+}
+
+/** The reason the column of the populations, the individuals file and
+    how a text file of it is read are locked while `running`, which reads
+    the populations, runs, as tooltip and description: the words of
+    `filtersLockedText` with "the populations" in place of "the filters",
+    "Stop the diversity in the Populations tab to change the populations;
+    then press Run there to calculate it again." (popgen2-input.md and
+    popgen2-populations.md, "While the diversity runs"). */
+export function populationsLockedText(
+  running: LiveAnalysisName,
+  beside: readonly LiveAnalysisName[],
+  stopAllOffered: boolean,
+): string {
+  return lockedText("the populations", running, beside, stopAllOffered);
+}
+
+/** The words of a lock of `what`, "the filters" or "the populations",
+    while `running` runs with `beside` live beside it. */
+function lockedText(
+  what: "the filters" | "the populations",
+  running: LiveAnalysisName,
+  beside: readonly LiveAnalysisName[],
+  stopAllOffered: boolean,
+): string {
   if (beside.length === 0) {
-    return `Stop ${running.name} in the ${running.tab} tab to change the filters; then press Run there to calculate it again.`;
+    return `Stop ${running.name} in the ${running.tab} tab to change ${what}; then press Run there to calculate it again.`;
   }
   const again = "then press Run in each tab to calculate them again.";
   return stopAllOffered
-    ? `Stop ${running.name} in the ${running.tab} tab to change the filters, or press ${STOP_ALL_PLACE} to stop ${bothOf(beside.map((one) => one.name))} too; ${again}`
-    : `Stop ${eachInItsTab([running, ...beside])} to change the filters; ${again}`;
+    ? `Stop ${running.name} in the ${running.tab} tab to change ${what}, or press ${STOP_ALL_PLACE} to stop ${bothOf(beside.map((one) => one.name))} too; ${again}`
+    : `Stop ${eachInItsTab([running, ...beside])} to change ${what}; ${again}`;
 }
 
 /** The analyses `named`, each with its tab, as a Stop of each names
@@ -583,9 +609,9 @@ export function eachInItsTab(named: readonly LiveAnalysisName[]): string {
 /** Stop all and where it is, in the words of a lock or of a wait. */
 export const STOP_ALL_PLACE = "Stop all beside the heading Popnei";
 
-/** Whether the band offers Stop all, which the words of the lock of the
-    filters and of the download's wait name when another analysis is
-    live beside the one running: not until work package 4 of
+/** Whether the band offers Stop all, which the words of the locks of the
+    filters and of the populations, and of the download's wait, name when
+    another analysis is live beside the one running: not until work package 4 of
     docs/plans/population-tab.md builds it in the band, which turns this
     on; until then they name the Stop of each tab. */
 export const STOP_ALL_OFFERED = false;

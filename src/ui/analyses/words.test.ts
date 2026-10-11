@@ -10,6 +10,7 @@ import {
   failureText,
   STOP_ALL_OFFERED,
   filtersLockedText,
+  populationsLockedText,
   popgen2FailureText,
   minimumRefusedText,
   progressShare,
@@ -475,6 +476,32 @@ describe("PT1 D7 the words of the lock of the filters, with and without another 
       ),
     ).toBe(
       "Stop the PCA in the PCA tab to change the filters, or press Stop all beside the heading Popnei to stop the diversity and the LD decay too; then press Run in each tab to calculate them again.",
+    );
+  });
+});
+
+describe("PT3 D1 the words of the lock of the populations, with and without another analysis live", () => {
+  test("the diversity alone: stop it in the Populations tab to change the populations, then Run there", () => {
+    expect(populationsLockedText(DIVERSITY, [], false)).toBe(
+      "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again.",
+    );
+    expect(populationsLockedText(DIVERSITY, [], true)).toBe(
+      populationsLockedText(DIVERSITY, [], false),
+    );
+  });
+
+  test("until the band offers Stop all, the words name the Stop of each tab", () => {
+    expect(populationsLockedText(DIVERSITY, [PCA], false)).toBe(
+      "Stop the diversity in the Populations tab and the PCA in the PCA tab to change the populations; then press Run in each tab to calculate them again.",
+    );
+  });
+
+  test("with Stop all offered and the PCA live beside it, the words name Stop all, which stops the PCA too", () => {
+    expect(populationsLockedText(DIVERSITY, [PCA], true)).toBe(
+      "Stop the diversity in the Populations tab to change the populations, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again.",
+    );
+    expect(populationsLockedText(DIVERSITY, [PCOA], true)).toBe(
+      "Stop the diversity in the Populations tab to change the populations, or press Stop all beside the heading Popnei to stop the PCoA too; then press Run in each tab to calculate them again.",
     );
   });
 });
