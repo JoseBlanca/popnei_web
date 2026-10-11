@@ -680,11 +680,14 @@ function unfilteredWords(variantsName: string): DrawWords {
 
 /** The first reason the diversity of popgen2.html cannot run beyond
     those every analysis shares, or `null` (the spec, "On popgen2.html"):
-    the individuals file being read, and last a draw larger than the
-    chromosomes of the largest population. An individual of the variants
-    file not in the individuals file, a refused file and a column that
-    gives no population do not lock: their individuals are unclassified.
-    Throws a defect on a project of association. */
+    the individuals file being read. The draw larger than the chromosomes
+    of the largest population is `keptNeeds`'s, which the store asks
+    after its lock of no individual kept, so that a user whose thresholds
+    keep no individual is not told to change the draw, which would not
+    help. An individual of the variants file not in the individuals file,
+    a refused file and a column that gives no population do not lock:
+    their individuals are unclassified. Throws a defect on a project of
+    association. */
 function popgen2Needs(p: Project): string | null {
   const individuals = p.individuals;
   if (individuals?.read.kind === "pending") {
@@ -693,16 +696,7 @@ function popgen2Needs(p: Project): string | null {
   if (p.grouping.kind === "roles") {
     throw defect("the diversity was given a project of association.");
   }
-  const kept = individualsKept(p, null);
-  if (kept === null || p.variants === null) {
-    return null;
-  }
-  return drawNeeds(
-    p,
-    kept.byLists,
-    unfilteredWords(p.variants.name),
-    "popgen2",
-  );
+  return null;
 }
 
 /**
@@ -727,6 +721,9 @@ function keptNeeds(
   if (noPopulation !== null) {
     return noPopulation;
   }
+  if (page === "popgen2") {
+    return popgen2DrawNeeds(p, kept);
+  }
   const list = kept.list.kind === "known" ? kept.list.individuals : null;
   if (list === null || list.length >= kept.byLists.length) {
     return null;
@@ -741,6 +738,37 @@ function keptNeeds(
       orElse: `, or loosen ${individualFilters} in ${filtersPlace}`,
     },
     page,
+  );
+}
+
+/** The lock of the draw on popgen2.html, for the individuals kept,
+    `kept`, whose list is known: over every individual of the variants
+    file, in the words that name no filter, when the thresholds keep them
+    all; over those they keep, in the words of the Variants tab,
+    otherwise; `null` while the list is not known. */
+function popgen2DrawNeeds(p: Project, kept: IndividualsKept): string | null {
+  if (kept.list.kind !== "known" || p.variants === null) {
+    return null;
+  }
+  const list = kept.list.individuals;
+  if (list === null || list.length >= kept.byLists.length) {
+    return drawNeeds(
+      p,
+      kept.byLists,
+      unfilteredWords(p.variants.name),
+      "popgen2",
+    );
+  }
+  const { individualFilters, filtersPlace } = PLACES.popgen2;
+  return drawNeeds(
+    p,
+    list,
+    {
+      individuals: `${individualFilters} keep`,
+      population: ` ${individualFilters} keep`,
+      orElse: `, or loosen ${individualFilters} in ${filtersPlace}`,
+    },
+    "popgen2",
   );
 }
 

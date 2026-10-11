@@ -3319,20 +3319,35 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     ).toBeNull();
   });
 
-  test("needs: the draw larger than the chromosomes of the largest population locks with the old words, which name no list", () => {
-    expect(diversityOnPopgen2.needs(withDiversity(project(), 2, 5))).toBe(
-      "The rarefaction draws 5 chromosomes, and the largest population, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity.",
-    );
-    expect(diversityOnPopgen2.needs(withDiversity(project(), 2, 4))).toBeNull();
+  test("needs leaves the draw to keptNeeds, so that the store's lock of no individual kept comes first: a draw larger than every population needs nothing", () => {
+    expect(diversityOnPopgen2.needs(withDiversity(project(), 2, 5))).toBeNull();
+    expect(
+      diversityOnPopgen2.needs(withDiversity(noneProject(), 2, 9)),
+    ).toBeNull();
   });
 
-  test("needs: with None, a draw larger than the chromosomes of every individual names Unclassified", () => {
-    expect(diversityOnPopgen2.needs(withDiversity(noneProject(), 2, 9))).toBe(
+  test("keptNeeds with every individual kept: the draw larger than the chromosomes of the largest population locks with the old words, which name no list", () => {
+    const all: IndividualsKept = {
+      list: { kind: "known", individuals: null },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    };
+    expect(keptNeeds2(withDiversity(project(), 2, 5), all)).toBe(
+      "The rarefaction draws 5 chromosomes, and the largest population, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity.",
+    );
+    expect(keptNeeds2(withDiversity(project(), 2, 4), all)).toBeNull();
+  });
+
+  test("keptNeeds with every individual kept and None: a draw larger than the chromosomes of every individual names Unclassified", () => {
+    const all: IndividualsKept = {
+      list: { kind: "known", individuals: null },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    };
+    expect(keptNeeds2(withDiversity(noneProject(), 2, 9), all)).toBe(
       "The rarefaction draws 9 chromosomes, and the one population, Unclassified, holds 8, those of its 4 individuals at a ploidy of 2. Type a number of chromosomes of at most 8 in the options of the diversity.",
     );
-    expect(
-      diversityOnPopgen2.needs(withDiversity(noneProject(), 2, 8)),
-    ).toBeNull();
+    expect(keptNeeds2(withDiversity(noneProject(), 2, 8), all)).toBeNull();
   });
 
   test("keptNeeds: the thresholds keep only unclassified individuals while the column classifies some, the lock of populationsKeptNeeds in the words of the Variants tab", () => {

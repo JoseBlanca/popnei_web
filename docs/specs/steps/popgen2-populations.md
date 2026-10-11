@@ -221,7 +221,7 @@ disabled, or beside Stop recalculating while the diversity is live:
 | the individuals file being read | "The diversity waits for panel_pops.csv to be read." |
 | the filters of the individuals keep no individual at all | the store's words of `keptNoneReason`, as the PCA tab gives them, "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them." |
 | the filters of the individuals keep no individual of any population | the old panel's words of `populationsKeptNeeds`, with "the Variants tab" |
-| the draw larger than the chromosomes of the largest population | the old panel's words of the draw, with "the thresholds of the individuals in the Variants tab" where they name the filters |
+| the draw larger than the chromosomes of the largest population, also of every individual of the variants file, after the lock of no individual kept | the old panel's words of the draw, with "the thresholds of the individuals in the Variants tab" where they name the filters |
 
 The three of the one pass are those of the PCA tab with "the diversity"
 (`passLockText` of `src/ui/analyses/pca/passLock.ts`), since the one

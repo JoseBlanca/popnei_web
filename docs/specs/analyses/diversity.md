@@ -126,6 +126,11 @@ unclassified are left out or are one population, its locks and its
 words (below, "On popgen2.html"). The old page changes in nothing. Approved by the owner on 11 October 2026; not
 yet built; its plan is `docs/plans/population-tab.md`.
 
+Corrected on 11 October 2026 after the review of work package 1 of
+that plan, in "On popgen2.html": the lock of the draw over every
+individual moves from `needs` to `keptNeeds`, so that the lock of no
+individual kept comes first.
+
 The walking skeleton is stage 2 of `docs/build-order.md`, the smallest
 application that goes through every part once. For it the owner decided,
 on 25 September 2026: the inbreeding coefficient F waits for stage 5, and
@@ -1868,14 +1873,22 @@ the result are the old ones.
 - **`needs`**, without `individualsNeeds` of
   `docs/specs/core/project.md`, which locks on an individual missing
   from the file, and without `populationsNeeds`, which locks with no
-  column and with a column that classifies none. Its reasons, the first
-  that holds, each with the words of `popgen2-populations.md`, "The
-  locks": the individuals file being read; and last the draw larger than the chromosomes of the largest population,
-  `drawNeeds`, with "the thresholds of the individuals in the Variants
-  tab" where the old words name the filters of individuals, and no
-  words of the lists to keep and to remove, which this page does not
-  have. `keptNeeds` gives `populationsKeptNeeds` and the draw with this
-  page's words.
+  column and with a column that classifies none. Its one reason, with
+  the words of `popgen2-populations.md`, "The locks": the individuals
+  file being read. `keptNeeds`, which the store asks after its own lock
+  of no individual kept, gives `populationsKeptNeeds` and then the draw
+  larger than the chromosomes of the largest population, `drawNeeds`:
+  over every individual of the variants file, in the old words that
+  name no filter, when the thresholds keep them all; over those they
+  keep, with "the thresholds of the individuals in the Variants tab"
+  where the old words name the filters of individuals, otherwise; and
+  no words of the lists to keep and to remove, which this page does
+  not have. So the lock of no individual kept comes before that of the
+  draw, as "The locks" orders them, and a user whose thresholds keep
+  nobody is not told to change the draw, which would not lift it
+  (corrected on 11 October 2026 after the review of work package 1 of
+  `docs/plans/population-tab.md`; the draw over every individual was a
+  reason of `needs` until then, which the store asks first).
 - **The words**, where the old ones name a place of `popgen.html`:
   "the Variants tab" for "the Variants step"; "panel_pops.csv", the name
   of the individuals file, for "the metadata file"; "in the box
@@ -2038,10 +2051,14 @@ cases, which stay:
   `tooFewIndividuals` of "Unclassified" at `minNumIndividuals` 20 with
   12 individuals, its text above whole; `privateAllelesNeedTwoPopulations`
   in its three cases on this page, each whole.
-- `needs` of `diversityOnPopgen2`: each row of "The locks" of
-  `popgen2-populations.md` but those of the one pass, which are the
-  screen's, with its words whole; a project with an individual missing
-  from the file, a refused file and a column of 21 values, `null`.
+- `needs` and `keptNeeds` of `diversityOnPopgen2`: each row of "The
+  locks" of `popgen2-populations.md` but those of the one pass, which
+  are the screen's, with its words whole; a project with an individual
+  missing from the file, a refused file and a column of 21 values,
+  `null`; `needs` `null` for a draw larger than every population, which
+  `keptNeeds` gives; and in the tab, the thresholds keeping no
+  individual with such a draw lock Run with the words of no individual
+  kept.
 - The line of the one population, with its second sentence for a
   refused file, a column absent and a column of 21 values.
 - The words: each warning and refusal that names a place, with this

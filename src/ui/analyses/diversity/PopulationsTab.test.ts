@@ -502,6 +502,26 @@ describe("PT1 D3 the Populations tab", () => {
   });
 });
 
+describe("the order of the locks of the Populations tab", () => {
+  test("the thresholds keeping no individual and a draw over every individual: Run shows the lock of no individual kept, which changing the draw would not lift", async () => {
+    const page = await readyTab();
+    await apply(page, (p) =>
+      setAnalysisOptions(p, diversityOnPopgen2, {
+        ...diversityOptions(p),
+        minNumIndividuals: 2,
+        numCalledAlleles: 30,
+      }),
+    );
+    await apply(page, (p) =>
+      setIndividualFilter(p, { kind: "obs_het", maxAllowedObsHet: 0.1 }),
+    );
+    expect(button("Run")?.disabled).toBe(true);
+    expect(descriptionOf(button("Run"))).toMatch(
+      /^The filters of individuals keep none of the 10 individuals of panel\.nei\./u,
+    );
+  });
+});
+
 describe("the Populations tab's Stop and its options while an analysis runs", () => {
   const LOCK =
     "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again.";
