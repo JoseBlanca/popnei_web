@@ -967,7 +967,7 @@ function storeWithFaultyIntake(): ReturnType<typeof newStore> & {
     ...vars,
     warnings: (r, p) => {
       fail("warnings");
-      return vars.warnings(r, p);
+      return vars.warnings(r, p, null);
     },
     checkNumbers: (r) => {
       fail("checkNumbers");
@@ -3731,6 +3731,53 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       reason: noC,
     });
     expect(store.startRun("pops")).toBeNull();
+  });
+
+  test("the warnings of a result are made with the individuals kept its request was sent with", () => {
+    const { analyses: twoFakes, stats } = fakeAnalyses();
+    const warnedWith: (readonly string[] | null)[] = [];
+    const analyses = [
+      ...twoFakes.map((def) =>
+        def.id === "pops"
+          ? {
+              ...def,
+              warnings: (
+                _r: TestResult,
+                _p: Project,
+                individuals: readonly string[] | null,
+              ) => {
+                warnedWith.push(individuals);
+                return [];
+              },
+            }
+          : def,
+      ),
+      stats,
+    ];
+    const { send, sent } = fakeSend();
+    const store = createStore({
+      first: emptyProject("popgen"),
+      analyses,
+      send,
+      countsOf: (r) => ({
+        numVarsRead: r.kind === "vars" ? r.numVars : null,
+        counts: null,
+      }),
+      counts: null,
+      statistics: FAKE_STATISTICS,
+      write: null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024 * 1024,
+      maxUndoSteps: 200,
+    });
+    store.popneiReady("0.1.0");
+    store.open(() => fiveIndividualsProject([MISSING_AT_02]));
+    store.startRun("pops");
+    const statsSent = sentAt(sent, 0);
+    store.runEnded(statsSent.run.id, doneWith(statsSent, fiveStats()));
+    const own = sentAt(sent, 1);
+    store.runEnded(own.run.id, doneWith(own, popsResult()));
+    expect(warnedWith).toStrictEqual([["a", "b", "d"]]);
   });
 
   test("with no filter of individuals, a Run of the analysis that reads them sends at once, its client giving no list", () => {

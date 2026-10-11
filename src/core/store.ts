@@ -113,8 +113,15 @@ export interface AnalysisDef<J, R> {
       to its key, and returns the handle without waiting on it. */
   run(p: Project, c: WorkerClient<J, R>): Run<R>;
   /** The warnings its result raises from the data, given the project the
-      request was made from. */
-  warnings(r: R, p: Project): readonly Warning[];
+      request was made from and the individuals the filters kept that it
+      was sent with, `individuals`, as `WorkerClient.individuals` gave
+      them: `null` when they removed nobody, and for an analysis that
+      does not read the filters of individuals. */
+  warnings(
+    r: R,
+    p: Project,
+    individuals: readonly string[] | null,
+  ): readonly Warning[];
   /** The numbers of its result kept in the project file, made from
       popnei's by addition, subtraction, multiplication and division
       alone; `null` where popnei gave NaN. */
@@ -725,6 +732,9 @@ interface InFlight<J, R, F> {
   readonly key: Key;
   /** The project it was made from, which its warnings are made from. */
   readonly project: Project;
+  /** The individuals the filters kept that it was sent with, `null` when
+      they removed nobody, which its warnings are made from too. */
+  readonly individuals: readonly string[] | null;
   /** The load id of the variants file of that project, which the number
       of variants its pass counted is recorded into. */
   readonly fileId: string;
@@ -2059,6 +2069,7 @@ export function createStore<J, R, F = never>(
       target: { kind: "analysis", def, index },
       key,
       project,
+      individuals,
       fileId,
       popneiVersion: version,
       handle,
@@ -2113,6 +2124,7 @@ export function createStore<J, R, F = never>(
       target: { kind: "write", format },
       key,
       project,
+      individuals,
       fileId,
       popneiVersion: version,
       handle,
@@ -2161,7 +2173,11 @@ export function createStore<J, R, F = never>(
       key: countsKey,
       cached: {
         result: counts,
-        warnings: countsDef.warnings(counts, request.project),
+        warnings: countsDef.warnings(
+          counts,
+          request.project,
+          request.individuals,
+        ),
         numbers: countsDef.checkNumbers(counts),
         stats: null,
       },
@@ -2195,7 +2211,7 @@ export function createStore<J, R, F = never>(
     result: R,
   ): void => {
     // Everything that can throw comes before anything is kept.
-    const warnings = def.warnings(result, request.project);
+    const warnings = def.warnings(result, request.project, request.individuals);
     const numbers = def.checkNumbers(result);
     const stats =
       index === statsIndex && statistics !== null

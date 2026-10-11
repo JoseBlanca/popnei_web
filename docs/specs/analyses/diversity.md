@@ -129,7 +129,9 @@ yet built; its plan is `docs/plans/population-tab.md`.
 Corrected on 11 October 2026 after the review of work package 1 of
 that plan, in "On popgen2.html": the lock of the draw over every
 individual moves from `needs` to `keptNeeds`, so that the lock of no
-individual kept comes first.
+individual kept comes first; and the last sentence of the warning of
+one classified population counts the unclassified among the
+individuals kept, which the store now gives the warnings.
 
 The walking skeleton is stage 2 of `docs/build-order.md`, the smallest
 application that goes through every part once. For it the owner decided,
@@ -1924,7 +1926,10 @@ the result are the old ones.
   popcat among the individuals kept, and an allele is private when one
   population has it and no other does, so the table has no private
   alleles. The unclassified individuals are not a population to compare
-  it with."; the last sentence left out when none is unclassified; the
+  it with."; the last sentence left out when none of the individuals
+  kept is unclassified, counted among the individuals the request was
+  sent with, so also when the thresholds removed every unclassified one
+  (corrected on 11 October 2026); the
   refusal of no population left ends "Loosen the thresholds of the
   individuals in the Variants tab.".
 - **`individualsWithoutPopulation` is not raised.** An unclassified

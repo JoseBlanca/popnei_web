@@ -241,6 +241,7 @@ describe("IP2 D2 the statistics of each individual over every variant of the fil
       project({
         filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
       }),
+      null,
     )[0]?.text;
     expect(text).toMatch(/among the 1,200 variants of the file,/);
     expect(text).not.toMatch(/filters kept/);
@@ -264,7 +265,7 @@ describe("VS3 D1 the statistics of each individual: the worked example", () => {
   });
 
   test("warnings gives individualsWithoutCalls naming i3", () => {
-    expect(individualChecks.warnings(EXAMPLE, project())).toEqual([
+    expect(individualChecks.warnings(EXAMPLE, project(), null)).toEqual([
       {
         code: "individualsWithoutCalls",
         text: "i3 has no called genotype among the 4 variants of panel.nei, so it has no observed heterozygosity. The filter of the individuals by observed heterozygosity removes it when it is on.",
@@ -303,7 +304,7 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
       obsHetRate: [0.3, NaN, NaN, NaN],
       numVars: 1200,
     });
-    expect(individualChecks.warnings(r, project())).toEqual([
+    expect(individualChecks.warnings(r, project(), null)).toEqual([
       {
         code: "individualsWithoutCalls",
         text: "3 individuals of panel.nei have no called genotype among the 1,200 variants of the file, so they have no observed heterozygosity: s001, s002 and s003. The filter of the individuals by observed heterozygosity removes them when it is on.",
@@ -318,7 +319,9 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
       obsHetRate: [1, NaN],
       numVars: 1,
     });
-    expect(individualChecks.warnings(r, project()).map((w) => w.text)).toEqual([
+    expect(
+      individualChecks.warnings(r, project(), null).map((w) => w.text),
+    ).toEqual([
       "i2 has no called genotype among the one variant of panel.nei, so it has no observed heterozygosity. The filter of the individuals by observed heterozygosity removes it when it is on.",
     ]);
   });
@@ -330,7 +333,7 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
       obsHetRate: [0.5, 0.5],
       numVars: 4,
     });
-    expect(individualChecks.warnings(r, project())).toEqual([]);
+    expect(individualChecks.warnings(r, project(), null)).toEqual([]);
   });
 
   test("checkNumbers of a result where no individual has a heterozygosity gives null", () => {
@@ -425,7 +428,8 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
       numVars: 1152,
     });
     expect(
-      individualChecks.warnings(r, project({ name: "a\tb.nei" })).at(0)?.text,
+      individualChecks.warnings(r, project({ name: "a\tb.nei" }), null).at(0)
+        ?.text,
     ).toBe(
       "2 individuals of a\\tb.nei have no called genotype among the 1,152 variants of the file, so they have no observed heterozygosity: s001 and s002. The filter of the individuals by observed heterozygosity removes them when it is on.",
     );

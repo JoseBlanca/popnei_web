@@ -162,7 +162,7 @@ describe("open-variants 1 the summary of the variants file: the request", () => 
     });
     expect(variantsSummary.defaults).toEqual({});
     expect(variantsSummary.needs(project())).toBeNull();
-    expect(variantsSummary.warnings(LD, project())).toEqual([]);
+    expect(variantsSummary.warnings(LD, project(), null)).toEqual([]);
     expect(variantsSummary.parseOptions({}, 1)).toEqual({
       ok: true,
       value: {},

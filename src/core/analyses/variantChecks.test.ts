@@ -256,7 +256,11 @@ describe("IP2 D2 the histograms of the variants over the individuals kept", () =
       },
     };
     expect(
-      variantChecks.warnings(r, project({ individualFilters: THRESHOLDS })),
+      variantChecks.warnings(
+        r,
+        project({ individualFilters: THRESHOLDS }),
+        null,
+      ),
     ).toEqual([
       {
         code: "variantsWithoutCalls",
@@ -293,7 +297,7 @@ describe("VS3 D1 the histograms of the variants", () => {
       unbiasedExpHet: { mean: 0.3, counts },
       passStats: { numVars: 6, filtering: {} },
     };
-    expect(variantChecks.warnings(r, project())).toEqual([
+    expect(variantChecks.warnings(r, project(), null)).toEqual([
       {
         code: "variantsWithoutCalls",
         text: "1 of the 6 variants of panel.nei has no called genotype, and is in none of the histograms. The filter by observed heterozygosity, the MAF filter and the LD pruning remove it at any threshold, and the missing data filter at any threshold below 1.",
@@ -353,7 +357,7 @@ describe("VS6 D2 the line under a histogram of the bin its threshold splits", ()
 
 describe("VS3 D1 the histograms of the variants: the rest of the module", () => {
   test("warnings of panel.nei, whose MAF counts sum to its 1,200 variants, is none", () => {
-    expect(variantChecks.warnings(PANEL, project())).toEqual([]);
+    expect(variantChecks.warnings(PANEL, project(), null)).toEqual([]);
   });
 
   test("warnings of 12 of 1,200 variants with no call says them in the plural", () => {
@@ -365,7 +369,7 @@ describe("VS3 D1 the histograms of the variants: the rest of the module", () => 
       ...PANEL,
       maf: { mean: 0.7, counts: Uint32Array.from(counts) },
     };
-    expect(variantChecks.warnings(r, project())).toEqual([
+    expect(variantChecks.warnings(r, project(), null)).toEqual([
       {
         code: "variantsWithoutCalls",
         text: "12 of the 1,200 variants of panel.nei have no called genotype, and are in none of the histograms. The filter by observed heterozygosity, the MAF filter and the LD pruning remove them at any threshold, and the missing data filter at any threshold below 1.",

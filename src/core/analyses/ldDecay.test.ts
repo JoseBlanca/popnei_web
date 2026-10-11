@@ -781,7 +781,7 @@ describe("PA2 D5 the warnings", () => {
     });
 
   test("the result of the flow raises none", () => {
-    expect(ldDecay.warnings(flowResult(), project())).toStrictEqual([]);
+    expect(ldDecay.warnings(flowResult(), project(), null)).toStrictEqual([]);
   });
 
   test("a population of 12 individuals gives fewIndividuals with its words", () => {
@@ -789,7 +789,7 @@ describe("PA2 D5 the warnings", () => {
       flowPop("pop_a"),
       flowPop("pop_b", { individuals: 12 }),
     ]);
-    expect(ldDecay.warnings(r, project())).toStrictEqual([
+    expect(ldDecay.warnings(r, project(), null)).toStrictEqual([
       {
         code: "fewIndividuals",
         text: "Population pop_b has 12 individuals. With fewer than 20, r² is higher than in the population by chance alone, more than the fitted curve corrects for, so its curve, when it has one, lies higher and its half distance is longer than those of a larger population. Compare it with the others with this in mind.",
@@ -800,18 +800,18 @@ describe("PA2 D5 the warnings", () => {
   test("PA10 when every population of the result has fewer than 20 individuals, fewIndividuals leaves out its last sentence, there being no others to compare with: one population, two, and the one population of every individual", () => {
     const end = "longer than those of a larger population.";
     const one = resultOf([flowPop("pop_b", { individuals: 12 })]);
-    expect(ldDecay.warnings(one, project())[0]?.text).toBe(
+    expect(ldDecay.warnings(one, project(), null)[0]?.text).toBe(
       `Population pop_b has 12 individuals. With fewer than 20, r² is higher than in the population by chance alone, more than the fitted curve corrects for, so its curve, when it has one, lies higher and its half distance is ${end}`,
     );
     const two = resultOf([
       flowPop("p3", { individuals: 12 }),
       flowPop("p5", { individuals: 8 }),
     ]);
-    expect(ldDecay.warnings(two, project())[0]?.text).toBe(
+    expect(ldDecay.warnings(two, project(), null)[0]?.text).toBe(
       `Populations p3 and p5 have fewer than 20 individuals, 12 and 8. With fewer than 20, r² is higher than in the population by chance alone, more than the fitted curve corrects for, so their curves, when they have one, lie higher and their half distances are ${end}`,
     );
     const all = resultOf([flowPop("All individuals", { individuals: 12 })]);
-    expect(ldDecay.warnings(all, project({ table: null }))[0]?.text).toBe(
+    expect(ldDecay.warnings(all, project({ table: null }), null)[0]?.text).toBe(
       `All individuals has 12 individuals. With fewer than 20, r² is higher than in the population by chance alone, more than the fitted curve corrects for, so its curve, when it has one, lies higher and its half distance is ${end}`,
     );
   });
@@ -822,7 +822,7 @@ describe("PA2 D5 the warnings", () => {
       flowPop("p5", { individuals: 8 }),
       flowPop("p0"),
     ]);
-    expect(ldDecay.warnings(two, panelProject())[0]).toStrictEqual({
+    expect(ldDecay.warnings(two, panelProject(), null)[0]).toStrictEqual({
       code: "fewIndividuals",
       text: "Populations p3 and p5 have fewer than 20 individuals, 12 and 8. With fewer than 20, r² is higher than in the population by chance alone, more than the fitted curve corrects for, so their curves, when they have one, lie higher and their half distances are longer than those of a larger population. Compare them with the others with this in mind.",
     });
@@ -832,16 +832,16 @@ describe("PA2 D5 the warnings", () => {
       ),
       flowPop("p0"),
     ]);
-    expect(ldDecay.warnings(four, panelProject())[0]?.text).toMatch(
+    expect(ldDecay.warnings(four, panelProject(), null)[0]?.text).toMatch(
       /^Populations p1, p2 and 2 more have fewer than 20 individuals\. With .* Compare them with the others with this in mind\.$/u,
     );
   });
 
   test("the one population of 12 individuals is named without the word population", () => {
     const r = resultOf([flowPop("All individuals", { individuals: 12 })]);
-    expect(ldDecay.warnings(r, project({ table: null }))[0]?.text).toMatch(
-      /^All individuals has 12 individuals\. With fewer than 20, /u,
-    );
+    expect(
+      ldDecay.warnings(r, project({ table: null }), null)[0]?.text,
+    ).toMatch(/^All individuals has 12 individuals\. With fewer than 20, /u);
   });
 
   test("one variant counted and no pair gives noPairs with the words of the MAF", () => {
@@ -854,7 +854,7 @@ describe("PA2 D5 the warnings", () => {
         halfDist: Number.NaN,
       },
     ]);
-    expect(ldDecay.warnings(r, project())).toStrictEqual([
+    expect(ldDecay.warnings(r, project(), null)).toStrictEqual([
       {
         code: "noPairs",
         text: "pop_b has no pair of variants to measure: fewer than two of its variants pass its maximum major allele frequency of 0.95.",
@@ -875,7 +875,7 @@ describe("PA2 D5 the warnings", () => {
         },
       ]);
     for (const variants of [0, 1, 432]) {
-      expect(ldDecay.warnings(of(variants), project())[1]).toStrictEqual({
+      expect(ldDecay.warnings(of(variants), project(), null)[1]).toStrictEqual({
         code: "noPairs",
         text: "pop_b has no pair of variants to measure: it has 1 individual, and r² needs two or more.",
       });
@@ -891,7 +891,7 @@ describe("PA2 D5 the warnings", () => {
         halfDist: Number.NaN,
       })),
     );
-    expect(ldDecay.warnings(r, panelProject())).toStrictEqual([
+    expect(ldDecay.warnings(r, panelProject(), null)).toStrictEqual([
       {
         code: "noPairs",
         text: "p0 has no pair of variants to measure: no two of its 1,152 variants on one chromosome are within 100,000 base pairs of each other with a value of r². Type a larger distance.",
@@ -917,7 +917,7 @@ describe("PA2 D5 the warnings", () => {
         halfDist: Number.NaN,
       },
     ]);
-    expect(ldDecay.warnings(r, project())).toStrictEqual([
+    expect(ldDecay.warnings(r, project(), null)).toStrictEqual([
       {
         code: "noPairs",
         text: "pop_b has no pair of variants to measure: no two of its 1,152 variants on one chromosome are within 100,000 base pairs of each other with a value of r². Type a larger distance.",
@@ -930,7 +930,7 @@ describe("PA2 D5 the warnings", () => {
       flowPop("pop_a"),
       flowPop("pop_b", { rhoPerBp: Number.NaN, halfDist: Number.NaN }),
     ]);
-    expect(ldDecay.warnings(r, project())).toStrictEqual([
+    expect(ldDecay.warnings(r, project(), null)).toStrictEqual([
       {
         code: "noCurve",
         text: "No curve could be fitted to the pairs of pop_b, so it has no half distance: its pairs are at one distance only, or r² does not fall with distance in a way a curve can follow within 100,000 base pairs, flat across them or fallen within the first base pair. Its mean r² of each bin is shown.",
@@ -943,7 +943,7 @@ describe("PA2 D5 the warnings", () => {
       flowPop("pop_a"),
       flowPop("pop_b", { halfDist: 1_599_810.0655818006 }),
     ]);
-    expect(ldDecay.warnings(r, project())).toStrictEqual([
+    expect(ldDecay.warnings(r, project(), null)).toStrictEqual([
       {
         code: "halfDistBeyondPairs",
         text: "The curve of pop_b falls to half at 1,599,810 bp, beyond the 100,000 base pairs within which pairs were counted, so that distance is where the curve would reach and not where pairs were measured, and the plot does not reach it. Type a larger distance to count pairs that far apart.",
@@ -963,7 +963,7 @@ describe("PA2 D5 the warnings", () => {
       2_800_000,
     );
     expect(
-      ldDecay.warnings(r, project({ ld: { maxDist: 2_800_000 } })),
+      ldDecay.warnings(r, project({ ld: { maxDist: 2_800_000 } }), null),
     ).toStrictEqual([
       {
         code: "halfDistBeyondPairs",
@@ -980,7 +980,7 @@ describe("PA2 D5 the warnings", () => {
     ]);
     const text = (pop: string, half: string): string =>
       `The curve of ${pop} falls to half at ${half} bp, closer than the closest pairs counted, in the bin from 1 bp: r² is already low at the shortest distances of this file, and the half distance says only that LD falls within them. Type a smaller largest distance to see the decay within them.`;
-    expect(ldDecay.warnings(r, panelProject())).toStrictEqual([
+    expect(ldDecay.warnings(r, panelProject(), null)).toStrictEqual([
       { code: "halfDistBelowPairs", text: text("p0", "0.247") },
       { code: "halfDistBelowPairs", text: text("p2", "0.109") },
       { code: "halfDistBelowPairs", text: text("p1", "0.139") },
@@ -993,7 +993,11 @@ describe("PA2 D5 the warnings", () => {
       400_000,
     );
     expect(
-      ldDecay.warnings(r, project({ table: null, ld: { maxDist: 400_000 } })),
+      ldDecay.warnings(
+        r,
+        project({ table: null, ld: { maxDist: 400_000 } }),
+        null,
+      ),
     ).toStrictEqual([
       {
         code: "halfDistBelowPairs",
@@ -1010,6 +1014,7 @@ describe("PA2 D5 the warnings", () => {
           400_000,
         ),
         project({ table: null, ld: { maxDist: 400_000 } }),
+        null,
       )[0]?.text;
     expect(at(3.4)).toMatch(/^The curve of p3 falls to half at 3\.40 bp, /u);
     expect(at(9.996)).toMatch(/^The curve of p3 falls to half at 10 bp, /u);
@@ -1021,8 +1026,11 @@ describe("PA2 D5 the warnings", () => {
       50,
     );
     expect(
-      ldDecay.warnings(r, project({ table: null, ld: { maxDist: 50 } }))[0]
-        ?.text,
+      ldDecay.warnings(
+        r,
+        project({ table: null, ld: { maxDist: 50 } }),
+        null,
+      )[0]?.text,
     ).toMatch(
       /^The curve of p3 falls to half at 3\.40 bp, beyond its furthest pairs, in the bin to 1 bp, /u,
     );
@@ -1042,14 +1050,14 @@ describe("PA2 D5 the warnings", () => {
       },
     ]);
     const p = project({ table });
-    expect(ldDecay.warnings(r, p).map((w) => w.code)).toStrictEqual([
+    expect(ldDecay.warnings(r, p, null).map((w) => w.code)).toStrictEqual([
       "fewIndividuals",
       "noPairs",
       "halfDistBeyondPairs",
       "individualsWithoutPopulation",
       "populationNotInResult",
     ]);
-    expect(ldDecay.warnings(r, p).slice(3)).toStrictEqual([
+    expect(ldDecay.warnings(r, p, null).slice(3)).toStrictEqual([
       {
         code: "individualsWithoutPopulation",
         text: "1 individual of ld.nei has no population, and is left out of the LD decay: i099. If it belongs to one, fill in its population in the metadata file and load it again.",
@@ -1063,7 +1071,7 @@ describe("PA2 D5 the warnings", () => {
 
   test("the warnings of a result of another analysis, and those of a project of association, throw a defect", () => {
     const other: JobResult = { analysis: "filterCounts", passStats: FLOW_PASS };
-    expect(() => ldDecay.warnings(other, project())).toThrow(
+    expect(() => ldDecay.warnings(other, project(), null)).toThrow(
       /^popnei_web defect: /u,
     );
     const association = deepFreeze<Project>({
@@ -1071,7 +1079,7 @@ describe("PA2 D5 the warnings", () => {
       app: "gwas",
       grouping: { kind: "roles", roles: [] },
     });
-    expect(() => ldDecay.warnings(flowResult(), association)).toThrow(
+    expect(() => ldDecay.warnings(flowResult(), association, null)).toThrow(
       /^popnei_web defect: /u,
     );
   });
@@ -1607,6 +1615,7 @@ describe("PA2 D5 the boundaries of the rules", () => {
         .warnings(
           resultOf([flowPop("pop_a"), flowPop("pop_b", { individuals })]),
           project(),
+          null,
         )
         .map((w) => w.code);
     expect(at(19)).toStrictEqual(["fewIndividuals"]);
@@ -1626,6 +1635,7 @@ describe("PA2 D5 the boundaries of the rules", () => {
           },
         ]),
         project({ ld: { maxDist: 100_000, maxAllowedMaf: 0.8 } }),
+        null,
       )[0]?.text;
     expect(at(1)).toBe(
       "pop_b has no pair of variants to measure: fewer than two of its variants pass its maximum major allele frequency of 0.8.",
@@ -1646,7 +1656,7 @@ describe("PA2 D5 the boundaries of the rules", () => {
       250_000,
     );
     expect(
-      ldDecay.warnings(r, project({ ld: { maxDist: 250_000 } }))[0]?.text,
+      ldDecay.warnings(r, project({ ld: { maxDist: 250_000 } }), null)[0]?.text,
     ).toMatch(/ within 250,000 base pairs of each other /u);
   });
 
@@ -1656,8 +1666,11 @@ describe("PA2 D5 the boundaries of the rules", () => {
       250_000,
     );
     expect(
-      ldDecay.warnings(r, project({ table: null, ld: { maxDist: 250_000 } }))[0]
-        ?.text,
+      ldDecay.warnings(
+        r,
+        project({ table: null, ld: { maxDist: 250_000 } }),
+        null,
+      )[0]?.text,
     ).toMatch(/ a curve can follow within 250,000 base pairs, flat /u);
   });
 
@@ -1670,6 +1683,7 @@ describe("PA2 D5 the boundaries of the rules", () => {
           2_800_000,
         ),
         project({ table: null, ld: { maxDist: 2_800_000 } }),
+        null,
       );
     expect(at(280_000)).toStrictEqual([]);
     expect(at(2_800_000)).toStrictEqual([
@@ -1688,6 +1702,7 @@ describe("PA2 D5 the boundaries of the rules", () => {
       ldDecay.warnings(
         resultOf([{ name: "p3", pairs: pairsIn([1, 2]), halfDist }], 400_000),
         project({ table: null, ld: { maxDist: 400_000 } }),
+        null,
       );
     expect(at(8001)).toStrictEqual([]);
     expect(at(1)[0]?.text).toMatch(
@@ -1739,7 +1754,7 @@ describe("PA6 the small rules of the populations, shared from project.ts", () =>
     const p = project({
       table: tableOf(LD_INDIVIDUALS, (_, i) => `p${String(i % 3)}`),
     });
-    expect(ldDecay.warnings(three, p)[0]).toStrictEqual({
+    expect(ldDecay.warnings(three, p, null)[0]).toStrictEqual({
       code: "fewIndividuals",
       text: "Populations p3, p5 and p6 have fewer than 20 individuals, 12, 8 and 5. With fewer than 20, r² is higher than in the population by chance alone, more than the fitted curve corrects for, so their curves, when they have one, lie higher and their half distances are longer than those of a larger population.",
     });

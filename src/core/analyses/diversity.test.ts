@@ -287,7 +287,7 @@ describe("WS5 D1 the example and the reasons", () => {
       numVarsWithValue: [0, 0],
       numVars: 1000,
     });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "tooFewIndividuals",
         text: "Populations A and B have fewer than 20 individuals, 2 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
@@ -306,12 +306,12 @@ describe("WS5 D1 the example and the reasons", () => {
       numVarsWithValue: [0],
       numVars: 1000,
     });
-    expect(diversity.warnings(aAlone, p).map((w) => w.code)).toEqual([
+    expect(diversity.warnings(aAlone, p, null).map((w) => w.code)).toEqual([
       "tooFewIndividuals",
       "individualsWithoutPopulation",
       "populationNotInResult",
     ]);
-    expect(diversity.warnings(aAlone, p).at(-1)).toEqual({
+    expect(diversity.warnings(aAlone, p, null).at(-1)).toEqual({
       code: "populationNotInResult",
       text: "Population B has no individual among the individuals of panel.nei that the filters kept, so it is not in the table.",
     });
@@ -461,7 +461,7 @@ describe("WS5 D3 the rest of the module", () => {
 
   test("warnings of a population with a value at 641 of 1,152 variants gives variantsWithoutValue with 56%", () => {
     const { p, r } = p0a(641);
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "variantsWithoutValue",
         text: "p0a has a value at 641 of the 1,152 variants kept (56%); at the others fewer than 20 of its individuals have a genotype.",
@@ -472,7 +472,7 @@ describe("WS5 D3 the rest of the module", () => {
 
   test("warnings of 1,151 of 1,152 variants writes 99%, not 100%", () => {
     const { p, r } = p0a(1151);
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "variantsWithoutValue",
         text: "p0a has a value at 1,151 of the 1,152 variants kept (99%); at the others fewer than 20 of its individuals have a genotype.",
@@ -483,7 +483,7 @@ describe("WS5 D3 the rest of the module", () => {
 
   test("warnings of 1 of 1,152 variants writes 1%, not 0%", () => {
     const { p, r } = p0a(1);
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "variantsWithoutValue",
         text: "p0a has a value at 1 of the 1,152 variants kept (1%); at the others fewer than 20 of its individuals have a genotype.",
@@ -494,7 +494,7 @@ describe("WS5 D3 the rest of the module", () => {
 
   test("warnings of a population with a value at every variant kept is none", () => {
     const { p, r } = p0a(1152);
-    expect(diversity.warnings(r, p)).toEqual([needTwo("p0a")]);
+    expect(diversity.warnings(r, p, null)).toEqual([needTwo("p0a")]);
   });
 
   test("warnings of four populations of fewer than 20 names two and how many more, with no counts", () => {
@@ -509,7 +509,7 @@ describe("WS5 D3 the rest of the module", () => {
       numVarsWithValue: [0, 0, 0, 0],
       numVars: 1152,
     });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "tooFewIndividuals",
         text: "Populations P1, P2 and 2 more have fewer than 20 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
@@ -1086,7 +1086,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
       numVarsWithValue: [641, 1100],
       numVars: 1152,
     });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "variantsWithoutValue",
         text: "p0a and p0b have a value at 641 and 1,100 of the 1,152 variants kept (56% and 95%); at the others fewer than 20 of their individuals have a genotype.",
@@ -1103,7 +1103,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
       numVarsWithValue: [641, 1100, 10, 11, 12],
       numVars: 1152,
     });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "variantsWithoutValue",
         text: "p0a, p0b and 3 more have a value at fewer than the 1,152 variants kept; at the others fewer than 20 of their individuals have a genotype.",
@@ -1119,7 +1119,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
       numVarsWithValue: [0],
       numVars: 1152,
     });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "variantsWithoutValue",
         text: "p0a has a value at none of the 1,152 variants kept: at each, fewer than 20 of its individuals have a genotype.",
@@ -1136,7 +1136,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
       numVarsWithValue: [0],
       numVars: 1,
     });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "variantsWithoutValue",
         text: "A has no value at the one variant kept: fewer than 20 of its individuals have a genotype there.",
@@ -1153,7 +1153,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
       numVarsWithValue: [0, 0],
       numVars: 1,
     });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "variantsWithoutValue",
         text: "A and B have no value at the one variant kept: fewer than 20 of their individuals have a genotype there.",
@@ -1169,7 +1169,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
       numVarsWithValue: [0],
       numVars: 1152,
     });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "tooFewIndividuals",
         text: "Population p3 has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so p3 has no values. To have them, merge it with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
@@ -1191,7 +1191,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
       individuals: names,
     });
     const r = result({ pops: ["p0"], numIndividuals: [20], numVars: 1152 });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "individualsWithoutPopulation",
         text: "5 individuals of panel.nei have no population, and are left out of the diversity: s0, s1 and 3 more. If they belong to one, fill in their population in the metadata file and load it again.",
@@ -1207,7 +1207,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
       individuals: ["i1", "i2"],
     });
     const r = result({ pops: [long], numIndividuals: [1], numVars: 1152 });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "tooFewIndividuals",
         text: `Population ${"x".repeat(40)}… has 1 individual, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so ${"x".repeat(40)}… has no values. To have them, merge it with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.`,
@@ -1301,7 +1301,7 @@ describe("WS5 D1 the example and the reasons, with options set and reasons toget
       "    variants, pops=pops, min_num_individuals=10, poly_threshold=0.9\n",
     );
     const r = result({ pops: ["p0"], numIndividuals: [15], numVars: 1152 });
-    expect(diversity.warnings(r, p)).toEqual([needTwo("p0", 10)]);
+    expect(diversity.warnings(r, p, null)).toEqual([needTwo("p0", 10)]);
   });
 
   test("needs gives a reason of individualsNeeds before the column, whatever the filters of individuals", () => {
@@ -1348,7 +1348,7 @@ describe("WS5 D3 the rest of the module, its words at their bounds", () => {
       individuals: ["i1", "i2", "i3"],
     });
     const r = result({ pops: ["A"], numIndividuals: [20], numVars: 1152 });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "populationNotInResult",
         text: "Populations C and D have no individual among the individuals of panel.nei that the filters kept, so they are not in the table.",
@@ -1365,7 +1365,7 @@ describe("WS5 D3 the rest of the module, its words at their bounds", () => {
       numVarsWithValue: [0, 0, 0],
       numVars: 1152,
     });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "tooFewIndividuals",
         text: "Populations A, B and C have fewer than 20 individuals, 1, 2 and 3, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
@@ -1381,7 +1381,7 @@ describe("WS5 D3 the rest of the module, its words at their bounds", () => {
       numVarsWithValue: [641, 1100, 576],
       numVars: 1152,
     });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "variantsWithoutValue",
         text: "A, B and C have a value at 641, 1,100 and 576 of the 1,152 variants kept (56%, 95% and 50%); at the others fewer than 20 of their individuals have a genotype.",
@@ -1395,7 +1395,7 @@ describe("WS5 D3 the rest of the module, its words at their bounds", () => {
       individuals: ["i1"],
     });
     const r = result({ pops: ["A"], numIndividuals: [20], numVars: 1152 });
-    expect(diversity.warnings(r, p)).toEqual([needTwo("A")]);
+    expect(diversity.warnings(r, p, null)).toEqual([needTwo("A")]);
   });
 
   test("diversityCsv quotes a population with a new line", () => {
@@ -1548,6 +1548,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
     const found = diversity.warnings(
       aAlone,
       filteredProject([{ kind: "missing_data", maxAllowedMissingRate: 0.2 }]),
+      null,
     );
     expect(found.map((w) => w.code)).toEqual([
       "tooFewIndividuals",
@@ -1567,7 +1568,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
       numVarsWithValue: [0],
       numVars: 1000,
     });
-    expect(diversity.warnings(r, project()).at(0)).toEqual({
+    expect(diversity.warnings(r, project(), null).at(0)).toEqual({
       code: "tooFewIndividuals",
       text: "Population A has 1 individual, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so A has no values. To have them, merge it with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity, or loosen the filters of individuals in the Variants step.",
     });
@@ -1577,7 +1578,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
       numVarsWithValue: [0, 0],
       numVars: 1000,
     });
-    expect(diversity.warnings(both, project()).at(0)).toEqual({
+    expect(diversity.warnings(both, project(), null).at(0)).toEqual({
       code: "tooFewIndividuals",
       text: "Populations A and B have fewer than 20 individuals, 1 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity, or loosen the filters of individuals in the Variants step.",
     });
@@ -1621,7 +1622,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
       numVars: 1000,
     });
     expect(
-      diversity.warnings(r, project({ individuals: ["i1", "i2"] })).at(0),
+      diversity.warnings(r, project({ individuals: ["i1", "i2"] }), null).at(0),
     ).toEqual({
       code: "tooFewIndividuals",
       text: "Populations A and B have fewer than 20 individuals, 1 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
@@ -1874,7 +1875,7 @@ describe("IP4 D1 the one population", () => {
       ...project({ individuals: ["i1", "i2"] }),
       individuals: null,
     });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "tooFewIndividuals",
         text: "All individuals, the one population, has 2 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so it has no values. To have them, lower the minimum number of individuals in the options of the diversity.",
@@ -1886,7 +1887,7 @@ describe("IP4 D1 the one population", () => {
       ...project({ individuals: ["i1", "i4"] }),
       grouping: { kind: "onePopulation" },
     });
-    expect(diversity.warnings(r, withFile).map((w) => w.code)).toEqual([
+    expect(diversity.warnings(r, withFile, null).map((w) => w.code)).toEqual([
       "tooFewIndividuals",
     ]);
   });
@@ -1898,7 +1899,7 @@ describe("IP4 D1 the one population", () => {
       numVarsWithValue: [0],
       numVars: 1000,
     });
-    expect(diversity.warnings(r, noFileProject())).toEqual([
+    expect(diversity.warnings(r, noFileProject(), null)).toEqual([
       {
         code: "tooFewIndividuals",
         text: "All individuals, the one population, has 3 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so it has no values. To have them, lower the minimum number of individuals in the options of the diversity, or loosen the filters of individuals in the Variants step.",
@@ -1908,7 +1909,7 @@ describe("IP4 D1 the one population", () => {
 
   test("a result without All individuals raises no populationNotInResult for the one population", () => {
     const r = result({ pops: [], numIndividuals: [], numVars: 1000 });
-    expect(diversity.warnings(r, noFileProject())).toEqual([]);
+    expect(diversity.warnings(r, noFileProject(), null)).toEqual([]);
   });
 
   test("script gives the lines of the one population, with no metadata file and with onePopulation", () => {
@@ -2547,6 +2548,7 @@ describe("PA10 populations that hold fewer than 2 chromosomes", () => {
     const found = diversity.warnings(
       { ...r, numVarsInDraw: Uint32Array.from([0]), numCalledAlleles: 2 },
       p,
+      null,
     );
     expect(found.map((w) => w.code)).toEqual([
       "tooFewChromosomesForDraw",
@@ -2603,7 +2605,7 @@ function warningsOf(
   p: Project,
   code: string,
 ): readonly Warning[] {
-  return diversity.warnings(r, p).filter((w) => w.code === code);
+  return diversity.warnings(r, p, null).filter((w) => w.code === code);
 }
 
 /** The project of the flow, the column popcat, with two individuals. */
@@ -2633,7 +2635,7 @@ describe("PA6 D4 the warnings of stage 5", () => {
       numVarsEveryPop: 1152,
       numVarsEveryPopInDraw: 1152,
     });
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "tooFewIndividuals",
         text: "Population p3 has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so p3 has no values. To have them, merge it with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
@@ -2677,7 +2679,7 @@ describe("PA6 D4 the warnings of stage 5", () => {
   test("All individuals in the call gives privateAllelesNeedTwoPopulations with the words of the one population", () => {
     const p = deepFreeze<Project>({ ...project(), individuals: null });
     const r = stage5Result(["All individuals"], [200]);
-    expect(diversity.warnings(r, p)).toEqual([
+    expect(diversity.warnings(r, p, null)).toEqual([
       {
         code: "privateAllelesNeedTwoPopulations",
         text: "With every individual in one population, no allele can be private, found in this population and in no other, so the table has no private alleles. Choose a column that defines the populations in the Individuals step to count them.",
@@ -2696,6 +2698,7 @@ describe("PA6 D4 the warnings of stage 5", () => {
           numVarsEveryPopInDraw: 641,
         }),
         p,
+        null,
       ),
     ).toEqual([
       {
@@ -2710,6 +2713,7 @@ describe("PA6 D4 the warnings of stage 5", () => {
           numVarsEveryPopInDraw: 0,
         }),
         p,
+        null,
       ),
     ).toEqual([
       {
@@ -2745,6 +2749,7 @@ describe("PA6 D4 the warnings of stage 5", () => {
           numVarsEveryPopInDraw: 1152,
         }),
         p,
+        null,
       ),
     ).toEqual([{ code: "variantsNotInDraw", text: first }]);
     expect(
@@ -2755,6 +2760,7 @@ describe("PA6 D4 the warnings of stage 5", () => {
           numVarsEveryPopInDraw: 277,
         }),
         p,
+        null,
       ),
     ).toEqual([
       {
@@ -2858,7 +2864,7 @@ describe("PA6 D4 the warnings of stage 5", () => {
     };
     expect(
       diversity
-        .warnings(r, p)
+        .warnings(r, p, null)
         .map((w) => w.code)
         .slice(-1),
     ).toEqual(["noFInHaploid"]);
@@ -3407,7 +3413,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       numVarsWithValue: [0],
       numVars: 1000,
     });
-    expect(diversityOnPopgen2.warnings(r, p)).toEqual([
+    expect(diversityOnPopgen2.warnings(r, p, null)).toEqual([
       {
         code: "tooFewIndividuals",
         text: "The unclassified individuals, taken as one population since none has a population, are 12, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, lower the minimum number of individuals in the options of the diversity.",
@@ -3417,7 +3423,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       ...project({ individuals: individualsNamed("s", 14) }),
       individuals: null,
     });
-    expect(diversityOnPopgen2.warnings(r, fourteen)).toEqual([
+    expect(diversityOnPopgen2.warnings(r, fourteen, null)).toEqual([
       {
         code: "tooFewIndividuals",
         text: "The unclassified individuals, taken as one population since none has a population, are 12, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, lower the minimum number of individuals in the options of the diversity, or loosen the thresholds of the individuals in the Variants tab.",
@@ -3431,7 +3437,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       2,
       null,
     );
-    expect(diversityOnPopgen2.warnings(oneResult(), noFile)).toEqual([
+    expect(diversityOnPopgen2.warnings(oneResult(), noFile, null)).toEqual([
       {
         code: "privateAllelesNeedTwoPopulations",
         text: `${NO_PRIVATE_ONE} Open an individuals file that assigns the individuals to populations in the box Individuals to count them.`,
@@ -3441,6 +3447,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       diversityOnPopgen2.warnings(
         oneResult(),
         withDiversity(noneProject(), 2, null),
+        null,
       ),
     ).toEqual([
       {
@@ -3452,6 +3459,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       diversityOnPopgen2.warnings(
         oneResult(),
         withDiversity(noneClassifiedProject(), 2, null),
+        null,
       ),
     ).toEqual([
       {
@@ -3472,7 +3480,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     );
     const only =
       "Only A has a population in pop among the individuals kept, and an allele is private when one population has it and no other does, so the table has no private alleles.";
-    expect(diversityOnPopgen2.warnings(r, withUnclassified)).toEqual([
+    expect(diversityOnPopgen2.warnings(r, withUnclassified, null)).toEqual([
       {
         code: "privateAllelesNeedTwoPopulations",
         text: `${only} The unclassified individuals are not a population to compare it with.`,
@@ -3485,8 +3493,30 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       2,
       null,
     );
-    expect(diversityOnPopgen2.warnings(r, allA)).toEqual([
+    expect(diversityOnPopgen2.warnings(r, allA, null)).toEqual([
       { code: "privateAllelesNeedTwoPopulations", text: only },
+    ]);
+  });
+
+  test("privateAllelesNeedTwoPopulations of one classified population counts the unclassified among the individuals kept: none kept, no last sentence", () => {
+    const r = result({ pops: ["A"], numIndividuals: [2], numVars: 1000 });
+    const p = withDiversity(
+      project({
+        table: tableOf(["i1", "i2", "i3", "i4"], ["A", null, "A", null]),
+      }),
+      2,
+      null,
+    );
+    const only =
+      "Only A has a population in pop among the individuals kept, and an allele is private when one population has it and no other does, so the table has no private alleles.";
+    expect(diversityOnPopgen2.warnings(r, p, ["i1", "i3"])).toEqual([
+      { code: "privateAllelesNeedTwoPopulations", text: only },
+    ]);
+    expect(diversityOnPopgen2.warnings(r, p, ["i1", "i2", "i3"])).toEqual([
+      {
+        code: "privateAllelesNeedTwoPopulations",
+        text: `${only} The unclassified individuals are not a population to compare it with.`,
+      },
     ]);
   });
 
@@ -3498,7 +3528,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       numVarsWithValue: [0, 0],
       numVars: 1000,
     });
-    expect(diversityOnPopgen2.warnings(r, p)).toEqual([
+    expect(diversityOnPopgen2.warnings(r, p, null)).toEqual([
       {
         code: "tooFewIndividuals",
         text: "Populations A and B have fewer than 20 individuals, 2 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in pops.csv, or lower the minimum number of individuals in the options of the diversity.",
@@ -3510,13 +3540,12 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       numVarsWithValue: [0],
       numVars: 1000,
     });
-    expect(diversityOnPopgen2.warnings(aAlone, p).map((w) => w.code)).toEqual([
-      "tooFewIndividuals",
-      "populationNotInResult",
-    ]);
+    expect(
+      diversityOnPopgen2.warnings(aAlone, p, null).map((w) => w.code),
+    ).toEqual(["tooFewIndividuals", "populationNotInResult"]);
     expect(
       diversityOnPopgen2
-        .warnings(oneResult(), noneProject())
+        .warnings(oneResult(), noneProject(), null)
         .map((w) => w.code),
     ).toEqual(["tooFewIndividuals"]);
   });

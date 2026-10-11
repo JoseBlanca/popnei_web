@@ -148,8 +148,11 @@ describe("IP2 D2 the counts of the filters over the individuals kept", () => {
   });
 
   test("filterKeptNone no longer names the statistics of each individual, whose pass has no filter", () => {
-    const text = filterCounts.warnings(EMPTY_PASS, project(EMPTY_FILTERS))[0]
-      ?.text;
+    const text = filterCounts.warnings(
+      EMPTY_PASS,
+      project(EMPTY_FILTERS),
+      null,
+    )[0]?.text;
     expect(text).toBe(
       "The MAF filter kept none of the 1,152 variants it was given, so the analyses have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.",
     );
@@ -166,7 +169,9 @@ describe("VS3 D1 the counts of the filters", () => {
   });
 
   test("warnings of the empty pass gives filterKeptNone naming the MAF filter", () => {
-    expect(filterCounts.warnings(EMPTY_PASS, project(EMPTY_FILTERS))).toEqual([
+    expect(
+      filterCounts.warnings(EMPTY_PASS, project(EMPTY_FILTERS), null),
+    ).toEqual([
       {
         code: "filterKeptNone",
         text: "The MAF filter kept none of the 1,152 variants it was given, so the analyses have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.",
@@ -199,9 +204,9 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
   });
 
   test("warnings of counts where every filter kept some is none", () => {
-    expect(filterCounts.warnings(THREE_PASS, project(THREE_FILTERS))).toEqual(
-      [],
-    );
+    expect(
+      filterCounts.warnings(THREE_PASS, project(THREE_FILTERS), null),
+    ).toEqual([]);
   });
 
   test("warnings of a first filter that kept none tells to loosen it alone", () => {
@@ -212,7 +217,7 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
     const filters: readonly VariantFilter[] = [
       { kind: "missing_data", maxAllowedMissingRate: 0 },
     ];
-    expect(filterCounts.warnings(r, project(filters))).toEqual([
+    expect(filterCounts.warnings(r, project(filters), null)).toEqual([
       {
         code: "filterKeptNone",
         text: "The filter of the variants by missing data kept none of the 1,200 variants it was given, so the analyses have no variant to calculate over, and a file written would hold none. Loosen it.",
@@ -229,7 +234,7 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
       },
     });
     expect(
-      filterCounts.warnings(r, project(EMPTY_FILTERS)).map((w) => w.text),
+      filterCounts.warnings(r, project(EMPTY_FILTERS), null).map((w) => w.text),
     ).toEqual([
       "The filter of the variants by missing data kept none of the 1,200 variants it was given, so the analyses have no variant to calculate over, and a file written would hold none. Loosen it.",
     ]);
@@ -244,7 +249,7 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
       },
     });
     expect(
-      filterCounts.warnings(r, project(EMPTY_FILTERS)).map((w) => w.text),
+      filterCounts.warnings(r, project(EMPTY_FILTERS), null).map((w) => w.text),
     ).toEqual([
       "The MAF filter kept none of the one variant it was given, so the analyses have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.",
     ]);
@@ -256,6 +261,7 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
       filterCounts.warnings(
         r,
         project([], { name: "empty.vcf", onlyPassed: false }),
+        null,
       ),
     ).toEqual([
       {
@@ -277,6 +283,7 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
       filterCounts.warnings(
         r,
         project(filters, { name: "failed.vcf", onlyPassed: true }),
+        null,
       ),
     ).toEqual([
       {

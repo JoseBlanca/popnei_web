@@ -794,6 +794,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
         project({
           options: { ld: { follow: true, maxAllowedR2: 0.1, maxDist: null } },
         }),
+        null,
       ),
     ).toEqual([
       {
@@ -805,6 +806,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
       pcaOnPopgen2.warnings(
         result({ numVarsUsed: 150 }),
         project({ options: LD_50000 }),
+        null,
       ),
     ).toEqual([
       {
@@ -1698,10 +1700,12 @@ function workedPcoa(corrected: boolean): PcaResult {
 
 describe("IP6 D4 warnings", () => {
   const codes = (r: PcaResult, p: Project): string[] =>
-    pca.warnings(r, p).map((w) => w.code);
+    pca.warnings(r, p, null).map((w) => w.code);
 
   test("a job with no LD filter gives pruningOff with the words of the PCA", () => {
-    expect(pca.warnings(result({ numVarsUsed: 1200 }), project())).toEqual([
+    expect(
+      pca.warnings(result({ numVarsUsed: 1200 }), project(), null),
+    ).toEqual([
       {
         code: "pruningOff",
         text: "No LD filter was applied, neither in the Variants step nor for the PCA, so a region of the genome counts once for each of its variants, and a region of many variants in linkage disequilibrium, such as an inversion, can make a component of its own that separates the individuals by that region rather than by their ancestry. Set an LD filter for the PCA in its options above, or for every analysis in the Variants step, unless such regions are what you are looking for.",
@@ -1714,6 +1718,7 @@ describe("IP6 D4 warnings", () => {
     const [warning] = pca.warnings(
       result({ method: "pcoa", numVars: 1200 }),
       p,
+      null,
     );
     expect(warning?.code).toBe("pruningOff");
     expect(warning?.text).toContain(
@@ -1734,7 +1739,7 @@ describe("IP6 D4 warnings", () => {
 
   test("numVarsUsed 150 for 200 individuals gives fewVariants, and 200 for 200 none", () => {
     const p = project({ options: ownLd(50_000) });
-    expect(pca.warnings(result({ numVarsUsed: 150 }), p)).toEqual([
+    expect(pca.warnings(result({ numVarsUsed: 150 }), p, null)).toEqual([
       {
         code: "fewVariants",
         text: "The PCA used 150 variants that vary among its 200 individuals, fewer variants than individuals, so each component rests on few variants and can show chance differences as structure. If the dataset has more, loosen the filters of the PCA in its options above, or those of the Variants step that it follows.",
@@ -1745,7 +1750,9 @@ describe("IP6 D4 warnings", () => {
 
   test("the PCoA counts the variants of its pass for fewVariants", () => {
     const p = project({ options: { method: "pcoa", ...ownLd(50_000) } });
-    expect(pca.warnings(result({ method: "pcoa", numVars: 150 }), p)).toEqual([
+    expect(
+      pca.warnings(result({ method: "pcoa", numVars: 150 }), p, null),
+    ).toEqual([
       {
         code: "fewVariants",
         text: "The PCoA used 150 variants for its 200 individuals, fewer variants than individuals, so each component rests on few variants and can show chance differences as structure. If the dataset has more, loosen the filters of the PCoA in its options above, or those of the Variants step that it follows.",
@@ -1759,7 +1766,7 @@ describe("IP6 D4 warnings", () => {
       individualsFile: "none",
       options: { method: "pcoa", ...ownLd(50_000) },
     });
-    expect(pca.warnings(workedPcoa(true), p)).toEqual([
+    expect(pca.warnings(workedPcoa(true), p, null)).toEqual([
       {
         code: "lingoesCorrection",
         text: "The Kosman distances between these individuals cannot all be drawn in one space: 7.88% of their variance lies in directions that no space has. So they were corrected, by Lingoes' method, which adds the same amount, here 0.13, to the square of the distance between every two individuals, 32% of the mean of those squares. This moves the closest individuals apart the most: two individuals of the same genotypes are drawn 0.36 apart, and groups look looser than their distances make them. The percentages of the components are of the corrected distances. Compare with the PCA of the genotypes, which needs no correction.",
@@ -1773,7 +1780,7 @@ describe("IP6 D4 warnings", () => {
       individualsFile: "none",
       options: { method: "pcoa", ...ownLd(50_000) },
     });
-    expect(pca.warnings(workedPcoa(false), p)).toEqual([]);
+    expect(pca.warnings(workedPcoa(false), p, null)).toEqual([]);
   });
 
   test("a result of another analysis is a defect", () => {
@@ -1781,6 +1788,7 @@ describe("IP6 D4 warnings", () => {
       pca.warnings(
         { analysis: "filterCounts", passStats: { numVars: 0, filtering: {} } },
         project(),
+        null,
       ),
     ).toThrow(/^popnei_web defect: the PCA was given a result of filterCounts/);
   });

@@ -387,7 +387,11 @@ function definitionOf(page: DiversityPage): AnalysisDef<Job, JobResult> {
     needs: (p: Project) => (page === "popgen" ? needs(p) : popgen2Needs(p)),
     keptNeeds: (p: Project, kept: IndividualsKept) => keptNeeds(p, kept, page),
     run: (p: Project, c: WorkerClient<Job, JobResult>) => run(p, c, page),
-    warnings: (result: JobResult, p: Project) => warnings(result, p, page),
+    warnings: (
+      result: JobResult,
+      p: Project,
+      individuals: readonly string[] | null,
+    ) => warnings(result, p, individuals, page),
     checkNumbers,
     numCheckNumbers: (p: Project) => numCheckNumbers(p, page),
     script: (p: Project) => script(p, page),
@@ -953,6 +957,7 @@ function run(
 function warnings(
   result: JobResult,
   p: Project,
+  individuals: readonly string[] | null,
   page: DiversityPage,
 ): readonly Warning[] {
   const r = diversityResultOf(result);
@@ -1024,7 +1029,7 @@ function warnings(
       text: `The diversity was calculated over one individual of ploidy 1, which holds 1 chromosome, and the rarefaction and the spectrum draw ${String(MIN_DRAW)} or more. So the alleles per variant, the private alleles, their rarefied values and the spectrum, which are calculated together, have no value.`,
     });
   } else {
-    found.push(...privateAllelesWarnings(r, rows, min, p, page));
+    found.push(...privateAllelesWarnings(r, rows, min, p, individuals, page));
     const notInDraw = counts.filter(
       ({ row, withValue, inDraw }) =>
         row.individuals >= min && inDraw < withValue,
@@ -1059,6 +1064,7 @@ function privateAllelesWarnings(
   rows: readonly DiversityRow[],
   min: number,
   p: Project,
+  individuals: readonly string[] | null,
   page: DiversityPage,
 ): readonly Warning[] {
   const called = rows.filter((row) => row.individuals >= min);
@@ -1077,7 +1083,7 @@ function privateAllelesWarnings(
       text: isOnePopulation(p, page)
         ? onePopulationPrivateText(p, page)
         : page === "popgen2" && rows.length === 1
-          ? onlyClassifiedText(p, only.population)
+          ? onlyClassifiedText(p, only.population, individuals)
           : `Only ${namesOf([only.population])} has ${grouped(min)} individuals or more, and private alleles are counted among such populations, so the table has none: an allele is private when one population has it and no other does.`,
     });
   }
@@ -1126,13 +1132,18 @@ function onePopulationPrivateText(p: Project, page: DiversityPage): string {
 
 /** The text of `privateAllelesNeedTwoPopulations` on popgen2.html when
     `population` is the one population of the column in the result, with
-    a last sentence when the variants file has unclassified individuals,
-    which the runner left out. */
-function onlyClassifiedText(p: Project, population: string): string {
+    a last sentence when some of the individuals kept, `individuals`,
+    `null` for every one of the variants file, are unclassified, which
+    the runner left out. */
+function onlyClassifiedText(
+  p: Project,
+  population: string,
+  individuals: readonly string[] | null,
+): string {
   const column = populationsColumnOf(p) ?? "";
   const text = `Only ${namesOf([population])} has a population in ${shown(column)} among the individuals kept, and an allele is private when one population has it and no other does, so the table has no private alleles.`;
   const unclassified =
-    popgen2PopulationsKept(p, null)?.unclassifiedLeftOut ?? 0;
+    popgen2PopulationsKept(p, individuals)?.unclassifiedLeftOut ?? 0;
   return unclassified > 0
     ? `${text} The unclassified individuals are not a population to compare it with.`
     : text;

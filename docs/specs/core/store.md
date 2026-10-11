@@ -1407,7 +1407,14 @@ export interface AnalysisDef<J, R> {
       populations.ts, shared. */
   keptNeeds?(p: Project, kept: IndividualsKept): string | null;
   run(p: Project, c: WorkerClient<J, R>): Run<R>;
-  warnings(r: R, p: Project): readonly Warning[];
+  /** From 11 October 2026 (the review of work package 1 of
+      docs/plans/population-tab.md), with the individuals kept its
+      request was sent with, `null` when the filters removed nobody, as
+      the client gave them, so that a warning that counts individuals
+      kept counts those of the result. */
+  warnings(
+    r: R, p: Project, individuals: readonly string[] | null,
+  ): readonly Warning[];
   checkNumbers(r: R): readonly (number | null)[];
   numCheckNumbers(p: Project): number | null;  // reads p.variants
   script(p: Project): string;

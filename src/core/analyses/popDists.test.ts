@@ -283,7 +283,7 @@ function resultOf(
 
 /** The warnings of `r` for `p` of the code `code`. */
 function warningsOf(r: JobResult, p: Project, code: string): Warning[] {
-  return popDists.warnings(r, p).filter((w) => w.code === code);
+  return popDists.warnings(r, p, null).filter((w) => w.code === code);
 }
 
 /** A client that keeps the jobs it is given. */
@@ -388,7 +388,7 @@ describe("PA3 D4 the worked example", () => {
   test("a result of A and B with an Fst of −0.01 and a D of 0.02 gives negativeDistance naming Fst alone, the check numbers [numVars, −0.01, 0.02], and 3 of them", () => {
     const p = exampleProject(1);
     const r = resultOf(["A", "B"], [{ fst: -0.01, dest: 0.02 }]);
-    expect(popDists.warnings(r, p)).toStrictEqual([
+    expect(popDists.warnings(r, p, null)).toStrictEqual([
       {
         code: "individualsWithoutPopulation",
         text: "1 individual of panel.nei has no population, and is left out of the distances: i4. If it belongs to one, fill in its population in the metadata file and load it again.",
@@ -584,12 +584,12 @@ describe("PA3 D4 run", () => {
 
 describe("PA3 D4 the warnings", () => {
   test("the result of the flow raises none", () => {
-    expect(popDists.warnings(flowResult(), project())).toStrictEqual([]);
+    expect(popDists.warnings(flowResult(), project(), null)).toStrictEqual([]);
   });
 
   test("tooFewIndividuals of one population left out whole", () => {
     const r = resultOf(["p2", "p1"], [], [["p0", 48]]);
-    expect(popDists.warnings(r, project({ min: 50 }))).toStrictEqual([
+    expect(popDists.warnings(r, project({ min: 50 }), null)).toStrictEqual([
       {
         code: "tooFewIndividuals",
         text: "Population p0 has 48 individuals, fewer than the minimum of 50, so it is left out of the distances. To include it, lower the minimum of individuals, or merge it with another population in the metadata file.",
@@ -617,7 +617,7 @@ describe("PA3 D4 the warnings", () => {
         ["p5", 8],
       ],
     );
-    expect(popDists.warnings(r, p)).toStrictEqual([
+    expect(popDists.warnings(r, p, null)).toStrictEqual([
       {
         code: "tooFewIndividuals",
         text: "Populations p3 and p5 have fewer than 20 individuals, 12 and 8, so they are left out of the distances. To include them, lower the minimum of individuals, or merge each with another population in the metadata file.",
@@ -645,7 +645,7 @@ describe("PA3 D4 the warnings", () => {
 
   test("a population left out that is not among the populations to run is a defect", () => {
     const r = resultOf(["p0", "p2", "p1"], [], [["p9", 3]]);
-    expect(() => popDists.warnings(r, project())).toThrow(
+    expect(() => popDists.warnings(r, project(), null)).toThrow(
       /^popnei_web defect: the distances left out "p9"/u,
     );
   });
@@ -804,7 +804,7 @@ describe("PA3 D4 the warnings", () => {
       leftOut: [],
       passStats: FLOW_PASS,
     };
-    expect(popDists.warnings(r, p)).toStrictEqual([
+    expect(popDists.warnings(r, p, null)).toStrictEqual([
       {
         code: "negativeDistance",
         text: "p0a and p0b have a negative Hudson's Fst, −0.0113, and Jost's D, −0.0060: the variants cannot tell the two apart. The heatmap orders them as if the distance were 0, and shows the value.",
@@ -845,7 +845,7 @@ describe("PA3 D4 the warnings", () => {
 
   test("jostHaploid for a load of ploidy 1, whatever the values of D", () => {
     expect(
-      popDists.warnings(flowResult(), project({ ploidy: 1 })),
+      popDists.warnings(flowResult(), project({ ploidy: 1 }), null),
     ).toStrictEqual([
       {
         code: "jostHaploid",
@@ -875,7 +875,7 @@ describe("PA3 D4 the warnings", () => {
       [["p3", 12]],
       pass,
     );
-    expect(popDists.warnings(r, p).map((w) => w.code)).toStrictEqual([
+    expect(popDists.warnings(r, p, null).map((w) => w.code)).toStrictEqual([
       "tooFewIndividuals",
       "individualsWithoutPopulation",
       "populationNotInResult",
@@ -883,7 +883,9 @@ describe("PA3 D4 the warnings", () => {
       "negativeDistance",
       "jostHaploid",
     ]);
-    expect(popDists.warnings(withNone, p).map((w) => w.code)).toStrictEqual([
+    expect(
+      popDists.warnings(withNone, p, null).map((w) => w.code),
+    ).toStrictEqual([
       "tooFewIndividuals",
       "individualsWithoutPopulation",
       "populationNotInResult",
@@ -907,7 +909,9 @@ describe("PA3 D4 the warnings", () => {
       [["p3", 12]],
       pass,
     );
-    expect(popDists.warnings(every, three).map((w) => w.code)).toStrictEqual([
+    expect(
+      popDists.warnings(every, three, null).map((w) => w.code),
+    ).toStrictEqual([
       "tooFewIndividuals",
       "individualsWithoutPopulation",
       "pairWithoutDistance",
@@ -1671,7 +1675,7 @@ describe("PA6 the small rules of the populations, shared from project.ts and ind
         ["p6", 5],
       ],
     );
-    expect(popDists.warnings(r, p)).toStrictEqual([
+    expect(popDists.warnings(r, p, null)).toStrictEqual([
       {
         code: "tooFewIndividuals",
         text: "Populations p3, p5 and p6 have fewer than 20 individuals, 12, 8 and 5, so they are left out of the distances. To include them, lower the minimum of individuals, or merge each with another population in the metadata file.",
