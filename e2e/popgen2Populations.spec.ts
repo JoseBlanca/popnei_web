@@ -28,6 +28,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import type AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page, Route } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
@@ -304,6 +305,18 @@ async function setMissing(
   await tab(page, back).click();
 }
 
+/** Checks the page with axe, light and then dark, and leaves it light. */
+async function expectNoAxeViolations(
+  page: Page,
+  makeAxeBuilder: () => AxeBuilder,
+): Promise<void> {
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+}
+
 /** Shows the Populations tab once the one pass has read panel.nei to the
     end, Run enabled, presses Run and waits for the table of `caption`. */
 async function runDiversity(page: Page, caption = CAPTION): Promise<void> {
@@ -393,8 +406,9 @@ test.describe("PT1 D4 the Populations tab", () => {
     expect(await runsOf(page, "pca")).toBe(0);
   });
 
-  test("PT1 D4 no individuals file: the line and the one row Unclassified, 200, 0.3755, 0.3543, 0.9792, 0.0564, 2.0000, 1.9926 and no private alleles", async ({
+  test("PT1 D4 no individuals file: the line and the one row Unclassified, 200, 0.3755, 0.3543, 0.9792, 0.0564, 2.0000, 1.9926 and no private alleles; axe on the line and on the result, light and dark", async ({
     page,
+    makeAxeBuilder,
   }) => {
     test.setTimeout(90_000);
     await openPage(page);
@@ -403,9 +417,33 @@ test.describe("PT1 D4 the Populations tab", () => {
     await expect(
       shown(page).getByText(ONE_POPULATION, { exact: true }),
     ).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+    await expectNoAxeViolations(page, makeAxeBuilder);
     await runDiversity(page);
     await expect(row(page, "Unclassified")).toHaveText(UNCLASSIFIED);
     await expect(diversity(page).getByRole("rowheader")).toHaveCount(1);
+    await expectNoAxeViolations(page, makeAxeBuilder);
+  });
+
+  test("PT1 D4 axe in the ready state and while the diversity runs, held, light and dark", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    test.setTimeout(90_000);
+    await holdSummary(page, { holdDiversity: true });
+    await openPage(page);
+    await pick(page, "panel.nei");
+    await release(page, "allSoFar");
+    await release(page, "result");
+    await pickIndividuals(page, "panel_pops.csv");
+    await tab(page, "Populations").click();
+    await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+    await expectNoAxeViolations(page, makeAxeBuilder);
+    await button(page, "Run").click();
+    await expect(button(page, "Stop")).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expectNoAxeViolations(page, makeAxeBuilder);
+    await release(page, "diversity");
+    await expect(table(page, CAPTION)).toBeVisible({ timeout: RESULT_TIMEOUT });
   });
 
   test("PT1 D4 panel_pops.csv with None chosen, and with a column that gives none of the individuals of panel.nei a population: the same one row Unclassified", async ({
