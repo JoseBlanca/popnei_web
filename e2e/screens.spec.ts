@@ -6063,6 +6063,9 @@ for (const theme of ["light", "dark"] as const) {
           const front = `{ const realPost = self.postMessage.bind(self); self.postMessage = (m, t) => { if (m !== null && typeof m === "object" && m.kind === "result" && m.result !== null && typeof m.result === "object" && m.result.analysis === "diversity") return; realPost(m, t); }; }\n`;
           await route.fulfill({ response, body: front + script });
         });
+        // Opened again, so that its worker is made with the script served
+        // so.
+        await page.goto("popgen2.html");
         const panel = await populationsReady(page);
         await panel.getByRole("button", { name: "Run", exact: true }).click();
         await expect(
