@@ -465,3 +465,22 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     endWrite({ kind: "done", key: "k", result: pcaResult("pca", 1) });
   });
 });
+
+describe("PT1 the band while a crash holds the PCA", () => {
+  test("it says the PCA starts again after the next change", () => {
+    expect(
+      lineWords(
+        {
+          kind: "aboutToStart",
+          method: "pca",
+          waitsFor: "afterCrash",
+          withStop: true,
+        },
+        0,
+      ),
+    ).toEqual({
+      full: "The PCA starts again after the next change",
+      short: "PCA later",
+    });
+  });
+});

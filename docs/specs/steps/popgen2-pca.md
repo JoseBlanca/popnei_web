@@ -661,7 +661,16 @@ calculation worker: after a crash, which may be one for lack of
 memory, which WebKit may still hold in the ended worker while the tab
 was at its limit, the others start by themselves only after the next
 change of the filters or the options, a quiet second after it, and not
-in a new worker at once. A Run starts its own analysis meanwhile. (The
+in a new worker at once. Meanwhile each of them is about to start
+"afterCrash", and its tab says so: "The PCA starts again after the next
+change of the filters or of its options." ("The PCoA …"), "The
+diversity starts again after the next change of the filters, of its
+options or of the populations."; the band, "The PCA starts again after
+the next change", "PCA later". A Run starts its own analysis and lifts
+the hold for it alone; the others wait for the next change (since 11
+October 2026, after the second review of the fixes of work package 1:
+before, they said "starts again in a moment" for a start that never
+came without a change). (The
 session's decision of 11 October 2026, from the review of work package
 1 of `docs/plans/population-tab.md`; until then the others started at
 once.) The tab of the analysis whose live state ended shows the line of
@@ -761,8 +770,10 @@ lists the live ones in that order, the one list the page reads. In
     another calculation that runs, whether the quiet second has run out
     or not, which wins over the two others; "download", the dialog of the
     download of the filtered variants or its write; "changes", the quiet
-    second or a change under way, nothing running. */
-export type AboutToStart = "changes" | "download" | "behind";
+    second or a change under way, nothing running; "afterCrash", a crash
+    of the worker ended another live state and holds this one until the
+    next change of the project or its own Run, nothing running. */
+export type AboutToStart = "changes" | "download" | "behind" | "afterCrash";
 
 export type LiveState =
   | { readonly kind: "off" }
@@ -1310,7 +1321,7 @@ greyed or shows its line of not built yet.
 | empty | the tab greyed, with its reason, as the row of tabs gives it; if it was shown when it became greyed, the reason in its place | open a variants file |
 | locked | the options, the line of the individuals, Run disabled with the lock beside it, from the table of "Run and Stop"; while the PCA is live, the same lock with "Stop recalculating" in the place of Run, enabled, in the same place of the Tab key's order, which ends the live state, and the PCA starts by itself a second after the lock lifts, unless it lifts with the key it had, which shows the result kept | change the options; type the distance or turn the LD pruning off; Start again the one pass in the box; change the thresholds of the individuals |
 | ready | the options, the line of the individuals, Run: before the first Run for the file, and after a Stop, with "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change." under it, in the place of the bar | change the options; Run |
-| about to start | the PCA live, during the quiet second after a change: the options, the line of the individuals, no result, no Run, "Stop recalculating" in its place, and under it, in the place of the bar, "The PCA starts again in a moment, once the filters and its options stop changing."; while the dialog of the download is open, "The PCA starts again when the download is written or closed." | go on changing the options and the thresholds, which puts the start off; Stop recalculating, which ends the live state |
+| about to start | the PCA live, during the quiet second after a change: the options, the line of the individuals, no result, no Run, "Stop recalculating" in its place, and under it, in the place of the bar, "The PCA starts again in a moment, once the filters and its options stop changing."; while the dialog of the download is open, "The PCA starts again when the download is written or closed."; after a crash ended another live state, "The PCA starts again after the next change of the filters or of its options." | go on changing the options and the thresholds, which puts the start off; Stop recalculating, which ends the live state |
 | running | Stop, the bar and the clock, and the line under them; the options and the thresholds and FILTER box of the Variants tab greyed, with "Stop the PCA in the PCA tab to change the filters; then press Run there to calculate it again." (above, "While a PCA runs"); the same whether Run or a change started it | Stop; change the individuals file, its column of the populations and the colour of the points; turn to another tab, where the PCA goes on; open another variants file, which stops it |
 | done | the result, its warnings and notes, the downloads; "Loading the result…" in its place while its code downloads, or the words of its code that could not be downloaded, with "Try again"; above them, while the PCA is live, "Stop recalculating", with no line under it, and after a Stop the line of a Stop, with no button | colour, turn, highlight, sort, download; change the options; Try again; Stop recalculating |
 | results removed | not a state of its own on this page: a change that takes the result off the screen gives about to start while the PCA is live, and ready, with Run, while it is not (before its first Run is impossible, so only after a Stop); the page makes no notice, as the owner decided on 8 October 2026, and keeps no result to bring back, since 10 October 2026 | as in about to start, or as in ready |
@@ -1401,7 +1412,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | an error, a failure that is not popnei's refusal, in this page's words where the old panel's name the Variants step or a project to save (`popgen2FailureText` of `src/ui/analyses/words.ts`; since 9 October 2026, by task 6.1 of the plan, from the review of work package 2, which found the old words on this page) | the variants file changed on the disk since the one pass read it, a failure and not a refusal, "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants."; an error of the application's own, "The application met an error of its own: ‹its words›. Run it again."; the calculations that could not start, "The application could not start its calculations. Reload the page and open panel.nei again."; the page out of date, "The page is out of date. Reload the page and open panel.nei again."; the worker that stopped, the PCA's own words of the memory, `crashText` of core with the page |
 | the note of the colours, a column to colour by that the individuals file lacks | "panel_pops.csv has no column height, by which the points were coloured, so they are coloured by the column of the populations chosen in the box Individuals."; with no column of the populations chosen, or with None, "…, so every point is unclassified. Choose a column of the populations in the box Individuals, or another column to colour the points by."; with no individuals file, "No individuals file is open in the box Individuals, so the points cannot be coloured by height." |
 | the end of a run, in the status region | "PCA of panel.nei calculated."; "PCoA of panel.nei calculated."; a refusal or a failure, "The PCA of panel.nei could not be calculated: " followed by the words of its error |
-| under the button, in the place of the bar, during the quiet second | "The PCA starts again in a moment, once the filters and its options stop changing."; "The PCoA starts again in a moment, once the filters and its options stop changing."; while the dialog of the download is open, "The PCA starts again when the download is written or closed."; "The PCoA starts again when the download is written or closed." |
+| under the button, in the place of the bar, during the quiet second | "The PCA starts again in a moment, once the filters and its options stop changing."; "The PCoA starts again in a moment, once the filters and its options stop changing."; while the dialog of the download is open, "The PCA starts again when the download is written or closed."; "The PCoA starts again when the download is written or closed."; after a crash ended another live state, "The PCA starts again after the next change of the filters or of its options."; "The PCoA …" |
 | the button while the PCA is live and no PCA runs | "Stop recalculating" |
 | under the button, in the place of the bar, after a Stop, until Run or another variants file | "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change."; "Stopped: the PCoA …" |
 | under the words of a failure that ended the live state, until Run or another variants file | "The PCA no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change."; "The PCoA …" |

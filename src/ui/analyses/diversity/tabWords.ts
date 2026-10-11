@@ -45,6 +45,13 @@ export const DIVERSITY_TAB_NAME = "the diversity";
 export const DIVERSITY_STOPPED_LINE =
   "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.";
 
+/** The line in the place of the bar while a crash of the worker, which
+    ended another live state, holds the diversity until the next change;
+    the lines of its other waits come with work package 2 of
+    docs/plans/population-tab.md. */
+export const DIVERSITY_AFTER_CRASH_LINE =
+  "The diversity starts again after the next change of the filters, of its options or of the populations.";
+
 /** The line after a failure that ended the live state, under the
     failure's words, until Run or another variants file, in the place of
     the bar; the user pressed no Stop. */

@@ -2136,6 +2136,13 @@ describe("PT1 D2 several analyses calculated again by themselves", () => {
     expect(page.auto.isLive(DIV)).toBe(true);
     await wait(10_000);
     expect(diversityRequests(page)).toHaveLength(1);
+    // Held until the next change, which its tab says.
+    expect(page.auto.liveState(DIV)).toEqual({
+      kind: "live",
+      aboutToStart: "afterCrash",
+      running: false,
+      after: null,
+    });
     const closeDialog = page.gate.holdChange("download");
     closeDialog();
     await wait(5000);
@@ -2180,9 +2187,41 @@ describe("PT1 D2 several analyses calculated again by themselves", () => {
     expect(page.auto.liveState(DIV)).toEqual({ kind: "endedByFailure" });
     await wait(10_000);
     expect(page.pcaRequests()).toHaveLength(1);
+    expect(page.auto.liveState("pca")).toEqual({
+      kind: "live",
+      aboutToStart: "afterCrash",
+      running: false,
+      after: null,
+    });
     page.setMissing(0.04);
+    expect(page.auto.aboutToStart("pca")).toBe("changes");
     await wait(1000);
     expect(page.pcaRequests()).toHaveLength(2);
+  });
+
+  test("after a crash holds the others, a Run starts its own analysis and lifts the hold for it alone: the other still waits for the next change", async () => {
+    const individuals = Array.from(
+      { length: 2264 },
+      (_, i) => `s${String(i).padStart(4, "0")}`,
+    );
+    const page = await bothLiveDone(individuals);
+    page.setMissing(0.05);
+    await wait(1000);
+    await page.endPca({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    expect(page.auto.aboutToStart(DIV)).toBe("afterCrash");
+    expect(page.auto.run("pca")).toBe("started");
+    expect(page.pcaRequests()).toHaveLength(3);
+    await page.endPca();
+    await wait(10_000);
+    expect(diversityRequests(page)).toHaveLength(1);
+    expect(page.auto.aboutToStart(DIV)).toBe("afterCrash");
+    expect(page.auto.aboutToStart("pca")).toBeNull();
+    page.setMissing(0.04);
+    await wait(1000);
+    expect(page.pcaRequests()).toHaveLength(4);
   });
 
   test.each([

@@ -83,10 +83,15 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
             full: `The ${name} starts again when the download is written or closed`,
             short: `${name} later`,
           }
-        : {
-            full: `The ${name} starts again in a moment`,
-            short: `${name} soon`,
-          };
+        : line.waitsFor === "afterCrash"
+          ? {
+              full: `The ${name} starts again after the next change`,
+              short: `${name} later`,
+            }
+          : {
+              full: `The ${name} starts again in a moment`,
+              short: `${name} soon`,
+            };
     }
     case "result":
       return resultWords(line.method, line.warnings);

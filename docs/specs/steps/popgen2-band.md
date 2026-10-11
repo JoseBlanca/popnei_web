@@ -140,6 +140,7 @@ to a screen reader:
 | "Stopping the PCA…" | "Stopping…" |
 | "The PCA starts again in a moment" | "PCA soon" |
 | "The PCA starts again when the download is written or closed" | "PCA later" |
+| "The PCA starts again after the next change" | "PCA later" |
 | "PCA: 2 warnings, in the PCA tab" | "PCA: 2 warnings" |
 | "PCA: could not be calculated, in the PCA tab" | "PCA: failed" |
 | "Diversity running · 0:12" | "Diversity · 0:12" |

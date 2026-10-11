@@ -183,7 +183,10 @@ export function pcaTabResultFailed(
     to start"): "The PCA starts again in a moment, once the filters and
     its options stop changing."; while the dialog of the download of the
     filtered variants holds it, "download", "The PCA starts again when
-    the download is written or closed."; "The PCoA …" under the PCoA. */
+    the download is written or closed."; after a crash ended another
+    live state, "afterCrash", "The PCA starts again after the next
+    change of the filters or of its options."; "The PCoA …" under the
+    PCoA. */
 export function aboutToStartLine(
   method: PcaMethod,
   waits: AboutToStart,
@@ -192,6 +195,8 @@ export function aboutToStartLine(
   switch (waits) {
     case "download":
       return `The ${name} starts again when the download is written or closed.`;
+    case "afterCrash":
+      return `The ${name} starts again after the next change of the filters or of its options.`;
     // Behind another calculation, which no tab of the page starts yet
     // beside the PCA: the line that names it comes with the Populations
     // tab (docs/plans/population-tab.md, work package 2).

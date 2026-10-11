@@ -34,6 +34,7 @@ import { passLock } from "../pca/passLock.ts";
 import { POPULATIONS_TAB_PANEL } from "./populationsTabPanel.ts";
 import {
   DIVERSITY_FAILURE_ENDED_LINE,
+  DIVERSITY_AFTER_CRASH_LINE,
   DIVERSITY_STOPPED_LINE,
   diversityTabLock,
 } from "./tabWords.ts";
@@ -51,7 +52,13 @@ function panelLive(state: LiveState): PanelLive {
     case "endedByFailure":
       return { kind: "stopped", line: DIVERSITY_FAILURE_ENDED_LINE };
     case "live":
-      return { kind: "live", aboutToStartLine: null };
+      return {
+        kind: "live",
+        aboutToStartLine:
+          state.aboutToStart === "afterCrash"
+            ? DIVERSITY_AFTER_CRASH_LINE
+            : null,
+      };
   }
 }
 

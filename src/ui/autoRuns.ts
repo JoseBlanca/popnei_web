@@ -101,8 +101,10 @@ export type ChangesUnderWay = Pick<
     "download", the dialog of the download of the filtered variants
     open, or the write it started running; "changes", the quiet second
     after the last change, or a change under way of a control, nothing
-    running. */
-export type AboutToStart = "changes" | "download" | "behind";
+    running; "afterCrash", a crash of the worker ended another live
+    state and holds this start until the next change of the project or
+    a Run of this analysis, nothing running. */
+export type AboutToStart = "changes" | "download" | "behind" | "afterCrash";
 
 /** The live state of an analysis that starts again by itself, for the
     load of the variants file open, as the page draws it. */
@@ -530,6 +532,10 @@ export function createAutoRuns(deps: {
   /** Whether a crash of the worker ended a live state since the last
       change of the project: no quiet second runs until that change. */
   let heldAfterCrash = false;
+  /** The live analyses a Run made start again while a crash held the
+      others: the hold is lifted for them alone, until the next change
+      of the project. */
+  const runSinceCrash = new Set<AnalysisId>();
   let quietTimer: ReturnType<typeof setTimeout> | null = null;
   let lastProject = store.getState().project;
 
@@ -615,9 +621,11 @@ export function createAutoRuns(deps: {
       return { waits: "behind", after: liveIds.has(running) ? running : null };
     }
     const waits =
-      live.changes.heldBy("download") || writeRunning()
-        ? "download"
-        : "changes";
+      heldAfterCrash && !runSinceCrash.has(id)
+        ? "afterCrash"
+        : live.changes.heldBy("download") || writeRunning()
+          ? "download"
+          : "changes";
     const before = liveOrder
       .slice(0, liveOrder.indexOf(id))
       .find((other) => isAboutToStart(other));
@@ -723,6 +731,7 @@ export function createAutoRuns(deps: {
       if (state.project !== lastProject) {
         lastProject = state.project;
         heldAfterCrash = false;
+        runSinceCrash.clear();
         quietAgain();
       }
       tellLiveChanges();
@@ -751,7 +760,7 @@ export function createAutoRuns(deps: {
         const key = liveKey(id, index, status);
         if (
           key !== null &&
-          quiet &&
+          (quiet || runSinceCrash.has(id)) &&
           live !== null &&
           live.changes.underWay() === 0 &&
           !writeRunning()
@@ -835,6 +844,7 @@ export function createAutoRuns(deps: {
       pausedFor.delete(id);
       failedFor.delete(id);
       waitedRun.delete(id);
+      if (heldAfterCrash) runSinceCrash.add(id);
       // The calculation worker runs one request at a time: behind one
       // that runs, a Run waits, and `sync` starts it after
       // (docs/designs/population-tab.md, choice 3); but only one that

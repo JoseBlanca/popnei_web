@@ -353,6 +353,15 @@ describe("NU4 D2 the words of the PCA started again by itself, by the method", (
     );
   });
 
+  test("while a crash that ended another live state holds it, the line names the next change", () => {
+    expect(aboutToStartLine("pca", "afterCrash")).toBe(
+      "The PCA starts again after the next change of the filters or of its options.",
+    );
+    expect(aboutToStartLine("pcoa", "afterCrash")).toBe(
+      "The PCoA starts again after the next change of the filters or of its options.",
+    );
+  });
+
   test("while the dialog of the download holds it, the line says the download goes first", () => {
     expect(aboutToStartLine("pca", "download")).toBe(
       "The PCA starts again when the download is written or closed.",

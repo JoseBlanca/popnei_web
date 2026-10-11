@@ -20,6 +20,7 @@ import {
 import type { Project } from "../../../core/project.ts";
 import { deepFreeze } from "../../../core/testSupport.ts";
 import {
+  DIVERSITY_AFTER_CRASH_LINE,
   DIVERSITY_FAILURE_ENDED_LINE,
   DIVERSITY_STOPPED_LINE,
   diversityTabLock,
@@ -195,6 +196,9 @@ describe("PT1 D3 the words of the Populations tab", () => {
   test("the line of a Stop, the caption's sentence of the unclassified, and the result that could not be loaded", () => {
     expect(DIVERSITY_STOPPED_LINE).toBe(
       "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.",
+    );
+    expect(DIVERSITY_AFTER_CRASH_LINE).toBe(
+      "The diversity starts again after the next change of the filters, of its options or of the populations.",
     );
     expect(DIVERSITY_FAILURE_ENDED_LINE).toBe(
       "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.",
