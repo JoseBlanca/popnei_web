@@ -26,9 +26,9 @@ import type {
   Written,
 } from "../../worker/protocol.ts";
 import { downloadFile } from "../download.ts";
+import { POPGEN2_LIVE } from "../../core/apps.ts";
 import {
   POPGEN2_AUTO_GROUPS,
-  POPGEN2_LIVE,
   createPopgen2Store,
   openVariantsFile,
   popgen2EndsLive,

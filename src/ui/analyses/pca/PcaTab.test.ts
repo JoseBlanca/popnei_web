@@ -21,9 +21,9 @@ import { summaryResult } from "../../../core/testSupport.ts";
 import type { Job, JobResult, Outcome, Run } from "../../../worker/protocol.ts";
 import { LIVE_QUIET_MS, createAutoRuns } from "../../autoRuns.ts";
 import type { AutoRuns } from "../../autoRuns.ts";
+import { POPGEN2_LIVE } from "../../../core/apps.ts";
 import {
   POPGEN2_AUTO_GROUPS,
-  POPGEN2_LIVE,
   createPopgen2Store,
   openVariantsFile,
 } from "../../popgen2Store.ts";

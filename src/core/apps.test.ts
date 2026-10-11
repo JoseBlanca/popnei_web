@@ -1,12 +1,14 @@
 import { describe, expect, test } from "vitest";
 import {
   POPGEN2_ANALYSES,
+  POPGEN2_LIVE,
   POPGEN_ANALYSES,
   POPGEN_ANALYSIS_STEPS,
   POPGEN_STEPS,
   countsOf,
   firstProject,
   individualStatsOf,
+  isPopgen2Live,
   variantsKept,
   writeCountsOf,
 } from "./apps.ts";
@@ -110,6 +112,22 @@ describe("IP8 D3 the analyses of apps.ts", () => {
     expect(ids.indexOf("pca")).toBe(ids.indexOf("diversity") - 1);
     expect(POPGEN_ANALYSIS_STEPS["pca"]).toBe("analyses");
     expect(POPGEN_ANALYSIS_STEPS["diversity"]).toBe("analyses");
+  });
+});
+
+describe("the analyses of popgen2.html that can be live", () => {
+  test("they are the PCA and then the diversity of the page, in the order of the tabs, each an analysis of the page", () => {
+    expect(POPGEN2_LIVE).toEqual([pcaOnPopgen2.id, diversityOnPopgen2.id]);
+    for (const id of POPGEN2_LIVE) {
+      expect(POPGEN2_ANALYSES.map((def) => def.id)).toContain(id);
+    }
+  });
+
+  test("isPopgen2Live tells them from the page's other analyses", () => {
+    expect(isPopgen2Live("pca")).toBe(true);
+    expect(isPopgen2Live("diversity")).toBe(true);
+    expect(isPopgen2Live("variantsSummary")).toBe(false);
+    expect(isPopgen2Live("constructor")).toBe(false);
   });
 });
 

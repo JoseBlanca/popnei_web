@@ -7,6 +7,8 @@
  */
 import { diversityOnPopgen2 } from "../../core/analyses/diversity.ts";
 import { pcaMethodOf, pcaOnPopgen2 } from "../../core/analyses/pca.ts";
+import { POPGEN2_LIVE, isPopgen2Live } from "../../core/apps.ts";
+import type { Popgen2LiveId } from "../../core/apps.ts";
 import type { AnalysisId } from "../../core/project.ts";
 import type { AnalysisStatus, AppState, Notice } from "../../core/store.ts";
 import type { JobResult, PcaMethod } from "../../worker/protocol.ts";
@@ -150,6 +152,16 @@ const RUNNING_DIVERSITY: RunningAnalysis = Object.freeze({
   readsPopulations: true,
 });
 
+/** How the words of the page name each analysis that can be live in
+    `s`. Keyed by `POPGEN2_LIVE` of src/core/apps.ts, so that an analysis
+    added to it without its words does not compile. */
+const LIVE_NAMES: Readonly<
+  Record<Popgen2LiveId, (s: AppState<JobResult, unknown>) => RunningAnalysis>
+> = Object.freeze({
+  pca: (s) => RUNNING_PCA[pcaMethodOf(s.project, "popgen2")],
+  diversity: () => RUNNING_DIVERSITY,
+});
+
 /** The live analysis `id` of popgen2.html as the words of the page name
     it in `s`, the PCA by the method of its project, read with
     `pcaMethodOf`, which never throws, since this is read above every
@@ -160,32 +172,21 @@ export function liveAnalysisOf(
   s: AppState<JobResult, unknown>,
   id: AnalysisId,
 ): RunningAnalysis {
-  if (id === pcaOnPopgen2.id) {
-    return RUNNING_PCA[pcaMethodOf(s.project, "popgen2")];
+  if (!isPopgen2Live(id)) {
+    throw new Error(
+      `popnei_web defect: ${id} is not an analysis popgen2.html calculates again by itself.`,
+    );
   }
-  if (id === diversityOnPopgen2.id) return RUNNING_DIVERSITY;
-  throw new Error(
-    `popnei_web defect: ${id} is not an analysis popgen2.html calculates again by itself.`,
-  );
+  return LIVE_NAMES[id](s);
 }
-
-/** The live analyses of popgen2.html this module names, in the order of
-    the tabs, the order `POPGEN2_LIVE` of src/ui/popgen2Store.ts gives
-    them, which is not imported here, so that popgen.html does not
-    download the store of popgen2.html. */
-const LIVE_IDS: readonly AnalysisId[] = Object.freeze([
-  pcaOnPopgen2.id,
-  diversityOnPopgen2.id,
-]);
 
 /** The live analysis of popgen2.html running in `s`, which locks what it
     reads while it runs, the PCA or the diversity, the calculation worker
     running one at a time; `null` while none runs. Read on popgen2.html
-    alone, whose store runs the PCA of `pcaOnPopgen2` and the diversity
-    of `diversityOnPopgen2`. */
+    alone, whose store runs the analyses of `POPGEN2_LIVE`. */
 export function runningAnalysisOf(
   s: AppState<JobResult, unknown>,
 ): RunningAnalysis | null {
-  const id = LIVE_IDS.find((one) => statusOf(s, one).kind === "running");
+  const id = POPGEN2_LIVE.find((one) => statusOf(s, one).kind === "running");
   return id === undefined ? null : liveAnalysisOf(s, id);
 }

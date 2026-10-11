@@ -8,7 +8,7 @@ import {
   diversityOptions,
 } from "../core/analyses/diversity.ts";
 import { pcaOnPopgen2, pcaOptions } from "../core/analyses/pca.ts";
-import { countsOf, firstProject } from "../core/apps.ts";
+import { POPGEN2_LIVE, countsOf, firstProject } from "../core/apps.ts";
 import { keyFromWire } from "../core/keys.ts";
 import {
   loadIndividuals,
@@ -37,7 +37,6 @@ import type { AutoRuns, LiveEvent } from "./autoRuns.ts";
 import {
   POPGEN2_AUTO_GROUPS,
   POPGEN2_CHAIN,
-  POPGEN2_LIVE,
   createPopgen2Store,
   openVariantsFile,
   popgen2EndsLive,

@@ -34,11 +34,8 @@ import { LIVE_QUIET_MS, createAutoRuns } from "../autoRuns.ts";
 import { FilesProvider } from "../files.tsx";
 import { createPageTab } from "../pageTab.ts";
 import type { PageTabStore } from "../pageTab.ts";
-import {
-  POPGEN2_AUTO_GROUPS,
-  POPGEN2_LIVE,
-  createPopgen2Store,
-} from "../popgen2Store.ts";
+import { POPGEN2_LIVE } from "../../core/apps.ts";
+import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "../popgen2Store.ts";
 import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { statusOf } from "../analyses/status.ts";
 import { startAnalysis } from "../runs.ts";

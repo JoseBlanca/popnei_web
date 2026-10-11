@@ -18,16 +18,17 @@
  * Apart from the entry, so that a test in node makes the store with what
  * the page gives it.
  */
-import { diversityOnPopgen2 } from "../core/analyses/diversity.ts";
-import { pcaOnPopgen2 } from "../core/analyses/pca.ts";
 import { variantsSummary } from "../core/analyses/variantsSummary.ts";
 import {
   POPGEN2_ANALYSES,
+  POPGEN2_LIVE,
   countsOf,
+  isPopgen2Live,
   popgen2FirstProject,
   summaryStatsOf,
   writeCountsOf,
 } from "../core/apps.ts";
+import type { Popgen2LiveId } from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
 import { loadVariants } from "../core/project.ts";
 import type { AnalysisId, VariantLoad } from "../core/project.ts";
@@ -53,44 +54,48 @@ export const POPGEN2_CHAIN: readonly AnalysisId[] = Object.freeze([
   variantsSummary.id,
 ]);
 
-/** The analyses the page starts again by itself once the user's Run made
-    each live, and only then, in the order they start after one change,
-    that of the tabs: the PCA and then the diversity
-    (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by
-    itself" and "Several analyses calculated again by themselves"). Each
-    is a group of its own, after `POPGEN2_CHAIN`, so that it waits for the
-    one pass as its Run does, and for no other live analysis. */
-export const POPGEN2_LIVE: readonly AnalysisId[] = Object.freeze([
-  pcaOnPopgen2.id,
-  diversityOnPopgen2.id,
-]);
-
 /** The analyses the page starts by itself, in the groups `createAutoRuns`
     of autoRuns.ts takes: the one pass, `POPGEN2_CHAIN`, and then a group
-    for each live analysis of `POPGEN2_LIVE`, in its order. */
+    for each analysis that can be live, `POPGEN2_LIVE` of
+    src/core/apps.ts, in its order, so that it waits for the one pass as
+    its Run does, and for no other live analysis. */
 export const POPGEN2_AUTO_GROUPS: readonly (readonly AnalysisId[])[] =
   Object.freeze([
     POPGEN2_CHAIN,
     ...POPGEN2_LIVE.map((id) => Object.freeze([id])),
   ]);
 
+/** The rule of each analysis that can be live by which its failure ends
+    its live state, as a Stop does: the PCA's, `failureEndsLive` of
+    analyses/pca/liveEnd.ts, a crash of the memory or a failure only a
+    reload mends; the diversity's, `diversityFailureEndsLive` of
+    analyses/diversity/liveEnd.ts, every crash and the failures only a
+    reload mends. Keyed by `POPGEN2_LIVE`, so that an analysis added to
+    it without a rule does not compile. */
+const ENDS_LIVE: Readonly<
+  Record<
+    Popgen2LiveId,
+    (s: AppState<unknown, unknown>, id: AnalysisId) => boolean
+  >
+> = Object.freeze({
+  pca: failureEndsLive,
+  diversity: diversityFailureEndsLive,
+});
+
 /** Whether the failure of the live analysis `id` in `s` ends its live
-    state, as a Stop does, by the rule of that analysis: the PCA's,
-    `failureEndsLive` of analyses/pca/liveEnd.ts, a crash of the memory
-    or a failure only a reload mends; the diversity's,
-    `diversityFailureEndsLive` of analyses/diversity/liveEnd.ts, every
-    crash and the failures only a reload mends. The `endsLive` the page
-    gives `createAutoRuns`. A defect for an analysis not in
+    state, by the rule of that analysis in `ENDS_LIVE`. The `endsLive`
+    the page gives `createAutoRuns`. A defect for an analysis not in
     `POPGEN2_LIVE`. */
 export function popgen2EndsLive(
   s: AppState<unknown, unknown>,
   id: AnalysisId,
 ): boolean {
-  if (id === pcaOnPopgen2.id) return failureEndsLive(s, id);
-  if (id === diversityOnPopgen2.id) return diversityFailureEndsLive(s, id);
-  throw new Error(
-    `popnei_web defect: ${id} is not an analysis popgen2.html calculates again by itself.`,
-  );
+  if (!isPopgen2Live(id)) {
+    throw new Error(
+      `popnei_web defect: ${id} is not an analysis popgen2.html calculates again by itself.`,
+    );
+  }
+  return ENDS_LIVE[id](s, id);
 }
 
 /** The store of popgen2.html as its screens see it: no undo, no redo,

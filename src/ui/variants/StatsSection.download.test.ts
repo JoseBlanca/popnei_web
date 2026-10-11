@@ -153,7 +153,8 @@ const REGION_PAUSE_MS = 150;
 async function drawPage(): Promise<Page> {
   const { loadVariants } = await import("../../core/project.ts");
   const { LIVE_QUIET_MS, createAutoRuns } = await import("../autoRuns.ts");
-  const { POPGEN2_AUTO_GROUPS, POPGEN2_LIVE, createPopgen2Store } =
+  const { POPGEN2_LIVE } = await import("../../core/apps.ts");
+  const { POPGEN2_AUTO_GROUPS, createPopgen2Store } =
     await import("../popgen2Store.ts");
   const { startAnalysis } = await import("../runs.ts");
   const { AnnouncerProvider } = await import("../shell/announcer.tsx");

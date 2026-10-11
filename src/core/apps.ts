@@ -18,7 +18,7 @@ import { variantsSummary } from "./analyses/variantsSummary.ts";
 import { defect } from "./analyses/words.ts";
 import type { IndividualStats } from "./individualsKept.ts";
 import { emptyProject, setVariantFilter } from "./project.ts";
-import type { Project } from "./project.ts";
+import type { AnalysisId, Project } from "./project.ts";
 import type { AnalysisDef, AppState, PassFound } from "./store.ts";
 import type { Job, JobResult, PassStats } from "../worker/protocol.ts";
 
@@ -78,6 +78,27 @@ export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
     analyses"). */
 export const POPGEN2_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
   Object.freeze([variantsSummary, pcaOnPopgen2, diversityOnPopgen2]);
+
+/** The analyses of popgen2.html that can be live, calculated again by
+    themselves once the user's Run made each live, in the order they
+    start after one change, that of the tabs: the PCA and then the
+    diversity (docs/specs/steps/popgen2-pca.md, "The PCA calculated again
+    by itself" and "Several analyses calculated again by themselves").
+    The one list of them: the store of the page and the words of its
+    locks read it, here, where popgen.html already loads it. The ids of
+    `pcaOnPopgen2` and `diversityOnPopgen2`, as literals, so that a table
+    keyed by them must name each. */
+export const POPGEN2_LIVE = Object.freeze(["pca", "diversity"] as const);
+
+/** The id of an analysis of popgen2.html that can be live, one of
+    `POPGEN2_LIVE`. */
+export type Popgen2LiveId = (typeof POPGEN2_LIVE)[number];
+
+/** Whether `id` is one of the analyses of popgen2.html that can be
+    live, `POPGEN2_LIVE`. */
+export function isPopgen2Live(id: AnalysisId): id is Popgen2LiveId {
+  return POPGEN2_LIVE.some((one) => one === id);
+}
 
 /** The steps of the population genetics application, by their ids, in
     their order. */

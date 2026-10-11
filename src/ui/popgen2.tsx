@@ -31,9 +31,9 @@ import {
 import type { DrawBar } from "./pageStart.tsx";
 import { Band } from "./band/Band.tsx";
 import type { BandWith } from "./band/Band.tsx";
+import { POPGEN2_LIVE } from "../core/apps.ts";
 import {
   POPGEN2_AUTO_GROUPS,
-  POPGEN2_LIVE,
   createPopgen2Store,
   popgen2EndsLive,
 } from "./popgen2Store.ts";

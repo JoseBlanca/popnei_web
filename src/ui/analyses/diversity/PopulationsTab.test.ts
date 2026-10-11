@@ -35,10 +35,10 @@ import type {
 } from "../../../worker/protocol.ts";
 import { LIVE_QUIET_MS, createAutoRuns } from "../../autoRuns.ts";
 import type { AutoRuns } from "../../autoRuns.ts";
+import { POPGEN2_LIVE } from "../../../core/apps.ts";
 import {
   POPGEN2_AUTO_GROUPS,
   POPGEN2_CHAIN,
-  POPGEN2_LIVE,
   createPopgen2Store,
   openVariantsFile,
   popgen2EndsLive,

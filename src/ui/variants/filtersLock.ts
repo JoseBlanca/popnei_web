@@ -24,7 +24,8 @@ import { liveAnalysisOf, runningAnalysisOf } from "../analyses/status.ts";
 import type { RunningAnalysis } from "../analyses/status.ts";
 import { filtersLockedText } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
-import { POPGEN2_LIVE } from "../popgen2Store.ts";
+import { POPGEN2_LIVE } from "../../core/apps.ts";
+import {} from "../popgen2Store.ts";
 import { useAppState } from "../store.tsx";
 
 const AutoRunsContext = createContext<AutoRuns | null>(null);

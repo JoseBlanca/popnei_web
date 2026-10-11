@@ -15,9 +15,9 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { setVariantFilter } from "../../../core/project.ts";
 import type { ProjectVariantFilter } from "../../../core/project.ts";
 import type { Run } from "../../../worker/protocol.ts";
+import { POPGEN2_LIVE } from "../../../core/apps.ts";
 import {
   POPGEN2_AUTO_GROUPS,
-  POPGEN2_LIVE,
   createPopgen2Store,
   popgen2EndsLive,
 } from "../../popgen2Store.ts";
