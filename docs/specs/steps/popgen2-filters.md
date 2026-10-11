@@ -169,7 +169,10 @@ when").
 
 ### The order of the page
 
-From the top: the heading "Popnei"; the box of the file; the part "Filters of the variants", its four histograms and, once the opening of
+From the top: the heading "Popnei"; the box of the file; since 11
+October 2026, at the top of the Variants tab, the size of the file, its
+chromosomes and its ploidy, which the box showed until then
+(`docs/specs/steps/popgen2-input.md`, "The Variants tab"); the part "Filters of the variants", its four histograms and, once the opening of
 the file has said that it records the FILTER of its variants, the check box of the FILTER column; the part "Filters of the individuals", its two
 histograms and the download of their table; "Open another variants
 file…". Until 8 October 2026 a row of Undo and Redo stood between the

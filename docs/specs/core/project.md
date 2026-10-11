@@ -1148,7 +1148,8 @@ never find one of the other not yet made (above, "The populations").
   file" until 9 October 2026, when the row of five tabs of
   `docs/specs/steps/popgen2-pca.md` renamed it "Individuals"); for
   `variantsFile`, "it is a variants file; open it with Open variants
-  file in the box Variants file." in place of the reader's words; for
+  file in the box Variants." ("…in the box Variants file." until 11
+  October 2026, when the box was renamed) in place of the reader's words; for
   `tooLarge`, "it is 312.4 MB, more than the 20 MB an individuals file
   can have; check that it is the individuals file and not the variants
   file."; for `sheetTooLarge`, "its first sheet, Hoja1, has values as

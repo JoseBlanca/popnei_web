@@ -15,8 +15,19 @@ October 2026, with no change asked. Revised on 10 October 2026 for
 "Popnei" moves into the band at the top of the window, and the page has
 no Undo, so no description of a command is shown (below, "The order of
 the page" and the commands). Built on the branch `pca-tab` on 10
-October 2026, work packages 2 and 5 of `docs/plans/no-undo.md`; not yet
-tried by the owner. It
+October 2026, work packages 2 and 5 of `docs/plans/no-undo.md`. Revised
+on 11 October 2026 for the owner's first round after trying the page
+(`docs/plans/no-undo.md`, work package 8), so that the two boxes, which
+stand above every tab, stay small: they are headed "Variants" and
+"Individuals"; the box of the variants file keeps its name, its
+individuals, its variants, its FILTER failures and the bar of the one
+pass, and the size, the chromosomes and the ploidy move to the top of
+the Variants tab; the box of the individuals file shows only its button
+before a variants file, the counts with one row "Unclassified" with no
+individuals file, no caption over the counts and no Download; and the
+line of the individuals of the individuals file that the variants file
+does not have moves to the Individuals tab, shown only when there are
+any. It
 covers step 2 of case 4 of `docs/use-cases.md`, how many individuals
 each population has, and the file of the populations that case 3 needs
 for the colours of its PCA.
@@ -135,15 +146,22 @@ changes the tab by itself.
 
 ### The box of the variants file
 
-What the box shows today (`popgen2-filters.md`; `VariantsSummary.tsx`):
-the name and size, the individuals, the variants, the FILTER failures,
-the chromosomes and the ploidy, the bar of the one pass with its Stop
-and Start again, and what went wrong, with the words of a file not
-opened. It ends with the zone that opens a variants file, today's
-`OpenVariants.tsx`, moved here from the end of the page: its button,
+Its heading is "Variants" ("Variants file" until 11 October 2026). It
+shows what matters most of the file open (`popgen2-filters.md`;
+`VariantsSummary.tsx`): the name of the file, with no size, "panel.nei";
+"Individuals: 200"; "Variants: 1,200"; for a file that records the
+FILTER of its variants, a VCF and a `.nei` file written from one by
+popnei 0.2.2, "FILTER failures: 0"; each "reading…" while the file is
+read, and the variants and the FILTER failures "so far" while the one
+pass runs; the bar of the one pass with its Stop and Start again; and
+what went wrong, with the words of a file not opened. The size of the
+file, its chromosomes and its ploidy, in the box until 11 October 2026,
+are at the top of the Variants tab (below, "The Variants tab"), as the
+owner asked that day. It ends with the zone that opens a variants file,
+`OpenVariants.tsx`: its button,
 "Open variants file…" before a file and "Open another variants file…"
-after, and the drop and the paste it takes today. Before a file is open
-the box holds the zone alone, under its heading "Variants file". Both
+after, and the drop and the paste it takes. Before a file is open
+the box holds the zone alone, under its heading "Variants". Both
 zones, the variants file's and the individuals file's, stay outside the
 boundary of errors that is made anew for each file (the `ErrorBoundary`
 keyed by the load id in `VariantsPage.tsx`): a zone inside it would be
@@ -158,13 +176,13 @@ holds it is replaced.
 
 ### The box of the individuals file
 
-Its heading is "Individuals file". What it shows, the first row that
-holds:
+Its heading is "Individuals" ("Individuals file" until 11 October
+2026). What it shows, the first row that holds:
 
 | the individuals file | what the box shows |
 |---|---|
-| none, no variants file | "No individuals file: every individual is unclassified." |
-| none, a variants file open | "No individuals file: all 200 individuals of panel.nei are unclassified, and the analyses per population will take them as one population." Before the variants file has given its individuals, the first sentence alone. |
+| none, no variants file | the zone alone: there are no individuals yet |
+| none, a variants file open | the counts with one row, "Unclassified", below; the zone alone before the variants file has given its individuals, and when it could not be opened |
 | being read | its name, and "Reading panel_pops.csv." |
 | refused, or the read failed | its name, and the words of the refusal, below, "Its words" |
 | read | its name, the list "Column of the populations", and the counts, below |
@@ -215,8 +233,10 @@ names alone; with more columns, all of true or false, "panel_pops.csv has no col
 
 **The counts.** With a variants file read and a column chosen whose
 values are 20 or fewer, a table of two columns, "Population" and
-"Individuals", captioned "Individuals of panel.nei after the filters of
-individuals":
+"Individuals". It has no caption on the screen, and no menu
+"Download…", since 11 October 2026, when the owner took both out of the
+box; a screen reader names it "Individuals of panel.nei after the
+filters of individuals", the caption it had until then:
 
 | Population | Individuals |
 |---|---|
@@ -261,8 +281,20 @@ Under the table, the first that holds:
   population will take them as one population."; for one, "The one
   individual kept is unclassified."
 
-Last, always with a variants file read: "Individuals in panel_pops.csv
-but not in panel.nei: 18", 0 written too, which no filter changes.
+The line of the rows of the individuals file that the variants file
+does not have, which stood last in the box until 11 October 2026, is in
+the Individuals tab (below).
+
+**With no individuals file**, once the variants file has given its
+individuals, the same table has one row, "Unclassified", with the
+individuals kept, every one of them unclassified:
+
+| Population | Individuals |
+|---|---|
+| Unclassified | 200 |
+
+While the count waits, as below, the row has "…" and the line of
+waiting is under it; nothing else is.
 
 **The counts that wait.** With a threshold of the individuals on and the
 one pass not finished, once the variants file has given its individuals
@@ -278,7 +310,7 @@ unclassified gives way to:
 - after a failure of the pass or of the opening: "Not counted: panel.nei
   could not be read to the end; the box of panel.nei says why."
 
-The warning of no individual in the file and the last line do not wait.
+The warning of no individual in the file does not wait.
 With no threshold of the individuals on, the counts never wait.
 
 **Before a variants file is read**, the counts give way to "The
@@ -292,8 +324,7 @@ for a column of populations: the individuals are counted here only for a
 column of 20 different values or fewer. If it is not the column of the
 populations, choose another in the list." The values
 are counted in the individuals file, missing ones left out, so the
-warning does not depend on the variants file or the filters. The last
-line still shows.
+warning does not depend on the variants file or the filters.
 
 ### The Variants tab
 
@@ -302,7 +333,18 @@ unchanged, but for "Open another variants file…", now in the box: the
 part "Filters of the variants", its four histograms and the FILTER box;
 the part "Filters of the individuals", its two histograms and the download of their table; the
 download of the filtered variants. With no variants file: "No variants
-file open. Open one in the box Variants file."
+file open. Open one in the box Variants."
+
+**The size, the chromosomes and the ploidy** of the file open, which the
+box of the variants file showed until 11 October 2026, stand at the top
+of the tab, before "Filters of the variants", on one line that wraps
+between them at 320 px: "File size: 261 KB", "Chromosomes: 1", "Ploidy:
+2". While the file is read, "Chromosomes: reading…" and "Ploidy:
+reading…"; while the one pass counts, "Chromosomes: counting…" before its
+first result so far and "Chromosomes: 1 so far" after it; after a Stop
+or a failure of the pass, "Chromosomes: not counted". The words of the
+chromosomes and the ploidy are those the box had. A file that could not
+be opened shows none of them: the box says why.
 
 ### The Individuals tab
 
@@ -311,7 +353,7 @@ file open. Open one in the box Variants file."
 | none | "No individuals file open." |
 | being read | "Reading panel_pops.csv." |
 | refused, read as text | the options of the reader, below, and nothing else; the box holds the words |
-| refused as an xlsx, or before table_io read it: too large, not readable by the browser, the reader not downloaded, the worker stopped | "panel_pops.xlsx could not be read; the box Individuals file says why." |
+| refused as an xlsx, or before table_io read it: too large, not readable by the browser, the reader not downloaded, the worker stopped | "panel_pops.xlsx could not be read; the box Individuals says why." |
 | read | the parts below, in this order |
 
 **How it was read.** For a file table_io read as text, the found format
@@ -333,7 +375,7 @@ under them, so that the select just changed keeps the focus. To know
 that the file is a text file while its new read is pending, the screen
 remembers the format of the last read of each load id; it keeps this
 itself, as it keeps the tab shown, since it is not part of the project. Beside the options of a text file refused, the
-line "panel_pops.csv could not be read; the box Individuals file says
+line "panel_pops.csv could not be read; the box Individuals says
 why."  For an xlsx, the line "Read from the first
 sheet of panel_pops.xlsx; any other sheet is not read." What the file is
 comes from the read, its `found` or the format of its refusal, never
@@ -353,6 +395,12 @@ variants file, before the filters, and the button "Copy the 4 names",
 "Copy the name" for one, with the words of the old step for the copy and
 its failure (`copyLabel`, `copiedText`, `NOT_COPIED` of
 `src/ui/steps/individuals/words.ts`).
+
+**The rows not used.** With the variants file read, and only when some
+rows of the individuals file name an individual the variants file does
+not have, the line "Individuals in panel_pops.csv but not in panel.nei:
+18", which no filter changes; in the box until 11 October 2026, where it
+showed 0 too.
 
 **The table.** Over it, "200 rows, 2 columns". Every row and column of
 the file, in its order: the column of the names first, each of its cells
@@ -484,22 +532,24 @@ the project's (`docs/architecture.md`, section 7).
 
 | where | the words |
 |---|---|
-| the heading of each box | "Variants file"; "Individuals file" |
+| the heading of each box | "Variants"; "Individuals" ("Variants file" and "Individuals file" until 11 October 2026) |
 | the buttons of the zones | "Open variants file…", "Open another variants file…"; "Open individuals file…", "Open another individuals file…" |
 | the button of removal | "Remove panel_pops.csv" |
 | the row of the tabs, for a screen reader | "Files and analyses" |
-| the heading drawn in place of the zone of the variants file when its code throws, under the box's "Variants file" | "Opening a variants file" |
-| the headings drawn in place of the lines of the individuals file and of its zone when their code throws, under the box's "Individuals file" | "What the individuals file holds"; "Opening an individuals file" |
+| the heading drawn in place of the zone of the variants file when its code throws, under the box's "Variants" | "Opening a variants file" |
+| the headings drawn in place of the lines of the individuals file and of its zone when their code throws, under the box's "Individuals" | "What the individuals file holds"; "Opening an individuals file" |
 | the heading drawn in place of what the Individuals tab shows when its code throws | "How the individuals file was read and what it holds" |
 | the tabs | "Variants"; "Individuals" |
 | the list | "Column of the populations"; first item "None: every individual unclassified" |
-| the caption of the counts | "Individuals of panel.nei after the filters of individuals" |
+| the name of the counts, for a screen reader alone | "Individuals of panel.nei after the filters of individuals" |
+| the one row of the counts with no individuals file | "Unclassified" |
 | the headers of the counts | "Population"; "Individuals" |
 | a count not yet known, for a screen reader | "not counted yet" |
-| the line of the rows not used | "Individuals in panel_pops.csv but not in panel.nei: 18" |
+| the line of the rows not used, in the Individuals tab | "Individuals in panel_pops.csv but not in panel.nei: 18" |
+| the top of the Variants tab | "File size: 261 KB"; "Chromosomes: 1"; "Ploidy: 2" |
 | the refusals, in the box | "panel_pops.csv could not be read: " and the words of the reader spec after the colon (`docs/specs/worker/individuals.md`, "The refusals and their words"), ending as below |
 | the end of `raggedRow` and `unclosedQuote` | "Choose another separator in the Individuals tab, or open a corrected file." |
-| the end of `variantsFile` | "it is a variants file; open it with Open variants file in the box Variants file." in place of the reader's words after the colon |
+| the end of `variantsFile` | "it is a variants file; open it with Open variants file in the box Variants." in place of the reader's words after the colon |
 | the end of `tooLarge` | "check that it is the individuals file and not the variants file." |
 | `sheetTooLarge` after the colon | "its first sheet, Hoja1, has values as far as row 1,048,576 and column XFD, more than the 20,000,000 cells an individuals file can have; delete the values outside the table.", the reader's words with the name of the file of this page |
 | `readerNotLoaded` | "panel_pops.csv could not be read: the reader of tables could not be loaded. Check the connection and open the file again." |
@@ -564,8 +614,9 @@ so the words given to it start after it; the table of the file
 `SortableTable.tsx`, named by its `label`, "The table of
 panel_pops.csv".
 
-**A table that a screen reader can read.** The counts are a table with
-its caption and two header cells; a count waiting is "…" on the screen
+**A table that a screen reader can read.** The counts are a table named for
+a screen reader by the caption it had, which the screen no longer
+shows, with two header cells; a count waiting is "…" on the screen
 and "not counted yet" to a screen reader. The table of the file has its
 first column as row headers.
 
@@ -575,7 +626,7 @@ its label and by the weight of its words; each warning by the word
 
 **Not yet heard in VoiceOver**, which the session cannot run: the row of
 the tabs read as "The files, tab list", each label with its position;
-the counts read with their caption; a waiting count read "not counted
+the counts read with their name; a waiting count read "not counted
 yet"; a refusal said once as it appears.
 
 ## How it is checked
@@ -593,7 +644,9 @@ core and of the entry in their module specs.
 
 - `panel.nei` then `panel_pops.csv`, and the other order: the list on
   `popcat`, the counts p0 48, p2 84, p1 68, in that order, no line of the
-  unclassified, "Individuals in panel_pops.csv but not in panel.nei: 0";
+  unclassified, and in the Individuals tab no line of the rows not used;
+  with no individuals file, the one row "Unclassified" with 200, and
+  none before a variants file;
 - `panel_split.csv` chooses `popsplit`; `ld_pops.csv`, opened over
   `ld.nei`, chooses `pop`, its two populations; `panel_meta.csv` chooses
   `popcat` and not `altitude`;
@@ -673,7 +726,8 @@ which sets the size above which the light worker is ended after a read
 
 From the design, and open to the owner's change after trying the page:
 the column chosen by the page; the words of the box and its lines; the
-caption and headers of the counts; "…" for a count that waits; the
+headers of the counts; the words "File size:" at the top of the Variants
+tab, and its three values on one line; "…" for a count that waits; the
 status region silent at a change of the counts; the tab shown first and
 never changed by the page; the order of the parts of the Individuals tab; the zone of the individuals file taking any file,
 with no check of its name; Remove putting the focus on the zone.

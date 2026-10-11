@@ -271,8 +271,9 @@ the first error in them (`docs/specs/shell.md`, "The error bar"):
   else of the band, which has nothing to read;
 - the calculation worker stopped during the one pass, `countStopped`:
   "The application stopped as it counted the variants and calculated
-  the statistics: ‹message›. Press Start again in the box Variants file,
-  and if it stops again, reload the page and open your files again.",
+  the statistics: ‹message›. Press Start again in the box Variants
+  ("the box Variants file" until 11 October 2026, when the box was
+  renamed), and if it stops again, reload the page and open your files again.",
   which names where Start again is, since the band stands apart from
   the box; the error bar of `popgen.html`, which never shows this
   sentence, keeps its words;
