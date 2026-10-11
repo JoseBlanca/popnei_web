@@ -6785,6 +6785,107 @@ for (const theme of ["light", "dark"] as const) {
         });
       });
 
+      test("PT4 D4 the band with the PCA held running and the diversity waiting after it, the Variants tab shown: Stop and Stop all", async ({
+        page,
+      }) => {
+        const panel = await bandPcaRunning(page);
+        const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+        await tabs
+          .getByRole("tab", { name: "Populations", exact: true })
+          .click();
+        const run = panel.getByRole("button", { name: "Run", exact: true });
+        await expect(run).toBeEnabled({ timeout: 20_000 });
+        await run.click();
+        await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
+        await expect(band(page)).toContainText("then the diversity");
+        await expect(
+          band(page).getByRole("button", {
+            name: "Stop all: the PCA and the diversity",
+          }),
+        ).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-band-then-diversity${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      for (const shot of ["analyses-soon", "diversity-soon"] as const) {
+        test(`PT4 D4 the band with ${shot === "analyses-soon" ? "the PCA and the diversity about to start, Stop all" : "the diversity about to start alone beside the PCA live, Stop recalculating and Stop all"}, the Variants tab shown`, async ({
+          page,
+        }) => {
+          await page.clock.install();
+          await page.reload();
+          await pickOnNewPage(page, "panel.nei");
+          const tabs = page.getByRole("tablist", {
+            name: "Files and analyses",
+          });
+          const panel = page.getByRole("tabpanel");
+          await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+          const field = panel.getByRole("textbox", {
+            name: /^Distance within which variants are compared/u,
+          });
+          await expect(field).toBeVisible({ timeout: 20_000 });
+          await field.fill("50000");
+          await field.press("Enter");
+          await panel.getByRole("button", { name: "Run", exact: true }).click();
+          await expect(
+            panel.getByText(/^The place of each of the 200 individuals/u),
+          ).toBeVisible({ timeout: 30_000 });
+          await tabs
+            .getByRole("tab", { name: "Populations", exact: true })
+            .click();
+          const run = panel.getByRole("button", { name: "Run", exact: true });
+          await expect(run).toBeEnabled({ timeout: 20_000 });
+          await run.click();
+          await expect(
+            panel.getByRole("table", {
+              name: /^The diversity of each population/u,
+            }),
+          ).toBeVisible({ timeout: 30_000 });
+          // The plots of the Variants tab drawn before the clock stops,
+          // which they wait for.
+          await tabs
+            .getByRole("tab", { name: "Variants", exact: true })
+            .click();
+          await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+          // The page's timers stand still, so that the quiet second does
+          // not run out before the picture.
+          await page.clock.pauseAt(Date.now() + 1000);
+          if (shot === "analyses-soon") {
+            const missing = newPageStats(page)
+              .getByRole("group", {
+                name: "Proportion of missing genotypes",
+                exact: true,
+              })
+              .getByRole("textbox");
+            await missing.fill("0.05");
+            await missing.press("Enter");
+            await expect(band(page)).toContainText(
+              "The PCA and the diversity start in a moment",
+            );
+          } else {
+            await tabs
+              .getByRole("tab", { name: "Populations", exact: true })
+              .click();
+            const minimum = panel.getByRole("textbox", {
+              name: /^Individuals with a called genotype needed in each population, per variant/u,
+            });
+            await minimum.fill("10");
+            await minimum.press("Enter");
+            await tabs
+              .getByRole("tab", { name: "Variants", exact: true })
+              .click();
+            await expect(band(page)).toContainText(
+              "The diversity starts in a moment",
+            );
+          }
+          await page.mouse.move(0, 0);
+          await save(page, `popgen2-band-${shot}${at}-${theme}`, {
+            fullPage: false,
+          });
+        });
+      }
+
       for (const shot of ["error", "error-details", "error-running"] as const) {
         test(`NU5 D5 the band with an error of the application${shot === "error-details" ? ", its details shown" : shot === "error-running" ? ", beside the PCA held running" : ""}`, async ({
           page,
