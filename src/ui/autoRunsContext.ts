@@ -2,8 +2,11 @@
  * The analyses popgen2.html starts by itself, `autoRuns` of autoRuns.ts,
  * given to the screens as the store is (store.tsx): the entry of the page
  * makes them once and gives them through `AutoRunsProvider`, and every
- * screen reaches them with `useAutoRuns`, or reads a part of them with
- * the state of the store with `useLive`, never through a prop.
+ * screen under it reaches them with `useAutoRuns`, or reads a part of
+ * them with the state of the store with `useLive`, never through a prop.
+ * The one exception is the band (src/ui/band/Band.tsx), drawn in a root
+ * of its own outside the provider, which the page gives autoRuns as a
+ * prop.
  */
 import {
   createContext,

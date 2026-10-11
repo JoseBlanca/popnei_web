@@ -1188,7 +1188,11 @@ interface AnalysisDef<J, R> {           // J: its request; R: its result
                                          // beyond the load and the filters (section 3)
   needs(p: Project): string | null;      // why it cannot run yet, or null
   run(p: Project, c: WorkerClient<J, R>): Run<R>; // the request to the worker
-  warnings(r: R, p: Project): Warning[]; // raised by the data only
+  warnings(r: R, p: Project, individuals: readonly string[] | null): Warning[];
+                                         // raised by the data only; `individuals`,
+                                         // those kept that the request was sent with,
+                                         // null when the filters removed nobody
+                                         // (since 11 October 2026)
   checkNumbers(r: R): (number | null)[]; // kept in the project file (section 8)
   numCheckNumbers(p: Project): number | null; // their count, checked at an opening
   script(p: Project): string;            // its lines of the Python script
@@ -3101,7 +3105,8 @@ src/core/
                     POPGEN2_ANALYSES, the analyses of the new page
                     popgen2.html, which has no steps; from 7 October
                     2026 popgen2FirstProject, the first project of that
-                    page
+                    page; from 11 October 2026 POPGEN2_LIVE, the one
+                    list of the analyses of that page that can be live
   fileNames.ts      the names of the files the application writes, from
                     the stem of the variants file; from 9 October 2026
                     also the names of the downloads of the tables and
@@ -3198,6 +3203,17 @@ src/ui/
                     dropLeftBehind, and the PCA as a second group after
                     POPGEN2_CHAIN; apart from the entry, so that
                     a test in node makes it
+  autoRunsContext.ts from 11 October 2026, autoRuns given to the screens
+                    as the store is, through AutoRunsProvider and
+                    useAutoRuns, and to the band, its own root, through
+                    the page
+  codeFiles.ts      from 11 October 2026, the files of a piece of code
+                    downloaded apart, read from manifest.json, which the
+                    build writes beside the pages and the site serves at
+                    /popnei_web/manifest.json, and asked of the network
+                    before its import(), so that a browser keeps no
+                    failure of them; without that file every download of
+                    a tab's code fails on the deployed site
   autoRuns.ts       the analyses popgen2.html starts by itself, in order,
                     each once for each key once those before it let it,
                     which keys were started, from which the page tells a
@@ -3260,7 +3276,10 @@ src/ui/
                     the page's first load, asked for the first time it
                     is needed, kept once it arrives, and asked again at
                     another address after a failure: the 3D view with
-                    three.js, and the result of the PCA tab
+                    three.js, and the result of the PCA tab; from 11
+                    October 2026 also the Populations tab and the plots
+                    of the Variants tab, with their files asked first
+                    (codeFiles.ts)
   popgenStore.ts    the store of the population genetics page, made with
                     the analyses and the functions of apps.ts and the
                     functions of the worker client that send; apart from
@@ -3337,7 +3356,14 @@ src/ui/
                     lock of its Run by the one pass (passLock.ts), its
                     words (tabWords.ts), and its result, whose code is
                     downloaded apart from the page when the tab is first
-                    shown (PcaTabResults.tsx, PcaTabResultView.tsx)
+                    shown (PcaTabResults.tsx, PcaTabResultView.tsx); from
+                    11 October 2026 CodeSplit.tsx, what a tab draws from
+                    code downloaded apart, its loading line and Try
+                    again; and diversity/ the Populations tab of
+                    popgen2.html, its frame and first words, which the
+                    page loads (PopulationsTab.tsx, tabLoadWords.ts),
+                    and the tab itself with its result, downloaded when
+                    the tab is first shown (PopulationsTabView.tsx)
   report/           renders the report model into its HTML page, with the plots
   widgets/          React Aria components with our styles, one wrapper per
                     widget; among them ThresholdSlider.tsx, from 7

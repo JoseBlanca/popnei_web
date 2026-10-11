@@ -894,8 +894,10 @@ user's words (its error state, below).
 
 ### The warnings
 
-`warnings(r, p)` gives them from the result and the project the request
-was made from, in this order; each has its code, which the tests assert,
+`warnings(r, p, individuals)` gives them from the result, the project
+the request was made from and the individuals kept it was sent with,
+`null` when the filters removed nobody (the third since 11 October
+2026, read on popgen2.html alone), in this order; each has its code, which the tests assert,
 and its text. Each lists the populations or individuals it is about as
 `project.md` lists individuals: three or fewer by name, more as the
 first two and how many more.

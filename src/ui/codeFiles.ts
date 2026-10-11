@@ -150,9 +150,11 @@ async function fetchWhole(address: string): Promise<Response> {
  * Asks the network for every file of the code of `source` that the page
  * does not have yet, and settles once each has arrived; refused when one
  * could not be downloaded, which leaves nothing kept, so that a later
- * call asks again. With no manifest, in the development server, or a
- * manifest that does not name `source`, as one of a newer site may not,
- * nothing is asked first and the `import()` meets the network itself.
+ * call asks again. In the development server, which has no manifest,
+ * nothing is asked first; on the built site, a manifest that does not
+ * name `source`, as one of a newer site may not, asks nothing first and
+ * the `import()` meets the network itself, and a manifest that cannot be
+ * downloaded fails the download, which Try again asks for again.
  */
 export async function codeFilesReady(source: string): Promise<void> {
   if (import.meta.env.DEV) return;

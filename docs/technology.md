@@ -676,6 +676,14 @@ packages from their releases (section 5).
   GitHub Pages; the page loads once more the first time a user opens it.
   The option not taken was a host that sets headers, Cloudflare Pages or
   Netlify.
+- **The build writes `manifest.json` beside the pages**, served at
+  `/popnei_web/manifest.json`, which names the files of each piece of
+  code a page downloads apart from its first load. popgen2.html reads it
+  before it downloads a tab's code, and asks the network for each file
+  first, since a browser keeps the failure of a module for the life of
+  the page (`src/ui/codeFiles.ts`; since 11 October 2026). The deploy
+  publishes it with the rest of `dist/`; a site without it cannot
+  download the code of any tab.
 - **Every file the site loads is served by the site.** The fonts, the
   scripts and the example data are in the repository, none from another
   domain. A page under `Cross-Origin-Embedder-Policy` cannot load from
