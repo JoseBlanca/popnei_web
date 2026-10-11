@@ -3238,7 +3238,10 @@ function sentPops(
 /** The sentence of the line of the one population when it stands for an
     individuals file or a column the user opened. */
 const MIXED =
-  "If the individuals belong to several populations, the expected heterozygosity and F are those of all of them pooled, and F comes out higher than within each population.";
+  "If the individuals belong to several populations, the values of Unclassified are those of all the individuals taken as one population, and F comes out higher than within each population.";
+/** The same, when no sentence before it says how to get populations. */
+const MIXED_GET_EACH =
+  "If the individuals belong to several populations, the values of Unclassified are those of all the individuals taken as one population, and F comes out higher than within each population; choose a column of populations in the box Individuals to get each one's.";
 
 /** The first sentence of the warning of the private alleles of the one
     population on popgen2.html. */
@@ -3671,15 +3674,17 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     const first =
       "No individual is assigned to a population, so the diversity is of every individual kept as one population.";
     expect(popgen2OnePopulationLine(noneClassifiedProject(), 4)).toBe(
-      `1 population, Unclassified: 4 individuals. ${first} ${MIXED}`,
+      `1 population, Unclassified: 4 individuals. ${first} ${MIXED_GET_EACH}`,
     );
-    expect(popgen2OnePopulationLine(noneProject(), 4)).not.toContain(MIXED);
+    expect(popgen2OnePopulationLine(noneProject(), 4)).not.toContain(
+      "If the individuals belong",
+    );
     expect(
       popgen2OnePopulationLine(
         deepFreeze<Project>({ ...project(), individuals: null }),
         4,
       ),
-    ).not.toContain(MIXED);
+    ).not.toContain("If the individuals belong");
   });
 
   test("the key holds what the warnings read: no individuals file and None, run and then the file opened with None, give different keys and different warnings", () => {

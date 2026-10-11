@@ -207,7 +207,7 @@ describe("PT1 D3 the words of the Populations tab", () => {
     );
     expect(POPULATIONS_TAB_LOADING).toBe("Loading the Populations tab…");
     expect(populationsTabFailed("panel.nei")).toBe(
-      "The Populations tab could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page and open panel.nei again.",
+      "The Populations tab could not be loaded. Press Try again. If it fails again, the site may have been updated since this page was opened: reload the page and open panel.nei again; what the page has calculated is lost.",
     );
   });
 });

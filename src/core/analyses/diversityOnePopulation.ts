@@ -43,7 +43,10 @@ export function popgen2OnePopulationLine(
   }
   const line = `1 population, ${UNCLASSIFIED_POPULATION}: ${counted(numIndividuals, "individual")}. No individual is assigned to a population, so the diversity is of every individual kept as one population.`;
   const why = onePopulationWhy(p, cause);
-  return [line, why, standsForOpened(cause) ? MIXED_POPULATIONS : null]
+  // How to get populations is said once: by the sentence of the cause
+  // when there is one, by the end of this one otherwise.
+  const mixed = `${MIXED_POPULATIONS}${why === null ? GET_EACH : "."}`;
+  return [line, why, standsForOpened(cause) ? mixed : null]
     .filter((sentence) => sentence !== null)
     .join(" ");
 }
@@ -52,8 +55,12 @@ export function popgen2OnePopulationLine(
     belong to several populations: the Wahlund effect, F pooled above F
     within each (docs/functionality.md: nothing misleads without
     warning). */
-const MIXED_POPULATIONS =
-  "If the individuals belong to several populations, the expected heterozygosity and F are those of all of them pooled, and F comes out higher than within each population.";
+const MIXED_POPULATIONS = `If the individuals belong to several populations, the values of ${UNCLASSIFIED_POPULATION} are those of all the individuals taken as one population, and F comes out higher than within each population`;
+
+/** The end of `MIXED_POPULATIONS` when no sentence before it says how
+    to get populations. */
+const GET_EACH =
+  "; choose a column of populations in the box Individuals to get each one's.";
 
 /** Whether the one population of the cause `cause` stands for an
     individuals file or a column of the populations the user opened, and

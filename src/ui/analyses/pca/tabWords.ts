@@ -175,7 +175,7 @@ export function pcaTabResultFailed(
   variantsName: string,
 ): string {
   const name = methodName(method);
-  return `The result of the ${name} could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page, open ${escaped(variantsName)} again and run the ${name} again.`;
+  return `The result of the ${name} could not be loaded. Press Try again. If it fails again, the site may have been updated since this page was opened: reload the page, open ${escaped(variantsName)} again and run the ${name} again; what the page has calculated is lost.`;
 }
 
 /** The line in the place of the bar while the PCA is about to start by

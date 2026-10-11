@@ -92,7 +92,7 @@ const ONE_POPULATION =
 
 /** The same line when the one population stands for a column the user
     chose, which classifies nobody. */
-const ONE_POPULATION_OF_COLUMN = `${ONE_POPULATION} If the individuals belong to several populations, the expected heterozygosity and F are those of all of them pooled, and F comes out higher than within each population.`;
+const ONE_POPULATION_OF_COLUMN = `${ONE_POPULATION} If the individuals belong to several populations, the values of Unclassified are those of all the individuals taken as one population, and F comes out higher than within each population; choose a column of populations in the box Individuals to get each one's.`;
 
 /** What the page records, on `window`, of the calculations it asks of
     its workers and the results it gets back: "run diversity", "result
@@ -681,7 +681,7 @@ test.describe("PT1 D3 the code of the Populations tab", () => {
     for (const route of held) await route.abort();
     await page.unroute(tabFile);
     const words =
-      "The Populations tab could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page and open panel.nei again.";
+      "The Populations tab could not be loaded. Press Try again. If it fails again, the site may have been updated since this page was opened: reload the page and open panel.nei again; what the page has calculated is lost.";
     await expect(shown(page).getByText(words, { exact: true })).toBeVisible();
     await expect(page.getByRole("alert")).toHaveText("");
 

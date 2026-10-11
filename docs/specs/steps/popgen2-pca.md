@@ -1415,7 +1415,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | the PCA's menu while three.js downloads | "Download once the 3D view is drawn." |
 | the table of the individuals cut off at its right | "More columns: scroll sideways." |
 | the result while its code downloads | "Loading the result…" |
-| the result whose code could not be downloaded | "The result of the PCA could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page, open panel.nei again and run the PCA again."; "PCoA" under the PCoA; its button "Try again" |
+| the result whose code could not be downloaded | "The result of the PCA could not be loaded. Press Try again. If it fails again, the site may have been updated since this page was opened: reload the page, open panel.nei again and run the PCA again; what the page has calculated is lost."; "PCoA" under the PCoA; its button "Try again" (worded so on 11 October 2026: Try again first, the reload second with what it costs) |
 | the status region, a file handed to the browser | "Saving panel.pca.coordinates.csv." |
 | a PNG refused | "The image of this plot is too large for a PNG in this browser; download it as SVG."; "The image of this plot could not be made as a PNG in this browser; download it as SVG." |
 

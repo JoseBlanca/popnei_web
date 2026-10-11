@@ -182,9 +182,14 @@ population stands for an individuals file or a column the user opened,
 a refused file, a column absent, not offered, of more than 20 values
 or that classifies nobody, a last sentence says what it does to the
 numbers: "If the individuals belong to several populations, the
-expected heterozygosity and F are those of all of them pooled, and F
-comes out higher than within each population." (worded so on 11
-October 2026, after a first reader found "their mixture" unclear.) With no individuals file and
+values of Unclassified are those of all the individuals taken as one
+population, and F comes out higher than within each population.", and,
+when no sentence before it says how to get populations, a column not
+offered or one that classifies nobody, it ends instead "…; choose a
+column of populations in the box Individuals to get each one's." (worded
+so on 11 October 2026, after two first readers found "their mixture"
+and "all of them pooled" unclear and the sentence gave nothing to do.)
+With no individuals file and
 with "None", chosen to have one population, it is not said. (Added on
 11 October 2026 after the review of work package 1 of the plan: on
 `panel.nei` with `panel_pops.csv` the one population gives F 0.0564,
@@ -419,7 +424,7 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 | the status region, a Stop | "Diversity stopped. Press Run in the Populations tab to calculate it again."; with no Run to press, "Diversity stopped." |
 | the buttons of the downloads, for a screen reader | "Download the table of the diversity"; "Download the spectrum of p0"; "Download the table of the spectrum" |
 | the tab while its code downloads | "Loading the Populations tab…" |
-| the tab whose code could not be downloaded | "The Populations tab could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page and open panel.nei again." with "Try again" |
+| the tab whose code could not be downloaded | "The Populations tab could not be loaded. Press Try again. If it fails again, the site may have been updated since this page was opened: reload the page and open panel.nei again; what the page has calculated is lost." with "Try again" (worded so on 11 October 2026: Try again first, the reload second with what it costs) |
 
 The errors, the warnings and the words of the spectrum are those of
 `diversity.md` and `sfs.md`, "On popgen2.html".

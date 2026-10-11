@@ -1697,7 +1697,7 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     for (const route of held) await route.abort();
     await page.unroute(resultsFile);
     const words =
-      "The result of the PCA could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page, open panel.nei again and run the PCA again.";
+      "The result of the PCA could not be loaded. Press Try again. If it fails again, the site may have been updated since this page was opened: reload the page, open panel.nei again and run the PCA again; what the page has calculated is lost.";
     await expect(shown(page).getByText(words, { exact: true })).toBeVisible();
     await expect
       .poll(

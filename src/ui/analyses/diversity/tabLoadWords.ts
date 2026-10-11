@@ -20,5 +20,5 @@ export const POPULATIONS_TAB_LOADING = "Loading the Populations tab…";
     downloaded, of the variants file `variantsName`, with "Try again"
     under them. */
 export function populationsTabFailed(variantsName: string): string {
-  return `The Populations tab could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page and open ${escaped(variantsName)} again.`;
+  return `The Populations tab could not be loaded. Press Try again. If it fails again, the site may have been updated since this page was opened: reload the page and open ${escaped(variantsName)} again; what the page has calculated is lost.`;
 }
