@@ -12,6 +12,7 @@ import type { Popgen2LiveId } from "../../core/apps.ts";
 import type { AnalysisId } from "../../core/project.ts";
 import type { AnalysisStatus, AppState, Notice } from "../../core/store.ts";
 import type { JobResult, PcaMethod } from "../../worker/protocol.ts";
+import type { AutoRuns } from "../autoRuns.ts";
 import { methodName } from "./pca/words.ts";
 
 /** The state of the analysis `id` in `s`; a defect when the store has
@@ -193,4 +194,42 @@ export function runningAnalysisOf(
 ): LiveAnalysisName | null {
   const id = POPGEN2_LIVE.find((one) => statusOf(s, one).kind === "running");
   return id === undefined ? null : liveAnalysisOf(s, id);
+}
+
+/** The live analyses of the page other than `running`, live beside it,
+    in their order, as `isLive` of `live` tells: those a Stop all stops
+    too. */
+export function liveBeside(
+  s: AppState<JobResult, unknown>,
+  running: LiveAnalysisName,
+  live: Pick<AutoRuns, "isLive">,
+): readonly LiveAnalysisName[] {
+  return namedOf(
+    s,
+    POPGEN2_LIVE.filter((id) => id !== running.id && live.isLive(id)),
+  );
+}
+
+/** The live analyses of the page waiting to start after the one running,
+    in their order, those whose `liveState` of `live` is about to start
+    "behind" it; empty while none runs. */
+export function waitingAfter(
+  s: AppState<JobResult, unknown>,
+  live: Pick<AutoRuns, "liveState">,
+): readonly LiveAnalysisName[] {
+  return namedOf(
+    s,
+    POPGEN2_LIVE.filter((id) => {
+      const state = live.liveState(id);
+      return state.kind === "live" && state.aboutToStart === "behind";
+    }),
+  );
+}
+
+/** The analyses `ids` as the words name them in `s`. */
+function namedOf(
+  s: AppState<JobResult, unknown>,
+  ids: readonly AnalysisId[],
+): readonly LiveAnalysisName[] {
+  return ids.map((id) => liveAnalysisOf(s, id));
 }

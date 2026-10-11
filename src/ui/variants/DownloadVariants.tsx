@@ -56,7 +56,7 @@ import {
   endOfWrite,
   saveAgain,
 } from "./downloadState.ts";
-import { useAutoRuns } from "./filtersLock.ts";
+import { useAutoRuns } from "../autoRunsContext.ts";
 import { useRunGate } from "./runGate.tsx";
 import type { DownloadPlace, WriteEnd } from "./downloadState.ts";
 import {

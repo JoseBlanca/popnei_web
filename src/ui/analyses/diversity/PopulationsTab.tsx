@@ -18,7 +18,8 @@
 import { useEffect, useSyncExternalStore } from "react";
 
 import { diversityOnPopgen2 } from "../../../core/analyses/diversity.ts";
-import type { AutoRuns, LiveState } from "../../autoRuns.ts";
+import type { LiveState } from "../../autoRuns.ts";
+import { useAutoRuns } from "../../autoRunsContext.ts";
 import { useAppState } from "../../store.tsx";
 import { summaryStatus } from "../../variants/words.ts";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
@@ -33,8 +34,6 @@ const DIVERSITY = diversityOnPopgen2.id;
 
 /** What the Populations tab is drawn with. */
 export interface PopulationsTabProps {
-  /** The analyses the page starts by itself, the one pass among them. */
-  readonly autoRuns: AutoRuns;
   /** Whether the tab is shown and not greyed, a variants file open:
       the code of the result is then downloaded, so that it is there
       when a run ends. */
@@ -57,16 +56,15 @@ function panelLive(state: LiveState): PanelLive {
     line of the populations, Run or Stop with its lock, the run under
     way, its errors, and its result. */
 export function PopulationsTab({
-  autoRuns,
   shown,
 }: PopulationsTabProps): React.JSX.Element {
   // The code of the result, asked for while the user sets the options.
   useEffect(() => {
     if (shown) prefetchPopulationsResults();
   }, [shown]);
-  // Selected for what autoRuns knows, which tells a pass stopped from one
-  // about to start, and which the store does not.
-  useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
+  // Drawn again at each change of what autoRuns knows, which tells a
+  // pass stopped from one about to start, and which the store does not.
+  const autoRuns = useAutoRuns();
   const lock = useAppState((s) =>
     diversityTabLock(
       s.project,

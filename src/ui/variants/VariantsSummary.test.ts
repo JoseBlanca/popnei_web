@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { loadVariants } from "../../core/project.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import type { Job, JobResult, Outcome, Run } from "../../worker/protocol.ts";
+import { AutoRunsProvider } from "../autoRunsContext.ts";
 import { LIVE_QUIET_MS, createAutoRuns } from "../autoRuns.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { POPGEN2_LIVE } from "../../core/apps.ts";
@@ -155,12 +156,15 @@ async function drawPage(
         AnnouncerProvider,
         { value: announcer },
         createElement("button", { ref: openButton }, "Open variants file…"),
-        createElement(VariantsSummary, {
-          autoRuns,
-          openButton,
-          onCountButton: () => undefined,
-          refusal: null,
-        }),
+        createElement(
+          AutoRunsProvider,
+          { value: autoRuns },
+          createElement(VariantsSummary, {
+            openButton,
+            onCountButton: () => undefined,
+            refusal: null,
+          }),
+        ),
       ),
     ),
   );

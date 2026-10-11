@@ -9,9 +9,8 @@
  * while it runs. A file that could not be opened shows none of them: its
  * box says why.
  */
-import { useSyncExternalStore } from "react";
 
-import type { AutoRuns } from "../autoRuns.ts";
+import { useAutoRuns } from "../autoRunsContext.ts";
 import { classOf } from "../classOf.ts";
 import { useAppState } from "../store.tsx";
 import { chainButton, chainStatuses } from "./chain.ts";
@@ -26,18 +25,9 @@ import {
   summaryStatus,
 } from "./words.ts";
 
-/** What the lines are drawn with. */
-export interface FileFactsProps {
-  /** The analyses the page starts by itself, which tell a count stopped
-      from one about to start. */
-  readonly autoRuns: AutoRuns;
-}
-
 /** The three lines of the file open; nothing with no file, or one that
     could not be opened. */
-export function FileFacts({
-  autoRuns,
-}: FileFactsProps): React.JSX.Element | null {
+export function FileFacts(): React.JSX.Element | null {
   const variants = useAppState((s) => s.project.variants);
   if (variants === null || variants.read.kind === "failed") return null;
   const read = variants.read;
@@ -47,7 +37,7 @@ export function FileFacts({
     <section aria-label={FACTS_NAME} className={classOf(styles, "facts")}>
       <p className={classOf(styles, "fact")}>{fileSizeLine(variants)}</p>
       {read.kind === "read" ? (
-        <Chromosomes autoRuns={autoRuns} />
+        <Chromosomes />
       ) : (
         <p className={classOf(styles, "fact")}>{CHROMOSOMES_READING}</p>
       )}
@@ -60,12 +50,12 @@ export function FileFacts({
 
 /** The line of the chromosomes of a file read, in each state of their
     count by the one pass. */
-function Chromosomes({ autoRuns }: FileFactsProps): React.JSX.Element {
+function Chromosomes(): React.JSX.Element {
   const status = useAppState(summaryStatus);
   const analyses = useAppState((s) => s.analyses);
-  // Selected for what autoRuns knows, which a Stop of a pass about to
-  // start changes and the store does not.
-  useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
+  // Drawn again at each change of what autoRuns knows, which a Stop of a
+  // pass about to start changes and the store does not.
+  const autoRuns = useAutoRuns();
   const stopped =
     chainButton(chainStatuses(analyses), (key) => autoRuns.startedUnder(key))
       ?.kind === "run";

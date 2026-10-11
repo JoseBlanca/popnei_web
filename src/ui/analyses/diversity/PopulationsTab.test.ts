@@ -48,7 +48,7 @@ import { startAnalysis } from "../../runs.ts";
 import { AnnouncerProvider } from "../../shell/announcer.tsx";
 import { createAnnouncer } from "../../shell/status.ts";
 import { StoreProvider } from "../../store.tsx";
-import { AutoRunsProvider } from "../../variants/filtersLock.ts";
+import { AutoRunsProvider } from "../../autoRunsContext.ts";
 import { RunGateProvider } from "../../variants/runGate.tsx";
 import { createRunGate, gatedStore } from "../../variants/thresholdRun.ts";
 import { ChangeHoldsProvider } from "../../widgets/changeHold.ts";
@@ -211,7 +211,7 @@ async function drawTab(): Promise<Page> {
                 createElement(
                   AutoRunsProvider,
                   { value: autoRuns },
-                  createElement(PopulationsTab, { autoRuns, shown: false }),
+                  createElement(PopulationsTab, { shown: false }),
                 ),
               ),
             ),

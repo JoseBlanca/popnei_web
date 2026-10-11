@@ -19,79 +19,16 @@
  *
  * Which analyses are live, and which wait after the one running, is
  * known to `autoRuns` alone, which the entry of the page gives to every
- * component under `AutoRunsProvider`.
+ * component under `AutoRunsProvider` of src/ui/autoRunsContext.ts.
  */
-import { createContext, useContext, useSyncExternalStore } from "react";
-
 import type { AnalysisId } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
-import { liveAnalysisOf, runningAnalysisOf } from "../analyses/status.ts";
-import type { LiveAnalysisName } from "../analyses/status.ts";
+import { liveBeside, runningAnalysisOf } from "../analyses/status.ts";
 import { filtersLockedText } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
-import { POPGEN2_LIVE } from "../../core/apps.ts";
-import {} from "../popgen2Store.ts";
+import { useAutoRuns } from "../autoRunsContext.ts";
 import { useAppState } from "../store.tsx";
-
-const AutoRunsContext = createContext<AutoRuns | null>(null);
-
-/** Gives the analyses the page starts by itself to every component under
-    it. */
-export const AutoRunsProvider = AutoRunsContext.Provider;
-
-/** The analyses the page starts by itself, read with `subscribe`, so
-    that the component that calls it is drawn again at each change of the
-    live state of an analysis. Throws a defect outside an
-    `AutoRunsProvider`. */
-export function useAutoRuns(): AutoRuns {
-  const autoRuns = useContext(AutoRunsContext);
-  if (autoRuns === null) {
-    throw new Error(
-      "popnei_web defect: useAutoRuns outside an AutoRunsProvider",
-    );
-  }
-  useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
-  return autoRuns;
-}
-
-/** The live analyses of the page other than `running`, live beside it,
-    in their order, as `isLive` of `live` tells: those a Stop all stops
-    too. */
-export function liveBeside(
-  s: AppState<JobResult, unknown>,
-  running: LiveAnalysisName,
-  live: Pick<AutoRuns, "isLive">,
-): readonly LiveAnalysisName[] {
-  return namedOf(
-    s,
-    POPGEN2_LIVE.filter((id) => id !== running.id && live.isLive(id)),
-  );
-}
-
-/** The live analyses of the page waiting to start after the one running,
-    in their order, those whose `liveState` of `live` is about to start
-    "behind" it; empty while none runs. */
-export function waitingAfter(
-  s: AppState<JobResult, unknown>,
-  live: Pick<AutoRuns, "liveState">,
-): readonly LiveAnalysisName[] {
-  return namedOf(
-    s,
-    POPGEN2_LIVE.filter((id) => {
-      const state = live.liveState(id);
-      return state.kind === "live" && state.aboutToStart === "behind";
-    }),
-  );
-}
-
-/** The analyses `ids` as the words name them in `s`. */
-function namedOf(
-  s: AppState<JobResult, unknown>,
-  ids: readonly AnalysisId[],
-): readonly LiveAnalysisName[] {
-  return ids.map((id) => liveAnalysisOf(s, id));
-}
 
 /** The reason the thresholds and the FILTER box wait in `s`, while a
     live analysis runs, with Stop all when another is live beside it;

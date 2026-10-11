@@ -22,13 +22,13 @@
  * holds the words of the last drop or paste it did not open, until the
  * next opening.
  */
-import { useId, useRef, useState, useSyncExternalStore } from "react";
+import { useId, useRef, useState } from "react";
 
 import { populationCounts } from "../../core/populations.ts";
 import type { PageTab } from "../../core/popgen2Tabs.ts";
 import { escaped, individualsBoxNeeds } from "../../core/project.ts";
 import type { IndividualsSource, Project } from "../../core/project.ts";
-import type { AutoRuns } from "../autoRuns.ts";
+import { useAutoRuns } from "../autoRunsContext.ts";
 import { classOf } from "../classOf.ts";
 import { useFiles } from "../files.tsx";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
@@ -94,16 +94,12 @@ const COUNT_COLUMNS = [
 
 /** What the box is drawn with. */
 export interface IndividualsBoxProps {
-  /** The analyses the page starts by itself, which tell a pass stopped
-      from one about to start. */
-  readonly autoRuns: AutoRuns;
   /** The tab shown, whose turn draws the zone again after a throw. */
   readonly tab: PageTab;
 }
 
 /** The box of the individuals file. */
 export function IndividualsBox({
-  autoRuns,
   tab,
 }: IndividualsBoxProps): React.JSX.Element {
   const headingId = useId();
@@ -158,7 +154,7 @@ export function IndividualsBox({
         heading={INDIVIDUALS_LINES_NAME}
         level={3}
       >
-        <FileLines individuals={individuals} autoRuns={autoRuns} />
+        <FileLines individuals={individuals} />
       </ErrorBoundary>
       {refusal !== null && <Problem>{refusal}</Problem>}
       {/* Its own boundary, made again at each turn of the tabs, as the
@@ -196,21 +192,16 @@ export function IndividualsBox({
 interface FileLinesProps {
   /** The individuals file of the project, or null with none. */
   readonly individuals: IndividualsSource | null;
-  /** The analyses the page starts by itself. */
-  readonly autoRuns: AutoRuns;
 }
 
 /** The lines of the file: with no file, the counts of the unclassified;
     or its name and its read, refusal, or list and counts. */
-function FileLines({
-  individuals,
-  autoRuns,
-}: FileLinesProps): React.JSX.Element | null {
-  if (individuals === null) return <NoFileCounts autoRuns={autoRuns} />;
+function FileLines({ individuals }: FileLinesProps): React.JSX.Element | null {
+  if (individuals === null) return <NoFileCounts />;
   return (
     <div className={classOf(styles, "lines")}>
       <p className={classOf(styles, "fileName")}>{escaped(individuals.name)}</p>
-      <ReadLines individuals={individuals} autoRuns={autoRuns} />
+      <ReadLines individuals={individuals} />
     </div>
   );
 }
@@ -219,7 +210,6 @@ function FileLines({
     list and the counts. */
 function ReadLines({
   individuals,
-  autoRuns,
 }: FileLinesProps & {
   readonly individuals: IndividualsSource;
 }): React.JSX.Element {
@@ -231,7 +221,7 @@ function ReadLines({
     case "notGiven":
       return <Problem>{reasonOf(project)}</Problem>;
     case "read":
-      return <ColumnAndCounts project={project} autoRuns={autoRuns} />;
+      return <ColumnAndCounts project={project} />;
   }
 }
 
@@ -251,19 +241,14 @@ function reasonOf(p: Project): string {
 interface ColumnAndCountsProps {
   /** The project, whose individuals file is read. */
   readonly project: Project;
-  /** The analyses the page starts by itself. */
-  readonly autoRuns: AutoRuns;
 }
 
 /** The list "Column of the populations", with the line of no column
     chosen under it, and the counts with their lines. */
-function ColumnAndCounts({
-  project,
-  autoRuns,
-}: ColumnAndCountsProps): React.JSX.Element {
+function ColumnAndCounts({ project }: ColumnAndCountsProps): React.JSX.Element {
   const store = useStore();
   const kept = useAppState((s) => s.individualsKept);
-  const wait = usePassWait(autoRuns);
+  const wait = usePassWait();
   const read = project.individuals?.read;
   const counts = populationCounts(project, kept);
   if (read?.kind !== "read" || counts === null) {
@@ -312,14 +297,10 @@ function ColumnAndCounts({
 /** The counts with no individuals file: one row, "Unclassified", with
     the individuals kept, and the line of why they wait; nothing before
     the variants file has given its individuals (`noFileCounts`). */
-function NoFileCounts({
-  autoRuns,
-}: {
-  readonly autoRuns: AutoRuns;
-}): React.JSX.Element | null {
+function NoFileCounts(): React.JSX.Element | null {
   const project = useAppState((s) => s.project);
   const kept = useAppState((s) => s.individualsKept);
-  const wait = usePassWait(autoRuns);
+  const wait = usePassWait();
   const counts = noFileCounts(project, kept, wait);
   if (counts === null || project.variants === null) return null;
   return (
@@ -395,7 +376,7 @@ function CountsLineShown({
     of the pass, which changes the statuses and not the answer, draws the
     box no more; and read again when the analyses the page starts by
     itself tell a Stop. */
-function usePassWait(autoRuns: AutoRuns): PassWait {
-  useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
+function usePassWait(): PassWait {
+  const autoRuns = useAutoRuns();
   return useAppState((s) => passWaitOf(s, (key) => autoRuns.startedUnder(key)));
 }

@@ -33,7 +33,6 @@
 import { useId, useRef, useState } from "react";
 
 import { classOf } from "../classOf.ts";
-import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { StatusRegion } from "../shell/StatusRegion.tsx";
 import { useAppState } from "../store.tsx";
@@ -51,8 +50,6 @@ import { INFO_NAME, OPENING_NAME, OPENING_ZONE_NAME } from "./words.ts";
 
 /** What the page is drawn with. */
 export interface VariantsPageProps {
-  /** The analyses the page starts by itself. */
-  readonly autoRuns: AutoRuns;
   /** The tab shown, which the row of tabs reads and changes. */
   readonly pageTab: PageTabStore;
   /** Called with the element of Stop or Start again of the box while
@@ -66,7 +63,6 @@ export interface VariantsPageProps {
 
 /** The page that opens a variants file and shows what it holds. */
 export function VariantsPage({
-  autoRuns,
   pageTab,
   onCountButton,
   onStatsShown,
@@ -96,7 +92,6 @@ export function VariantsPage({
                 Start again. */}
             <ErrorBoundary key={fileId ?? "none"} heading={INFO_NAME} level={3}>
               <VariantsSummary
-                autoRuns={autoRuns}
                 openButton={openButton}
                 onCountButton={onCountButton}
                 refusal={refusal}
@@ -112,7 +107,7 @@ export function VariantsPage({
               <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
             </ErrorBoundary>
           </section>
-          <IndividualsBox autoRuns={autoRuns} tab={tab} />
+          <IndividualsBox tab={tab} />
         </div>
         {/* A defect in the reasons of the tabs costs the row alone, not
             the boxes of the files. */}
@@ -122,7 +117,6 @@ export function VariantsPage({
             onTabChange={(next) => {
               pageTab.show(next);
             }}
-            autoRuns={autoRuns}
             openButton={openButton}
             onStatsShown={onStatsShown}
           />

@@ -23,7 +23,7 @@ import type {
 } from "../../worker/protocol.ts";
 import { runningAnalysisOf } from "../analyses/status.ts";
 import type { AutoRuns } from "../autoRuns.ts";
-import { waitingAfter } from "./filtersLock.ts";
+import { waitingAfter } from "../analyses/status.ts";
 import type { FileHanded } from "./downloadWords.ts";
 import { summaryStatus } from "./words.ts";
 import {

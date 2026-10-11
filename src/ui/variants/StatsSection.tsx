@@ -11,7 +11,6 @@
  * ploidy (FileFacts.tsx), so that a throw in one of the two leaves the
  * other drawn, as each part of the page has its own.
  */
-import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { useAppState } from "../store.tsx";
 import { classOf } from "../classOf.ts";
@@ -24,8 +23,6 @@ import type { StatsShown } from "./announceChanges.ts";
 
 /** What the section is drawn with. */
 export interface StatsSectionProps {
-  /** The analyses the page starts by itself. */
-  readonly autoRuns: AutoRuns;
   /** The open button of the page, which takes the focus when the section
       goes with it. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
@@ -36,7 +33,6 @@ export interface StatsSectionProps {
 /** The size, the chromosomes and the ploidy of the open file, and its
     statistics; nothing before a file is picked. */
 export function StatsSection({
-  autoRuns,
   openButton,
   onShown,
 }: StatsSectionProps): React.JSX.Element | null {
@@ -46,14 +42,10 @@ export function StatsSection({
     <div className={classOf(styles, "withFacts")}>
       {/* Another load is another boundary, which has caught nothing. */}
       <ErrorBoundary key={`facts-${fileId}`} heading={FACTS_NAME} level={2}>
-        <FileFacts autoRuns={autoRuns} />
+        <FileFacts />
       </ErrorBoundary>
       <ErrorBoundary key={fileId} heading={STATS_NAME} level={2}>
-        <FileStats
-          autoRuns={autoRuns}
-          openButton={openButton}
-          onShown={onShown}
-        />
+        <FileStats openButton={openButton} onShown={onShown} />
       </ErrorBoundary>
     </div>
   );

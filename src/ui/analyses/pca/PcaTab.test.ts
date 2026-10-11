@@ -33,7 +33,7 @@ import { AnnouncerProvider } from "../../shell/announcer.tsx";
 import { createAnnouncer } from "../../shell/status.ts";
 import { StoreProvider } from "../../store.tsx";
 import { RunGateProvider } from "../../variants/runGate.tsx";
-import { AutoRunsProvider } from "../../variants/filtersLock.ts";
+import { AutoRunsProvider } from "../../autoRunsContext.ts";
 import { createRunGate, gatedStore } from "../../variants/thresholdRun.ts";
 import type { RunGate } from "../../variants/thresholdRun.ts";
 import { ChangeHoldsProvider } from "../../widgets/changeHold.ts";
@@ -220,7 +220,7 @@ async function drawTab(): Promise<Page> {
                 createElement(
                   AutoRunsProvider,
                   { value: autoRuns },
-                  createElement(PcaTab, { autoRuns, shown: false }),
+                  createElement(PcaTab, { shown: false }),
                 ),
               ),
             ),

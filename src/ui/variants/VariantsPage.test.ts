@@ -43,7 +43,7 @@ import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
 import { StoreProvider } from "../store.tsx";
 import { RunGateProvider } from "./runGate.tsx";
-import { AutoRunsProvider } from "./filtersLock.ts";
+import { AutoRunsProvider } from "../autoRunsContext.ts";
 import { createRunGate } from "./thresholdRun.ts";
 import { ChangeHoldsProvider } from "../widgets/changeHold.ts";
 import { VariantsPage } from "./VariantsPage.tsx";
@@ -305,7 +305,6 @@ async function drawPage(
                 AutoRunsProvider,
                 { value: autoRuns },
                 createElement(VariantsPage, {
-                  autoRuns,
                   pageTab,
                   onCountButton: () => undefined,
                   onStatsShown: () => () => undefined,

@@ -27,7 +27,7 @@
  * or alone with none. There are no lines before a file is opened or
  * refused, and the box holds its heading and the zone alone.
  */
-import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import { escaped } from "../../core/project.ts";
 import type { VariantSource } from "../../core/project.ts";
@@ -35,7 +35,7 @@ import type { AnalysisStatus } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { RunButton } from "../analyses/RunButton.tsx";
 import { progressShare } from "../analyses/words.ts";
-import type { AutoRuns } from "../autoRuns.ts";
+import { useAutoRuns } from "../autoRunsContext.ts";
 import { classOf } from "../classOf.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
@@ -66,9 +66,6 @@ import {
 
 /** What the box is drawn with. */
 export interface VariantsSummaryProps {
-  /** The analyses the page starts by itself, for Stop and Start again
-      and to tell a count stopped from one not yet started. */
-  readonly autoRuns: AutoRuns;
   /** The open button of the page, which takes the focus when the lines
       of a load go while the focus is in them. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
@@ -83,7 +80,6 @@ export interface VariantsSummaryProps {
 
 /** The box of the file; nothing before a file is opened or refused. */
 export function VariantsSummary({
-  autoRuns,
   openButton,
   onCountButton,
   refusal,
@@ -101,7 +97,6 @@ export function VariantsSummary({
         // the focus they held.
         <Load
           key={variants.fileId}
-          autoRuns={autoRuns}
           openButton={openButton}
           onCountButton={onCountButton}
           variants={variants}
@@ -115,7 +110,6 @@ export function VariantsSummary({
 
 /** What the lines of one load of the file are drawn with. */
 interface LoadProps {
-  readonly autoRuns: AutoRuns;
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
   readonly onCountButton: (node: HTMLButtonElement | null) => void;
   /** The file. */
@@ -126,7 +120,6 @@ interface LoadProps {
 
 /** The lines of one load of the file, in each state of its read. */
 function Load({
-  autoRuns,
   openButton,
   onCountButton,
   variants,
@@ -198,7 +191,6 @@ function Load({
             {individualsLine(read.individuals.length)}
           </p>
           <Count
-            autoRuns={autoRuns}
             onCountButton={onCountButton}
             refused={refused}
             recordsFilter={read.keepsPassed}
@@ -211,7 +203,6 @@ function Load({
 
 /** What the count is drawn with. */
 interface CountProps {
-  readonly autoRuns: AutoRuns;
   readonly onCountButton: (node: HTMLButtonElement | null) => void;
   /** Whether the words of a file not opened follow the lines. */
   readonly refused: boolean;
@@ -225,7 +216,6 @@ interface CountProps {
     of their count, the row of the progress with Stop or Start again, and
     a failure of the count after them. */
 function Count({
-  autoRuns,
   onCountButton,
   refused,
   recordsFilter,
@@ -233,9 +223,9 @@ function Count({
   const announcer = useAnnouncer();
   const status = useAppState(summaryStatus);
   const analyses = useAppState((s) => s.analyses);
-  // Selected for what autoRuns knows, which a Stop of a pass about to
-  // start changes and the store does not.
-  useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
+  // Drawn again at each change of what autoRuns knows, which a Stop of
+  // a pass about to start changes and the store does not.
+  const autoRuns = useAutoRuns();
   const project = useAppState((s) => s.project);
   // The lines of the count, and the element that holds the words of a
   // failure: one of them takes the focus when the button goes with it.

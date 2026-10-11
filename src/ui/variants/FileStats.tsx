@@ -66,13 +66,7 @@
  * it again, which WebKit 26.6 downloads, and Chromium 153 does not,
  * keeping the failure until the page is reloaded.
  */
-import {
-  Suspense,
-  lazy,
-  useLayoutEffect,
-  useRef,
-  useSyncExternalStore,
-} from "react";
+import { Suspense, lazy, useLayoutEffect, useRef } from "react";
 
 import type { AnalysisStatus } from "../../core/store.ts";
 import type {
@@ -80,7 +74,7 @@ import type {
   VariantsSummaryResult,
 } from "../../worker/protocol.ts";
 import { progressShare } from "../analyses/words.ts";
-import type { AutoRuns } from "../autoRuns.ts";
+import { useAutoRuns } from "../autoRunsContext.ts";
 import { individualChecksCsv } from "../../core/analyses/individualChecks.ts";
 import { downloadText } from "../download.ts";
 import { DownloadVariants } from "./DownloadVariants.tsx";
@@ -115,9 +109,6 @@ import { summaryStatus } from "./words.ts";
 
 /** What the section is drawn with. */
 export interface FileStatsProps {
-  /** The analyses the page starts by itself, which tell a pass stopped
-      from one about to start. */
-  readonly autoRuns: AutoRuns;
   /** The open button of the page, which takes the focus when the section
       goes with it, another file opened. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
@@ -130,7 +121,6 @@ export interface FileStatsProps {
 /** The statistics of the open file; nothing before a file is read. The
     code of the plots is asked for from the moment a file is picked. */
 export function FileStats({
-  autoRuns,
   openButton,
   onShown,
 }: FileStatsProps): React.JSX.Element | null {
@@ -146,7 +136,6 @@ export function FileStats({
     // the focus it held.
     <Stats
       key={variants.fileId}
-      autoRuns={autoRuns}
       openButton={openButton}
       onShown={onShown}
       plots={plots}
@@ -249,7 +238,6 @@ const INDIVIDUAL_ROOM = INDIVIDUAL_STATISTICS.map((statistic) => ({
 
 /** The section of one load of the file. */
 function Stats({
-  autoRuns,
   openButton,
   onShown,
   plots,
@@ -259,10 +247,10 @@ function Stats({
 }: StatsProps): React.JSX.Element {
   const sectionRef = useRef<HTMLElement>(null);
   const status = useAppState(summaryStatus);
-  // Selected for what autoRuns knows, which tells a pass stopped from one
-  // about to start, and which a Stop with no pass running changes and the
-  // store does not.
-  useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
+  // Drawn again at each change of what autoRuns knows, which tells a
+  // pass stopped from one about to start, and which a Stop with no pass
+  // running changes and the store does not.
+  const autoRuns = useAutoRuns();
   const { CodeMark, VariantPlots, IndividualPlots } = plots;
 
   useLayoutEffect(() => {

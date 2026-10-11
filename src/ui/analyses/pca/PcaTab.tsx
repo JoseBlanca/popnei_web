@@ -24,7 +24,8 @@
 import { useEffect, useSyncExternalStore } from "react";
 
 import { pcaOnPopgen2, pcaOptions } from "../../../core/analyses/pca.ts";
-import type { AutoRuns, LiveState } from "../../autoRuns.ts";
+import type { LiveState } from "../../autoRuns.ts";
+import { useAutoRuns } from "../../autoRunsContext.ts";
 import type { PcaMethod } from "../../../worker/protocol.ts";
 import { useAppState } from "../../store.tsx";
 import { summaryStatus } from "../../variants/words.ts";
@@ -40,8 +41,6 @@ const PCA = pcaOnPopgen2.id;
 
 /** What the PCA tab is drawn with. */
 export interface PcaTabProps {
-  /** The analyses the page starts by itself, the one pass among them. */
-  readonly autoRuns: AutoRuns;
   /** Whether the tab is shown and not greyed, a variants file open:
       the code of the result is then downloaded, so that it is there
       when a run ends. */
@@ -70,16 +69,16 @@ function panelLive(state: LiveState, method: PcaMethod): PanelLive {
 /** The PCA tab: its heading, its options, the line of the individuals,
     Run or Stop with its lock, the run under way, its errors, and its
     result. */
-export function PcaTab({ autoRuns, shown }: PcaTabProps): React.JSX.Element {
+export function PcaTab({ shown }: PcaTabProps): React.JSX.Element {
   // The code of the result, asked for while the user sets the options,
   // and not at the end of a run of minutes.
   useEffect(() => {
     if (shown) prefetchPcaResults();
   }, [shown]);
-  // Selected for what autoRuns knows, which tells a pass stopped from one
-  // about to start, and which a Stop with no pass running changes and the
-  // store does not.
-  useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
+  // Drawn again at each change of what autoRuns knows, which tells a
+  // pass stopped from one about to start, and which a Stop with no pass
+  // running changes and the store does not.
+  const autoRuns = useAutoRuns();
   const method = useAppState((s) => pcaOptions(s.project, "popgen2").method);
   const lock = useAppState((s) =>
     pcaTabLock(

@@ -26,7 +26,7 @@ import type { AutoRunStore, AutoRuns } from "../../autoRuns.ts";
 import { AnnouncerProvider } from "../../shell/announcer.tsx";
 import { createAnnouncer } from "../../shell/status.ts";
 import { StoreProvider } from "../../store.tsx";
-import { AutoRunsProvider } from "../../variants/filtersLock.ts";
+import { AutoRunsProvider } from "../../autoRunsContext.ts";
 import { createRunGate } from "../../variants/thresholdRun.ts";
 import { PcaTabOptions } from "./PcaTabOptions.tsx";
 import {

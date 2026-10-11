@@ -34,7 +34,6 @@ import { PcaTab } from "../analyses/pca/PcaTab.tsx";
 import { pcaTabTitle } from "../analyses/pca/tabWords.ts";
 import { classOf } from "../classOf.ts";
 import { PCA_TAB_CONTENT_ID } from "../pageTab.ts";
-import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { useAppState } from "../store.tsx";
 import { Tabs } from "../widgets/Tabs.tsx";
@@ -58,8 +57,6 @@ export interface PageTabsProps {
   readonly tab: PageTab;
   /** Called with the tab the user chose. */
   readonly onTabChange: (tab: PageTab) => void;
-  /** The analyses the page starts by itself. */
-  readonly autoRuns: AutoRuns;
   /** The button that opens a variants file, in its box. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
   /** Told when the section of the statistics of a load is drawn, and when
@@ -71,7 +68,6 @@ export interface PageTabsProps {
 export function PageTabs({
   tab,
   onTabChange,
-  autoRuns,
   openButton,
   onStatsShown,
 }: PageTabsProps): React.JSX.Element {
@@ -116,11 +112,7 @@ export function PageTabs({
                   {notReadTabText(notRead)}
                 </p>
               )}
-              <StatsSection
-                autoRuns={autoRuns}
-                openButton={openButton}
-                onShown={onStatsShown}
-              />
+              <StatsSection openButton={openButton} onShown={onStatsShown} />
             </>
           ),
         },
@@ -150,10 +142,7 @@ export function PageTabs({
             level={2}
             resetOn={fileId ?? "none"}
           >
-            <PcaTab
-              autoRuns={autoRuns}
-              shown={tab === "pca" && tabReasons.pca === null}
-            />
+            <PcaTab shown={tab === "pca" && tabReasons.pca === null} />
           </ErrorBoundary>,
         ),
         analysisTab(
@@ -165,7 +154,6 @@ export function PageTabs({
             resetOn={fileId ?? "none"}
           >
             <PopulationsTab
-              autoRuns={autoRuns}
               shown={tab === "populations" && tabReasons.populations === null}
             />
           </ErrorBoundary>,

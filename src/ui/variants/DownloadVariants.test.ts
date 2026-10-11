@@ -40,7 +40,7 @@ import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
 import { StoreProvider } from "../store.tsx";
 import { DownloadVariants } from "./DownloadVariants.tsx";
-import { AutoRunsProvider } from "./filtersLock.ts";
+import { AutoRunsProvider } from "../autoRunsContext.ts";
 import { RunGateProvider } from "./runGate.tsx";
 import { createRunGate, gatedStore } from "./thresholdRun.ts";
 import { ChangeHoldsProvider } from "../widgets/changeHold.ts";
