@@ -133,6 +133,58 @@ force a design:
    the PCA alone; the status region speaks only of the PCA. The section
    "For the session that builds it" gives each with its file and line.
 
+## The time and the memory of a diversity, measured
+
+Three choices below turn on how long a diversity runs and how much
+memory it leaves, which were measured for this design on 11 October
+2026. They were measured on the Diversity panel of the old page,
+`popgen.html`, which makes the same calls of popnei as the Populations
+tab will: `calcPerVarDistribs` and then `calcPopDiversity`, with the
+spectrum in the same Run. The machine was the owner's Apple M5 Pro with
+64 GB, macOS 27.0.1, with Playwright 1.63.0 driving Chromium
+153.0.8010.12 and WebKit 26.6 on the built site, at load averages of 1.8
+to 6.4. The memory is the sum of the memory of the engine's processes,
+read every 250 ms. The time runs from the request sent to the
+calculation worker to its answer. Each file had three populations, of
+334, 333 and 333 individuals out of 1,000, or of 3,127 each out of
+9,381. Each value is the median of two or three runs.
+
+The table gives the time of a Run and the memory before it, at its peak,
+and 3 s after its end, in GB.
+
+| file | Chromium: time, memory | WebKit: time, memory |
+|---|---|---|
+| gzipped VCF, 300 variants of 9,381 individuals | 0.10 s; 0.18, 0.24, 0.24 | 0.10 s; 0.25, 0.47, 0.25 |
+| `.nei`, 19,161,818 bytes, 20,000 variants of 1,000 | 0.27 s; 0.17, 0.25, 0.25 | 0.27 s; 0.26, 0.58, 0.36 |
+| VCF, 80,692,954 bytes, 1,000 individuals | 0.50 s; 0.17, 0.32, 0.25 | 0.55 s; 0.25, 0.80, 0.51 |
+| VCF, 403 MB, 100,000 variants of 1,000 | 2.4 s; 0.17, 0.70, 0.43 | 2.5 s; 0.25, 0.96, 0.72 |
+| gzipped VCF, 128 MB, 200,000 variants of 1,000 | not measured | 5.8 s; 0.26, 0.80, 0.51 |
+| gzipped VCF, 510 MB, 800,000 variants of 1,000, made for this measurement | 23.8 s; 0.17, 0.73, 0.38 | 23.1 s; 0.27, 0.80, 0.50 |
+
+In WebKit about 0.2 GB of each peak is the process that draws the page
+on the graphics card, drawing the result, and it is gone within 3 s. The
+runs of 0.10 s were read only once or twice, so their peaks may be
+higher than the table says.
+
+**A Stop in the middle of a diversity**, on the file of 800,000
+variants, stopped at 11.5 s and followed for 60 s: in WebKit the memory
+was 0.26 GB before, 0.81 at the peak, 0.69 at the Stop and 0.44 GB 60 s
+after, and never came back to its level before, the page's own process
+keeping 0.35 GB against 0.13 before; so a stopped diversity leaves about
+0.2 GB in WebKit. In Chromium it was 0.17, 0.50 and 0.39 GB, and back
+to 0.14 GB 2.2 s after the Stop. The new worker was ready to calculate
+0.07 s after the Stop in WebKit and 0.04 s in Chromium.
+
+**A diversity a second after a Stop of a PCA**, in WebKit on the VCF of
+300 variants of 9,381 individuals: the old page's PCA stopped at 10 s,
+then a diversity 1 s later. The tab held, and the table came in 0.10 s;
+the memory was 2.30 GB at the Stop, 2.41 GB at the diversity's peak and
+2.19 GB 11 s later. The old page's PCA, with its own options, reached
+2.3 GB, not the 3.7 to 4.2 GB of the PCA of `popgen2.html`, so a
+diversity started after a Stop of that larger PCA is not measured; it
+is measured in the plan's first work package, once the diversity is on
+`popgen2.html`.
+
 ## The options and the choices
 
 ### 1. The order after a change
@@ -140,14 +192,10 @@ force a design:
 A change of a threshold gives every live analysis that reads the
 filters a new key. Whatever the order, they run one after the other,
 and the last ends after the sum of their times. The times differ by
-three orders of magnitude: on the `.nei` file of 19 MB, 20,000 variants
-of 1,000 individuals, a diversity took 257 ms in Chromium 153 and 261 ms
-in WebKit 26.6, the engine of Safari (`docs/architecture.md`, section
-11, 30 September 2026); a PCA of 9,381 individuals took 226 s and 134 s
-(same section, 10 October 2026). A diversity over a gzipped VCF of
-several gigabytes reads it twice, and a pass over such a file takes
-minutes (`docs/specs/analyses/diversity.md`, "How it runs"); that time
-has not been measured in a browser.
+up to three orders of magnitude: a diversity took 0.10 s to 23.8 s on
+the files measured above, in Chromium 153 and WebKit 26.6, the engine
+of Safari; a PCA of 9,381 individuals took 226 s and 134 s
+(`docs/architecture.md`, section 11, 10 October 2026).
 
 Only a change of what several analyses read needs an order, and on this
 page that is a change of the filters: a threshold or the FILTER box,
@@ -205,15 +253,22 @@ them while the diversity runs stops it and starts it again on the new
 populations after the quiet second. It costs a stop of the worker that
 the user did not press. For the PCA that was refused because, in WebKit,
 a worker ended in the middle of a PCA of 9,381 individuals keeps its 3
-to 4 GB in the tab for 40 s and more (`docs/designs/no-undo.md`). What a
-worker ended in the middle of a diversity keeps has not been measured.
+to 4 GB in the tab for 40 s and more (`docs/designs/no-undo.md`). A
+worker ended in the middle of a diversity leaves about 0.2 GB in WebKit,
+on the largest file measured, and the new worker is ready in 0.07 s
+(above). So (c) is within the bound this design set for it: a stop at
+each change of the populations would cost little memory.
+
+Under (a) the column and the individuals file are greyed for as long as
+the diversity runs: half a second on the VCF of 80 MB, 2.5 s on the VCF
+of 403 MB, and 23 s on the largest file made, 800,000 variants of 1,000
+individuals.
 
 **Recommended: (a).** It keeps the owner's rule that only the user's
 Stop stops a calculation, and leaves the column open during a PCA. (c)
-would win if the measurement M2 below showed that a worker ended in the
-middle of a diversity of the largest files keeps little memory in WebKit,
-a few hundred megabytes, and if the owner preferred the column always
-open.
+is what the owner may prefer, now that its cost in memory is known to be
+small: the column and the file always open, at the cost of a stop of
+the worker the user did not press at each change of them during a run.
 
 ### 3. A Run pressed while another analysis runs
 
@@ -283,13 +338,14 @@ analyses make. (b) would win if users of the page kept one analysis live
 at a time, when it is the same as (a) with one fewer button.
 
 In WebKit a Stop of a large PCA leaves 3.7 to 4.2 GB in the tab for 40 s
-and more; under (a) the diversity waiting would grow beside that memory
-a second after the Stop. A diversity holds few blocks of the file at a
-time and its result is a few hundred bytes
-(`docs/specs/analyses/diversity.md`, "How it runs"), but its memory in
-the browser has not been measured; M1 below measures it, and "How it
-will be tested" gives the value that would call for more than a second
-after a Stop of a large PCA.
+and more; under (a) the diversity waiting grows beside that memory a
+second after the Stop. Its peak was at most 0.96 GB of the whole
+engine, about 0.7 GB above the engine before the Run, on the files
+measured above. A diversity a second after a Stop of the old page's PCA,
+at 2.30 GB, raised the tab to 2.41 GB and the tab held. So no hold after
+a Stop is added for now. The case of a Stop of the larger PCA of
+`popgen2.html` is not measured; "How it will be tested" gives the
+result that would call for a hold.
 
 ### 6. What the band shows with several analyses
 
@@ -420,13 +476,16 @@ choice 1, and that Stop all ends it everywhere.
   its result gave a PCA's memory back within 3 s in both engines
   (`docs/specs/steps/popgen2-pca.md`, "Stop"). So the next analysis grows
   beside at most 3 s of the previous one's memory. The worker is not
-  started again after a diversity, so what a diversity's peak leaves
-  stays under the analysis after it; M1 measures it. The exception is a
+  started again after a diversity, and needs no restart: the engine
+  peaked under 1 GB in every case measured above, and 3 s after a
+  diversity of the VCF of 403 MB it held 0.72 GB in WebKit, 0.47 GB
+  above its level before the Run, under which a PCA of 9,381
+  individuals, 3.0 to 3.4 GB of its own, would run. The exception is a
   Stop in WebKit, whose 3.7 to 4.2 GB after a PCA stay 40 s and more,
-  beside which a waiting analysis starts a second later (choice 5). The
-  results kept are the one pass's, at most one PCA, 0.90 MB at 9,381
-  individuals, and one diversity of a few hundred bytes. The memory of a
-  diversity in the browser is measured by M1.
+  beside which a waiting analysis starts a second later (choice 5). A
+  stopped diversity leaves about 0.2 GB in WebKit. The results kept are
+  the one pass's, at most one PCA, 0.90 MB at 9,381 individuals, and one
+  diversity of a few hundred bytes.
 - **The page frozen.** The table of the diversity has one row per
   population and the spectrum one plot per population, both drawn as on
   `popgen.html`; nothing new on the page's own thread grows with the
@@ -436,7 +495,7 @@ choice 1, and that Stop all ends it everywhere.
   by a memo across changes of a threshold.
 - **Download size.** The Populations tab's code, its table, its plots and
   its menus, is downloaded when the tab is first shown, as the PCA tab's
-  is. Its size is measured at the build of the piece, M3.
+  is. Its size is measured in the plan's first work package.
 - **The browsers.** Nothing here needs a browser above the floor of the
   applications, Chrome 111, Firefox 115 and Safari 16.4.
 - **What GitHub Pages does not allow.** Nothing new is asked of it.
@@ -474,43 +533,45 @@ choice 1, and that Stop all ends it everywhere.
   of the Populations tab: before Run, running, waiting behind the PCA,
   about to start, with its result, locked, failed, stopped; the band
   with two analyses; the order after a change made in each tab.
-- **Three measurements.** M1: the time and the peak memory of a
-  diversity started through the page, and the memory left 3 s after its
-  end, in Chromium 153 and WebKit 26.6, on the VCF of 80,692,954 bytes,
-  of about 1,000 individuals, or a larger one. The VCF of 9,381
-  individuals of the PCA's measurements holds 300 variants, so a
-  diversity of it ends in well under a second and tells nothing. M2: the
-  memory WebKit keeps 40 s after a Stop in the middle of such a
-  diversity. M3: the gzipped size of the Populations tab's code. M1 and
-  M2 are being taken now; their numbers go where the placeholders below
-  stand.
+- **Measurements.** The time and the memory of a diversity, and of a
+  Stop in its middle, are measured, above. Two remain for the plan's
+  first work package: a diversity started a second after a Stop of the
+  PCA of `popgen2.html` of 9,381 individuals, in WebKit; and the gzipped
+  size of the Populations tab's code.
 
-**What would send each choice back:**
+**What would send each choice back.** The measurements above send none
+back.
 
 - **Choices 1 (a) and 2 (a).** A diversity of the largest file that
-  takes more than about a minute: [M1/M2, being measured]. The column of
-  the populations and the individuals file would be greyed that long
-  whenever the diversity runs, and after each change of a threshold the
-  filters would stay greyed for the PCA and then the diversity, one
-  after the other. Then 2 (c) and 1 (c) would be weighed again with the
-  owner.
+  takes more than about a minute would grey the column of the
+  populations and the individuals file that long whenever the diversity
+  runs, and keep the filters greyed for the PCA and then the diversity
+  after each change of a threshold. The longest measured took 23.8 s in
+  Chromium and 23.1 s in WebKit, on 800,000 variants of 1,000
+  individuals, a gzipped VCF of 510 MB. A file several times longer, or
+  with many more individuals, could pass the minute; then 2 (c) and 1
+  (c) would be weighed again with the owner.
 - **Choice 5 (a).** The diversity waiting starts 1 s after a Stop, and
-  after a Stop of a large PCA, WebKit still holds the stopped PCA's 3.7
-  to 4.2 GB for 40 s and more. The most a tab of this page is known to
-  have held and survived is 4.33 GB, WebKit's PCoA of 9,381 individuals
-  (`docs/architecture.md`, section 11). So a peak of the diversity of a
-  few hundred megabytes, [M1/M2, being measured], would call for a hold
-  after a Stop of a large PCA: the waiting analyses not started until
-  WebKit has given that memory back, or until the user's next change
-  after it.
+  after a Stop of a large PCA of `popgen2.html` WebKit still holds the
+  stopped PCA's 3.7 to 4.2 GB for 40 s and more. The most a tab of this
+  page is known to have held and survived is 4.33 GB, WebKit's PCoA of
+  9,381 individuals (`docs/architecture.md`, section 11). A diversity
+  peaks at up to 0.7 GB above the engine before it, on the files
+  measured, which on top of 3.7 to 4.2 GB passes 4.33 GB. So if the
+  measurement of the plan's first work package finds the tab closed, or
+  the engine above 4.33 GB, a diversity a second after a Stop of the PCA
+  of 9,381 individuals calls for a hold after a Stop of a large PCA: the
+  waiting analyses not started until WebKit has given that memory back,
+  or until the user's next change after it.
 - **The worker after a diversity.** The calculation worker is not
   started again after a diversity, only after a large write, a PCA of
   more than 700 individuals and every LD decay
   (`src/worker/client.ts`, lines 9 to 16), and the memory of wasm never
-  shrinks. A large peak of the diversity, [M1/M2, being measured], would
-  stay in the worker under a PCA of 9,381 individuals that runs next,
-  3.0 to 3.4 GB of its own. That would call for a restart after a
-  diversity, as after an LD decay.
+  shrinks. A diversity of the VCF of 403 MB left WebKit's engine at 0.72
+  GB 3 s after its end, 0.47 GB above its level before; a diversity that
+  left more than about 1 GB under a PCA of 9,381 individuals, 3.0 to 3.4
+  GB of its own, would call for a restart after a diversity, as after
+  an LD decay.
 - **The wait after each change.** The owner, trying the page with the
   PCA and the diversity live on a large file, finding the wait after
   each change too long, which would call for 1 (c).
@@ -527,9 +588,12 @@ choice 1, and that Stop all ends it everywhere.
    diversity runs** (choice 2). (a) Greyed while the diversity runs, and
    open while only the PCA runs. (c) Never greyed: a change of them
    stops the diversity and starts it again on the new populations, a
-   stop of the worker the user did not press. Recommended: (a), unless
-   M2 finds that a stopped diversity keeps little memory in WebKit and
-   the owner prefers them always open.
+   stop of the worker the user did not press, which leaves about 0.2 GB
+   in WebKit. Under (a) they are greyed for as long as the diversity
+   runs, from half a second on a VCF of 80 MB to 23 s on the largest
+   file measured, 800,000 variants of 1,000 individuals. Recommended:
+   (a), since only the user's Stop then stops a calculation; (c) if the
+   owner prefers them always open.
 
 ## For the session that builds it
 
