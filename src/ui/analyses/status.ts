@@ -103,12 +103,14 @@ export function stoppedNotice(
     : null;
 }
 
-/** A live analysis of popgen2.html, one that is calculated again by
-    itself once its Run is pressed, and that, while it runs, locks what
-    it reads and keeps the download of the filtered variants waiting
+/** How the words of popgen2.html name one of the analyses that can be
+    live there, `POPGEN2_LIVE` of src/core/apps.ts, whether it is live,
+    runs or waits now or not: one that is calculated again by itself once
+    its Run is pressed, and that, while it runs, locks what it reads and
+    keeps the download of the filtered variants waiting
     (docs/specs/steps/popgen2-pca.md, "While a PCA runs" and "Several
     analyses calculated again by themselves"). */
-export interface RunningAnalysis {
+export interface LiveAnalysisName {
   /** Its id in the store: "pca", "diversity". */
   readonly id: AnalysisId;
   /** The analysis in the middle of a sentence: "the PCA", "the PCoA",
@@ -121,31 +123,29 @@ export interface RunningAnalysis {
   readonly readsPopulations: boolean;
 }
 
-/** The running PCA by its method, the same object for the same method,
+/** The PCA by its method, the same object for the same method,
     so that a selector may return it. Its tab is the PCA tab, labelled as
     `PAGE_TAB_LABELS` of src/ui/variants/analysisTabsWords.ts labels it,
     which is not imported here, so that popgen.html, which reads this
     module, does not download the words of popgen2.html's tabs; the
     same for the diversity's Populations tab. */
-const RUNNING_PCA: Readonly<Record<PcaMethod, RunningAnalysis>> = Object.freeze(
-  {
-    pca: Object.freeze({
-      id: pcaOnPopgen2.id,
-      name: `the ${methodName("pca")}`,
-      tab: "PCA",
-      readsPopulations: false,
-    }),
-    pcoa: Object.freeze({
-      id: pcaOnPopgen2.id,
-      name: `the ${methodName("pcoa")}`,
-      tab: "PCA",
-      readsPopulations: false,
-    }),
-  },
-);
+const PCA_NAMES: Readonly<Record<PcaMethod, LiveAnalysisName>> = Object.freeze({
+  pca: Object.freeze({
+    id: pcaOnPopgen2.id,
+    name: `the ${methodName("pca")}`,
+    tab: "PCA",
+    readsPopulations: false,
+  }),
+  pcoa: Object.freeze({
+    id: pcaOnPopgen2.id,
+    name: `the ${methodName("pcoa")}`,
+    tab: "PCA",
+    readsPopulations: false,
+  }),
+});
 
 /** The diversity of the Populations tab, which reads the populations. */
-const RUNNING_DIVERSITY: RunningAnalysis = Object.freeze({
+const DIVERSITY_NAMES: LiveAnalysisName = Object.freeze({
   id: diversityOnPopgen2.id,
   name: "the diversity",
   tab: "Populations",
@@ -156,10 +156,10 @@ const RUNNING_DIVERSITY: RunningAnalysis = Object.freeze({
     `s`. Keyed by `POPGEN2_LIVE` of src/core/apps.ts, so that an analysis
     added to it without its words does not compile. */
 const LIVE_NAMES: Readonly<
-  Record<Popgen2LiveId, (s: AppState<JobResult, unknown>) => RunningAnalysis>
+  Record<Popgen2LiveId, (s: AppState<JobResult, unknown>) => LiveAnalysisName>
 > = Object.freeze({
-  pca: (s) => RUNNING_PCA[pcaMethodOf(s.project, "popgen2")],
-  diversity: () => RUNNING_DIVERSITY,
+  pca: (s) => PCA_NAMES[pcaMethodOf(s.project, "popgen2")],
+  diversity: () => DIVERSITY_NAMES,
 });
 
 /** The live analysis `id` of popgen2.html as the words of the page name
@@ -171,7 +171,7 @@ const LIVE_NAMES: Readonly<
 export function liveAnalysisOf(
   s: AppState<JobResult, unknown>,
   id: AnalysisId,
-): RunningAnalysis {
+): LiveAnalysisName {
   if (!isPopgen2Live(id)) {
     throw new Error(
       `popnei_web defect: ${id} is not an analysis popgen2.html calculates again by itself.`,
@@ -186,7 +186,7 @@ export function liveAnalysisOf(
     alone, whose store runs the analyses of `POPGEN2_LIVE`. */
 export function runningAnalysisOf(
   s: AppState<JobResult, unknown>,
-): RunningAnalysis | null {
+): LiveAnalysisName | null {
   const id = POPGEN2_LIVE.find((one) => statusOf(s, one).kind === "running");
   return id === undefined ? null : liveAnalysisOf(s, id);
 }

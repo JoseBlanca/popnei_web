@@ -128,8 +128,9 @@ export type LiveState =
 /** The analyses a page starts again by itself once the user's Run made
     them live, and what their start reads. */
 export interface LiveDeps {
-  /** The live analyses, the PCA on popgen2.html, each in one of the
-      groups; they start by themselves only while live. */
+  /** The analyses that can be live, the PCA and the diversity on
+      popgen2.html, each in one of the groups; they start by themselves
+      only while live. */
   readonly analyses: readonly AnalysisId[];
   /** The changes under way, which hold the quiet second. */
   readonly changes: ChangesUnderWay;
@@ -229,8 +230,8 @@ export interface AutoRuns {
       would wait behind the write shown as running (docs/specs/steps/
       popgen2-download.md, "When the PCA starts by itself"); "refused"
       too when the store starts nothing for it, locked or done, which
-      leaves it live, as before. A defect for an analysis that is not
-      live. */
+      leaves it live, as before. A defect for an id outside the analyses
+      that can be live, `LiveDeps.analyses`, whether live now or not. */
   run(id: AnalysisId): RunAnswer;
   /** The user's Stop of the live analysis `id`, in its tab or in the
       band: ends its live state, so that nothing starts it again until

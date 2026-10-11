@@ -29,7 +29,7 @@ import type { Project } from "../../core/project.ts";
 import type { AnalysisError, Notice } from "../../core/store.ts";
 import type { Pops, Progress, RunError } from "../../worker/protocol.ts";
 import { capitalized, undoneOrRedone } from "../sentences.ts";
-import type { RunningAnalysis } from "./status.ts";
+import type { LiveAnalysisName } from "./status.ts";
 import { numberText } from "../widgets/committedNumber.ts";
 import type { NumberRefusal } from "../widgets/committedNumber.ts";
 
@@ -556,8 +556,8 @@ export function minimumRefusedText(
     press Run in each tab to calculate them again." (popgen2-pca.md,
     "Several analyses calculated again by themselves", "The lock"). */
 export function filtersLockedText(
-  running: RunningAnalysis,
-  beside: readonly RunningAnalysis[],
+  running: LiveAnalysisName,
+  beside: readonly LiveAnalysisName[],
 ): string {
   const stop = `Stop ${running.name} in the ${running.tab} tab to change the filters`;
   return beside.length === 0

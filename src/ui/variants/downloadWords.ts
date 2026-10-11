@@ -21,7 +21,7 @@ import type {
   VariantFilterKind,
 } from "../../worker/protocol.ts";
 import type { WriteFormat } from "../../core/keys.ts";
-import type { RunningAnalysis } from "../analyses/status.ts";
+import type { LiveAnalysisName } from "../analyses/status.ts";
 import { STOP_ALL_PLACE, clockText } from "../analyses/words.ts";
 import { failedText } from "./words.ts";
 
@@ -47,8 +47,8 @@ export const DOWNLOAD_NEEDS =
     the diversity after it, to end; or press Stop all beside the heading
     Popnei." (the same, "While an analysis runs"). */
 export function analysisWaitsText(
-  running: RunningAnalysis,
-  waiting: readonly RunningAnalysis[],
+  running: LiveAnalysisName,
+  waiting: readonly LiveAnalysisName[],
 ): string {
   return waiting.length === 0
     ? `Waits for ${running.name} to end; or stop it in the ${running.tab} tab.`

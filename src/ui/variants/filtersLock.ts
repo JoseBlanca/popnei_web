@@ -21,7 +21,7 @@ import type { AnalysisId } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { liveAnalysisOf, runningAnalysisOf } from "../analyses/status.ts";
-import type { RunningAnalysis } from "../analyses/status.ts";
+import type { LiveAnalysisName } from "../analyses/status.ts";
 import { filtersLockedText } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { POPGEN2_LIVE } from "../../core/apps.ts";
@@ -54,9 +54,9 @@ export function useAutoRuns(): AutoRuns {
     too. */
 export function liveBeside(
   s: AppState<JobResult, unknown>,
-  running: RunningAnalysis,
+  running: LiveAnalysisName,
   live: Pick<AutoRuns, "isLive">,
-): readonly RunningAnalysis[] {
+): readonly LiveAnalysisName[] {
   return namedOf(
     s,
     POPGEN2_LIVE.filter((id) => id !== running.id && live.isLive(id)),
@@ -69,7 +69,7 @@ export function liveBeside(
 export function waitingAfter(
   s: AppState<JobResult, unknown>,
   live: Pick<AutoRuns, "liveState">,
-): readonly RunningAnalysis[] {
+): readonly LiveAnalysisName[] {
   return namedOf(
     s,
     POPGEN2_LIVE.filter((id) => {
@@ -83,7 +83,7 @@ export function waitingAfter(
 function namedOf(
   s: AppState<JobResult, unknown>,
   ids: readonly AnalysisId[],
-): readonly RunningAnalysis[] {
+): readonly LiveAnalysisName[] {
   return ids.map((id) => liveAnalysisOf(s, id));
 }
 

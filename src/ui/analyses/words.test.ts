@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
 import type { Project } from "../../core/project.ts";
 import type { AnalysisError, Notice } from "../../core/store.ts";
-import type { RunningAnalysis } from "./status.ts";
+import type { LiveAnalysisName } from "./status.ts";
 import {
   clockText,
   failedWordsOf,
@@ -404,14 +404,14 @@ describe("AP6 D1 failedWordsOf, the words a panel gives the errors of its analys
 
 /** The PCA, the PCoA and the diversity as `liveAnalysisOf` of status.ts
     names them. */
-const PCA: RunningAnalysis = {
+const PCA: LiveAnalysisName = {
   id: "pca",
   name: "the PCA",
   tab: "PCA",
   readsPopulations: false,
 };
-const PCOA: RunningAnalysis = { ...PCA, name: "the PCoA" };
-const DIVERSITY: RunningAnalysis = {
+const PCOA: LiveAnalysisName = { ...PCA, name: "the PCoA" };
+const DIVERSITY: LiveAnalysisName = {
   id: "diversity",
   name: "the diversity",
   tab: "Populations",

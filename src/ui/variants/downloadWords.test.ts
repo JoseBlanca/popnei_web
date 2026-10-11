@@ -13,7 +13,7 @@ import { loadVariants } from "../../core/project.ts";
 import type { Project } from "../../core/project.ts";
 import type { AnalysisError } from "../../core/store.ts";
 import type { PassStats } from "../../worker/protocol.ts";
-import type { RunningAnalysis } from "../analyses/status.ts";
+import type { LiveAnalysisName } from "../analyses/status.ts";
 import {
   DIALOG_HEADING,
   DOWNLOAD_LABEL,
@@ -309,13 +309,13 @@ describe("DL6 D2 the words of the download", () => {
 
 /** The PCA and the diversity as `liveAnalysisOf` of
     src/ui/analyses/status.ts names them. */
-const PCA: RunningAnalysis = {
+const PCA: LiveAnalysisName = {
   id: "pca",
   name: "the PCA",
   tab: "PCA",
   readsPopulations: false,
 };
-const DIVERSITY: RunningAnalysis = {
+const DIVERSITY: LiveAnalysisName = {
   id: "diversity",
   name: "the diversity",
   tab: "Populations",
