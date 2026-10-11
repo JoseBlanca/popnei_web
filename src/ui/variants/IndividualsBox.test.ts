@@ -610,7 +610,7 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     });
     await settled();
     expect(paragraphs(box())).toContain(
-      "Not counted: the reading of panel.nei was stopped. Start it again in the box of panel.nei to count the individuals the filters keep.",
+      "Not counted: the reading of panel.nei was stopped. Start it again in the box Variants to count the individuals the filters keep.",
     );
 
     await act(async () => {
@@ -627,7 +627,7 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     });
     await settled();
     expect(paragraphs(box())).toContain(
-      "Not counted: panel.nei could not be read to the end; the box of panel.nei says why.",
+      "Not counted: panel.nei could not be read to the end; the box Variants says why.",
     );
   });
 

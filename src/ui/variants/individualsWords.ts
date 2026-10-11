@@ -353,9 +353,9 @@ function waitingText(wait: PassWait, variantsName: string): string {
     case "running":
       return `The individuals the filters keep are counted once ${variantsName} is read to the end.`;
     case "stopped":
-      return `Not counted: the reading of ${variantsName} was stopped. Start it again in the box of ${variantsName} to count the individuals the filters keep.`;
+      return `Not counted: the reading of ${variantsName} was stopped. Start it again in the box Variants to count the individuals the filters keep.`;
     case "failed":
-      return `Not counted: ${variantsName} could not be read to the end; the box of ${variantsName} says why.`;
+      return `Not counted: ${variantsName} could not be read to the end; the box Variants says why.`;
   }
 }
 

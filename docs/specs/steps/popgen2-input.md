@@ -309,10 +309,13 @@ unclassified gives way to:
 - while the pass runs, or before it starts: "The individuals the filters
   keep are counted once panel.nei is read to the end.";
 - after a Stop: "Not counted: the reading of panel.nei was stopped. Start
-  it again in the box of panel.nei to count the individuals the filters
+  it again in the box Variants to count the individuals the filters
   keep.";
 - after a failure of the pass or of the opening: "Not counted: panel.nei
-  could not be read to the end; the box of panel.nei says why."
+  could not be read to the end; the box Variants says why."
+
+The box is named by its heading, "Variants", as the page's other words
+name it ("the box of panel.nei" until 11 October 2026).
 
 The warning of no individual in the file does not wait.
 With no threshold of the individuals on, the counts never wait.

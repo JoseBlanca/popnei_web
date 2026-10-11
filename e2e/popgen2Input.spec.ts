@@ -848,7 +848,7 @@ test("IN6 D2 the missing rate of the individuals at 0.03, the pass held: … and
   await variantsBox(page).getByRole("button", { name: "Stop" }).click();
   await expect(
     individualsBox(page).getByText(
-      "Not counted: the reading of panel.nei was stopped. Start it again in the box of panel.nei to count the individuals the filters keep.",
+      "Not counted: the reading of panel.nei was stopped. Start it again in the box Variants to count the individuals the filters keep.",
       { exact: true },
     ),
   ).toBeVisible();

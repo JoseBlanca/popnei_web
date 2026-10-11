@@ -532,11 +532,11 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
     ],
     [
       "stopped",
-      "Not counted: the reading of panel.nei was stopped. Start it again in the box of panel.nei to count the individuals the filters keep.",
+      "Not counted: the reading of panel.nei was stopped. Start it again in the box Variants to count the individuals the filters keep.",
     ],
     [
       "failed",
-      "Not counted: panel.nei could not be read to the end; the box of panel.nei says why.",
+      "Not counted: panel.nei could not be read to the end; the box Variants says why.",
     ],
   ])(
     "a threshold on and the pass not finished, %s: the table of …, the line of why",
@@ -827,11 +827,11 @@ describe("NU8 R1 the counts with no individuals file, and the line of the rows n
     ],
     [
       "stopped",
-      "Not counted: the reading of panel.nei was stopped. Start it again in the box of panel.nei to count the individuals the filters keep.",
+      "Not counted: the reading of panel.nei was stopped. Start it again in the box Variants to count the individuals the filters keep.",
     ],
     [
       "failed",
-      "Not counted: panel.nei could not be read to the end; the box of panel.nei says why.",
+      "Not counted: panel.nei could not be read to the end; the box Variants says why.",
     ],
   ])(
     "a threshold on and the pass not finished, %s: the count not known, and the line of why",
