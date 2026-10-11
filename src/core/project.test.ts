@@ -58,6 +58,10 @@ import {
   populationsNeeds,
   populationsOf,
   populationsToRun,
+  popgen2OnePopulationCause,
+  popgen2Populations,
+  popgen2PopulationsKept,
+  popgen2PopulationsToRun,
 } from "./project.ts";
 import {
   filtersApplied,
@@ -7971,5 +7975,263 @@ describe("IN1 D3 the place of a refusal by the format, the new words, cellShown 
       });
       expect(parse(projectJson(xlsx))).toStrictEqual({ ok: true, value: xlsx });
     }
+  });
+});
+
+/** The worked example of popgen2.html, `popsProject` with its
+    individuals file refused by the reader. */
+function popsRefused(p: Project = popsProject()): Project {
+  if (p.individuals === null) {
+    throw new Error("the project of the test has an individuals file");
+  }
+  return deepFreeze<Project>({
+    ...p,
+    individuals: {
+      ...p.individuals,
+      read: { kind: "failed", error: { kind: "empty" }, format: "text" },
+    },
+  });
+}
+
+/** A table of the individuals s000 to s0nn, `count` of them, each its
+    own value v0 to vnn in the column `pop`. */
+function tableOfValues(count: number): IndividualsTable {
+  return {
+    columns: ["name", "pop"],
+    rows: Array.from({ length: count }, (_, i) => [
+      `s${String(i).padStart(3, "0")}`,
+      `v${String(i)}`,
+    ]),
+  };
+}
+
+/** The table of the worked example with a column of booleans, `flag`. */
+const FLAG_TABLE: IndividualsTable = {
+  columns: ["name", "pop", "flag"],
+  rows: [
+    ["i1", "A", true],
+    ["i2", "B", false],
+    ["i3", "A", true],
+    ["i4", null, null],
+    ["i5", "C", false],
+  ],
+};
+
+describe("PT1 D1 the populations of popgen2.html, popgen2Populations", () => {
+  test("no individuals file, None and the grouping onePopulation give the one population, all", () => {
+    expect(popgen2Populations(popsProject({ table: null }))).toBe("all");
+    expect(
+      popgen2Populations(
+        popsProject({ grouping: { kind: "populations", column: null } }),
+      ),
+    ).toBe("all");
+    expect(
+      popgen2Populations(popsProject({ grouping: { kind: "onePopulation" } })),
+    ).toBe("all");
+  });
+
+  test("the column pop of the worked example gives its populations, as populationsOf does", () => {
+    const p = popsProject();
+    expect(popgen2Populations(p)).toStrictEqual([
+      ["A", ["i1", "i3"]],
+      ["B", ["i2"]],
+      ["C", ["i5"]],
+    ]);
+    expect(popgen2Populations(p)).toBe(populationsOf(p));
+  });
+
+  test("a refused file, a column absent, a column of booleans and the first column give all", () => {
+    expect(popgen2Populations(popsRefused())).toBe("all");
+    expect(
+      popgen2Populations(
+        popsProject({ grouping: { kind: "populations", column: "country" } }),
+      ),
+    ).toBe("all");
+    expect(
+      popgen2Populations(
+        popsProject({
+          table: FLAG_TABLE,
+          grouping: { kind: "populations", column: "flag" },
+        }),
+      ),
+    ).toBe("all");
+    expect(
+      popgen2Populations(
+        popsProject({ grouping: { kind: "populations", column: "name" } }),
+      ),
+    ).toBe("all");
+  });
+
+  test("a column of 21 values gives all, and one of 20 its 20 populations", () => {
+    expect(popgen2Populations(popsProject({ table: tableOfValues(21) }))).toBe(
+      "all",
+    );
+    const twenty = popgen2Populations(
+      popsProject({ table: tableOfValues(20) }),
+    );
+    expect(twenty === "all" || twenty === null ? 0 : twenty.length).toBe(20);
+  });
+
+  test("the file pending gives null, which locks", () => {
+    expect(popgen2Populations(popsPending(popsProject()))).toBeNull();
+  });
+
+  test("none of the cases reads p.variants", () => {
+    const cases = [
+      popsProject({ table: null }),
+      popsProject({ grouping: { kind: "populations", column: null } }),
+      popsProject(),
+      popsRefused(),
+      popsProject({ grouping: { kind: "populations", column: "country" } }),
+      popsProject({ table: tableOfValues(21) }),
+      popsPending(popsProject()),
+    ];
+    for (const p of cases) {
+      expect(() => popgen2Populations(variantsUnread(p))).not.toThrow();
+    }
+  });
+});
+
+describe("PT1 D1 the populations to run on popgen2.html", () => {
+  test("the worked example: i4, of no population, and i5, not in the variants file, left out, as on the old page, with 1 unclassified left out", () => {
+    const p = popsProject();
+    expect(popgen2PopulationsToRun(p)).toStrictEqual([
+      ["A", ["i1", "i3"]],
+      ["B", ["i2"]],
+    ]);
+    expect(popgen2PopulationsToRun(p)).toStrictEqual(populationsToRun(p));
+    expect(popgen2PopulationsKept(p, null)).toStrictEqual({
+      pops: [
+        ["A", ["i1", "i3"]],
+        ["B", ["i2"]],
+      ],
+      emptied: [],
+      unclassifiedLeftOut: 1,
+    });
+  });
+
+  test("an individual i6 of the variants file not in the table is left out with no lock, 2 unclassified left out", () => {
+    const p = popsProject({ individuals: ["i1", "i2", "i3", "i4", "i6"] });
+    expect(popgen2PopulationsKept(p, null)).toStrictEqual({
+      pops: [
+        ["A", ["i1", "i3"]],
+        ["B", ["i2"]],
+      ],
+      emptied: [],
+      unclassifiedLeftOut: 2,
+    });
+  });
+
+  test("a column whose populations hold none of the individuals of the variants file gives Unclassified of every individual kept", () => {
+    const p = popsProject({
+      table: popsTableOf(["i1", "i2", "i9"], [null, null, "A"]),
+      individuals: ["i1", "i2"],
+    });
+    expect(popgen2Populations(p)).toStrictEqual([["A", ["i9"]]]);
+    expect(popgen2PopulationsToRun(p)).toStrictEqual([
+      ["Unclassified", ["i1", "i2"]],
+    ]);
+    expect(popgen2PopulationsKept(p, ["i2"])).toStrictEqual({
+      pops: [["Unclassified", ["i2"]]],
+      emptied: [],
+      unclassifiedLeftOut: 0,
+    });
+  });
+
+  test("None and no individuals file give Unclassified of every individual, 0 left out, and narrowed to i1 and i3", () => {
+    for (const p of [
+      popsProject({ table: null }),
+      popsProject({ grouping: { kind: "populations", column: null } }),
+    ]) {
+      expect(popgen2PopulationsKept(p, null)).toStrictEqual({
+        pops: [["Unclassified", ["i1", "i2", "i3", "i4"]]],
+        emptied: [],
+        unclassifiedLeftOut: 0,
+      });
+      expect(popgen2PopulationsKept(p, ["i1", "i3"])).toStrictEqual({
+        pops: [["Unclassified", ["i1", "i3"]]],
+        emptied: [],
+        unclassifiedLeftOut: 0,
+      });
+    }
+  });
+
+  test("a list that keeps only i4, unclassified, empties A and B, with 1 left out; and the old page's one population is still All individuals", () => {
+    const p = popsProject();
+    expect(popgen2PopulationsKept(p, ["i4"])).toStrictEqual({
+      pops: [],
+      emptied: ["A", "B"],
+      unclassifiedLeftOut: 1,
+    });
+    expect(populationsToRun(popsProject({ table: null }))).toStrictEqual([
+      ["All individuals", ["i1", "i2", "i3", "i4"]],
+    ]);
+  });
+
+  test("the same frozen value for the same frozen inputs, and null while the file is read or the variants file is not", () => {
+    const p = popsProject();
+    expect(popgen2PopulationsToRun(p)).toBe(popgen2PopulationsToRun(p));
+    const kept = Object.freeze(["i1", "i2"]);
+    expect(popgen2PopulationsKept(p, kept)).toBe(
+      popgen2PopulationsKept(p, kept),
+    );
+    expect(popgen2PopulationsKept(p, null)).toBe(
+      popgen2PopulationsKept(p, null),
+    );
+    const none = popsProject({ table: null });
+    expect(popgen2PopulationsToRun(none)).toBe(popgen2PopulationsToRun(none));
+    expect(Object.isFrozen(popgen2PopulationsKept(none, null))).toBe(true);
+    expect(popgen2PopulationsToRun(popsPending(p))).toBeNull();
+    expect(popgen2PopulationsKept(popsPending(p), null)).toBeNull();
+    const unread = deepFreeze<Project>({
+      ...p,
+      variants:
+        p.variants === null
+          ? null
+          : { ...p.variants, read: { kind: "pending" } },
+    });
+    expect(popgen2PopulationsToRun(unread)).toBeNull();
+  });
+});
+
+describe("PT1 D1 why popgen2.html takes every individual as one population", () => {
+  test("each cause, and null with populations of a column or a file being read", () => {
+    expect(popgen2OnePopulationCause(popsProject({ table: null }))).toEqual({
+      kind: "noFile",
+    });
+    expect(
+      popgen2OnePopulationCause(
+        popsProject({ grouping: { kind: "populations", column: null } }),
+      ),
+    ).toEqual({ kind: "noColumn" });
+    expect(popgen2OnePopulationCause(popsRefused())).toEqual({
+      kind: "refused",
+    });
+    expect(
+      popgen2OnePopulationCause(
+        popsProject({ grouping: { kind: "populations", column: "country" } }),
+      ),
+    ).toEqual({ kind: "noSuchColumn", column: "country" });
+    expect(
+      popgen2OnePopulationCause(
+        popsProject({
+          table: FLAG_TABLE,
+          grouping: { kind: "populations", column: "flag" },
+        }),
+      ),
+    ).toEqual({ kind: "notOffered", column: "flag" });
+    expect(
+      popgen2OnePopulationCause(popsProject({ table: tableOfValues(21) })),
+    ).toEqual({ kind: "tooMany", column: "pop", numValues: 21 });
+    expect(
+      popgen2OnePopulationCause(
+        popsProject({
+          table: popsTableOf(["i1", "i9"], [null, "A"]),
+          individuals: ["i1"],
+        }),
+      ),
+    ).toEqual({ kind: "noneClassified", column: "pop" });
+    expect(popgen2OnePopulationCause(popsProject())).toBeNull();
+    expect(popgen2OnePopulationCause(popsPending(popsProject()))).toBeNull();
   });
 });

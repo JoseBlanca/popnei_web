@@ -2702,6 +2702,15 @@ const TO_RUN = new WeakMap<Pops, WeakMap<SourceRead, Pops>>();
     reads frozen with their individuals are kept. */
 const ONE_TO_RUN = new WeakMap<SourceRead, Pops>();
 
+/** The one population to run on popgen2.html, "Unclassified", by the
+    read of the variants file, as `ONE_TO_RUN`. */
+const UNCLASSIFIED_TO_RUN = new WeakMap<SourceRead, Pops>();
+
+/** The populations kept on popgen2.html with the unclassified left out,
+    by the populations kept they were made from, which are one object for
+    one set of populations to run and one list of the individuals kept. */
+const POPGEN2_KEPT = new WeakMap<PopulationsKept, Popgen2PopulationsKept>();
+
 /** The populations to run narrowed to each frozen list of the individuals
     kept, by the populations to run. */
 const KEPT = new WeakMap<Pops, WeakMap<readonly string[], PopulationsKept>>();
@@ -2867,25 +2876,29 @@ export function populationsToRun(p: Project): Pops | null {
     return null;
   }
   return pops === "all"
-    ? onePopulationOf(variantsRead)
+    ? onePopulationOf(variantsRead, ONE_POPULATION, ONE_TO_RUN)
     : narrowedToVariants(pops, variantsRead);
 }
 
-/** The one population of every individual of the variants file read
-    `variantsRead`, in its order. */
-function onePopulationOf(variantsRead: VariantsRead): Pops {
-  const kept = ONE_TO_RUN.get(variantsRead);
+/** The one population, named `name`, of every individual of the variants
+    file read `variantsRead`, in its order, kept in `memo` by the read. */
+function onePopulationOf(
+  variantsRead: VariantsRead,
+  name: string,
+  memo: WeakMap<SourceRead, Pops>,
+): Pops {
+  const kept = memo.get(variantsRead);
   if (kept !== undefined) {
     return kept;
   }
   const one: Pops = Object.freeze([
     Object.freeze([
-      ONE_POPULATION,
+      name,
       Object.freeze([...variantsRead.individuals]),
     ] as const),
   ]);
   if (isReadFrozen(variantsRead)) {
-    ONE_TO_RUN.set(variantsRead, one);
+    memo.set(variantsRead, one);
   }
   return one;
 }
@@ -2939,9 +2952,12 @@ export function populationsKept(
   kept: readonly string[] | null,
 ): PopulationsKept | null {
   const toRun = populationsToRun(p);
-  if (toRun === null) {
-    return null;
-  }
+  return toRun === null ? null : keptOf(toRun, kept);
+}
+
+/** The populations to run `toRun` narrowed to the individuals kept,
+    `kept`, as `populationsKept` gives them. */
+function keptOf(toRun: Pops, kept: readonly string[] | null): PopulationsKept {
   if (kept === null) {
     const whole =
       WHOLE.get(toRun) ??
@@ -2977,6 +2993,213 @@ export function populationsKept(
     byList.set(kept, narrowedKept);
   }
   return narrowedKept;
+}
+
+// The populations of popgen2.html (docs/specs/analyses/diversity.md,
+// "On popgen2.html"), where an individual of no population is
+// unclassified and not an error, and the unclassified are one population
+// when none of the individuals of the variants file has a population.
+
+/** The name of the one population on popgen2.html, the name the box
+    Individuals and the PCA give the individuals of no population, decided
+    by the session on 11 October 2026; the old page keeps
+    `ONE_POPULATION`. */
+export const UNCLASSIFIED_POPULATION = "Unclassified";
+
+/**
+ * The populations as a key of popgen2.html holds them, from the project
+ * alone: `"all"`, the one population, with no individuals file, with no
+ * column chosen ("None") or the grouping `onePopulation`, with the file
+ * refused, with a column the file does not have or the list of the
+ * column does not offer, its first column or a column of booleans, and
+ * with a column of more than `MAX_LISTED_POPULATIONS` values; the
+ * populations of the column chosen, as `populationsOf` gives them,
+ * otherwise; `null`, which locks, only while the file is read, and for a
+ * project of association. Never reads `p.variants`. The same frozen value
+ * for the same frozen table and column. Throws a defect for a file
+ * `notGiven`, which that page, opening no project file, cannot have.
+ */
+export function popgen2Populations(p: Project): Pops | "all" | null {
+  if (p.app !== "popgen" || p.grouping.kind === "roles") {
+    return null;
+  }
+  const individuals = p.individuals;
+  if (individuals === null) {
+    return "all";
+  }
+  const read = individuals.read;
+  switch (read.kind) {
+    case "pending":
+      return null;
+    case "failed":
+      return "all";
+    case "notGiven":
+      throw defect(
+        "popgen2.html has an individuals file not given, which only an opened project file makes.",
+      );
+    case "read":
+      break;
+  }
+  const column = p.grouping.kind === "populations" ? p.grouping.column : null;
+  if (column === null) {
+    return "all";
+  }
+  const pops = groupedBy(read.table, column, shownDecimal(read));
+  return pops === null || pops.length > MAX_LISTED_POPULATIONS ? "all" : pops;
+}
+
+/**
+ * `popgen2Populations(p)` narrowed to the individuals of the variants
+ * file, the populations left empty dropped; the one population,
+ * "Unclassified", of every individual of the variants file, in its
+ * order, for `"all"` and when the column gives none of them a
+ * population. `null` when `popgen2Populations` is `null` or the variants
+ * file is not read. The same frozen value for the same frozen table,
+ * column and read of the variants file.
+ */
+export function popgen2PopulationsToRun(p: Project): Pops | null {
+  const pops = popgen2Populations(p);
+  const variantsRead = p.variants?.read;
+  if (pops === null || variantsRead?.kind !== "read") {
+    return null;
+  }
+  if (pops !== "all") {
+    const toRun = narrowedToVariants(pops, variantsRead);
+    if (toRun.length > 0) {
+      return toRun;
+    }
+  }
+  return onePopulationOf(
+    variantsRead,
+    UNCLASSIFIED_POPULATION,
+    UNCLASSIFIED_TO_RUN,
+  );
+}
+
+/** The populations kept on popgen2.html, with the unclassified
+    individuals kept that are in none of them. */
+export type Popgen2PopulationsKept = PopulationsKept & {
+  /** The individuals kept that have no population and are left out, 0
+      for the one population, which takes them all. */
+  readonly unclassifiedLeftOut: number;
+};
+
+/**
+ * `popgen2PopulationsToRun(p)` narrowed to the individuals kept, `kept`,
+ * or left whole when `kept` is `null`, the filters removing nobody, with
+ * the populations emptied apart, as `populationsKept`; and the number of
+ * the unclassified individuals kept that are left out, for the line of
+ * the Populations tab. `null` when `popgen2PopulationsToRun` is `null`.
+ * The same frozen value for the same populations to run and the same
+ * frozen list.
+ */
+export function popgen2PopulationsKept(
+  p: Project,
+  kept: readonly string[] | null,
+): Popgen2PopulationsKept | null {
+  const toRun = popgen2PopulationsToRun(p);
+  const variantsRead = p.variants?.read;
+  if (toRun === null || variantsRead?.kind !== "read") {
+    return null;
+  }
+  const narrowed = keptOf(toRun, kept);
+  const found = POPGEN2_KEPT.get(narrowed);
+  if (found !== undefined) {
+    return found;
+  }
+  // The populations hold no individual twice, and only individuals of
+  // the variants file, so the rest of those kept is unclassified.
+  const numKept = (kept ?? variantsRead.individuals).length;
+  const numClassified = narrowed.pops.reduce(
+    (sum, [, individuals]) => sum + individuals.length,
+    0,
+  );
+  const withLeftOut: Popgen2PopulationsKept = Object.freeze({
+    ...narrowed,
+    unclassifiedLeftOut: numKept - numClassified,
+  });
+  POPGEN2_KEPT.set(narrowed, withLeftOut);
+  return withLeftOut;
+}
+
+/** Why popgen2.html takes every individual as one population. */
+export type OnePopulationCause =
+  /** No individuals file. */
+  | { readonly kind: "noFile" }
+  /** No column chosen, "None", or the grouping `onePopulation`. */
+  | { readonly kind: "noColumn" }
+  /** The individuals file could not be read. */
+  | { readonly kind: "refused" }
+  /** The file has no column of the name chosen. */
+  | { readonly kind: "noSuchColumn"; readonly column: string }
+  /** The column chosen is one the list does not offer: the first, which
+      names the individuals, or a column of booleans. */
+  | { readonly kind: "notOffered"; readonly column: string }
+  /** The column chosen has more values than a column of populations can
+      have, `numValues` of them, counted as `populationCounts` counts
+      them. */
+  | {
+      readonly kind: "tooMany";
+      readonly column: string;
+      readonly numValues: number;
+    }
+  /** The column gives none of the individuals of the variants file a
+      population. */
+  | { readonly kind: "noneClassified"; readonly column: string };
+
+/**
+ * Why `popgen2PopulationsToRun(p)` is the one population, "Unclassified",
+ * which the line of the populations of the Populations tab and the
+ * warning of the private alleles say; `null` when it is the populations
+ * of a column, while the individuals file is read, for a column with
+ * populations while the variants file is not read, and for a project of
+ * association. Throws a defect for a file `notGiven`, as
+ * `popgen2Populations` does.
+ */
+export function popgen2OnePopulationCause(
+  p: Project,
+): OnePopulationCause | null {
+  if (p.app !== "popgen" || p.grouping.kind === "roles") {
+    return null;
+  }
+  const individuals = p.individuals;
+  if (individuals === null) {
+    return { kind: "noFile" };
+  }
+  const read = individuals.read;
+  switch (read.kind) {
+    case "pending":
+      return null;
+    case "failed":
+      return { kind: "refused" };
+    case "notGiven":
+      throw defect(
+        "popgen2.html has an individuals file not given, which only an opened project file makes.",
+      );
+    case "read":
+      break;
+  }
+  const column = p.grouping.kind === "populations" ? p.grouping.column : null;
+  if (column === null) {
+    return { kind: "noColumn" };
+  }
+  if (!read.table.columns.includes(column)) {
+    return { kind: "noSuchColumn", column };
+  }
+  const pops = groupedBy(read.table, column, shownDecimal(read));
+  if (pops === null) {
+    return { kind: "notOffered", column };
+  }
+  if (pops.length > MAX_LISTED_POPULATIONS) {
+    return { kind: "tooMany", column, numValues: pops.length };
+  }
+  const variantsRead = p.variants?.read;
+  if (variantsRead?.kind !== "read") {
+    return null;
+  }
+  return narrowedToVariants(pops, variantsRead).length === 0
+    ? { kind: "noneClassified", column }
+    : null;
 }
 
 /**
