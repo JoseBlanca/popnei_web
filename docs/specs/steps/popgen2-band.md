@@ -517,7 +517,7 @@ change; it is still the screen's, not the project's
 | the band's own status region | "The details were copied."; "The details could not be copied. Select them in the box below and copy them." |
 | the name of the band for a screen reader | "What the page is doing" |
 | the status region of the page, a Stop pressed in the band | the words of that Stop where it is pressed elsewhere: of the PCA, "PCA stopped. Press Run in the PCA tab to calculate it again."; of the diversity, "Diversity stopped. Press Run in the Populations tab to calculate it again."; of the one pass, what its Stop in the box says today |
-| the status region of the page, Stop all | "Stopped: the PCA and the diversity no longer start by themselves. Press Run in their tabs to calculate them again." |
+| the status region of the page, Stop all | "Stopped: the PCA and the diversity no longer start by themselves. Press Run in their tabs to calculate them again."; the second sentence only for the tabs that then offer Run, "Press Run in the PCA tab to calculate the PCA again." for one, none when no tab does (`popgen2-pca.md`, "Several analyses calculated again by themselves", "The status region", corrected on 11 October 2026) |
 
 ## Accessibility
 

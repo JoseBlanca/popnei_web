@@ -10,6 +10,8 @@
  * them.
  */
 import { escaped } from "../../core/project.ts";
+import type { LiveAnalysisName } from "./status.ts";
+import { eachInItsTab } from "./words.ts";
 
 /** The analyses `names`, in their order, joined as a sentence names
     them: "the PCA", "the PCA and the diversity", "the PCA, the
@@ -47,10 +49,39 @@ export function runWaitedText(name: string, variantsName: string): string {
   return `Calculating ${name} of ${escaped(variantsName)}.`;
 }
 
-/** What the status region says at Stop all, which ended the live state
-    of the analyses `names`, two or more in their order: "Stopped: the
-    PCA and the diversity no longer start by themselves. Press Run in
-    their tabs to calculate them again." */
-export function stopAllText(names: readonly string[]): string {
-  return `Stopped: ${joined(names, false)} no longer start by themselves. Press Run in their tabs to calculate them again.`;
+/** An analysis whose live state Stop all ended, and whether its tab
+    then offers Run. */
+export interface StoppedByAll {
+  /** The analysis as the words name it. */
+  readonly named: LiveAnalysisName;
+  /** Whether its tab then offers an enabled Run. */
+  readonly runOffered: boolean;
+}
+
+/**
+ * What the status region says at Stop all, which ended the live state of
+ * the analyses `stopped`, two or more in their order: "Stopped: the PCA
+ * and the diversity no longer start by themselves.", and, as a Stop in
+ * one tab says it, Run to press only in the tabs that offer it: "Press
+ * Run in their tabs to calculate them again." when all do, "Press Run in
+ * the Populations tab to calculate the diversity again." when one does,
+ * and nothing when none does (docs/specs/steps/popgen2-pca.md, "Several
+ * analyses calculated again by themselves", "The status region").
+ */
+export function stopAllText(stopped: readonly StoppedByAll[]): string {
+  const first = `Stopped: ${joined(
+    stopped.map((one) => one.named.name),
+    false,
+  )} no longer start by themselves.`;
+  const offered = stopped
+    .filter((one) => one.runOffered)
+    .map((one) => one.named);
+  const [only] = offered;
+  if (only === undefined) return first;
+  if (offered.length === stopped.length) {
+    return `${first} Press Run in their tabs to calculate them again.`;
+  }
+  return offered.length === 1
+    ? `${first} Press Run in the ${only.tab} tab to calculate ${only.name} again.`
+    : `${first} Press Run for ${eachInItsTab(offered)} to calculate them again.`;
 }

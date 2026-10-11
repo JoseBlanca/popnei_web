@@ -207,7 +207,8 @@ function fileIdOf(s: AppState<JobResult, Blob>): string | null {
  *   again.", "Diversity stopped. …", or the first sentence alone when the
  *   tab then offers no Run to press;
  * - Stop all, once: "Stopped: the PCA and the diversity no longer start
- *   by themselves. Press Run in their tabs to calculate them again."
+ *   by themselves. Press Run in their tabs to calculate them again.",
+ *   with Run named only in the tabs that then offer it.
  *
  * "PCoA" under the PCoA, the method read from `store` then. It listens
  * for as long as the page lives.
@@ -257,7 +258,12 @@ export function announceLive(
         announcer.announce(
           others.length === 0
             ? liveSaidOf(only).stopped(s, runOffered(s, only))
-            : stopAllText(event.ids.map((id) => liveAnalysisOf(s, id).name)),
+            : stopAllText(
+                event.ids.map((id) => ({
+                  named: liveAnalysisOf(s, id),
+                  runOffered: runOffered(s, id),
+                })),
+              ),
         );
         return;
       }

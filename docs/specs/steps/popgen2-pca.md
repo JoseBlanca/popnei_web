@@ -727,7 +727,13 @@ panel.nei.", since the user pressed it earlier, and the bar then comes
 in a tab they may not see; the PCA's, "Calculating the PCA of
 panel.nei." ("the PCoA" by the method). Stop all is said once: "Stopped: the PCA and
 the diversity no longer start by themselves. Press Run in their tabs to
-calculate them again." Until the band offers Stop all, which work
+calculate them again.", with the second sentence only for the tabs
+that then offer Run, as a Stop in one tab says it: "… Press Run in the
+PCA tab to calculate the PCA again." when only the PCA offers it, the
+diversity's result shown with no Run, and the first sentence alone when
+none does (corrected on 11 October 2026 after the review of work
+packages 2 and 3: it said "Press Run in their tabs" also of a tab that
+showed its result and no Run). Until the band offers Stop all, which work
 package 4 of `docs/plans/population-tab.md` builds, the round names the
 Stop of each tab alone: "Calculating the PCA and then the diversity
 again. To change the filters, stop each in its tab." (the session's

@@ -333,11 +333,38 @@ describe("PT2 D2 the status region says a round of two analyses once, a Run that
     ]);
   });
 
-  test("Stop all is said once, naming the analyses it stopped", () => {
-    const { said, tell } = setUp();
-    tell({ kind: "pausedAll", ids: ["pca", "diversity"] });
-    expect(said).toEqual([
+  test("Stop all is said once, naming the analyses it stopped, with Run to press in the tabs that offer it", async () => {
+    const locked = setUp();
+    // panel.nei opened and not read: both locked, no Run to press.
+    locked.tell({ kind: "pausedAll", ids: ["pca", "diversity"] });
+    expect(locked.said).toEqual([
+      "Stopped: the PCA and the diversity no longer start by themselves.",
+    ]);
+    const ready = await setUpReady();
+    ready.tell({ kind: "pausedAll", ids: ["pca", "diversity"] });
+    expect(ready.said).toEqual([
       "Stopped: the PCA and the diversity no longer start by themselves. Press Run in their tabs to calculate them again.",
+    ]);
+  });
+
+  test("Stop all with the PCA's result shown names Run in the Populations tab alone", async () => {
+    const page = await setUpReady();
+    const run = startAnalysis(page.store, "pca");
+    page.endLast((key) => ({ kind: "done", key, result: pcaResult() }));
+    await run;
+    page.tell({ kind: "pausedAll", ids: ["pca", "diversity"] });
+    expect(page.said).toEqual([
+      "Stopped: the PCA and the diversity no longer start by themselves. Press Run in the Populations tab to calculate the diversity again.",
+    ]);
+  });
+
+  test("Stop all that ended one live state is said as that analysis's Stop", async () => {
+    const page = await setUpReady();
+    page.tell({ kind: "pausedAll", ids: ["diversity"] });
+    page.tell({ kind: "pausedAll", ids: ["pca"] });
+    expect(page.said).toEqual([
+      "Diversity stopped. Press Run in the Populations tab to calculate it again.",
+      "PCA stopped. Press Run in the PCA tab to calculate it again.",
     ]);
   });
 
