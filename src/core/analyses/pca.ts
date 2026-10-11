@@ -542,11 +542,11 @@ const PCA_LD_FILTER: LdFilterWords = Object.freeze({
 /** The LD pruning of popgen2.html's PCA, named by the method `name`,
     "PCA" or "PCoA", in the words of a refusal, as the reason of the
     pruning with no distance names it; the Variants tab has none, and the
-    file is opened again in the box Variants file. */
+    file is opened again in the box Variants. */
 function pca2LdPruning(name: string): LdFilterWords {
   return {
     name: `The LD pruning of the ${name}`,
-    openAgain: "open it again in the box Variants file",
+    openAgain: "open it again in the box Variants",
     turnOff: "turn the LD pruning off",
   };
 }
@@ -554,7 +554,7 @@ function pca2LdPruning(name: string): LdFilterWords {
 /** The places a sentence of the module names, by the page: the old page
     names its Variants step and the filters of individuals there,
     popgen2.html its Variants tab, the thresholds of the individuals there
-    and the box Variants file (docs/specs/steps/popgen2-pca.md, "Its
+    and the box Variants (docs/specs/steps/popgen2-pca.md, "Its
     words"). */
 interface PlaceWords {
   /** The filters of individuals, after "with". */
@@ -588,7 +588,7 @@ const PLACES: Readonly<Record<PcaPage, PlaceWords>> = Object.freeze({
     limitFilters: "the filters of individuals in the Variants tab",
     variantFilters: "the filters of the Variants tab",
     openAgain: (fileName: string) =>
-      `open ${fileName} again in the box Variants file`,
+      `open ${fileName} again in the box Variants`,
     pruningOff: () => "turn the LD pruning off",
   }),
 });
@@ -1073,7 +1073,7 @@ const ALL_DISTANCES_ZERO = "every distance is 0";
  * PCA or of the Variants step as the PCA follows it; the PCA's limit on
  * the individuals; the PCoA's pairs with no distance, its one individual,
  * its distances all 0; on popgen2.html, the refusals of the variants
- * file itself, in the words of the box Variants file, `fileRefusalText`;
+ * file itself, in the words of the box Variants, `fileRefusalText`;
  * and the rows every analysis shares, of `refusalWords`: the PCoA's empty
  * pass, the ploidy, a line of a VCF, and any other, with popnei's message
  * without its backquotes. Throws a defect on a project with no variants
@@ -1142,7 +1142,7 @@ export function refusalText(
     page === "popgen2"
       ? fileRefusalText(message, p, {
           cannot: `the ${name} cannot be calculated`,
-          where: " in the box Variants file",
+          where: " in the box Variants",
         })
       : null;
   if (ofFile !== null) {
@@ -1154,7 +1154,7 @@ export function refusalText(
     change:
       page === "popgen"
         ? CHANGE_SETTINGS
-        : "Change the settings, or open the variants file again in the box Variants file",
+        : "Change the settings, or open the variants file again in the box Variants",
     again: "to run it again",
     emptyPass: () => nothingKept,
   });
@@ -1168,7 +1168,7 @@ function emptyText(p: Project, consequence: string, page: PcaPage): string {
   if (page === "popgen" || p.variants === null) {
     return emptySourceText(p, consequence);
   }
-  return `${escaped(p.variants.name)} has no variants, so ${consequence}. Open another variants file in the box Variants file.`;
+  return `${escaped(p.variants.name)} has no variants, so ${consequence}. Open another variants file in the box Variants.`;
 }
 
 /** The words of the PCoA's pairs of individuals with no distance: `pairs`
@@ -1253,12 +1253,11 @@ export function statisticsFailedText(
 }
 
 /** The words of popnei's refusal of the statistics of each individual on
-    popgen2.html, which the one pass calculates: those of the box Variants
-    file, with the file opened again there. */
+    popgen2.html, which the one pass calculates: those of the box Variants, with the file opened again there. */
 function popgen2StatisticsRefusal(message: string, p: Project): string {
   return passRefusalText(message, p, {
     cannot: "the statistics of each individual cannot be calculated",
-    where: " in the box Variants file",
+    where: " in the box Variants",
   });
 }
 
@@ -1439,7 +1438,7 @@ function coloursOf(
       p,
       page === "popgen"
         ? `No metadata file is loaded, so the points cannot be coloured by ${shown(colourBy)}.`
-        : `No individuals file is open in the box Individuals file, so the points cannot be coloured by ${shown(colourBy)}.`,
+        : `No individuals file is open in the box Individuals, so the points cannot be coloured by ${shown(colourBy)}.`,
       page,
     );
   }
@@ -1461,8 +1460,8 @@ function coloursOf(
       page === "popgen"
         ? "so they are coloured by the populations."
         : pops === null || pops === "all"
-          ? "so every point is unclassified. Choose a column of the populations in the box Individuals file, or another column to colour the points by."
-          : "so they are coloured by the column of the populations chosen in the box Individuals file.";
+          ? "so every point is unclassified. Choose a column of the populations in the box Individuals, or another column to colour the points by."
+          : "so they are coloured by the column of the populations chosen in the box Individuals.";
     return byPopulations(r, p, `${lacks}, ${end}`, page);
   }
   const cells = cellsOf(read.table, index);

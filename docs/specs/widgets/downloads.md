@@ -95,11 +95,10 @@ corner, on a line of its own, with one item, "Table as CSV": below the
 table since 11 October 2026, as the owner asked on trying the page
 (round 1 of work package 8 of `docs/plans/no-undo.md`), and above it
 before. Its menu can wait, as a plot's
-does, with the reason the screen gives: the counts per population of
-the box of the individuals file wait for the one pass, "…" in place of
-each (`docs/specs/steps/popgen2-input.md`, "The counts that wait"), and
-a file of them then would hold counts of part of the variants with
-nothing to mark them. The CSV:
+does, with the reason the screen gives, for a table whose values wait
+for the one pass; the counts per population of the box of the
+individuals file, which did until 11 October 2026, have no menu since
+(`docs/specs/steps/popgen2-input.md`). The CSV:
 
 - **Every row**, in the order shown, sorted as the user sorted it, and
   every column in its order, the header the labels of the columns; for

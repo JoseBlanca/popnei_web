@@ -178,13 +178,13 @@ describe("AP6 D1 the words of the PCA tab around its options", () => {
     const p = projectOf(store);
     expect(pcaTabLock(p, null)).toBeNull();
     expect(pcaTabLock(p, "reading")).toBe(
-      "Run once panel.nei is read to the end: the reading under way in the box Variants file and the PCA cannot run at once.",
+      "Run once panel.nei is read to the end: the reading under way in the box Variants and the PCA cannot run at once.",
     );
     expect(pcaTabLock(p, "stopped")).toBe(
-      "Run once panel.nei is read to the end: Start again its reading in the box Variants file.",
+      "Run once panel.nei is read to the end: Start again its reading in the box Variants.",
     );
     expect(pcaTabLock(p, "unreadable")).toBe(
-      "Run once panel.nei is read to the end: it could not be read, as the box Variants file says. Open it again there, or open another.",
+      "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again there, or open another.",
     );
   });
 
@@ -202,7 +202,7 @@ describe("AP6 D1 the words of the PCA tab around its options", () => {
   test("the PCoA of a file of 9,382 individuals: the one pass locks it, since its limit counts the individuals kept", () => {
     const { store } = pageStore(9382, "pcoa");
     expect(pcaTabLock(projectOf(store), "reading")).toBe(
-      "Run once panel.nei is read to the end: the reading under way in the box Variants file and the PCoA cannot run at once.",
+      "Run once panel.nei is read to the end: the reading under way in the box Variants and the PCoA cannot run at once.",
     );
   });
 });
@@ -309,7 +309,7 @@ describe("AP6 D2 the status region at the end of a run of the PCA, over the stor
     const failures: readonly [RunError, string][] = [
       [
         { kind: "reopenFailed", name: "panel.nei", message: "NotReadable" },
-        "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants file.",
+        "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants.",
       ],
       [
         { kind: "couldNotStart", reason: "no ready" },
@@ -317,7 +317,7 @@ describe("AP6 D2 the status region at the end of a run of the PCA, over the stor
       ],
       [
         { kind: "workerFailed", message: "a crash" },
-        "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the box Variants file.",
+        "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the box Variants.",
       ],
     ];
     for (const [error, words] of failures) {

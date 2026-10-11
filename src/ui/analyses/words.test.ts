@@ -280,14 +280,14 @@ describe("PA5 D1 the refusals of the minimum of individuals", () => {
 });
 
 describe("AP6 D1 the failures on popgen2.html, in its words", () => {
-  test("each failure that is not popnei's names the box Variants file, and a reload with no project to save", () => {
+  test("each failure that is not popnei's names the box Variants, and a reload with no project to save", () => {
     expect(
       popgen2FailureText(
         { kind: "reopenFailed", name: "panel.nei", message: "gone" },
         "panel.nei",
       ),
     ).toBe(
-      "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants file.",
+      "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants.",
     );
     expect(
       popgen2FailureText(
@@ -295,7 +295,7 @@ describe("AP6 D1 the failures on popgen2.html, in its words", () => {
         "panel.nei",
       ),
     ).toBe(
-      "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the box Variants file.",
+      "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the box Variants.",
     );
     expect(
       popgen2FailureText(

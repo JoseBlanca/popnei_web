@@ -44,7 +44,7 @@ const LOCKED =
 
 /** The words of Run locked by the one pass while it runs. */
 const READING =
-  "Run once panel.nei is read to the end: the reading under way in the box Variants file and the PCA cannot run at once.";
+  "Run once panel.nei is read to the end: the reading under way in the box Variants and the PCA cannot run at once.";
 
 /** The words beside Run locked by the LD pruning with no distance. */
 const NO_DISTANCE = "Type the LD distance above, or turn the LD pruning off.";
@@ -795,7 +795,7 @@ test("AP6 D3 a PCA that fails: its words in the tab and in the status region, St
   await runHeld(page);
   await release(page, "crash");
   const words =
-    "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.vcf.gz again in the box Variants file.";
+    "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.vcf.gz again in the box Variants.";
   await expect(shown(page).getByText(words, { exact: true })).toBeVisible({
     timeout: RESULT_TIMEOUT,
   });

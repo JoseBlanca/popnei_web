@@ -65,9 +65,9 @@ export function passLock(
  * variants file `variantsName`, `name` being the analysis in a sentence,
  * "the PCA", "the PCoA":
  * "Run once panel.nei is read to the end: the reading under way in the
- * box Variants file and the PCA cannot run at once.", "…: Start again its
- * reading in the box Variants file.", "…: it could not be read, as the
- * box Variants file says. Open it again there, or open another.".
+ * box Variants and the PCA cannot run at once.", "…: Start again its
+ * reading in the box Variants.", "…: it could not be read, as the
+ * box Variants says. Open it again there, or open another.".
  */
 export function passLockText(
   lock: PassLock,
@@ -77,10 +77,10 @@ export function passLockText(
   const start = `Run once ${escaped(variantsName)} is read to the end: `;
   switch (lock) {
     case "reading":
-      return `${start}the reading under way in the box Variants file and ${name} cannot run at once.`;
+      return `${start}the reading under way in the box Variants and ${name} cannot run at once.`;
     case "stopped":
-      return `${start}Start again its reading in the box Variants file.`;
+      return `${start}Start again its reading in the box Variants.`;
     case "unreadable":
-      return `${start}it could not be read, as the box Variants file says. Open it again there, or open another.`;
+      return `${start}it could not be read, as the box Variants says. Open it again there, or open another.`;
   }
 }

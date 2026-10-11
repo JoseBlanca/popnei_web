@@ -51,7 +51,7 @@ export interface FailedProps {
   readonly workerFailedText?: (p: Project) => string;
   /** The words of a failure that is not popnei's refusal, of the page
       the panel is on: `popgen2FailureText` on popgen2.html, which names
-      the box Variants file; `failureText` of words.ts when absent. */
+      the box Variants; `failureText` of words.ts when absent. */
   readonly failureText?: (
     failure: Failure,
     variantsName: string,

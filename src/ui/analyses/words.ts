@@ -247,7 +247,7 @@ export function failureText(
 /**
  * What a calculation of popgen2.html that failed otherwise than by
  * popnei's refusal says went wrong and what to do, `failureText` in the
- * words of that page, which has the box Variants file in the place of the
+ * words of that page, which has the box Variants in the place of the
  * Variants step and saves no project (docs/specs/steps/popgen2-pca.md,
  * "Its words"): a variants file changed on the disk since the one pass
  * read it is opened again in that box; the calculations that could not
@@ -263,9 +263,9 @@ export function popgen2FailureText(
   const name = escaped(variantsName);
   switch (error.kind) {
     case "reopenFailed":
-      return `${escaped(error.name)} could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants file.`;
+      return `${escaped(error.name)} could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants.`;
     case "workerFailed":
-      return `The calculation stopped unexpectedly. ${again} If it stops again, open ${name} again in the box Variants file.`;
+      return `The calculation stopped unexpectedly. ${again} If it stops again, open ${name} again in the box Variants.`;
     case "defect":
     case "files":
       return failureText(error, variantsName, again);
@@ -335,7 +335,7 @@ export interface PanelErrorWords {
     ((p: Project, kept: IndividualsKept | null) => string) | null;
   /** The words of a failure that is not popnei's refusal, of the page
       the panel is on: `popgen2FailureText` on popgen2.html, which names
-      the box Variants file and saves no project; `null` on popgen.html,
+      the box Variants and saves no project; `null` on popgen.html,
       for those of `failureText`, which name the Variants step. Required,
       so that a panel of popgen2.html that forgot them would not compile
       rather than show the words of popgen.html. */

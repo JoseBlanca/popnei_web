@@ -2035,7 +2035,7 @@ step", which the page does not have.
   method, so a threshold of the Variants tab moved while the PCA's own
   is the stricter changes no key, and the PCA stays on the screen.
 - **The words** of the warnings, the refusals and the crash, with "the
-  Variants tab", "the box Variants file", "the thresholds of the
+  Variants tab", "the box Variants", "the thresholds of the
   individuals in the Variants tab" and "turn the LD pruning off", the
   same words as the lock of the LD pruning with no distance, where the
   old page names the step and its filters
@@ -2047,7 +2047,7 @@ step", which the page does not have.
   rings, last in the legend. No note says why the points are not
   coloured by population, since the box of the individuals file says
   it. A colouring by a column keeps the old rules and its "No value",
-  with "the box Individuals file" in its notes. A result is coloured
+  with "the box Individuals" in its notes. A result is coloured
   while the individuals file is read, which the old page's lock kept
   from happening; the comment of `coloursOf` that assumed it changes.
 - **The coordinates of the plot**, `pcaCoordinatesCsv(r)`, the CSV
@@ -2100,7 +2100,7 @@ export function pcaColours(r: PcaResult, p: Project, page: PcaPage): PcaColours;
 export function refusalText(message: string, p: Project, page: PcaPage): string;
 export function crashText(p: Project, numIndividuals: number, page: PcaPage): string;
 /** "was not run" when the PCA's own Run waited for the statistics, `waited`, "cannot run"
-    otherwise; on "popgen2", a refusal in the words of the box Variants file. */
+    otherwise; on "popgen2", a refusal in the words of the box Variants. */
 export function statisticsFailedText(
   error: AnalysisError, p: Project, failureText: (failure: Failure) => string,
   waited: boolean, page: PcaPage,

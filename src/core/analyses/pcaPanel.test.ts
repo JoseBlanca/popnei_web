@@ -1142,7 +1142,7 @@ describe("AP2 D2 pcaColours and pcaCoordinatesCsv on popgen2.html", () => {
     expect(pcaColours(r, p, "popgen2")).toBe(now);
   });
 
-  test("a colouring by a column keeps No value, and its notes name the box Individuals file", () => {
+  test("a colouring by a column keeps No value, and its notes name the box Individuals", () => {
     const byColumn = (meta: Project): PcaColours =>
       pcaColours(
         r,
@@ -1162,12 +1162,12 @@ describe("AP2 D2 pcaColours and pcaCoordinatesCsv on popgen2.html", () => {
       );
     const none = byColumn(project({ individuals: r.individuals, meta: null }));
     expect(none.note).toBe(
-      "No individuals file is open in the box Individuals file, so the points cannot be coloured by height.",
+      "No individuals file is open in the box Individuals, so the points cannot be coloured by height.",
     );
     expectAllUnclassified({ ...none, note: null });
     const missing = byColumn(withPops(panelPops()));
     expect(missing.note).toBe(
-      "panel_pops.csv has no column height, by which the points were coloured, so they are coloured by the column of the populations chosen in the box Individuals file.",
+      "panel_pops.csv has no column height, by which the points were coloured, so they are coloured by the column of the populations chosen in the box Individuals.",
     );
     const popcat = pcaColours(
       r,
@@ -1208,7 +1208,7 @@ describe("AP2 D2 pcaColours and pcaCoordinatesCsv on popgen2.html", () => {
         "popgen2",
       );
     const note =
-      "panel_pops.csv has no column height, by which the points were coloured, so every point is unclassified. Choose a column of the populations in the box Individuals file, or another column to colour the points by.";
+      "panel_pops.csv has no column height, by which the points were coloured, so every point is unclassified. Choose a column of the populations in the box Individuals, or another column to colour the points by.";
     for (const grouping of [
       { kind: "populations", column: null },
       { kind: "onePopulation" },

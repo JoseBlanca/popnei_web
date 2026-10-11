@@ -6,7 +6,7 @@
  * result, the parts of the old panel given the definition the store of
  * this page runs, `pcaOnPopgen2`; the line under the bar of a run under
  * way; and its errors in this page's words, which name the box Variants
- * file and the Variants tab. The result's code is downloaded apart from
+ * and the Variants tab. The result's code is downloaded apart from
  * the page's (`PcaTabResults.tsx`).
  */
 import type { Project } from "../../../core/project.ts";

@@ -45,8 +45,8 @@ export interface FileRefusalPlace {
       calculated". */
   readonly cannot: string;
   /** Where the file is opened again, after "open it again" and "Open
-      another variants file": "" in the box Variants file itself, " in the
-      box Variants file" elsewhere. */
+      another variants file": "" in the box Variants itself, " in the
+      box Variants" elsewhere. */
   readonly where: string;
 }
 

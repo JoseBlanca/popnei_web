@@ -104,16 +104,16 @@ describe("AP6 D1 passLock, the lock of Run by the one pass", () => {
 describe("AP6 D1 passLockText, the words of the lock", () => {
   test("each lock in the words of 'Run and Stop', the PCA and the PCoA", () => {
     expect(passLockText("reading", "panel.nei", "the PCA")).toBe(
-      "Run once panel.nei is read to the end: the reading under way in the box Variants file and the PCA cannot run at once.",
+      "Run once panel.nei is read to the end: the reading under way in the box Variants and the PCA cannot run at once.",
     );
     expect(passLockText("reading", "panel.nei", "the PCoA")).toBe(
-      "Run once panel.nei is read to the end: the reading under way in the box Variants file and the PCoA cannot run at once.",
+      "Run once panel.nei is read to the end: the reading under way in the box Variants and the PCoA cannot run at once.",
     );
     expect(passLockText("stopped", "panel.nei", "the PCA")).toBe(
-      "Run once panel.nei is read to the end: Start again its reading in the box Variants file.",
+      "Run once panel.nei is read to the end: Start again its reading in the box Variants.",
     );
     expect(passLockText("unreadable", "panel.nei", "the PCA")).toBe(
-      "Run once panel.nei is read to the end: it could not be read, as the box Variants file says. Open it again there, or open another.",
+      "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again there, or open another.",
     );
   });
 });
