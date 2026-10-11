@@ -4576,21 +4576,6 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-tabs-greyed-shown${at}-${theme}`);
       });
 
-      test("the Populations tab shown, not built yet", async ({ page }) => {
-        await pickOnNewPage(page, "panel.nei");
-        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
-        await page
-          .getByRole("tablist", { name: "Files and analyses" })
-          .getByRole("tab", { name: "Populations", exact: true })
-          .click();
-        // The panel shown: the line of Distances, greyed, is drawn hidden
-        // under its reason.
-        await expect(
-          page.getByRole("tabpanel").getByText(/^Not built yet: /u),
-        ).toBeVisible();
-        await save(page, `popgen2-tabs-not-built${at}-${theme}`);
-      });
-
       test("the input page with no file, each tab shown", async ({ page }) => {
         await save(page, `popgen2-input-no-file${at}-${theme}`);
         await page
@@ -6034,6 +6019,74 @@ for (const theme of ["light", "dark"] as const) {
         await page.mouse.move(0, 0);
         await save(page, `popgen2-pca-running${at}-${theme}`);
       });
+
+      /** Opens panel.nei, and panel_pops.csv unless `individuals` is
+          false, shows the Populations tab and waits for its Run, once the
+          one pass has read the file to the end; gives the tab. */
+      async function populationsReady(
+        page: Page,
+        individuals = true,
+      ): Promise<Locator> {
+        await pickOnNewPage(page, "panel.nei");
+        if (individuals) {
+          await pickIndividualsOnNewPage(page, "panel_pops.csv");
+        }
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "Populations", exact: true })
+          .click();
+        const panel = page.getByRole("tabpanel");
+        await expect(
+          panel.getByRole("button", { name: "Run", exact: true }),
+        ).toBeEnabled({ timeout: 20_000 });
+        return panel;
+      }
+
+      for (const shot of ["ready", "one-population"] as const) {
+        test(`the Populations tab ready: ${shot === "ready" ? "the line of the three populations of panel_pops.csv" : "no individuals file, the line of the one population, Unclassified"}, Run`, async ({
+          page,
+        }) => {
+          await populationsReady(page, shot === "ready");
+          await page.mouse.click(1, 1);
+          await save(page, `popgen2-populations-${shot}${at}-${theme}`);
+        });
+      }
+
+      test("the Populations tab running: the diversity held, Stop and the bar", async ({
+        page,
+      }) => {
+        // The result of the diversity kept back by the worker, so that
+        // the run lasts for the picture.
+        await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
+          const response = await route.fetch();
+          const script = await response.text();
+          const front = `{ const realPost = self.postMessage.bind(self); self.postMessage = (m, t) => { if (m !== null && typeof m === "object" && m.kind === "result" && m.result !== null && typeof m.result === "object" && m.result.analysis === "diversity") return; realPost(m, t); }; }\n`;
+          await route.fulfill({ response, body: front + script });
+        });
+        const panel = await populationsReady(page);
+        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(
+          panel.getByRole("button", { name: "Stop", exact: true }),
+        ).toBeVisible();
+        await expect(panel.getByRole("progressbar")).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-populations-running${at}-${theme}`);
+      });
+
+      for (const shot of ["done", "one-population-done"] as const) {
+        test(`the Populations tab done: ${shot === "done" ? "the table of the three populations" : "the one row Unclassified"} and the spectrum`, async ({
+          page,
+        }) => {
+          const panel = await populationsReady(page, shot === "done");
+          await panel.getByRole("button", { name: "Run", exact: true }).click();
+          await expect(panel.locator("svg.chart")).toHaveCount(
+            shot === "done" ? 3 : 1,
+            { timeout: 20_000 },
+          );
+          await page.mouse.click(1, 1);
+          await save(page, `popgen2-populations-${shot}${at}-${theme}`);
+        });
+      }
 
       /** Opens panel.nei, shows the PCA tab, types the distance, presses
           Run and waits for the result: the PCA is live. */

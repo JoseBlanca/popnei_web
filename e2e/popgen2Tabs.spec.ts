@@ -54,10 +54,6 @@ const NO_VARIANTS = {
 const NO_INDIVIDUALS =
   "The distances between populations need at least two populations. Open an individuals file that assigns the individuals to them.";
 
-/** The line of the Populations tab once it opens. */
-const POPULATIONS_NOT_BUILT =
-  "Not built yet: the diversity of each population, its site frequency spectrum and its LD decay come in a later version of the page.";
-
 /** The line of the Distances tab once it opens. */
 const DISTANCES_NOT_BUILT =
   "Not built yet: the distances between the populations, Hudson's Fst or Jost's D, come in a later version of the page.";
@@ -342,7 +338,9 @@ test("AP1 D4 panel.nei open: PCA and Populations open and Distances asks for an 
     shownPanel(page).getByRole("heading", { level: 2, name: "PCA" }),
   ).toBeVisible();
   await tab(page, "Populations").click();
-  await expect(shownPanel(page)).toHaveText(POPULATIONS_NOT_BUILT);
+  await expect(
+    shownPanel(page).getByRole("heading", { level: 2, name: "Diversity" }),
+  ).toBeVisible();
   await tab(page, "Distances").click({ force: true });
   await expect(tab(page, "Populations")).toHaveAttribute(
     "aria-selected",
