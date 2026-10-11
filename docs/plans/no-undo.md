@@ -1008,3 +1008,19 @@ in Chromium and WebKit. Not seen, for the owner's try: Firefox's undo
 in a number box and its paging under the band; whether Safari before
 26 keeps the heading clear of the band after the link is clicked; the
 band over a field typed into on a phone.
+
+### Work package 8, round 1, 11 October 2026
+
+The owner tried the page and asked for nine changes, listed with the
+session's decisions in the round's list (kept here in short): the box
+of the individuals with only its button before a variants file, and
+the tally "Unclassified" in place of the sentence of no individuals
+file; the box of the variants with the name, Individuals, Variants and
+FILTER failures, the size, the chromosomes and the ploidy moved to the
+top of the Variants tab; no caption "after the filters of individuals"
+over the tally and no Download in that box; the boxes named "Variants"
+and "Individuals"; the individuals of the individuals file missing from
+the variants file in the Individuals tab, and only when there are any;
+the PCA tab's sentence of its filters as "PCA filters can be stricter
+than the general analysis ones."; no line "The PCA is calculated again
+after each change…"; the Download of each table below it.
