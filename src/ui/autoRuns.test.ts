@@ -2182,3 +2182,81 @@ describe("PT1 D2 several analyses calculated again by themselves", () => {
     expect(diversityRequests(page)).toHaveLength(0);
   });
 });
+
+describe("run's answers: kept, when the store starts nothing for a live analysis", () => {
+  const DIV = diversityOnPopgen2.id;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('a Run of the diversity done, with nothing running, answers "kept": live, and nothing sent', async () => {
+    const page = await bothLiveDone();
+    page.auto.pause(DIV);
+    await wait(1000);
+    expect(page.auto.run(DIV)).toBe("kept");
+    expect(page.auto.isLive(DIV)).toBe(true);
+    await wait(5000);
+    expect(diversityRequests(page)).toHaveLength(1);
+  });
+
+  test('a Run of the diversity done, while the PCA runs, answers "kept", not "waiting": nothing waits, and its next start by itself is told in its round, not as a Run that waited', async () => {
+    const page = await bothLiveDone();
+    page.auto.pause(DIV);
+    await wait(1000);
+    setMethod(page, "pcoa");
+    await wait(1000);
+    expect(runningNow(page)).toEqual(["pca"]);
+    expect(page.auto.run(DIV)).toBe("kept");
+    expect(page.auto.liveState(DIV)).toEqual({
+      kind: "live",
+      aboutToStart: null,
+      running: false,
+      after: null,
+    });
+    await page.endPca();
+    expect(diversityRequests(page)).toHaveLength(1);
+    page.told.length = 0;
+    page.setMissing(0.05);
+    await wait(1000);
+    await page.endPca();
+    expect(diversityRequests(page)).toHaveLength(2);
+    expect(page.told).toEqual([
+      { kind: "startedByItself", id: "pca", round: ["pca", DIV] },
+      { kind: "startedByItself", id: DIV, round: [] },
+    ]);
+  });
+});
+
+describe("run's answers: a Run that waits after a Stop of the same key", () => {
+  const DIV = diversityOnPopgen2.id;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("the diversity stopped while it ran, then Run while the PCA runs: it waits, and starts under the key it was stopped under once the PCA ends", async () => {
+    const page = await bothLiveDone();
+    page.setMissing(0.05);
+    await wait(1000);
+    await page.endPca();
+    expect(runningNow(page)).toEqual([DIV]);
+    page.auto.pause(DIV);
+    diversityRequests(page)[1]?.end({ kind: "cancelled" });
+    await flush();
+    expect(diversityOf(page).kind).toBe("ready");
+    setMethod(page, "pcoa");
+    await wait(1000);
+    expect(runningNow(page)).toEqual(["pca"]);
+    expect(page.auto.run(DIV)).toBe("waiting");
+    await page.endPca();
+    expect(diversityRequests(page)).toHaveLength(3);
+    expect(runningNow(page)).toEqual([DIV]);
+  });
+});

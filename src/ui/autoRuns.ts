@@ -173,9 +173,12 @@ export type LiveEvent =
 
 /** The answer to the user's Run of a live analysis: "started" at once;
     "waiting", made live behind a calculation that runs, which it starts
-    after; "refused", while a write of the filtered variants runs, with
-    nothing made live, or when the store started nothing. */
-export type RunAnswer = "started" | "waiting" | "refused";
+    after; "kept", made live with nothing started nor waiting, since the
+    store starts nothing for it now, done, locked or held back by the one
+    pass, so that it starts by itself after the next change of its key;
+    "refused", while a write of the filtered variants runs, with nothing
+    made live. */
+export type RunAnswer = "started" | "waiting" | "kept" | "refused";
 
 /** The analyses a page starts by itself. */
 export interface AutoRuns {
@@ -225,13 +228,16 @@ export interface AutoRuns {
       after it. While another calculation runs, it makes it live and
       sends nothing, "waiting": it starts when that calculation ends, in
       the order of the live analyses, with no quiet second more, and is
-      told then as `startedAfterWaiting`. Refused, "refused" and nothing
-      made live, while a write of the filtered variants runs, since the
-      calculation worker runs one request at a time and the analysis
-      would wait behind the write shown as running (docs/specs/steps/
-      popgen2-download.md, "When the PCA starts by itself"); "refused"
-      too when the store starts nothing for it, locked or done, which
-      leaves it live, as before. A defect for an id outside the analyses
+      told then as `startedAfterWaiting`. "kept" when the store would
+      start nothing for it, whether another calculation runs or not:
+      done, locked, in a failure no new calculation mends, or held back
+      by the one pass; it is made live, and starts by itself after the
+      next change of its key, told then as any start by itself. Refused,
+      "refused" and nothing made live, while a write of the filtered
+      variants runs, since the calculation worker runs one request at a
+      time and the analysis would wait behind the write shown as running
+      (docs/specs/steps/popgen2-download.md, "When the PCA starts by
+      itself"). A defect for an id outside the analyses
       that can be live, `LiveDeps.analyses`, whether live now or not. */
   run(id: AnalysisId): RunAnswer;
   /** The user's Stop of the live analysis `id`, in its tab or in the
@@ -785,21 +791,34 @@ export function createAutoRuns(deps: {
       }
       liveFor.set(id, fileId);
       pausedFor.delete(id);
+      waitedRun.delete(id);
       // The calculation worker runs one request at a time: behind one
       // that runs, a Run waits, and `sync` starts it after
-      // (docs/designs/population-tab.md, choice 3).
+      // (docs/designs/population-tab.md, choice 3); but only one that
+      // `sync` would start, ready under a key and held back by nothing
+      // but the calculation running.
       if (anyRunning()) {
+        const index = ids.indexOf(id);
+        if (
+          startableKey(statusOf(id)) === null ||
+          holderOf(id, index) !== null
+        ) {
+          changed();
+          return "kept";
+        }
+        // The user's Run asks for the key it is ready under, though it
+        // was started under it before and stopped.
+        liveStarted.delete(id);
         waitedRun.add(id);
         changed();
         sync();
         return "waiting";
       }
-      waitedRun.delete(id);
       const sent = live.runStart(id);
       const status = statusOf(id);
       if (status.kind === "running") liveStarted.set(id, status.key);
       changed();
-      return sent === null ? "refused" : "started";
+      return sent === null ? "kept" : "started";
     },
     pause: (id) => {
       liveDefect(id);

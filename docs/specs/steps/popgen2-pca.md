@@ -82,6 +82,17 @@ stay open while the PCA runs and are greyed while the diversity runs;
 of the PCA's tab while it waits for the diversity are in "About to
 start". Approved by the owner on 11 October 2026; not yet built; its plan is `docs/plans/population-tab.md`.
 
+Corrected on 11 October 2026 after the review of work package 1 of that
+plan, in "Several analyses calculated again by themselves": `run`
+answers "kept" when the store starts nothing for its analysis, done,
+locked or held back by the one pass, whether another calculation runs
+or not, where it answered "refused", or "waiting" behind a calculation
+running, though nothing would start it after; such a Run makes the
+analysis live and nothing waits, so its next start by itself is told as
+any other. "refused" is kept for a Run during a write, which makes
+nothing live. A Run that waits asks for the key its analysis is ready
+under, also one it was stopped under, which it otherwise never started.
+
 The PCA tab is the panel of the old page, `popgen.html`, which is built
 and which the owner approved on 28 September 2026: its screen spec is
 the second half of `docs/specs/analyses/pca.md`, "The panel". This spec
@@ -677,8 +688,9 @@ a second after its dialog closes, in the order above.
 **For the implementer** (the design, "For the session that builds it",
 points 1 to 7). `POPGEN2_AUTO_GROUPS` of `src/ui/popgen2Store.ts` is
 the one pass, `POPGEN2_CHAIN`, then a group for each live analysis, the
-PCA and then the diversity; `POPGEN2_LIVE` lists the live ones in that
-order. In `src/ui/autoRuns.ts`:
+PCA and then the diversity; `POPGEN2_LIVE` of `src/core/apps.ts`
+lists the live ones in that order, the one list the page reads. In
+`src/ui/autoRuns.ts`:
 
 - `holderOf` holds a live analysis back behind no live analysis, only
   behind the groups before it that hold none, the one pass;
@@ -687,8 +699,11 @@ order. In `src/ui/autoRuns.ts`:
   under, so one at a time.
 - `run(id)` makes `id` live and starts it at once through `runStart`
   when nothing runs and no write runs; when another runs it makes `id`
-  live and calls `sync`, which starts it after; it is refused during a
-  write, as now.
+  live and calls `sync`, which starts it after, under the key it is
+  ready under, also one it was stopped under; when the store would
+  start nothing for it, done, locked or held back by the one pass, it
+  makes it live and answers "kept", with nothing waiting; it is refused
+  during a write, as now.
 - `pause(id)` ends the live state of `id`, starts the quiet second
   again, `quietAgain`, and then cancels its run if one is in flight, so
   that the `sync` after the store's change does not start the waiting
@@ -746,9 +761,11 @@ export type LiveEvent =
 interface AutoRuns {
   // … as before, and:
   /** The user's Run of the live analysis `id`: "started" at once,
-      "waiting" behind a calculation that runs, or "refused" during a
-      write, when nothing is made live. */
-  run(id: AnalysisId): "started" | "waiting" | "refused";
+      "waiting" behind a calculation that runs, "kept" when the store
+      would start nothing for it, done, locked or held back by the one
+      pass, which makes it live with nothing waiting, or "refused" during
+      a write, when nothing is made live. */
+  run(id: AnalysisId): "started" | "waiting" | "kept" | "refused";
   /** Stop all: stops the analysis running, if one is live, and ends the
       live state of every live analysis. */
   pauseAll(): void;

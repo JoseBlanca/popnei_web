@@ -436,8 +436,8 @@ Individuals.
 
 **In Vitest, in node**: `announceRunWaiting`, given "waiting" from
 `run`, says the line once, for the diversity behind the PCA and for the
-PCA behind the diversity, and says nothing for "started" and
-"refused"; the words of the tab, by state and by what it
+PCA behind the diversity, and says nothing for "started", "kept"
+and "refused"; the words of the tab, by state and by what it
 waits for, from the functions of its words; the line of the
 populations, at `popgen2PopulationsKept` and the function of the tab's
 words that writes it, with the unclassified, with the one population of
