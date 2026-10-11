@@ -780,7 +780,7 @@ test("IN6 D2 a column of 21 values chosen: its warning, and no table", async ({
   await expectAxeBothSchemes(page, makeAxeBuilder);
 });
 
-test("IN6 D2 None chosen: the one row Unclassified with every individual kept, as with no individuals file; the separator set to the semicolon and back to the comma, the list still on None with the same line", async ({
+test("IN6 D2 None chosen: the one row Unclassified with every individual kept, as with no individuals file; the separator set to the semicolon and back to the comma, the list still on None with the same row", async ({
   page,
   makeAxeBuilder,
 }) => {

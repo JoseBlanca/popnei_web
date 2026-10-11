@@ -4720,8 +4720,37 @@ for (const theme of ["light", "dark"] as const) {
             exact: true,
           })
           .click();
-        await expect(box.getByText(/^All 200 individuals kept/u)).toBeVisible();
+        await expect(
+          box.getByRole("rowheader", { name: "Unclassified" }),
+        ).toBeVisible();
+        await expect(box.getByRole("cell", { name: "200" })).toBeVisible();
         await save(page, `popgen2-input-none${at}-${theme}`);
+      });
+
+      test("the Individuals tab with the rows of the individuals file that name no individual of the variants file", async ({
+        page,
+      }) => {
+        // panel_pops.csv with two rows more, of individuals panel.nei
+        // does not have.
+        const made = await panelPopsMade("extra_pops.csv", (line, index) =>
+          index === 200 ? `${line}\nzz1,p9\nzz2,p9` : line,
+        );
+        await pickOnNewPage(page, "panel.nei");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 20_000,
+        });
+        await pickIndividualsOnNewPage(page, made);
+        await expect(
+          individualsBoxOnNewPage(page).getByRole("cell", { name: "84" }),
+        ).toBeVisible({ timeout: 20_000 });
+        await individualsTabOnNewPage(page);
+        await expect(
+          page.getByText(
+            "Individuals in extra_pops.csv but not in panel.nei: 2",
+            { exact: true },
+          ),
+        ).toBeVisible();
+        await save(page, `popgen2-input-rows-not-used${at}-${theme}`);
       });
 
       test("an individuals file refused, in the box and under the tab", async ({
