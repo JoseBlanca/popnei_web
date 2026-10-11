@@ -5,18 +5,19 @@
  * heading, "Diversity", and its name in a sentence; the line of the
  * populations it will run on; its options, which wait while it runs; its
  * result, the old panel's table and block of the spectrum given the
- * definition the store of this page runs, `diversityOnPopgen2`, whose
- * code is downloaded apart from the page's (`PopulationsTabResults.tsx`);
+ * definition the store of this page runs, `diversityOnPopgen2`, in the
+ * code of the tab that is downloaded apart from the page's
+ * (`PopulationsTab.tsx`);
  * and its errors in this page's words, which name the box Variants and
  * the Variants tab.
  */
 import type { AnalysisUi } from "../panels.ts";
 import { DiversityTabOptions } from "./DiversityTabOptions.tsx";
-import { PopulationsTabResults } from "./PopulationsTabResults.tsx";
+import { PopulationsTabResultView } from "./PopulationsTabResultView.tsx";
+import { DIVERSITY_TAB_TITLE } from "./tabLoadWords.ts";
 import {
   DIVERSITY_TAB_ERRORS,
   DIVERSITY_TAB_NAME,
-  DIVERSITY_TAB_TITLE,
   diversityTabReadyLines,
 } from "./tabWords.ts";
 
@@ -30,7 +31,7 @@ export const POPULATIONS_TAB_PANEL: AnalysisUi = Object.freeze({
   plural: false,
   readyLines: diversityTabReadyLines,
   ...DIVERSITY_TAB_ERRORS,
-  Results: PopulationsTabResults,
+  Results: PopulationsTabResultView,
   Options: DiversityTabOptions,
   runningLine: (): null => null,
 });

@@ -29,7 +29,7 @@ import type {
 } from "../../core/popgen2Tabs.ts";
 import { pcaMethodOf } from "../../core/analyses/pca.ts";
 import { PopulationsTab } from "../analyses/diversity/PopulationsTab.tsx";
-import { DIVERSITY_TAB_TITLE } from "../analyses/diversity/tabWords.ts";
+import { DIVERSITY_TAB_TITLE } from "../analyses/diversity/tabLoadWords.ts";
 import { PcaTab } from "../analyses/pca/PcaTab.tsx";
 import { pcaTabTitle } from "../analyses/pca/tabWords.ts";
 import { classOf } from "../classOf.ts";

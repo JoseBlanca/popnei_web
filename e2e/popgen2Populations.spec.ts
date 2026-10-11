@@ -14,8 +14,8 @@
  * while the PCA runs, which sends nothing until the PCA ends; a Stop of
  * the PCA while the diversity waits, after which the diversity starts a
  * second later, and later again when a threshold moves within that
- * second. And the result's code downloaded apart, with "Loading the
- * result…" and "Try again".
+ * second. And the tab's code downloaded apart, with "Loading the
+ * Populations tab…" and "Try again".
  *
  * The numbers are popnei 0.2.2's under node on 11 October 2026
  * (docs/specs/analyses/diversity.md, "On popgen2.html", "How it is
@@ -602,41 +602,41 @@ test.describe("PT1 D4 the diversity live beside the PCA", () => {
   });
 });
 
-test.describe("PT1 D3 the code of the result of the Populations tab", () => {
-  test('PT1 D3 the result\'s code that could not be downloaded: "Loading the result…" while it is asked for, then its words with Try again, no error bar; Try again draws the table', async ({
+test.describe("PT1 D3 the code of the Populations tab", () => {
+  test('PT1 D3 the tab\'s code that could not be downloaded: "Loading the Populations tab…" while it is asked for, then its words with Try again, no error bar; Try again draws the tab, the focus on its heading, and Run draws the table', async ({
     page,
   }) => {
     test.setTimeout(90_000);
     await openPage(page);
     await pick(page, "panel.nei");
-    // The file of the result held from the first time the tab is shown,
+    // The file of the tab held from the first time the tab is shown,
     // which asks for it; Try again asks for it again.
-    const resultsFile = /\/PopulationsTabResultView-[^/]*\.js(\?.*)?$/u;
+    const tabFile = /\/PopulationsTabView-[^/]*\.js(\?.*)?$/u;
     const held: Route[] = [];
-    await page.route(resultsFile, (route) => {
+    await page.route(tabFile, (route) => {
       held.push(route);
     });
     await tab(page, "Populations").click();
-    await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
-    await button(page, "Run").click();
     await expect(
-      shown(page).getByText("Loading the result…", { exact: true }),
+      shown(page).getByText("Loading the Populations tab…", { exact: true }),
     ).toBeVisible({ timeout: RESULT_TIMEOUT });
-    expect(held.length).toBeGreaterThan(0);
+    await expect.poll(() => held.length).toBeGreaterThan(0);
 
     for (const route of held) await route.abort();
-    await page.unroute(resultsFile);
+    await page.unroute(tabFile);
     const words =
-      "The result of the diversity could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page, open panel.nei again and run the diversity again.";
+      "The Populations tab could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page and open panel.nei again.";
     await expect(shown(page).getByText(words, { exact: true })).toBeVisible();
     await expect(page.getByRole("alert")).toHaveText("");
 
     await shown(page).getByRole("button", { name: "Try again" }).click();
     await expect(
       shown(page).getByRole("heading", { level: 2, name: "Diversity" }),
-    ).toBeFocused();
-    await expect(table(page, CAPTION)).toBeVisible({ timeout: RESULT_TIMEOUT });
+    ).toBeFocused({ timeout: RESULT_TIMEOUT });
     await expect(shown(page).getByText(words, { exact: true })).toHaveCount(0);
+    await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+    await button(page, "Run").click();
+    await expect(table(page, CAPTION)).toBeVisible({ timeout: RESULT_TIMEOUT });
   });
 });
 

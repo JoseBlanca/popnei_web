@@ -668,12 +668,12 @@ describe("IN3 the boundary of the zone that opens a variants file", () => {
       "H2 Variants",
       "H3 Opening a variants file",
       "H2 Individuals",
-      // The headings of the PCA tab and of the Populations tab, greyed,
-      // drawn hidden under their reasons, with the heading of the PCA's
-      // filters.
+      // The headings of the PCA tab, greyed, drawn hidden under its
+      // reason, with the heading of the PCA's filters; the Populations
+      // tab draws nothing until it is first shown, which downloads its
+      // code.
       "H2 PCA",
       "H3 Filters of the variants for the PCA",
-      "H2 Diversity",
     ]);
   });
 

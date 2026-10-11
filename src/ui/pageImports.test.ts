@@ -64,4 +64,23 @@ describe("what the pages load first", () => {
     expect(reached).not.toContain("ui/analyses/diversity/liveEnd.ts");
     expect(reached).not.toContain("ui/analyses/pca/liveEnd.ts");
   });
+
+  test("popgen2.html loads of the Populations tab only its frame and its first words, and the code of the tab when it is first shown", () => {
+    const reached = reachedFrom("ui/popgen2.tsx");
+    expect(reached).toContain("ui/analyses/diversity/PopulationsTab.tsx");
+    expect(reached).toContain("ui/analyses/diversity/tabLoadWords.ts");
+    for (const module of [
+      "PopulationsTabView.tsx",
+      "populationsTabPanel.ts",
+      "DiversityTabOptions.tsx",
+      "DiversityOptionsPart.tsx",
+      "DiversityResults.tsx",
+      "SpectrumBlock.tsx",
+      "tabWords.ts",
+      "words.ts",
+      "resultWords.ts",
+    ]) {
+      expect(reached).not.toContain(`ui/analyses/diversity/${module}`);
+    }
+  });
 });

@@ -1,13 +1,13 @@
 /**
  * The words of the Populations tab of popgen2.html around its options
  * (docs/specs/steps/popgen2-populations.md, "The populations it runs
- * on", "Run and Stop", "The result" and "Its words"): its heading and its
- * name in a sentence; the line of the populations it will run on, read
+ * on", "Run and Stop", "The result" and "Its words"): its name in a
+ * sentence; the line of the populations it will run on, read
  * from `popgen2PopulationsKept` of core, the one function every part of
  * the tab that counts the populations reads, so that the line and the
  * table never disagree; the locks of Run by the one pass; the line of a
- * Stop; the words of its errors, in this page's words; and the words of
- * a result whose code could not be downloaded. The sentence of the
+ * Stop; and the words of its errors, in this page's words. Its heading
+ * is in `tabLoadWords.ts`, which the page loads first. The sentence of the
  * caption of the table that counts the unclassified is with the words of
  * the result, in `resultWords.ts`. Pure, so that a test
  * in node checks them; `populationsTabPanel` and the result draw them.
@@ -36,9 +36,6 @@ import type { PassLock } from "../pca/passLock.ts";
 import { popgen2FailureText, populationsText } from "../words.ts";
 import type { PanelErrorWords } from "../words.ts";
 import { minimumAndDrawLines } from "./words.ts";
-
-/** The heading of the tab's analysis, its `<h2>`. */
-export const DIVERSITY_TAB_TITLE = "Diversity";
 
 /** The analysis in the middle of a sentence. */
 export const DIVERSITY_TAB_NAME = "the diversity";
@@ -169,10 +166,3 @@ export const DIVERSITY_TAB_ERRORS: PanelErrorWords = Object.freeze({
   workerFailedText: null,
   failureText: popgen2FailureText,
 });
-
-/** The words in the place of the result whose code could not be
-    downloaded, of the variants file `variantsName`, with "Try again"
-    beside them. */
-export function diversityTabResultFailed(variantsName: string): string {
-  return `The result of the diversity could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page, open ${escaped(variantsName)} again and run the diversity again.`;
-}

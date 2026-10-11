@@ -1,10 +1,8 @@
 /**
- * The result of the Populations tab of popgen2.html once its code is
- * there: the old panel's table and block of the spectrum, given the
- * definition the store of this page runs, `diversityOnPopgen2`. A module
- * of its own, which `PopulationsTabResults.tsx` alone imports with
- * `import()`, so that the bundler makes it a file of its own with its
- * export under its name, as `PcaTabResultView.tsx` is for the PCA tab.
+ * The result of the Populations tab of popgen2.html: the old panel's
+ * table and block of the spectrum, given the definition the store of
+ * this page runs, `diversityOnPopgen2`. In the code of the tab, which
+ * is downloaded apart from the page's (`PopulationsTab.tsx`).
  */
 import { diversityOnPopgen2 } from "../../../core/analyses/diversity.ts";
 import type { ResultsProps } from "../panels.ts";

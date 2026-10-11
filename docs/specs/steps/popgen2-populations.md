@@ -30,7 +30,8 @@ nothing for the diversity ("Accessibility" and "How it is checked");
 until the band offers Stop all, the words of the locks name the
 Stop of each tab in its place ("While the diversity runs"); and the
 line of the draw is a line of its own, under that of the versions
-("The result").
+("The result"); and the code of the whole tab, not only of its result,
+is downloaded when the tab is first shown ("The result", its code).
 
 The tab is the diversity panel of the old page, `popgen.html`, which is
 built and which the owner tried and accepted on 1 October 2026: its
@@ -316,11 +317,16 @@ of the panel"), with these differences:
   the old button "Download the spectrum as CSV". The warning of the MAF
   filter ends the caption with this page's words (`sfs.md`, "On
   popgen2.html").
-- **Its code**, which draws the table, the spectrum and their menus,
-  is downloaded apart from the page's, from the moment the Populations
-  tab is first shown with a variants file open, as the PCA tab's result
-  is, with "Loading the result…" while it downloads and, when it cannot
-  be downloaded, the words of "Its words" and "Try again".
+- **Its code**, that of the whole tab, the options, the lines, Run
+  and the result with its table, spectrum and menus, is downloaded
+  apart from the page's when the Populations tab is first shown with a
+  variants file open; the page loads only the tab's name and its
+  heading, and the store the definition of the diversity. Until the
+  code arrives the tab shows "Loading the Populations tab…"; when it
+  cannot be downloaded, the words of "Its words" and "Try again". (Since
+  11 October 2026, after the review of work package 1: the result alone
+  was downloaded apart before, and the rest of the tab was in the first
+  load of the page.)
 
 The files, named as `docs/specs/widgets/downloads.md` names them, from
 the stem of the variants file:
@@ -345,13 +351,14 @@ population that would give the same name gets "_2" after it, then "_3".
 | about to start | live, in the quiet second: the options, the line of the populations, no result, Stop recalculating, and the line of the table of "Run and Stop" | go on changing things, which puts the start off; Stop recalculating |
 | waiting | live, the PCA running: as about to start, with "The diversity starts once the PCA, which is running, ends." | change the options of the diversity, which are open, or the populations; Stop recalculating; Stop all in the band |
 | running | Stop, the bar and the clock of the old panel, "Calculating · pass 1 of 2 · 17% · 0:12"; the options greyed; the filters and the box Individuals greyed, with their reasons | Stop; colour the PCA; turn to another tab, where it goes on; open another variants file, which stops it |
-| done | the warnings, the table and its "Download…", the line of the versions, the spectrum; "Loading the result…" in its place while its code downloads, or its words with "Try again"; above them, while live, Stop recalculating, and after a Stop the line of a Stop | download; change the options; Stop recalculating |
+| loading the tab | at the first show, "Loading the Populations tab…" alone; when the code could not be downloaded, its words with "Try again" | Try again; turn to another tab |
+| done | the warnings, the table and its "Download…", the line of the versions, the spectrum; above them, while live, Stop recalculating, and after a Stop the line of a Stop | download; change the options; Stop recalculating |
 | results removed | not a state of this page: a change that takes the result off the screen gives about to start while the diversity is live, and ready while it is not, as in the PCA tab | as in about to start, or ready |
 | error | the words of the failure, the old panel's with this page's names (`diversity.md`, "On popgen2.html"); while the failure leaves it live, popnei's refusal, Stop recalculating under them; after a failure that ends it, every crash of the worker and those only a reload mends, Run with the line of a failure that ended the live state under it, or the line alone when Run is not offered (`popgen2-pca.md`, "For the implementer", `endsLive`) | Run again after a failure that is not popnei's refusal; change the options or the thresholds after a refusal; open the variants file again after it could no longer be read |
 
-About to start and waiting are two rows more than the seven states
-every screen spec has, as about to start is in the PCA tab; waiting is
-new: it is live and settled, and the user who changed a threshold in
+About to start, waiting and loading the tab are three rows more than
+the seven states every screen spec has, as about to start is in the PCA
+tab; loading the tab comes once, before any other; waiting is new: it is live and settled, and the user who changed a threshold in
 the Variants tab finds it so when they turn to this tab during a PCA of
 minutes.
 
@@ -385,7 +392,7 @@ populations and the names of the files; the individuals kept;
 `populationCounts` of core for the unclassified; the state of the one
 pass and `startedUnder` of `autoRuns`, for the lock of Run;
 `liveState("diversity")` of `autoRuns`, with its `subscribe` alone; and
-the tab shown, for the code of the result. It holds of its own the tab
+the tab shown, for the code of the tab. It holds of its own the tab
 of the spectrum, histograms or table, the scroll of the tables and the
 words of a PNG refused (`docs/architecture.md`, section 7).
 
@@ -408,7 +415,8 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 | the status region, the end | "Diversity of panel.nei calculated."; a refusal or a failure, "The diversity of panel.nei could not be calculated: " and the words of its error |
 | the status region, a Stop | "Diversity stopped. Press Run in the Populations tab to calculate it again."; with no Run to press, "Diversity stopped." |
 | the buttons of the downloads, for a screen reader | "Download the table of the diversity"; "Download the spectrum of p0"; "Download the table of the spectrum" |
-| the result whose code could not be downloaded | "The result of the diversity could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page, open panel.nei again and run the diversity again." with "Try again" |
+| the tab while its code downloads | "Loading the Populations tab…" |
+| the tab whose code could not be downloaded | "The Populations tab could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page and open panel.nei again." with "Try again" |
 
 The errors, the warnings and the words of the spectrum are those of
 `diversity.md` and `sfs.md`, "On popgen2.html".
@@ -438,7 +446,7 @@ it.
 **What is said without moving the focus** (4.1.3): the words of the
 status region of "Its words": a start by itself, once for a round; the
 start of a Run that waited; the end; a Stop; a file handed to the
-browser, "Saving panel.diversity.csv."; and the words of a result whose
+browser, "Saving panel.diversity.csv."; and the words of a tab whose
 code could not be downloaded, once the tab is shown. The lines of the
 quiet second and of waiting are not said: they come and go at each
 change, and the start that follows them is said; but a Run pressed
@@ -456,6 +464,10 @@ way ("The PCoA …").
 while it changes from one name to another; when it goes with the focus
 on it, the focus goes to the heading "Diversity"; when it becomes a
 disabled Run, to the lock beside it.
+
+**The focus at Try again**: the button goes with the words, and the
+focus goes to the place of the tab's content, and to the heading
+"Diversity" once the code arrives, not to the start of the page.
 
 **A greyed control of the box Individuals** carries `aria-disabled`, is
 still reached by the Tab key, and gives its reason on the mouse, the
@@ -540,7 +552,7 @@ page has them, the missing data of the variants at 0.1, which keeps all
 dark: `popgen2-populations-ready`, `-locked-pass`, `-running`,
 `-waiting` (the PCA running), `-about-to-start`, `-done`, `-done-live`,
 `-stopped`, `-failed`, `-unclassified`, `-one-population`,
-`-loading-result`, and `popgen2-individuals-box-locked`, the box
+`-loading-tab`, and `popgen2-individuals-box-locked`, the box
 Individuals greyed while the diversity runs.
 
 **By hand**: VoiceOver with Safari on the round said once and the
