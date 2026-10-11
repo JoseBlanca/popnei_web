@@ -13,8 +13,8 @@ the diversity runs), and section 6 of `docs/functionality.md`,
 6 of case 4 of `docs/use-cases.md`, "Characterise populations and the
 distances between them", the first of the three pieces of that case.
 Written on 11 October 2026, before any code; its plan is
-`docs/plans/population-tab.md`. Not yet approved by the owner. It has no open point: the name of the
-one population and what "None" chosen does were settled by the session
+`docs/plans/population-tab.md`. Not yet approved by the owner; one open point, at the end. The name of
+the one population and what "None" chosen does were settled by the session
 on 11 October 2026 from the owner's earlier decisions (below, "The
 populations it runs on").
 
@@ -185,7 +185,7 @@ the diversity is live and does not run (the rules of
 |---|---|
 | the quiet second, or a change under way, with no live analysis before it about to start | "The diversity starts again in a moment, once the filters and its options stop changing." |
 | the same, with the PCA live and about to start before it | "The diversity starts after the PCA, once the filters and the options stop changing." |
-| the PCA, which runs | "The diversity starts once the PCA, which is running, ends." ("the PCoA" by the method) |
+| the PCA, which runs, whether the quiet second has run out or not | "The diversity starts once the PCA, which is running, ends." ("the PCoA" by the method) |
 | the dialog of the download, or its write | "The diversity starts again when the download is written or closed." |
 
 **The locks**, the first that holds, as text beside Run, which is then
@@ -200,6 +200,7 @@ disabled, or beside Stop recalculating while the diversity is live:
 | the individuals file refused, or its read failed | "panel_pops.csv could not be read, as the box Individuals says. Open it again there, or remove it to take every individual as one population." |
 | a column chosen that the file does not have, or that its list does not offer | "panel_pops.csv has no column popcat. Choose the column of the populations in the box Individuals." |
 | a column of more than 20 values | "country has 35 values, more than the 20 a column of populations can have. Choose another column in the box Individuals." |
+| the filters of the individuals keep no individual at all | the store's words of `keptNoneReason`, as the PCA tab gives them, "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them." |
 | the filters of the individuals keep no individual of any population | the old panel's words of `populationsKeptNeeds`, with "the Variants tab" |
 | the draw larger than the chromosomes of the largest population | the old panel's words of the draw, with "the thresholds of the individuals in the Variants tab" where they name the filters |
 
@@ -230,10 +231,10 @@ choice 2 (a), approved by the owner on 11 October 2026:
   to change the populations; then press Run there to calculate it
   again." (`popgen2-input.md`, "While the diversity runs").
 
-When another live analysis waits after the diversity, the words of
-both locks end with "…, or press Stop all beside the heading Popnei to
-stop the PCA waiting after it too; then press Run in each tab to
-calculate them again." in place of "; then press Run there …"
+When another analysis is live beside the diversity, the words of both
+locks end with "…, or press Stop all beside the heading Popnei to stop
+the PCA too; then press Run in each tab to calculate them again." in
+place of "; then press Run there …"
 (`popgen2-pca.md`, "Several analyses calculated again by themselves",
 "The lock").
 
@@ -260,7 +261,8 @@ of the panel"), with these differences:
   popgen2.html"); `individualsWithoutPopulation`, which on the old page
   names the individuals of no population, is not raised here, where an
   unclassified individual is no fault and the caption says how many.
-- **The line of the versions**, beside the "Download…" of the table:
+- **The line of the versions**, under the line of the "Download…" of
+  the table:
   "Calculated with popnei 0.2.2, in version 0.1.0 of the application."
   and, for the rarefied columns, "Rarefied to 40 chromosomes."
 - **No comparison with check numbers**: the page opens no project file.
@@ -297,7 +299,7 @@ population that would give the same name gets "_2" after it, then "_3".
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | the tab greyed, with its reason, as the row of tabs gives it (`popgen2-pca.md`, "When a tab is greyed"); if it was shown when it became greyed, the reason in its place | open a variants file |
-| locked | the options, the line of the populations, Run disabled with the lock beside it, from the table of "The locks"; while the diversity is live, the same lock with Stop recalculating in the place of Run, and the diversity starts by itself a second after the lock lifts, unless it lifts with the values its result was calculated for, which shows that result again | what the lock names: Start again the one pass, choose a column, wait for the read, change the draw or the thresholds; Stop recalculating |
+| locked | the options, the line of the populations, Run disabled with the lock beside it, from the table of "The locks"; while the diversity is live, the same lock with Stop recalculating in the place of Run, and the diversity starts by itself when the lock lifts: at once when the one pass ends, which is no change of the project; a second after the change that lifts any other lock; and not at all when it lifts with the values its result was calculated for, which shows that result again | what the lock names: Start again the one pass, choose a column, wait for the read, change the draw or the thresholds; Stop recalculating |
 | ready | the options, the line of the populations, Run; after a Stop, the line of a Stop in the place of the bar | change the options; Run |
 | about to start | live, in the quiet second: the options, the line of the populations, no result, Stop recalculating, and the line of the table of "Run and Stop" | go on changing things, which puts the start off; Stop recalculating |
 | waiting | live, the PCA running: as about to start, with "The diversity starts once the PCA, which is running, ends." | change the options of the diversity, which are open, or the populations; Stop recalculating; Stop all in the band |
@@ -352,7 +354,7 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 | the button while live and not running | "Stop recalculating" |
 | the filters, the options of the diversity, while it runs, as tooltip and description | "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again." |
 | the column, the zone, Remove and the lists of the reader, while it runs | "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again." |
-| either, while another live analysis waits after it | "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA waiting after it too; then press Run in each tab to calculate them again."; "… to change the populations, …" |
+| either, while another analysis is live | "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again."; "… to change the populations, …" |
 | the caption of the table | "The diversity of each population, over the 1,200 variants of panel.nei the filters kept."; with unclassified left out, "… 7 unclassified individuals kept are not in it." |
 | the status region, a start by itself | "Calculating the diversity again. To change the filters, stop it in the Populations tab."; when it is the first start of a round of several, the words of `popgen2-pca.md`, "Several analyses calculated again by themselves" |
 | the status region, the start of a Run that waited | "Calculating the diversity of panel.nei." |
@@ -392,7 +394,10 @@ start of a Run that waited; the end; a Stop; a file handed to the
 browser, "Saving panel.diversity.csv."; and the words of a result whose
 code could not be downloaded, once the tab is shown. The lines of the
 quiet second and of waiting are not said: they come and go at each
-change, and the start that follows them is said.
+change, and the start that follows them is said; but a Run pressed
+while another calculation runs, which starts nothing, is said once,
+"The diversity starts once the PCA, which is running, ends.", so that
+a user of a screen reader learns why no bar comes.
 
 **The focus at a Stop and at the end**, as in the PCA tab
 (`popgen2-pca.md`, "The focus at a Stop"): the button keeps the focus
@@ -449,6 +454,9 @@ page has them, the missing data of the variants at 0.1, which keeps all
   row with `panel_pops.csv` and "None" chosen in the list of the
   column, and with a column of the file that gives none of the
   individuals of `panel.nei` a population.
+- **A column chosen**: `e2e/fixtures/panel_meta.csv`, whose columns
+  are `popcat` and `altitude`, with the diversity live: `altitude`
+  chosen sends one request of the diversity and none of the PCA.
 - **The unclassified**: `panel_pops.csv` with four rows removed and
   three cells of popcat emptied: the caption and the line say 7
   unclassified, and the table has three rows.
@@ -456,8 +464,7 @@ page has them, the missing data of the variants at 0.1, which keeps all
   the PCA, then one of the diversity after its end, counted at the
   worker; meanwhile the Populations tab shows "The diversity starts once
   the PCA, which is running, ends."; the status region says the round
-  once. A column chosen: one request of the diversity and none of the
-  PCA. Run of the diversity while the PCA runs: no request until the
+  once. Run of the diversity while the PCA runs: no request until the
   PCA ends. Stop of the PCA while the diversity waits: no request of
   the diversity for a second, and one after it; a threshold moved
   within that second puts it off.
@@ -511,7 +518,20 @@ while it scrolls sideways.
 
 ## Open points
 
-None. The two points of the first draft were settled by the session on
+1. **A refused individuals file, and a column of more than 20 values.**
+   This spec locks the diversity in both. The owner's answer of 9
+   October 2026 gives the one population whenever no individual is
+   classified; a refused file classifies nobody, and a column of more
+   than 20 values is, by the owner's bound of 20, no column of
+   populations, with no counts in the box. (a) Lock both, as written:
+   the user's file did not give the populations they meant, and a
+   table of every individual would pass for the one they asked for.
+   (b) The one population "Unclassified" in both, as the rule of 9
+   October reads, with the line of the populations saying why.
+   Recommended: (a). Meanwhile (a); an answer (b) changes two rows of
+   "The locks" and `needs` of the definition (task 1.1 of the plan).
+
+The two points of the first draft were settled by the session on
 11 October 2026 from the owner's earlier decisions: the one population
 is named "Unclassified", as the box Individuals names that row; and
 "None" chosen, like a column that classifies nobody, gives the one

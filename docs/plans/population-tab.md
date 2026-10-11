@@ -8,8 +8,8 @@ This plan builds the Populations tab of `popgen2.html`: the diversity of
 each population and its site frequency spectrum, calculated again by
 itself after each change, as the PCA tab is since 10 October 2026. It
 builds the design you approved today, `docs/designs/population-tab.md`.
-What is asked of you now is to approve it and its specs; no decision is
-left open in them.
+What is asked of you now is to approve it and its specs, and to answer
+one question, below.
 
 **The words used here.** An analysis is **live** once you press its
 Run: from then on it is calculated again by itself after each change of
@@ -22,7 +22,8 @@ and the diversity, **waiting**, after it. While an analysis runs, the
 controls of what it reads are greyed with the reason, **the lock**, so
 that no change ever meets a running calculation. **The band** is the
 line at the top of the page, beside the heading "Popnei", that says
-what runs and offers its Stop; it gains **Stop all**, which ends every
+what runs and offers its Stop; it gains **Stop all**, shown whenever
+two or more analyses are live, which ends every
 live analysis at once. **The one pass** is the reading of the variants
 file the page makes by itself when the file is opened. **The status
 region** is what a screen reader reads aloud without moving the
@@ -54,6 +55,16 @@ change:
   approved today said, in its section on a change of the populations,
   that no column chosen locks the diversity; that sentence was
   corrected to your earlier answer, with a dated line saying why.
+
+**The question.** When the individuals file cannot be read, or the
+column chosen has more than 20 different values, which the box
+Individuals does not take as populations: (a) the Populations tab says
+why and calculates nothing until the file or the column is changed;
+(b) it calculates the diversity of every individual as one population,
+"Unclassified", as it does with no file, and says why. Recommended:
+(a), since you opened a file to get populations, and a table of every
+individual would pass for the one you asked for. The work follows (a)
+meanwhile; (b) changes two of the tab's reasons.
 
 **The packages, by what each gives:**
 
@@ -184,7 +195,10 @@ Out, each with where it goes:
 
 ## The open points of the specs
 
-None. The screen spec's two points of its first draft were settled by
+The screen spec has one, at the top of this plan for the owner: a
+refused individuals file and a column of more than 20 values lock the
+diversity, meanwhile; an answer (b) changes task 1.1 (two reasons of
+`needs`) and a case of deliverable 1.1. The screen spec's two points of its first draft were settled by
 the session on 11 October 2026 from the owner's earlier decisions: the
 one population is named "Unclassified", and "None" chosen gives it; the
 design's choice 8, which said "None" locks, was corrected the same day.
@@ -513,8 +527,8 @@ What it gives, on `popgen2.html`: while the diversity runs, the list of
 the column, the zone of the individuals file, its Remove and the three
 lists of how a text file is read are greyed with their reason, and a
 file dropped or pasted on the zone opens nothing; while the PCA runs,
-the box Individuals stays open, as now. With another analysis waiting
-after the one running, the reasons name Stop all. The lock of the
+the box Individuals stays open, as now. With another analysis live, the
+reasons name Stop all. The lock of the
 filters and the download's wait are package 1's (task 1.6).
 
 Deliverables:
@@ -554,7 +568,7 @@ What it gives, on `popgen2.html`: the band names the diversity running,
 about to start or stopping, as the PCA; "PCA running · 1:20 · then the
 diversity" while the diversity waits after the PCA; "The PCA and the
 diversity start again in a moment" in the quiet second of both; Stop
-all while it names more than one; the link to the warnings or the error
+all whenever two or more analyses are live; the link to the warnings or the error
 of the first analysis in the order of the tabs.
 
 Deliverables:

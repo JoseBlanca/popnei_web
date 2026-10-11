@@ -75,7 +75,7 @@ Populations tab as a second analysis calculated again by itself: the
 thresholds and the FILTER box are greyed while either runs, with the
 words of the one running, "Stop the diversity in the Populations tab
 to change the filters; then press Run there to calculate it again.",
-and with Stop all named while another analysis waits after it
+and with Stop all named while another analysis is live
 (`docs/specs/steps/popgen2-pca.md`, "Several analyses calculated again
 by themselves", "The lock"; `popgen2-populations.md`, "While the
 diversity runs"). A change of a threshold or of the FILTER box starts

@@ -1901,10 +1901,13 @@ the result are the old ones.
   individual in one population, no allele can be private, found in this
   population and in no other, so the table has no private alleles. Open
   an individuals file that assigns the individuals to populations in the
-  box Individuals to count them."; of the one population with a file,
-  "None" or a column that classifies nobody, the same first sentence
-  and "Choose a column of the populations in the box Individuals to
-  count them."; of one classified population, with or without
+  box Individuals to count them."; of the one population with a file
+  and "None", the same first sentence and "Choose a column of the
+  populations in the box Individuals to count them."; with a column
+  that classifies nobody, the same first sentence and "popcat gives
+  none of the individuals of panel.nei a population. Choose another
+  column of the populations in the box Individuals, or fill in popcat
+  in panel_pops.csv and open it again, to count them."; of one classified population, with or without
   unclassified individuals left out, when the runner sends that one
   alone and asks for no private alleles, "Only p0 has a population in
   popcat among the individuals kept, and an allele is private when one
@@ -1994,8 +1997,8 @@ the PCA's do: the options part, the results and the spectrum's block of
 - **A column that gives none of the individuals of the variants file a
   population**: the key holds that column's populations; `run` sends
   the one population; the warning of the private alleles is that of
-  the one population with a column, "Choose a column of the
-  populations …".
+  a column that classifies nobody, "popcat gives none of the
+  individuals of panel.nei a population. …".
 - **The same file opened again**, its table the same: the key the same,
   so the result is shown with no calculation while the store holds it.
 - **The thresholds of the individuals keep only unclassified

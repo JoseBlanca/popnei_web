@@ -630,8 +630,8 @@ calculate with the new value (the design, choice 5, the owner's answer
 1a of 11 October 2026). Stop recalculating in a tab ends that
 analysis's live state alone too.
 
-**Stop all**, in the band, while the band names more than one live
-analysis, running, waiting or about to start, stops the one running and
+**Stop all**, in the band, whenever two or more analyses are live,
+whatever their states, stops the one running and
 ends the live state of every live analysis at once, so that nothing
 starts by itself again until a Run (`popgen2-band.md`, "The line"). A
 user who needs longer than a second to reach a filter, with a screen
@@ -644,12 +644,12 @@ of a Stop.
 the words of its tab: the PCA's as in "While a PCA runs"; the
 diversity's in `popgen2-populations.md`, "While the diversity runs",
 which also greys the column of the populations and the individuals
-file. When another live analysis waits after the one running, the words
+file. When another analysis is live beside the one running, the words
 add Stop all: "Stop the PCA in the PCA tab to change the filters, or
-press Stop all beside the heading Popnei to stop the diversity waiting
-after it too; then press Run in each tab to calculate them again."
-("the PCoA" by the method), since a Stop of the PCA alone would let the
-diversity start a second later and grey the filters again.
+press Stop all beside the heading Popnei to stop the diversity too;
+then press Run in each tab to calculate them again." ("the PCoA" by the
+method), since a Stop of the PCA alone lets the diversity start a
+second after the next change and grey the filters again.
 
 **The status region.** The first start of a round, the starts by
 themselves that one quiet second gives, says the analyses of the round
@@ -696,18 +696,21 @@ order. In `src/ui/autoRuns.ts`:
   dispatches by analysis: the PCA's `failureEndsLive` of
   `src/ui/analyses/pca/liveEnd.ts`; for the diversity, the failures only
   a reload mends, the calculations that could not start, the page out
-  of date and an error of the application's own, while a crash of the
-  worker and popnei's refusal leave it live, its crash not being one of
-  memory: a diversity peaked under 1 GB of the whole engine on every
-  file measured (the design, "The time and the memory of a diversity,
-  measured").
+  of date and an error of the application's own, and any crash of the
+  worker, while popnei's refusal leaves it live. The design (point 6 of
+  "For the session that builds it") ends it at a crash for memory, as
+  the PCA's; the diversity's crash has no words of the memory to tell
+  one from another, so every crash ends it, and a crash is not tried
+  again at each change, with the memory a stopped worker leaves in
+  WebKit.
 - The interface changes so:
 
 ```ts
-/** What the start by itself of a live analysis waits for: "changes",
-    the quiet second or a change under way; "download", the dialog of the
-    download of the filtered variants or its write; "behind", another
-    calculation that runs, its own quiet second run out. */
+/** What the start by itself of a live analysis waits for: "behind",
+    another calculation that runs, whether the quiet second has run out
+    or not, which wins over the two others; "download", the dialog of the
+    download of the filtered variants or its write; "changes", the quiet
+    second or a change under way, nothing running. */
 export type AboutToStart = "changes" | "download" | "behind";
 
 export type LiveState =
@@ -717,9 +720,10 @@ export type LiveState =
       readonly kind: "live";
       readonly aboutToStart: AboutToStart | null;
       readonly running: boolean;
-      /** While it is about to start: the live analysis that runs, or
-          that is about to start before it in the order; `null` when
-          none, and while it is not about to start. */
+      /** While it is about to start: under "behind", the live analysis
+          that runs; under "changes" or "download", the live analysis
+          about to start before it in the order; `null` when none, and
+          while it is not about to start. */
       readonly after: AnalysisId | null;
     };
 
