@@ -2,13 +2,16 @@
  * The box of the individuals file on popgen2.html, beside the box of the
  * variants file, or under it below 720 pixels
  * (docs/specs/steps/popgen2-input.md, "The box of the individuals
- * file"). With no file, the words that every individual is unclassified;
- * with one, its name and, as it is read, refused or read, the words of
- * the read, of the refusal, or the list "Column of the populations" with
- * the individuals the filters keep in each population, with their menu
- * "Download…", which waits while a count waits for the one pass, and
- * the lines under them. It ends with the zone that opens an individuals file, its
- * button, a drop or a paste, and with a file the button that removes it.
+ * file"). With no file, nothing before the variants file has given its
+ * individuals, and then the counts with one row, "Unclassified"; with a
+ * file, its name and, as it is read, refused or read, the words of the
+ * read, of the refusal, or the list "Column of the populations" with the
+ * individuals the filters keep in each population and the lines under
+ * them. The counts have no caption on the screen and no menu
+ * "Download…", as the owner asked on 11 October 2026, so that the box,
+ * which stands above every tab, stays small. It ends with the zone that
+ * opens an individuals file, its button, a drop or a paste, and with a
+ * file the button that removes it.
  *
  * The lines of the file are in a boundary of errors made again for each
  * file, as those of the variants file are; the zone is outside it, so
@@ -20,7 +23,6 @@
  */
 import { useId, useRef, useState, useSyncExternalStore } from "react";
 
-import { downloadName, variantsStem } from "../../core/fileNames.ts";
 import { populationCounts } from "../../core/populations.ts";
 import type { PageTab } from "../../core/popgen2Tabs.ts";
 import { escaped, individualsBoxNeeds } from "../../core/project.ts";
@@ -38,6 +40,7 @@ import { FileZone } from "../widgets/FileZone.tsx";
 import { Problem } from "../widgets/Problem.tsx";
 import { Select } from "../widgets/Select.tsx";
 import { Table } from "../widgets/Table.tsx";
+import type { TableRow } from "../widgets/Table.tsx";
 import { Warning } from "../widgets/Warning.tsx";
 import styles from "./IndividualsBox.module.css";
 import pageStyles from "./VariantsPage.module.css";
@@ -66,14 +69,13 @@ import {
   countText,
   countsCaption,
   countsShown,
-  countsWhat,
+  UNCLASSIFIED_ROW,
   noColumnQualifiedText,
-  noIndividualsFileText,
+  noFileCounts,
   passWaitOf,
   removeLabel,
 } from "./individualsWords.ts";
 import type { CountsLine, PassWait } from "./individualsWords.ts";
-import { passDownloadWaitingText } from "./statsWords.ts";
 
 /** What the box says of a drop, or a paste, that is not of one file. */
 const NOT_FILES_WORDS = {
@@ -196,22 +198,13 @@ interface FileLinesProps {
   readonly autoRuns: AutoRuns;
 }
 
-/** The lines of the file: the words of no file; or its name and its
-    read, refusal, or list and counts. */
+/** The lines of the file: with no file, the counts of the unclassified;
+    or its name and its read, refusal, or list and counts. */
 function FileLines({
   individuals,
   autoRuns,
-}: FileLinesProps): React.JSX.Element {
-  // The variants file alone, for the words of no file: a progress of the
-  // one pass changes the results and not the project.
-  const variants = useAppState((s) => s.project.variants);
-  if (individuals === null) {
-    return (
-      <p className={classOf(styles, "line")}>
-        {noIndividualsFileText(variants)}
-      </p>
-    );
-  }
+}: FileLinesProps): React.JSX.Element | null {
+  if (individuals === null) return <NoFileCounts autoRuns={autoRuns} />;
   return (
     <div className={classOf(styles, "lines")}>
       <p className={classOf(styles, "fileName")}>{escaped(individuals.name)}</p>
@@ -291,33 +284,77 @@ function ColumnAndCounts({
         }}
       />
       {shown.table && project.variants !== null && (
-        <Table
-          caption={countsCaption(project.variants.name)}
-          columns={COUNT_COLUMNS}
+        <CountsTable
+          variantsName={project.variants.name}
           rows={counts.populations.map(({ pop, kept: numKept }) => ({
             id: pop,
             cells: [escaped(pop), countCell(numKept)],
-            values: [pop, numKept],
           }))}
-          // The counts of part of the variants would hold other numbers
-          // with nothing to mark them: the menu waits with the counts.
-          download={{
-            what: countsWhat(project.individuals?.name ?? ""),
-            fileName: downloadName(
-              variantsStem(project.variants.name),
-              "population_counts",
-              "csv",
-            ),
-            waiting: counts.populations.some(({ kept }) => kept === null)
-              ? passDownloadWaitingText(project.variants.name, wait)
-              : null,
-          }}
         />
       )}
       {shown.lines.map((line) => (
         <CountsLineShown key={line.text} line={line} />
       ))}
     </>
+  );
+}
+
+/** The counts with no individuals file: one row, "Unclassified", with
+    the individuals kept, and the line of why they wait; nothing before
+    the variants file has given its individuals (`noFileCounts`). */
+function NoFileCounts({
+  autoRuns,
+}: {
+  readonly autoRuns: AutoRuns;
+}): React.JSX.Element | null {
+  const project = useAppState((s) => s.project);
+  const kept = useAppState((s) => s.individualsKept);
+  const wait = usePassWait(autoRuns);
+  const counts = noFileCounts(project, kept, wait);
+  if (counts === null || project.variants === null) return null;
+  return (
+    <div className={classOf(styles, "lines")}>
+      <CountsTable
+        variantsName={project.variants.name}
+        rows={[
+          {
+            id: UNCLASSIFIED_ROW,
+            cells: [UNCLASSIFIED_ROW, countCell(counts.kept)],
+          },
+        ]}
+      />
+      {counts.lines.map((line) => (
+        <CountsLineShown key={line.text} line={line} />
+      ))}
+    </div>
+  );
+}
+
+/** What the table of the counts is drawn with. */
+interface CountsTableProps {
+  /** The name of the variants file, which names the table. */
+  readonly variantsName: string;
+  /** A row per population, or the one row of the unclassified. */
+  readonly rows: readonly TableRow[];
+}
+
+/** The table of the counts, with no menu "Download…" and with its caption
+    hidden from the screen and kept as its name for a screen reader: the
+    owner took both out of the box on 11 October 2026. The table widget
+    draws its caption first in its frame, and the style of the box hides
+    that first line, as words for a screen reader alone. */
+function CountsTable({
+  variantsName,
+  rows,
+}: CountsTableProps): React.JSX.Element {
+  return (
+    <div className={classOf(styles, "counts")}>
+      <Table
+        caption={countsCaption(variantsName)}
+        columns={COUNT_COLUMNS}
+        rows={rows}
+      />
+    </div>
   );
 }
 

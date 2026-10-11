@@ -8,17 +8,19 @@ import type { AnalysisStatus } from "../../core/store.ts";
 import type { JobResult, VcfReadOptions } from "../../worker/protocol.ts";
 import {
   chromosomesLine,
+  chromosomesLineOf,
   chromosomesSoFarLine,
   countedText,
   countingVariantsLine,
   failedText,
+  fileSizeLine,
   individualsLine,
-  nameAndSizeText,
   notOpenedText,
   openFailure,
   ploidyLine,
   refusalText,
   variantsLine,
+  variantsLineOf,
   FAILURES_COUNTING,
   NO_VARIANTS_FILE_TAB,
   OPENING_NAME,
@@ -180,12 +182,10 @@ describe("the words of the page that opens a variants file", () => {
     );
   });
 
-  test("the lines of the box of the file: its name and size, its individuals, variants and chromosomes, with their numbers grouped", () => {
+  test("the lines of the file: its size, at the top of the Variants tab, its individuals, variants and chromosomes, with their numbers grouped", () => {
     const vcf = PASSED.variants;
     if (vcf === null) throw new Error("the project of the test has no VCF");
-    expect(nameAndSizeText({ ...vcf, size: 1234567 })).toBe(
-      "panel.vcf.gz · 1.2 MB",
-    );
+    expect(fileSizeLine({ ...vcf, size: 1234567 })).toBe("File size: 1.2 MB");
     expect(individualsLine(1200)).toBe("Individuals: 1,200");
     expect(chromosomesLine(1)).toBe("Chromosomes: 1");
   });
@@ -471,7 +471,7 @@ describe("popnei-0.2.2 3 the line of the FILTER failures", () => {
 
 describe("IN3 the words of the boxes and the tabs of the files", () => {
   test("the heading of the box of the variants file", () => {
-    expect(OPENING_NAME).toBe("Variants file");
+    expect(OPENING_NAME).toBe("Variants");
   });
 
   test("the heading in place of the zone that opens a variants file, when it throws, which is not the box's", () => {
@@ -480,7 +480,78 @@ describe("IN3 the words of the boxes and the tabs of the files", () => {
 
   test("the tab of the variants file with no file", () => {
     expect(NO_VARIANTS_FILE_TAB).toBe(
-      "No variants file open. Open one in the box Variants file.",
+      "No variants file open. Open one in the box Variants.",
     );
+  });
+});
+
+describe("NU8 R1 the line of the variants, in the box, and of the chromosomes, at the top of the Variants tab, in each state of the one pass", () => {
+  const KEY = keyFromWire("0".repeat(64));
+  const RESULT = summaryResult(["1", "2"], [1000, 200]);
+  const SO_FAR = summaryResult(["1"], [400]);
+  const running = (
+    soFar: JobResult | null,
+    share: number | null,
+  ): AnalysisStatus<JobResult> => ({
+    kind: "running",
+    key: KEY,
+    runId: 1,
+    progress:
+      share === null
+        ? null
+        : { bytesRead: share, numBytes: 100, pass: 1, numPasses: 1 },
+    waitsForStatistics: false,
+    soFar,
+  });
+  const ready: AnalysisStatus<JobResult> = {
+    kind: "ready",
+    key: KEY,
+    stopped: null,
+  };
+  const error: AnalysisStatus<JobResult> = {
+    kind: "error",
+    key: KEY,
+    error: { kind: "refused", message: "x" },
+    ofStatistics: false,
+    waited: false,
+  };
+  const done: AnalysisStatus<JobResult> = {
+    kind: "done",
+    key: KEY,
+    result: RESULT,
+    warnings: [],
+    check: null,
+  };
+
+  test("done: the numbers", () => {
+    expect(variantsLineOf(done, false)).toBe("Variants: 1,200");
+    expect(chromosomesLineOf(done, false)).toBe("Chromosomes: 2");
+  });
+
+  test("running: the share before the first result so far, then the numbers so far", () => {
+    expect(variantsLineOf(running(null, 6), false)).toBe(
+      "Variants: counting… 6%",
+    );
+    expect(chromosomesLineOf(running(null, 6), false)).toBe(
+      "Chromosomes: counting…",
+    );
+    expect(variantsLineOf(running(SO_FAR, 40), false)).toBe(
+      "Variants: 400 so far",
+    );
+    expect(chromosomesLineOf(running(SO_FAR, 40), false)).toBe(
+      "Chromosomes: 1 so far",
+    );
+  });
+
+  test("about to start, stopped, failed or locked", () => {
+    expect(variantsLineOf(ready, false)).toBe("Variants: counting…");
+    expect(chromosomesLineOf(ready, false)).toBe("Chromosomes: counting…");
+    expect(variantsLineOf(ready, true)).toBe("Variants: not counted");
+    expect(chromosomesLineOf(ready, true)).toBe("Chromosomes: not counted");
+    expect(variantsLineOf(error, false)).toBe("Variants: not counted");
+    expect(chromosomesLineOf(error, false)).toBe("Chromosomes: not counted");
+    const locked: AnalysisStatus<JobResult> = { kind: "locked", reason: "x" };
+    expect(variantsLineOf(locked, false)).toBe("Variants: not counted");
+    expect(chromosomesLineOf(locked, false)).toBe("Chromosomes: not counted");
   });
 });

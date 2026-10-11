@@ -177,7 +177,7 @@ function run(page: Page): Locator {
 
 /** The box of the variants file. */
 function variantsBox(page: Page): Locator {
-  return page.getByRole("region", { name: "Variants file", exact: true });
+  return page.getByRole("region", { name: "Variants", exact: true });
 }
 
 /** The line of the missing data among the statistics of the file. */

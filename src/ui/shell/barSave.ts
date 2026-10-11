@@ -70,7 +70,7 @@ export function barText(
     // stands apart from the box; one stopped during an opening, or a
     // defect, is not.
     if (first.origin === "countStopped") {
-      return `The application stopped as it counted the variants and calculated the statistics: ${text}. Press Start again in the box Variants file, and if it stops again, reload the page and open your files again.`;
+      return `The application stopped as it counted the variants and calculated the statistics: ${text}. Press Start again in the box Variants, and if it stops again, reload the page and open your files again.`;
     }
     // A worker stopped during the write is said by the dialog of the
     // download too, whose way to put it right these words repeat

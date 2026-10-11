@@ -42,12 +42,18 @@ async function openPage(page: Page): Promise<void> {
 }
 
 function opening(page: Page): Locator {
-  return page.getByRole("region", { name: "Variants file" });
+  return page.getByRole("region", { name: "Variants", exact: true });
 }
 
 /** The box of the file open, above the open button. */
 function info(page: Page): Locator {
   return page.getByRole("region", { name: "File information" });
+}
+
+/** The lines at the top of the Variants tab: the size of the file, its
+    chromosomes and its ploidy, out of the box since 11 October 2026. */
+function facts(page: Page): Locator {
+  return page.getByRole("group", { name: "About the file" });
 }
 
 /** The lines of the box, in their order. */
@@ -87,11 +93,11 @@ async function expectPanelCounted(page: Page): Promise<void> {
     info(page).getByText("Variants: 1,200", { exact: true }),
   ).toBeVisible();
   await expect(
-    info(page).getByText("Chromosomes: 1", { exact: true }),
+    facts(page).getByText("Chromosomes: 1", { exact: true }),
   ).toBeVisible();
 }
 
-test("OV2 the page opens with its heading, the headings of the boxes of the two files, and the open button alone in the box of the variants file, with no summary", async ({
+test("OV2 NU8 R1 the page opens with its heading, the headings of the boxes of the two files, Variants and Individuals, and the open button alone in the box of the variants file, with no summary", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -102,8 +108,8 @@ test("OV2 the page opens with its heading, the headings of the boxes of the two 
   // headings of the boxes follow the page's.
   await expect(page.getByRole("heading")).toHaveText([
     "Popnei",
-    "Variants file",
-    "Individuals file",
+    "Variants",
+    "Individuals",
   ]);
   await expect(openButton(page)).toHaveText("Open variants file…");
   // Nothing asks how a file is read: no ploidy and no box of the passed
@@ -132,7 +138,7 @@ test("OV2 at 320 pixels the page does not scroll sideways, with no file and with
   expect(await sideways()).toBe(0);
 });
 
-test("OV2 panel.vcf.gz shows its individuals, its variants, its chromosomes and the ploidy read from it, then panel.nei its own", async ({
+test("OV2 NU8 R1 panel.vcf.gz shows its individuals and its variants in the box, its size, chromosomes and the ploidy read from it at the top of the Variants tab, then panel.nei its own", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -143,10 +149,15 @@ test("OV2 panel.vcf.gz shows its individuals, its variants, its chromosomes and 
   await expectPanelCounted(page);
   // The FILTER failures from the same pass: none of panel.vcf.gz.
   await expect(lines(page)).toHaveText([
-    "panel.vcf.gz · 87 KB",
+    "panel.vcf.gz",
     "Individuals: 200",
     "Variants: 1,200",
     "FILTER failures: 0",
+  ]);
+  // The size, the chromosomes and the ploidy at the top of the Variants
+  // tab, out of the box since 11 October 2026 (NU8 R1).
+  await expect(facts(page).getByRole("paragraph")).toHaveText([
+    "File size: 87 KB",
     "Chromosomes: 1",
     "Ploidy: 2",
   ]);
@@ -158,7 +169,7 @@ test("OV2 panel.vcf.gz shows its individuals, its variants, its chromosomes and 
     throw new Error("the box or the button is not drawn");
   }
   expect(boxAt.y + boxAt.height).toBeLessThan(buttonAt.y);
-  await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(info(page).getByRole("table")).toHaveCount(0);
   // The read and the count, said together when they end within the
   // pause of the region.
   // Read from the record of the region; the end of the statistics, of
@@ -181,9 +192,12 @@ test("OV2 panel.vcf.gz shows its individuals, its variants, its chromosomes and 
   // No line of the FILTER failures: panel.nei, written before format 1.2
   // of the vars file, did not record the FILTER of its variants.
   await expect(lines(page)).toHaveText([
-    "panel.nei · 261 KB",
+    "panel.nei",
     "Individuals: 200",
     "Variants: 1,200",
+  ]);
+  await expect(facts(page).getByRole("paragraph")).toHaveText([
+    "File size: 261 KB",
     "Chromosomes: 1",
     "Ploidy: 2",
   ]);
@@ -200,7 +214,7 @@ test("OV2 bad.vcf is refused at the opening, with popnei's words", async ({
 
   // The words in place of what the file would have told.
   await expect(lines(page)).toHaveText([
-    "bad.vcf · 41 bytes",
+    "bad.vcf",
     "popnei could not read bad.vcf: the source is not a VCF: it starts with \u201cThis is a line o\u201d. Open another file.",
   ]);
   await expectNoViolations(makeAxeBuilder);
@@ -216,12 +230,10 @@ test("OV2 bad_position.vcf.gz opens, and its count is refused at the line of the
   // The lines of the variants and the chromosomes in their places, and
   // the words of the refusal after the last line.
   await expect(lines(page)).toHaveText([
-    /^bad_position\.vcf\.gz · /u,
+    "bad_position.vcf.gz",
     "Individuals: 200",
     "Variants: not counted",
     "FILTER failures: not counted",
-    "Chromosomes: not counted",
-    "Ploidy: 2",
     "popnei could not read bad_position.vcf.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position. Correct the file, or fetch it again, and open it again.",
   ]);
   // popnei's refusal comes again for the same file, so no Start again.
@@ -240,7 +252,7 @@ test("OV2 tetraploid.vcf.gz is opened with the ploidy popnei reads from it, 4", 
 
   // popnei's numbers: 12 individuals of ploidy 4.
   await expect(
-    info(page).getByText("Ploidy: 4", { exact: true }),
+    facts(page).getByText("Ploidy: 4", { exact: true }),
   ).toBeVisible();
   await expect(
     info(page).getByText("Individuals: 12", { exact: true }),
@@ -258,7 +270,7 @@ test("OV2 no_ploidy.vcf.gz, whose genotypes are all single dots, is refused with
   const words =
     "No genotype with alleles was found in the first 5 variants of no_ploidy.vcf.gz: their genotypes are missing, or the file has no genotypes (GT). popnei cannot read the ploidy of the file.";
   await expect(lines(page)).toHaveText([
-    /^no_ploidy\.vcf\.gz · /u,
+    "no_ploidy.vcf.gz",
     words,
     "If the genotypes are missing, popnei's Python opens the file with its ploidy given, 2 for a diploid, and writes it as a .nei file, which this page opens:",
   ]);
@@ -307,28 +319,26 @@ test("OV2 a file refused by its name while another is open is said in the box, a
   await pick(page, join(FIXTURES, "panel_pops.csv"));
 
   await expect(lines(page)).toHaveText([
-    /^panel\.nei · /u,
+    "panel.nei",
     "Individuals: 200",
     "Variants: 1,200",
-    "Chromosomes: 1",
-    "Ploidy: 2",
     /^panel_pops\.csv was not opened: /u,
   ]);
   // The empty row under the lines, kept for the end of a count, goes
   // under a refusal, as under the words of a failure of the count: the
   // refusal follows the last line at the gap of the box, 8 pixels, and
   // not under a row of a button's height.
-  const ploidy = await info(page)
-    .getByText("Ploidy: 2", { exact: true })
+  const last = await info(page)
+    .getByText("Variants: 1,200", { exact: true })
     .boundingBox();
   const refusal = await info(page)
     .getByRole("paragraph")
     .filter({ hasText: /^panel_pops\.csv was not opened: /u })
     .boundingBox();
-  if (ploidy === null || refusal === null) {
-    throw new Error("the line of the ploidy or the refusal is not drawn");
+  if (last === null || refusal === null) {
+    throw new Error("the line of the variants or the refusal is not drawn");
   }
-  expect(refusal.y - (ploidy.y + ploidy.height)).toBeLessThan(16);
+  expect(refusal.y - (last.y + last.height)).toBeLessThan(16);
   await expectNoViolations(makeAxeBuilder);
 });
 
@@ -356,27 +366,24 @@ test("OV2 a count stopped says so, Start again counts the variants, and the box 
   // The state of the count in place of the numbers of the variants and
   // the chromosomes, and the bar with Stop under the lines.
   await expect(lines(page)).toHaveText([
-    /^stop\.vcf\.gz · /u,
+    "stop.vcf.gz",
     "Individuals: 1,000",
     // A result so far of the pass, 2 seconds after its start, gives the
     // variants and the chromosomes read so far in place of the count.
     /^Variants: (counting…( \d+%)?|[\d,]+ so far)$/u,
     /^FILTER failures: (counting…|[\d,]+ so far)$/u,
-    /^Chromosomes: (counting…|[\d,]+ so far)$/u,
-    "Ploidy: 2",
   ]);
   const counting = await height();
   const stop = info(page).getByRole("button", { name: "Stop" });
   await stop.click();
 
   await expect(lines(page)).toHaveText([
-    /^stop\.vcf\.gz · /u,
+    "stop.vcf.gz",
     "Individuals: 1,000",
     "Variants: not counted",
     "FILTER failures: not counted",
-    "Chromosomes: not counted",
-    "Ploidy: 2",
   ]);
+  await expect(facts(page).getByText("Chromosomes: not counted")).toBeVisible();
   expect(await height()).toBe(counting);
   const again = info(page).getByRole("button", { name: "Start again" });
   // One button in one place: the focus stays on it.
@@ -394,7 +401,7 @@ test("OV2 a count stopped says so, Start again counts the variants, and the box 
   // focus is on the lines of the variants and the chromosomes, not on the
   // top of the page.
   await expect(page.locator(":focus")).toHaveText(
-    `${counted}FILTER failures: 0Chromosomes: 1`,
+    `${counted}FILTER failures: 0`,
   );
   await expectNoViolations(makeAxeBuilder);
 
@@ -402,7 +409,9 @@ test("OV2 a count stopped says so, Start again counts the variants, and the box 
   // the focus goes to the open button, not to the top.
   const nei = await readFile(join(FIXTURES, "panel.nei"));
   await drop(page, [{ name: "panel.nei", bytes: [...nei] }]);
-  await expect(info(page).getByText(/^panel\.nei · /u)).toBeVisible();
+  await expect(
+    info(page).getByText("panel.nei", { exact: true }),
+  ).toBeVisible();
   await expect(openButton(page)).toBeFocused();
 });
 
@@ -505,15 +514,19 @@ test("OV2 a file being read is announced once, by its name", async ({
     "",
     "Reading panel.vcf.gz.",
   ]);
-  // What is known before the read: the name and the size.
+  // What is known before the read: the name, and the size at the top of
+  // the Variants tab.
   await expect(lines(page)).toHaveText([
-    "panel.vcf.gz · 87 KB",
+    "panel.vcf.gz",
     "Individuals: reading…",
     "Variants: reading…",
     "FILTER failures: reading…",
+    /^Reading the file\./u,
+  ]);
+  await expect(facts(page).getByRole("paragraph")).toHaveText([
+    "File size: 87 KB",
     "Chromosomes: reading…",
     "Ploidy: reading…",
-    /^Reading the file\./u,
   ]);
   await expectNoViolations(makeAxeBuilder);
 });
@@ -535,7 +548,9 @@ test("OV2 a file dropped while the focus is on Start again moves the focus to th
   const nei = await readFile(join(FIXTURES, "panel.nei"));
   await drop(page, [{ name: "panel.nei", bytes: [...nei] }]);
 
-  await expect(info(page).getByText(/^panel\.nei · /u)).toBeVisible();
+  await expect(
+    info(page).getByText("panel.nei", { exact: true }),
+  ).toBeVisible();
   await expect(openButton(page)).toBeFocused();
 });
 
@@ -567,7 +582,7 @@ test("OV2 ld.vcf.gz shows its 500 variants on two chromosomes", async ({
     info(page).getByText("Variants: 500", { exact: true }),
   ).toBeVisible();
   await expect(
-    info(page).getByText("Chromosomes: 2", { exact: true }),
+    facts(page).getByText("Chromosomes: 2", { exact: true }),
   ).toBeVisible();
 });
 
@@ -583,12 +598,10 @@ test("OV2 popnei-0.2.2 a VCF with variants that did not pass is read once, with 
   // PASS, and the 300 with LowQual are read too and counted by the
   // summary's one pass.
   await expect(lines(page)).toHaveText([
-    /^low_qual\.vcf\.gz · /u,
+    "low_qual.vcf.gz",
     "Individuals: 200",
     "Variants: 1,200",
     "FILTER failures: 300",
-    "Chromosomes: 1",
-    "Ploidy: 2",
   ]);
   await expect(info(page).getByRole("button")).toHaveCount(0);
   await expect(info(page).getByRole("progressbar")).toHaveCount(0);
@@ -616,33 +629,27 @@ test("OV2 popnei-0.2.2 the FILTER failures of low_qual.vcf.gz while the pass run
     timeout: 30_000,
   });
   await expect(lines(page)).toHaveText([
-    /^low_qual\.vcf\.gz · /u,
+    "low_qual.vcf.gz",
     "Individuals: 200",
     /^Variants: counting…( \d+%)?$/u,
     "FILTER failures: counting…",
-    "Chromosomes: counting…",
-    "Ploidy: 2",
   ]);
   // popnei reads the 1,200 variants in one block: its result so far is
   // of every variant.
   await release(page, "oneSoFar");
   await expect(lines(page)).toHaveText([
-    /^low_qual\.vcf\.gz · /u,
+    "low_qual.vcf.gz",
     "Individuals: 200",
     "Variants: 1,200 so far",
     "FILTER failures: 300 so far",
-    "Chromosomes: 1 so far",
-    "Ploidy: 2",
   ]);
   await expectNoViolations(makeAxeBuilder);
   await info(page).getByRole("button", { name: "Stop" }).click();
   await expect(lines(page)).toHaveText([
-    /^low_qual\.vcf\.gz · /u,
+    "low_qual.vcf.gz",
     "Individuals: 200",
     "Variants: not counted",
     "FILTER failures: not counted",
-    "Chromosomes: not counted",
-    "Ploidy: 2",
   ]);
   // Start again, in a new worker, served with its results held too: the
   // count once the result is let through.
@@ -651,12 +658,10 @@ test("OV2 popnei-0.2.2 the FILTER failures of low_qual.vcf.gz while the pass run
   await release(page, "allSoFar");
   await release(page, "result");
   await expect(lines(page)).toHaveText([
-    /^low_qual\.vcf\.gz · /u,
+    "low_qual.vcf.gz",
     "Individuals: 200",
     "Variants: 1,200",
     "FILTER failures: 300",
-    "Chromosomes: 1",
-    "Ploidy: 2",
   ]);
 });
 
@@ -671,30 +676,24 @@ test("filters 2 low_qual.nei, which records the FILTER of its variants, has the 
     timeout: 30_000,
   });
   await expect(lines(page)).toHaveText([
-    /^low_qual\.nei · /u,
+    "low_qual.nei",
     "Individuals: 200",
     /^Variants: counting…( \d+%)?$/u,
     "FILTER failures: counting…",
-    "Chromosomes: counting…",
-    "Ploidy: 2",
   ]);
   await release(page, "oneSoFar");
   await expect(lines(page)).toHaveText([
-    /^low_qual\.nei · /u,
+    "low_qual.nei",
     "Individuals: 200",
     /^Variants: [\d,]+ so far$/u,
     /^FILTER failures: [\d,]+ so far$/u,
-    "Chromosomes: 1 so far",
-    "Ploidy: 2",
   ]);
   await info(page).getByRole("button", { name: "Stop" }).click();
   await expect(lines(page)).toHaveText([
-    /^low_qual\.nei · /u,
+    "low_qual.nei",
     "Individuals: 200",
     "Variants: not counted",
     "FILTER failures: not counted",
-    "Chromosomes: not counted",
-    "Ploidy: 2",
   ]);
   await expectNoViolations(makeAxeBuilder);
   await info(page).getByRole("button", { name: "Start again" }).click();
@@ -703,12 +702,10 @@ test("filters 2 low_qual.nei, which records the FILTER of its variants, has the 
   await release(page, "result");
   // popnei 0.2.2's numbers of low_qual.vcf.gz, which low_qual.nei holds.
   await expect(lines(page)).toHaveText([
-    /^low_qual\.nei · /u,
+    "low_qual.nei",
     "Individuals: 200",
     "Variants: 1,200",
     "FILTER failures: 300",
-    "Chromosomes: 1",
-    "Ploidy: 2",
   ]);
 });
 
@@ -722,19 +719,15 @@ test("filters 2 panel.nei, which did not record the FILTER of its variants, has 
     timeout: 30_000,
   });
   await expect(lines(page)).toHaveText([
-    /^panel\.nei · /u,
+    "panel.nei",
     "Individuals: 200",
     /^Variants: counting…( \d+%)?$/u,
-    "Chromosomes: counting…",
-    "Ploidy: 2",
   ]);
   await info(page).getByRole("button", { name: "Stop" }).click();
   await expect(lines(page)).toHaveText([
-    /^panel\.nei · /u,
+    "panel.nei",
     "Individuals: 200",
     "Variants: not counted",
-    "Chromosomes: not counted",
-    "Ploidy: 2",
   ]);
   // The worker made after the Stop served before the page closes.
   await workersListening(page);
@@ -773,7 +766,9 @@ test("OV2 another file opened while a count runs ends on the numbers of that fil
 
   await pick(page, join(FIXTURES, "panel.nei"));
 
-  await expect(info(page).getByText(/^panel\.nei · /u)).toBeVisible();
+  await expect(
+    info(page).getByText("panel.nei", { exact: true }),
+  ).toBeVisible();
   await expectPanelCounted(page);
   await expect(info(page).getByText(/200,000/u)).toHaveCount(0);
 });
@@ -804,7 +799,7 @@ test("OV2 a crash of the worker during the opening goes to the error bar, and th
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
 
   await expect(lines(page)).toHaveText([
-    /^panel\.vcf\.gz · /u,
+    "panel.vcf.gz",
     "panel.vcf.gz could not be read.",
   ]);
   await expect(page.getByRole("alert")).toHaveText(
@@ -831,7 +826,7 @@ test("OV2 a crash of the worker during the count goes to the error bar, which sa
     info(page).getByRole("button", { name: "Start again" }),
   ).toBeVisible();
   await expect(page.getByRole("alert")).toHaveText(
-    /^The application stopped as it counted the variants and calculated the statistics: .*a crash of the test.*\. Press Start again in the box Variants file, and if it stops again, reload the page and open your files again\.$/u,
+    /^The application stopped as it counted the variants and calculated the statistics: .*a crash of the test.*\. Press Start again in the box Variants, and if it stops again, reload the page and open your files again\.$/u,
   );
   await expectNoViolations(makeAxeBuilder);
 });

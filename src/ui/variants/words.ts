@@ -30,6 +30,7 @@ import {
 } from "../../core/analyses/variantsSummary.ts";
 import { sizeText } from "../../core/writeEstimate.ts";
 import type { JobResult } from "../../worker/protocol.ts";
+import { progressShare } from "../analyses/words.ts";
 import { chainStatuses, hasChainButton } from "./chain.ts";
 
 /** The id of the summary of the variants file. */
@@ -45,18 +46,19 @@ export const OPEN_ANOTHER_LABEL = "Open another variants file…";
 export const PASTE_LABEL = "Paste a variants file";
 
 /** The heading of the box of the variants file, at the top of the page,
-    which ends with the zone that opens one. */
-export const OPENING_NAME = "Variants file";
+    which ends with the zone that opens one; "Variants file" until 11
+    October 2026. */
+export const OPENING_NAME = "Variants";
 
 /** The heading drawn in place of the zone that opens a variants file
-    when its code throws, under the heading of its box, "Variants file",
+    when its code throws, under the heading of its box, "Variants",
     so that a screen reader does not hear the box's name twice. */
 export const OPENING_ZONE_NAME = "Opening a variants file";
 
 /** What the tab of the variants file says before a variants file is
     open. */
 export const NO_VARIANTS_FILE_TAB =
-  "No variants file open. Open one in the box Variants file.";
+  "No variants file open. Open one in the box Variants.";
 
 /** What the page says when several files are dropped or pasted at once. */
 export const SEVERAL_DROPPED = "Open one variants file at a time.";
@@ -78,9 +80,14 @@ export function notOpenedText(name: string): string {
     they fail. */
 export const INFO_NAME = "File information";
 
-/** The first line of the box: "panel.vcf.gz · 87 KB". */
-export function nameAndSizeText(variants: VariantSource): string {
-  return `${escaped(variants.name)} · ${sizeText(variants.size)}`;
+/** The name of the lines of the size, the chromosomes and the ploidy at
+    the top of the Variants tab, for a screen reader. */
+export const FACTS_NAME = "About the file";
+
+/** The size of the file, at the top of the Variants tab since 11 October
+    2026, when it left the box: "File size: 87 KB". */
+export function fileSizeLine(variants: VariantSource): string {
+  return `File size: ${sizeText(variants.size)}`;
 }
 
 /** The line of the individuals: "Individuals: 200". */
@@ -93,8 +100,9 @@ export function individualsLine(numIndividuals: number): string {
    open button under it does not move under the pointer as a count ends:
    the words of a value not known yet are short. */
 
-/** The lines of the individuals, the variants, the chromosomes and the
-    ploidy while the file is read. */
+/** The lines of the individuals and the variants, in the box, and of the
+    chromosomes and the ploidy, at the top of the Variants tab, while the
+    file is read. */
 export const INDIVIDUALS_READING = "Individuals: reading…";
 export const VARIANTS_READING = "Variants: reading…";
 export const CHROMOSOMES_READING = "Chromosomes: reading…";
@@ -144,6 +152,64 @@ export function chromosomesLine(numChroms: number): string {
     failure of their count. */
 export const VARIANTS_NOT_COUNTED = "Variants: not counted";
 export const CHROMOSOMES_NOT_COUNTED = "Chromosomes: not counted";
+
+/**
+ * The line of the variants in the box, from the status of the summary,
+ * whose one pass counts them: the number once counted; while the pass
+ * runs, the share done before its first result so far and the variants
+ * read so far after it; "counting…" while the pass is about to start;
+ * and "not counted" after a Stop, `stopped`, a failure, or while it
+ * cannot run.
+ */
+export function variantsLineOf(
+  status: AnalysisStatus<JobResult>,
+  stopped: boolean,
+): string {
+  switch (status.kind) {
+    case "running":
+      // The share on the bar alone once a result so far gave the
+      // variants read.
+      return status.soFar === null
+        ? countingVariantsLine(
+            status.progress === null ? null : progressShare(status.progress),
+          )
+        : countingVariantsLine(null, status.soFar.passStats.numVars);
+    case "ready":
+    case "removed":
+      // Not stopped, the count starts by itself in a moment.
+      return stopped ? VARIANTS_NOT_COUNTED : countingVariantsLine(null);
+    case "locked":
+    case "error":
+      return VARIANTS_NOT_COUNTED;
+    case "done":
+      return variantsLine(status.result.passStats.numVars);
+  }
+}
+
+/** The line of the chromosomes at the top of the Variants tab, from the
+    status of the summary, in the states of `variantsLineOf`: the number
+    once counted, "counting…" before the first result so far, the
+    chromosomes with a variant among those read so far after it, and "not
+    counted" after a Stop, a failure, or while the pass cannot run. */
+export function chromosomesLineOf(
+  status: AnalysisStatus<JobResult>,
+  stopped: boolean,
+): string {
+  switch (status.kind) {
+    case "running":
+      return status.soFar === null
+        ? CHROMOSOMES_COUNTING
+        : chromosomesSoFarLine(numChroms(status.soFar));
+    case "ready":
+    case "removed":
+      return stopped ? CHROMOSOMES_NOT_COUNTED : CHROMOSOMES_COUNTING;
+    case "locked":
+    case "error":
+      return CHROMOSOMES_NOT_COUNTED;
+    case "done":
+      return chromosomesLine(numChroms(status.result));
+  }
+}
 
 /** The line of the variants of the file that failed their FILTER, once
     counted: "FILTER failures: 300", 0 when every variant passed. */

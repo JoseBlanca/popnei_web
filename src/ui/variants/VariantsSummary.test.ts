@@ -223,12 +223,10 @@ describe("popnei-0.2.2 3 the box of a file being read: the line of the FILTER fa
   test("a vcf file", async () => {
     await drawPage("vcf", { read: false });
     expect(linesOf()).toEqual([
-      "low_qual.vcf.gz · 30 KB",
+      "low_qual.vcf.gz",
       "Individuals: reading…",
       "Variants: reading…",
       "FILTER failures: reading…",
-      "Chromosomes: reading…",
-      "Ploidy: reading…",
       expect.stringMatching(/^Reading the file\./u),
     ]);
   });
@@ -296,7 +294,7 @@ describe("the one button of the box of the variants file", () => {
     expect(active?.getAttribute("tabindex")).toBe("-1");
   });
 
-  test("live-stats 2 while the pass runs, the lines of the variants and the chromosomes give those read so far once the pass gave a result so far", async () => {
+  test("live-stats 2 while the pass runs, the line of the variants gives those read so far once the pass gave a result so far", async () => {
     const page = await drawPage();
     act(() => {
       page.autoRuns.sync();
@@ -313,8 +311,9 @@ describe("the one button of the box of the variants file", () => {
     expect(lines()).not.toContain("counting");
     // A .nei file that does not record the FILTER: no line of it.
     expect(lines()).not.toContain("FILTER");
-    // The chromosomes with a variant among those read.
-    expect(lines()).toContain("Chromosomes: 2 so far");
+    // The chromosomes are at the top of the Variants tab since 11
+    // October 2026, not in the box.
+    expect(lines()).not.toContain("Chromosomes");
   });
 });
 
@@ -359,12 +358,10 @@ describe("one-pass a VCF is read once", () => {
       await Promise.resolve();
     });
     expect(linesOf()).toEqual([
-      "low_qual.vcf.gz · 30 KB",
+      "low_qual.vcf.gz",
       "Individuals: 2",
       "Variants: 400 so far",
       "FILTER failures: 75 so far",
-      "Chromosomes: 1 so far",
-      "Ploidy: 2",
     ]);
   });
 
@@ -388,19 +385,17 @@ describe("one-pass a VCF is read once", () => {
       "variantsSummary",
     ]);
     expect(linesOf()).toEqual([
-      "low_qual.vcf.gz · 30 KB",
+      "low_qual.vcf.gz",
       "Individuals: 2",
       "Variants: 1,200",
       "FILTER failures: 300",
-      "Chromosomes: 1",
-      "Ploidy: 2",
     ]);
     expect(buttonsOf()).toEqual([]);
     expect(barName()).toBeNull();
     expect(document.activeElement?.textContent).toContain("Variants: 1,200");
   });
 
-  test("a Stop during the summary says not counted on the three lines, beside Start again", async () => {
+  test("a Stop during the summary says not counted on the lines of the count, beside Start again", async () => {
     const page = await drawPage("vcf");
     act(() => {
       page.autoRuns.sync();
@@ -415,12 +410,10 @@ describe("one-pass a VCF is read once", () => {
       page.autoRuns.sync();
     });
     expect(linesOf()).toEqual([
-      "low_qual.vcf.gz · 30 KB",
+      "low_qual.vcf.gz",
       "Individuals: 2",
       "Variants: not counted",
       "FILTER failures: not counted",
-      "Chromosomes: not counted",
-      "Ploidy: 2",
     ]);
     expect(buttonsOf()).toEqual(["Start again"]);
     expect(page.said).toEqual([
@@ -444,12 +437,10 @@ describe("one-pass a VCF is read once", () => {
       page.autoRuns.sync();
     });
     expect(linesOf()).toEqual([
-      "low_qual.nei · 261 KB",
+      "low_qual.nei",
       "Individuals: 2",
       "Variants: not counted",
       "FILTER failures: not counted",
-      "Chromosomes: not counted",
-      "Ploidy: 2",
     ]);
   });
 
@@ -490,12 +481,10 @@ describe("one-pass a VCF is read once", () => {
         "variantsSummary",
       ]);
       expect(linesOf()).toEqual([
-        "low_qual.vcf.gz · 30 KB",
+        "low_qual.vcf.gz",
         "Individuals: 2",
         "Variants: not counted",
         "FILTER failures: not counted",
-        "Chromosomes: not counted",
-        "Ploidy: 2",
         "The variants of low_qual.vcf.gz could not be counted, nor their statistics calculated.",
       ]);
       // Start again mends a crash of the worker, not a defect of ours.

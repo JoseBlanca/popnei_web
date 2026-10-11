@@ -134,7 +134,7 @@ export const INDIVIDUAL_PLOT_FILES: Readonly<
 });
 
 /** Why a menu "Download…" of what the one pass of `variantsName` gives,
-    a histogram or the counts per population, waits: a file of part of
+    a histogram, waits: a file of part of
     the variants would hold other numbers with nothing to mark them. The
     words say whether the pass runs, or will not end by itself, `wait`:
     the user stopped it, or it failed (docs/specs/steps/popgen2-pca.md,
@@ -148,9 +148,9 @@ export function passDownloadWaitingText(
     case "running":
       return `Download once ${name} is read to the end.`;
     case "stopped":
-      return `Download once ${name} is read to the end: its reading was stopped; start it again in the box Variants file.`;
+      return `Download once ${name} is read to the end: its reading was stopped; start it again in the box Variants.`;
     case "failed":
-      return `Nothing to download: ${name} could not be read to the end; the box Variants file says why.`;
+      return `Nothing to download: ${name} could not be read to the end; the box Variants says why.`;
   }
 }
 

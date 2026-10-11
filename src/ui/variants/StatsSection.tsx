@@ -6,11 +6,15 @@
  * boundary is made again for each file picked, so that a throw for one
  * file does not leave the section empty for the next ones while their
  * statistics are calculated, and so that the next file asks for the code
- * of the plots again.
+ * of the plots again. Above them, in the same boundary, the size of the
+ * file, its chromosomes and its ploidy (FileFacts.tsx).
  */
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { useAppState } from "../store.tsx";
+import { classOf } from "../classOf.ts";
+import { FileFacts } from "./FileFacts.tsx";
+import styles from "./FileFacts.module.css";
 import { FileStats } from "./FileStats.tsx";
 import { STATS_NAME } from "./statsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
@@ -26,7 +30,8 @@ export interface StatsSectionProps {
   readonly onShown: StatsShown;
 }
 
-/** The statistics of the open file; nothing before a file is picked. */
+/** The size, the chromosomes and the ploidy of the open file, and its
+    statistics; nothing before a file is picked. */
 export function StatsSection({
   autoRuns,
   openButton,
@@ -37,11 +42,14 @@ export function StatsSection({
   return (
     // Another load is another boundary, which has caught nothing.
     <ErrorBoundary key={fileId} heading={STATS_NAME} level={2}>
-      <FileStats
-        autoRuns={autoRuns}
-        openButton={openButton}
-        onShown={onShown}
-      />
+      <div className={classOf(styles, "withFacts")}>
+        <FileFacts autoRuns={autoRuns} />
+        <FileStats
+          autoRuns={autoRuns}
+          openButton={openButton}
+          onShown={onShown}
+        />
+      </div>
     </ErrorBoundary>
   );
 }

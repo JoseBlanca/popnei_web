@@ -60,7 +60,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     expect(testPage.band().error).toBeNull();
     testPage.defects.report(new Error("gone"), "countStopped", null);
     expect(testPage.band().error?.text).toBe(
-      "The application stopped as it counted the variants and calculated the statistics: gone. Press Start again in the box Variants file, and if it stops again, reload the page and open your files again.",
+      "The application stopped as it counted the variants and calculated the statistics: gone. Press Start again in the box Variants, and if it stops again, reload the page and open your files again.",
     );
   });
 

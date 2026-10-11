@@ -346,7 +346,7 @@ function regionOf(name: string): HTMLElement {
 
 /** The box of the individuals file. */
 function box(): HTMLElement {
-  return regionOf("Individuals file");
+  return regionOf("Individuals");
 }
 
 /** The panel of the tab "Individuals", the second, shown or kept
@@ -363,6 +363,20 @@ function tab(): HTMLElement {
 /** The texts of the paragraphs of `element`, in their order. */
 function paragraphs(element: HTMLElement): string[] {
   return [...element.querySelectorAll("p")].map((p) => p.textContent);
+}
+
+/** The texts of the paragraphs of `element` that the screen shows: all
+    but the caption of a table, which names it for a screen reader alone
+    in the box (its style hides it, which jsdom does not apply). */
+function shownParagraphs(element: HTMLElement): string[] {
+  const names = new Set(
+    [...element.querySelectorAll("table")].map((table) =>
+      table.getAttribute("aria-labelledby"),
+    ),
+  );
+  return [...element.querySelectorAll("p")]
+    .filter((p) => !names.has(p.id))
+    .map((p) => p.textContent);
 }
 
 /** The words of the buttons of `element`, in their order. */
@@ -400,32 +414,18 @@ function undoNames(store: Popgen2PageStore<JobResult, Blob>): string | null {
   return store.getState().undo;
 }
 
-/** The menu "Download…" of the counts per population of pops.csv:
-    whether it is marked disabled, and its description, or null. */
-function countsMenu(): {
-  readonly disabled: boolean;
-  readonly description: string | null;
-} {
-  const button = box().querySelector(
-    'button[aria-label="Download the counts per population of pops.csv"]',
-  );
-  if (button === null) throw new Error("the box has no menu of the counts");
-  const describedBy = button.getAttribute("aria-describedby");
-  return {
-    disabled: button.getAttribute("aria-disabled") === "true",
-    description:
-      describedBy === null
-        ? null
-        : (document.getElementById(describedBy)?.textContent ?? null),
-  };
+/** The names of the buttons of the box that download, which it has none
+    of since 11 October 2026. */
+function downloadsOfBox(): string[] {
+  return [...box().querySelectorAll("button")]
+    .map((b) => b.getAttribute("aria-label") ?? b.textContent)
+    .filter((name) => name.startsWith("Download"));
 }
 
 describe("IN6 D1 the box of the individuals file in each state", () => {
-  test("no file, no variants file: the words of no file and the zone's button, no Remove", async () => {
+  test("NU8 R1 no file, no variants file: the zone's button alone, no words and no Remove", async () => {
     await drawPage();
-    expect(paragraphs(box())).toEqual([
-      "No individuals file: every individual is unclassified.",
-    ]);
+    expect(paragraphs(box())).toEqual([]);
     expect(buttons(box())).toContain("Open individuals file…");
     expect(buttons(box()).some((b) => b.startsWith("Remove"))).toBe(false);
   });
@@ -466,16 +466,21 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     );
   });
 
-  test("both files read and a column chosen: the counts, the line of the unclassified and the line of the rows not used", async () => {
+  test("NU8 R1 both files read and a column chosen: the counts with no caption and no Download, the line of the unclassified; the line of the rows not used in the tab", async () => {
     const { store } = await drawPage();
     await openVariants(store);
     await pickIndividuals("pops.csv");
     await recorded(store, readOf(POPS));
     await choose(store, "popcat");
     expect(undoNames(store)).toBe("the column of the populations changed");
-    expect(paragraphs(box())).toContain(
-      "Individuals of panel.nei after the filters of individuals",
-    );
+    // The caption names the table for a screen reader alone.
+    const named = box().querySelector("table")?.getAttribute("aria-labelledby");
+    expect(
+      named === null || named === undefined
+        ? null
+        : document.getElementById(named)?.textContent,
+    ).toBe("Individuals of panel.nei after the filters of individuals");
+    expect(downloadsOfBox()).toEqual([]);
     expect(countRows()).toEqual([
       ["Population", "Individuals"],
       ["p0", "2"],
@@ -484,7 +489,8 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(paragraphs(box())).toContain(
       "Unclassified, left out of the analyses per population: 2 individuals kept, 1 with an empty cell in popcat and 1 that is not in pops.csv. Not in pops.csv: s004.",
     );
-    expect(paragraphs(box()).at(-1)).toBe(
+    expect(box().textContent).not.toContain("but not in panel.nei");
+    expect(paragraphs(tab())).toContain(
       "Individuals in pops.csv but not in panel.nei: 1",
     );
   });
@@ -537,7 +543,7 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     );
   });
 
-  test("a column of 21 values: its warning, no table, the line of the rows not used", async () => {
+  test("a column of 21 values: its warning, no table, the line of the rows not used in the tab", async () => {
     const { store } = await drawPage();
     await openVariants(store);
     await pickIndividuals("pops.csv");
@@ -556,7 +562,7 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(box().textContent).toContain(
       "Warning: accession has 21 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
     );
-    expect(paragraphs(box()).at(-1)).toBe(
+    expect(paragraphs(tab())).toContain(
       "Individuals in pops.csv but not in panel.nei: 16",
     );
   });
@@ -595,10 +601,7 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(paragraphs(box())).toContain(
       "The individuals the filters keep are counted once panel.nei is read to the end.",
     );
-    expect(countsMenu()).toEqual({
-      disabled: true,
-      description: "Download once panel.nei is read to the end.",
-    });
+    expect(downloadsOfBox()).toEqual([]);
 
     await act(async () => {
       autoRuns.stop(POPGEN2_CHAIN);
@@ -608,11 +611,6 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(paragraphs(box())).toContain(
       "Not counted: the reading of panel.nei was stopped. Start it again in the box of panel.nei to count the individuals the filters keep.",
     );
-    expect(countsMenu()).toEqual({
-      disabled: true,
-      description:
-        "Download once panel.nei is read to the end: its reading was stopped; start it again in the box Variants file.",
-    });
 
     await act(async () => {
       autoRuns.resume(POPGEN2_CHAIN);
@@ -630,19 +628,17 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(paragraphs(box())).toContain(
       "Not counted: panel.nei could not be read to the end; the box of panel.nei says why.",
     );
-    expect(countsMenu()).toEqual({
-      disabled: true,
-      description:
-        "Nothing to download: panel.nei could not be read to the end; the box Variants file says why.",
-    });
   });
 
-  test("the menu of the counts waits, marked disabled with its reason, while the statistics wait, and is enabled once panel.nei is read to the end", async () => {
+  test("NU8 R1 no individuals file and a variants file read: the counts of one row, Unclassified, with … while the pass is not finished and a threshold on, then the individuals kept", async () => {
     const { store, requests } = await drawPage();
     await openVariants(store);
-    await pickIndividuals("pops.csv");
-    await recorded(store, readOf(POPS));
-    await choose(store, "popcat");
+    expect(countRows()).toEqual([
+      ["Population", "Individuals"],
+      ["Unclassified", "5"],
+    ]);
+    expect(shownParagraphs(box())).toEqual([]);
+    expect(downloadsOfBox()).toEqual([]);
     await act(async () => {
       store.apply("the threshold of the missing genotypes changed", (p) =>
         setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.03),
@@ -650,10 +646,13 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
       await Promise.resolve();
     });
     await settled();
-    expect(countsMenu()).toEqual({
-      disabled: true,
-      description: "Download once panel.nei is read to the end.",
-    });
+    expect(countRows()).toEqual([
+      ["Population", "Individuals"],
+      ["Unclassified", "…not counted yet"],
+    ]);
+    expect(shownParagraphs(box())).toEqual([
+      "The individuals the filters keep are counted once panel.nei is read to the end.",
+    ]);
     await act(async () => {
       requests.at(-1)?.end({
         kind: "done",
@@ -663,12 +662,16 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
       await Promise.resolve();
     });
     await settled();
-    expect(
-      countRows()
-        .slice(1)
-        .every(([, count]) => count !== "…not counted yet"),
-    ).toBe(true);
-    expect(countsMenu()).toEqual({ disabled: false, description: null });
+    const kept = store.getState().individualsKept?.list;
+    const numKept =
+      kept?.kind === "known"
+        ? (kept.individuals ?? INDIVIDUALS).length
+        : Number.NaN;
+    expect(countRows()).toEqual([
+      ["Population", "Individuals"],
+      ["Unclassified", String(numKept)],
+    ]);
+    expect(shownParagraphs(box())).toEqual([]);
   });
 
   test("a progress of the one pass draws the box no more", async () => {
@@ -864,7 +867,7 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
     });
     expect(tab().querySelectorAll("select")).toHaveLength(3);
     expect(paragraphs(tab())).toContain(
-      "pops.csv could not be read; the box Individuals file says why.",
+      "pops.csv could not be read; the box Individuals says why.",
     );
   });
 
@@ -878,7 +881,7 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
     });
     expect(tab().querySelectorAll("select")).toHaveLength(0);
     expect(paragraphs(tab())).toEqual([
-      "pops.xlsx could not be read; the box Individuals file says why.",
+      "pops.xlsx could not be read; the box Individuals says why.",
     ]);
   });
 
@@ -913,7 +916,7 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
     expect(selectsOf(tab())).toEqual(["Semicolon", "Detected"]);
   });
 
-  test("every individual of the variants file in the file: no section of the individuals not in it, and no Copy", async () => {
+  test("NU8 R1 every individual of the variants file in the file, and every row of the file in the variants file: no section of the individuals not in it, no Copy, and no line of the rows not used", async () => {
     const { store } = await drawPage();
     await openVariants(store);
     await pickIndividuals("pops.csv");
@@ -921,12 +924,19 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
       store,
       readOf({
         columns: POPS.columns,
-        rows: [...POPS.rows, ["s004", "p1", 1]],
+        // x9 left out, so that every row names an individual of
+        // panel.nei too.
+        rows: [
+          ...POPS.rows.filter((row) => row[0] !== "x9"),
+          ["s004", "p1", 1],
+        ],
       }),
     );
-    expect(paragraphs(tab())).toContain("6 rows, 3 columns");
+    expect(paragraphs(tab())).toContain("5 rows, 3 columns");
     expect(tab().querySelector("h2")).toBeNull();
     expect(tab().textContent).not.toContain("but not in pops.csv");
+    // Every row of the file names an individual of panel.nei.
+    expect(tab().textContent).not.toContain("but not in panel.nei");
     expect(buttons(tab()).filter((b) => b.startsWith("Copy"))).toEqual([]);
   });
 

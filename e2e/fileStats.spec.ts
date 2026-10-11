@@ -410,7 +410,11 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   await expect(
     info(page).getByText(/^Variants: [\d,]+ so far$/u),
   ).toBeVisible();
-  await expect(info(page).getByText("Chromosomes: 1 so far")).toBeVisible();
+  await expect(
+    page
+      .getByRole("group", { name: "About the file" })
+      .getByText("Chromosomes: 1 so far"),
+  ).toBeVisible();
   const plotsDrawn = (texts: readonly string[]): number =>
     texts.filter((text) =>
       text.includes(
@@ -447,7 +451,7 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   // page.
   const counted = `Variants: ${HELD_VCF_VARIANTS.toLocaleString("en-US")}`;
   await expect(page.locator(":focus")).toHaveText(
-    `${counted}FILTER failures: 0Chromosomes: 1`,
+    `${counted}FILTER failures: 0`,
   );
   await expect(info(page).getByRole("button")).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
@@ -522,7 +526,7 @@ test("FS2 a file dropped while the focus is on the download of the individuals m
   await expect(
     page
       .getByRole("region", { name: "File information" })
-      .getByText("panel.nei · 261 KB"),
+      .getByText("panel.nei", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Open another variants file…" }),
@@ -636,7 +640,7 @@ test("FS2 the plots are downloaded once a file is picked, not with the page; a d
   // The rest of the page works: another file is opened and counted.
   await pick(page, join(FIXTURES, "panel.nei"));
   const box = page.getByRole("region", { name: "File information" });
-  await expect(box.getByText("panel.nei · 261 KB")).toBeVisible();
+  await expect(box.getByText("panel.nei", { exact: true })).toBeVisible();
   await expect(box.getByText("Variants: 1,200")).toBeVisible({
     timeout: 20_000,
   });

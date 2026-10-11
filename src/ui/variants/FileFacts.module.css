@@ -1,0 +1,28 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* The size, the chromosomes and the ploidy in columns of one width, as
+   many on a line as the tab holds: three from a tab of 44rem, one at 320
+   pixels. The columns hang on the width of the tab and not on the words,
+   so that a line that grows, "Chromosomes: 1 so far" turned "Chromosomes:
+   not counted" at a Stop, does not take the ploidy onto another line and
+   move the plots under it down, by 28 pixels at 320 when the lines
+   wrapped between them. 14rem holds "Chromosomes: 12,345 so far". */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 14rem);
+  gap: var(--space-1) var(--space-4);
+  min-inline-size: 0;
+}
+
+.fact {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* The Variants tab with the lines above the statistics. */
+.withFacts {
+  display: grid;
+  gap: var(--space-6);
+  min-inline-size: 0;
+}

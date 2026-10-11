@@ -7,7 +7,9 @@
  * focus; refused, the options of a text file and the line that sends to
  * the box; read, how it was read, the options of a CSV or the line of the
  * first sheet of an xlsx, the individuals of the variants file that the
- * file does not have with the button that copies their names, and the
+ * file does not have with the button that copies their names, the line of
+ * the rows of the file that the variants file does not have, when there
+ * are any, in the box until 11 October 2026, and the
  * table of the file, sortable, with its menu "Download…", whose CSV has
  * every row in the order sorted, with the cells as the file holds them.
  *
@@ -28,6 +30,7 @@ import {
   useTransition,
 } from "react";
 
+import { populationCounts } from "../../core/populations.ts";
 import { escaped, individualsCheck } from "../../core/project.ts";
 import type { IndividualsSource, TableRead } from "../../core/project.ts";
 import type {
@@ -67,6 +70,7 @@ import type { TableColumnId } from "./individualsTable.ts";
 import {
   individualsTabShows,
   notInFileHeading,
+  rowsNotUsedText,
   tableLabel,
   tableSizeText,
   tableWhat,
@@ -163,6 +167,7 @@ export function IndividualsTab({
             </p>
           )}
           <NotInFile individuals={individuals} />
+          <RowsNotUsed />
           <FileTable
             // A new load, or a read of other options, starts unsorted and
             // at the top.
@@ -294,6 +299,19 @@ function NotInFile({
       </div>
     </section>
   );
+}
+
+/** The line of the rows of the individuals file that name no individual
+    of the variants file, "Individuals in panel_pops.csv but not in
+    panel.nei: 18"; nothing when there are none, or the variants file is
+    not read. */
+function RowsNotUsed(): React.JSX.Element | null {
+  const text = useAppState((s) => {
+    const counts = populationCounts(s.project, s.individualsKept);
+    return counts === null ? null : rowsNotUsedText(s.project, counts);
+  });
+  if (text === null) return null;
+  return <p className={classOf(styles, "line")}>{text}</p>;
 }
 
 /** The button that copies the names to the clipboard, one a line, for a

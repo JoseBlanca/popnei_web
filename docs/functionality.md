@@ -67,7 +67,12 @@ along each chromosome, the number of variants in each window of the
 genome, which popnei will give (decided by the owner on 26 September
 2026). The new page, popgen2.html, gives the number of chromosomes and
 leaves out the variants on each of them for now (the owner, 6 October
-2026). It reads each variants file once, as the owner decided on 7
+2026). Its box of the variants file, headed "Variants", shows the name
+of the file, the individuals, the variants and the FILTER failures; the
+size of the file, the chromosomes and the ploidy are at the top of its
+Variants tab, as the owner asked on 11 October 2026 so that the boxes,
+which stand above every tab, stay small
+(`docs/specs/steps/popgen2-input.md`). It reads each variants file once, as the owner decided on 7
 October 2026 (docs/plans/one-pass.md). Every variant, whatever its
 FILTER column, stays in the count and the statistics, since the filter
 of the FILTER column, which the user sets on that page, acts only when
@@ -419,10 +424,15 @@ file. The unclassified are one population only when no individual is
 classified; otherwise the analyses per population leave them out, and
 the page says how many they are, as the owner decided the same day
 (`docs/designs/input-page.md`, approved on 9 October 2026). The page
-shows the file in a box of its own beside the variants file's, with the
-list of the column of the populations and the counts, and under a tab,
-"Individuals" ("Individuals file" until 9 October 2026), how it was read, the individuals of the variants
-file it lacks, and the whole file as a table sorted by any column
+shows the file in a box of its own, headed "Individuals", beside the
+variants file's, with the list of the column of the populations and the
+counts; with no file, the counts have one row, "Unclassified", once a
+variants file is open, and before one the box holds only its button, as
+the owner decided on 11 October 2026. Under a tab, "Individuals"
+("Individuals file" until 9 October 2026), it shows how the file was
+read, the individuals of the variants file it lacks, how many of its own
+rows name no individual of the variants file, when some do, and the
+whole file as a table sorted by any column
 (`docs/specs/steps/popgen2-input.md`, built on the branch
 `individuals-file` on 9 October 2026 and not yet tried by the owner).
 `popgen.html` keeps the rule above.

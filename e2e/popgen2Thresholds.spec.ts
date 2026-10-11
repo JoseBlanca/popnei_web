@@ -646,7 +646,7 @@ test("SF9 D5 a file dropped while a run of the keys waits opens with the thresho
   await expect(
     page
       .getByRole("region", { name: "File information" })
-      .getByText("panel.nei · 261 KB"),
+      .getByText("panel.nei", { exact: true }),
   ).toBeVisible({ timeout: 20_000 });
   await expect(
     page.getByRole("button", {

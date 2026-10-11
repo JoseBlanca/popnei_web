@@ -145,7 +145,7 @@ describe("WS9 the Save of the error bar", () => {
     expect(
       barText(defect("out of memory", "countStopped"), "noSaving", false),
     ).toBe(
-      "The application stopped as it counted the variants and calculated the statistics: out of memory. Press Start again in the box Variants file, and if it stops again, reload the page and open your files again.",
+      "The application stopped as it counted the variants and calculated the statistics: out of memory. Press Start again in the box Variants, and if it stops again, reload the page and open your files again.",
     );
     expect(
       barText(defect("out of memory", "writeStopped"), "noSaving", false),

@@ -4391,7 +4391,7 @@ test("popgen.html, its code not loaded", async ({ page }) => {
 async function pickOnNewPage(page: Page, file: string): Promise<void> {
   const chooser = page.waitForEvent("filechooser");
   await page
-    .getByRole("region", { name: "Variants file" })
+    .getByRole("region", { name: "Variants", exact: true })
     .getByRole("button", { name: /^Open (another )?variants file…$/ })
     .click();
   await (
@@ -4403,6 +4403,12 @@ async function pickOnNewPage(page: Page, file: string): Promise<void> {
     its variants. */
 function newPageCount(page: Page): Locator {
   return page.getByRole("region", { name: "File information" });
+}
+
+/** The size, the chromosomes and the ploidy of the file open on
+    popgen2.html, at the top of the Variants tab. */
+function newPageFacts(page: Page): Locator {
+  return page.getByRole("group", { name: "About the file" });
 }
 
 /** The statistics of the open file on popgen2.html, above the open
@@ -4419,7 +4425,7 @@ async function pickIndividualsOnNewPage(
 ): Promise<void> {
   const chooser = page.waitForEvent("filechooser");
   await page
-    .getByRole("region", { name: "Individuals file", exact: true })
+    .getByRole("region", { name: "Individuals", exact: true })
     .getByRole("button", { name: /^Open (another )?individuals file…$/u })
     .click();
   await (
@@ -4437,7 +4443,7 @@ async function pickIndividualsOnNewPage(
 
 /** The box of the individuals file on popgen2.html. */
 function individualsBoxOnNewPage(page: Page): Locator {
-  return page.getByRole("region", { name: "Individuals file", exact: true });
+  return page.getByRole("region", { name: "Individuals", exact: true });
 }
 
 /** panel_pops.csv with `edit` applied to each line but the header. */
@@ -4599,7 +4605,7 @@ for (const theme of ["light", "dark"] as const) {
       }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
         await expect(
-          newPageCount(page).getByText("Chromosomes: 1"),
+          newPageFacts(page).getByText("Chromosomes: 1"),
         ).toBeVisible();
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
         await save(page, `popgen2-input-tabs${at}-${theme}`);
@@ -4823,7 +4829,7 @@ for (const theme of ["light", "dark"] as const) {
       test("the summary", async ({ page }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
         await expect(
-          newPageCount(page).getByText("Chromosomes: 1"),
+          newPageFacts(page).getByText("Chromosomes: 1"),
         ).toBeVisible();
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
         await save(page, `popgen2-summary${at}-${theme}`);
@@ -4832,7 +4838,7 @@ for (const theme of ["light", "dark"] as const) {
       test("a .nei summary", async ({ page }) => {
         await pickOnNewPage(page, "panel.nei");
         await expect(
-          newPageCount(page).getByText("Chromosomes: 1"),
+          newPageFacts(page).getByText("Chromosomes: 1"),
         ).toBeVisible();
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
         await save(page, `popgen2-nei-summary${at}-${theme}`);
@@ -4853,7 +4859,7 @@ for (const theme of ["light", "dark"] as const) {
       }) => {
         await pickOnNewPage(page, "panel.nei");
         await expect(
-          newPageCount(page).getByText("Chromosomes: 1"),
+          newPageFacts(page).getByText("Chromosomes: 1"),
         ).toBeVisible();
         await pickOnNewPage(page, "panel_pops.csv");
         await expect(
@@ -4868,7 +4874,7 @@ for (const theme of ["light", "dark"] as const) {
         // under its greyed tab, is described by the store's reason too.
         await expect(
           page
-            .getByRole("region", { name: "Variants file" })
+            .getByRole("region", { name: "Variants", exact: true })
             .getByText(/^popnei could not read bad\.vcf/u),
         ).toBeVisible();
         await save(page, `popgen2-not-read${at}-${theme}`);
@@ -5031,7 +5037,7 @@ for (const theme of ["light", "dark"] as const) {
           name: "Download the plot of the proportion of missing genotypes of the variants",
         });
         await expect(button).toHaveAccessibleDescription(
-          "Download once stopped.vcf.gz is read to the end: its reading was stopped; start it again in the box Variants file.",
+          "Download once stopped.vcf.gz is read to the end: its reading was stopped; start it again in the box Variants.",
         );
         await button.scrollIntoViewIfNeeded();
         await button.focus();

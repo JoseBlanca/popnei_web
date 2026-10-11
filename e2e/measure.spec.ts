@@ -2726,15 +2726,13 @@ test("IN6 D4 the table of individuals_10000.xlsx under the tab Individuals file 
   await page.goto("popgen2.html");
   const chooser = page.waitForEvent("filechooser");
   await page
-    .getByRole("region", { name: "Individuals file", exact: true })
+    .getByRole("region", { name: "Individuals", exact: true })
     .getByRole("button", { name: "Open individuals file…" })
     .click();
   await (
     await chooser
   ).setFiles(join(import.meta.dirname, "fixtures", "individuals_10000.xlsx"));
-  await page
-    .getByRole("tab", { name: "Individuals file", exact: true })
-    .click();
+  await page.getByRole("tab", { name: "Individuals", exact: true }).click();
   const table = page.getByRole("grid", {
     name: "The table of individuals_10000.xlsx",
   });
@@ -2885,7 +2883,7 @@ test("AP5 D5 the table of individuals_10000.xlsx under the tab Individuals of po
   await page.goto("popgen2.html");
   const chooser = page.waitForEvent("filechooser");
   await page
-    .getByRole("region", { name: "Individuals file", exact: true })
+    .getByRole("region", { name: "Individuals", exact: true })
     .getByRole("button", { name: /^Open (another )?individuals file…$/u })
     .click();
   await (

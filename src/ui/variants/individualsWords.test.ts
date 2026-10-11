@@ -16,11 +16,7 @@ import type {
 } from "../../core/individualsKept.ts";
 import { populationCounts } from "../../core/populations.ts";
 import type { PopulationCounts } from "../../core/populations.ts";
-import {
-  emptyProject,
-  individualsBoxNeeds,
-  loadVariants,
-} from "../../core/project.ts";
+import { emptyProject, individualsBoxNeeds } from "../../core/project.ts";
 import type {
   IndividualsRead,
   IndividualsSource,
@@ -48,10 +44,12 @@ import {
   countsShown,
   individualsReadAnnouncement,
   individualsTabShows,
+  UNCLASSIFIED_ROW,
   noColumnQualifiedText,
-  noIndividualsFileText,
+  noFileCounts,
   notInFileHeading,
   removeLabel,
+  rowsNotUsedText,
   tableLabel,
   tableSizeText,
 } from "./individualsWords.ts";
@@ -59,79 +57,10 @@ import type { PassWait } from "./individualsWords.ts";
 
 const FILE_ID = "0123456789abcdef0123456789abcdef";
 
-/** A project with the `.nei` file `name` opened, not yet read. */
-function opened(name: string): Project {
-  return loadVariants(emptyProject("popgen"), {
-    fileId: FILE_ID,
-    name,
-    size: 1000,
-    format: "nei",
-    readOptions: null,
-  });
-}
-
-/** The same, read with `numIndividuals` individuals. */
-function read(name: string, numIndividuals: number): Project {
-  const p = opened(name);
-  if (p.variants === null) throw new Error("no variants file opened");
-  return {
-    ...p,
-    variants: {
-      ...p.variants,
-      read: {
-        kind: "read",
-        individuals: Array.from(
-          { length: numIndividuals },
-          (_, i) => `s${String(i).padStart(3, "0")}`,
-        ),
-        ploidy: 2,
-        numVars: null,
-        keepsPassed: false,
-      },
-    },
-  };
-}
-
 describe("IN3 the words of no individuals file on popgen2.html", () => {
   test("the heading of the box and the words of the tab", () => {
-    expect(INDIVIDUALS_BOX_NAME).toBe("Individuals file");
+    expect(INDIVIDUALS_BOX_NAME).toBe("Individuals");
     expect(NO_INDIVIDUALS_FILE_TAB).toBe("No individuals file open.");
-  });
-
-  test("with no variants file, the first sentence alone", () => {
-    expect(noIndividualsFileText(emptyProject("popgen").variants)).toBe(
-      "No individuals file: every individual is unclassified.",
-    );
-  });
-
-  test("before the variants file has given its individuals, the first sentence alone", () => {
-    expect(noIndividualsFileText(opened("panel.nei").variants)).toBe(
-      "No individuals file: every individual is unclassified.",
-    );
-  });
-
-  test("with a variants file read, its individuals and its name", () => {
-    expect(noIndividualsFileText(read("panel.nei", 200).variants)).toBe(
-      "No individuals file: all 200 individuals of panel.nei are unclassified, and the analyses per population will take them as one population.",
-    );
-  });
-
-  test("a count of thousands with its comma", () => {
-    expect(noIndividualsFileText(read("big.vcf.gz", 1250).variants)).toBe(
-      "No individuals file: all 1,250 individuals of big.vcf.gz are unclassified, and the analyses per population will take them as one population.",
-    );
-  });
-
-  test("one individual, in the singular", () => {
-    expect(noIndividualsFileText(read("one.nei", 1).variants)).toBe(
-      "No individuals file: the one individual of one.nei is unclassified.",
-    );
-  });
-
-  test("a character that would reverse the text is written escaped in the name", () => {
-    expect(noIndividualsFileText(read("a\u202eb.nei", 2).variants)).toBe(
-      "No individuals file: all 2 individuals of a\\u202eb.nei are unclassified, and the analyses per population will take them as one population.",
-    );
   });
 });
 
@@ -404,7 +333,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
     );
   });
 
-  test("the caption, the headers and the counts, a count not known written … and read not counted yet", () => {
+  test("the name of the counts for a screen reader, the headers and the counts, a count not known written … and read not counted yet", () => {
     expect(countsCaption("panel.nei")).toBe(
       "Individuals of panel.nei after the filters of individuals",
     );
@@ -418,16 +347,11 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
     expect(countText(null)).toBe("…");
   });
 
-  test("both files read, every individual classified: the table, and the line of the rows not used, 0", () => {
+  test("both files read, every individual classified: the table alone, with no line of the rows not used", () => {
     const p = project();
     expect(countsShown(p, countsOf(p), "running")).toEqual({
       table: true,
-      lines: [
-        {
-          kind: "line",
-          text: "Individuals in panel_pops.csv but not in panel.nei: 0",
-        },
-      ],
+      lines: [],
     });
   });
 
@@ -447,10 +371,6 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
         {
           kind: "line",
           text: "Unclassified, left out of the analyses per population: 7 individuals kept, 3 with an empty cell in popcat and 4 that are not in panel_pops.csv. Not in panel_pops.csv: s031, s044, s102 and 1 more; the Individuals tab lists them all.",
-        },
-        {
-          kind: "line",
-          text: "Individuals in panel_pops.csv but not in panel.nei: 0",
         },
       ],
     });
@@ -520,10 +440,6 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
           kind: "warning",
           text: "none of the 200 individuals of panel.nei is in panel_pops.csv, so all of them are unclassified. The first column of panel_pops.csv has to hold their names as panel.nei writes them: panel.nei starts with s000, and panel_pops.csv with S-000.",
         },
-        {
-          kind: "line",
-          text: "Individuals in panel_pops.csv but not in panel.nei: 200",
-        },
       ],
     });
   });
@@ -537,15 +453,11 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
           kind: "line",
           text: "All 200 individuals kept are unclassified, and the analyses per population will take them as one population.",
         },
-        {
-          kind: "line",
-          text: "Individuals in panel_pops.csv but not in panel.nei: 0",
-        },
       ],
     });
   });
 
-  test("a column of 21 values: its warning and the line of the rows not used, no table", () => {
+  test("a column of 21 values: its warning, no table", () => {
     const p = project({
       read: tableRead(manyValues(21)),
       grouping: { kind: "populations", column: "pop" },
@@ -556,10 +468,6 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
         {
           kind: "warning",
           text: "pop has 21 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
-        },
-        {
-          kind: "line",
-          text: "Individuals in panel_pops.csv but not in panel.nei: 0",
         },
       ],
     });
@@ -610,20 +518,14 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       "Not counted: panel.nei could not be read to the end; the box of panel.nei says why.",
     ],
   ])(
-    "a threshold on and the pass not finished, %s: the table of …, the line of why, the line of the rows",
+    "a threshold on and the pass not finished, %s: the table of …, the line of why",
     (wait, words) => {
       const p = project({ individualFilters: missingAt(0.03) });
       const counts = countsOf(p);
       expect(counts.known).toBe(false);
       expect(countsShown(p, counts, wait)).toEqual({
         table: true,
-        lines: [
-          { kind: "line", text: words },
-          {
-            kind: "line",
-            text: "Individuals in panel_pops.csv but not in panel.nei: 0",
-          },
-        ],
+        lines: [{ kind: "line", text: words }],
       });
     },
   );
@@ -638,10 +540,6 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       {
         kind: "warning",
         text: "p\\u202eop has 21 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
-      },
-      {
-        kind: "line",
-        text: "Individuals in a\\u202eb.csv but not in panel.nei: 0",
       },
     ]);
   });
@@ -697,7 +595,7 @@ describe("IN5 D1 what the Individuals tab shows", () => {
     );
     expect(individualsTabShows(refused, null)).toEqual({
       kind: "refused",
-      text: "panel_pops.csv could not be read; the box Individuals file says why.",
+      text: "panel_pops.csv could not be read; the box Individuals says why.",
       options: true,
     });
   });
@@ -730,7 +628,7 @@ describe("IN5 D1 what the Individuals tab shows", () => {
         ),
       ).toEqual({
         kind: "refused",
-        text: "panel_pops.xlsx could not be read; the box Individuals file says why.",
+        text: "panel_pops.xlsx could not be read; the box Individuals says why.",
         options: false,
       });
     }
@@ -866,5 +764,85 @@ describe("IN5 D1 what the status region says of a read of the individuals file",
     expect(words).toMatch(
       /^panel_pops\.csv could not be read: .*\. Choose another separator in the Individuals tab, or open a corrected file\.$/u,
     );
+  });
+});
+
+describe("NU8 R1 the counts with no individuals file, and the line of the rows not used in the Individuals tab", () => {
+  test("no variants file, or one not yet read: no counts, the box holds its button alone", () => {
+    const none = project({ read: null, variantsIndividuals: null });
+    expect(noFileCounts(none, keptOf(none), "running")).toBeNull();
+    const empty = emptyProject("popgen");
+    expect(noFileCounts(empty, null, "running")).toBeNull();
+  });
+
+  test("a variants file read: one row, Unclassified, with every individual kept, and no line", () => {
+    const p = project({ read: null });
+    expect(UNCLASSIFIED_ROW).toBe("Unclassified");
+    expect(noFileCounts(p, keptOf(p), "running")).toEqual({
+      kept: 200,
+      lines: [],
+    });
+  });
+
+  test("a threshold that keeps some: the individuals it keeps", () => {
+    const p = project({ read: null, individualFilters: missingAt(0.03) });
+    const stats: IndividualStats = {
+      individuals: PANEL_INDIVIDUALS,
+      missingGtRate: Float64Array.from(PANEL_INDIVIDUALS, (_, i) =>
+        i < 150 ? 0 : 0.5,
+      ),
+      obsHetRate: new Float64Array(PANEL_INDIVIDUALS.length).fill(0.3),
+    };
+    expect(noFileCounts(p, keptOf(p, stats), "running")).toEqual({
+      kept: 150,
+      lines: [],
+    });
+  });
+
+  test.each<[PassWait, string]>([
+    [
+      "running",
+      "The individuals the filters keep are counted once panel.nei is read to the end.",
+    ],
+    [
+      "stopped",
+      "Not counted: the reading of panel.nei was stopped. Start it again in the box of panel.nei to count the individuals the filters keep.",
+    ],
+    [
+      "failed",
+      "Not counted: panel.nei could not be read to the end; the box of panel.nei says why.",
+    ],
+  ])(
+    "a threshold on and the pass not finished, %s: the count not known, and the line of why",
+    (wait, words) => {
+      const p = project({ read: null, individualFilters: missingAt(0.03) });
+      expect(noFileCounts(p, keptOf(p), wait)).toEqual({
+        kept: null,
+        lines: [{ kind: "line", text: words }],
+      });
+    },
+  );
+
+  test("the rows not used: none, no line; some, their count", () => {
+    const p = project();
+    expect(rowsNotUsedText(p, countsOf(p))).toBeNull();
+    const fewer = project({
+      variantsIndividuals: PANEL_INDIVIDUALS.slice(0, 182),
+    });
+    expect(rowsNotUsedText(fewer, countsOf(fewer))).toBe(
+      "Individuals in panel_pops.csv but not in panel.nei: 18",
+    );
+    const renamed = project({
+      name: "a‮b.csv",
+      variantsIndividuals: PANEL_INDIVIDUALS.slice(0, 199),
+    });
+    expect(rowsNotUsedText(renamed, countsOf(renamed))).toBe(
+      "Individuals in a\\u202eb.csv but not in panel.nei: 1",
+    );
+  });
+
+  test("the rows not used before the variants file is read: no line", () => {
+    const p = project({ variantsIndividuals: null });
+    expect(rowsNotUsedText(p, countsOf(p, null))).toBeNull();
   });
 });

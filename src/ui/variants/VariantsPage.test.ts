@@ -64,8 +64,8 @@ declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
 }
 
-/** The number of chromosomes for which the line of the chromosomes so
-    far throws, or null. */
+/** The number of variants read so far for which the line of the variants
+    in the box throws, or null. */
 const inject = vi.hoisted(() => ({
   throwAt: null as number | null,
   zoneThrows: false,
@@ -139,11 +139,18 @@ vi.mock("./words.ts", async (importOriginal) => {
   const real = await importOriginal<typeof WordsModule>();
   return {
     ...real,
-    chromosomesSoFarLine: (numChroms: number): string => {
-      if (numChroms === inject.throwAt) {
+    variantsLineOf: (
+      ...args: Parameters<typeof real.variantsLineOf>
+    ): ReturnType<typeof real.variantsLineOf> => {
+      const [status] = args;
+      if (
+        status.kind === "running" &&
+        status.soFar?.analysis === "variantsSummary" &&
+        status.soFar.passStats.numVars === inject.throwAt
+      ) {
         throw new Error("a line of the box could not be drawn");
       }
-      return real.chromosomesSoFarLine(numChroms);
+      return real.variantsLineOf(...args);
     },
   };
 });
@@ -346,7 +353,7 @@ function box(): Element | null {
 test("live-stats 2 after a throw while the box of one file is drawn, the box of the next file is drawn whole, with its Stop", async () => {
   const { store, requests } = await drawPage();
   await open(store, "a".repeat(32), "first.nei");
-  inject.throwAt = 3;
+  inject.throwAt = 300;
   await act(async () => {
     requests
       .at(-1)
@@ -366,6 +373,13 @@ test("live-stats 2 after a throw while the box of one file is drawn, the box of 
     [...container.querySelectorAll("button")].map((b) => b.textContent),
   ).toContain("Stop");
 });
+
+/** The lines at the top of the Variants tab: the size of the file, its
+    chromosomes and its ploidy. */
+function factsOfTab(): string[] {
+  const facts = container.querySelector('[aria-label="About the file"]');
+  return [...(facts?.querySelectorAll("p") ?? [])].map((p) => p.textContent);
+}
 
 /** The region of the page named `name`, or null. */
 function region(name: string): Element | null {
@@ -392,16 +406,19 @@ function buttonOf(words: string): HTMLButtonElement | null {
 }
 
 describe("IN3 the page in two boxes and the row of tabs", () => {
-  test("with no file: the two boxes with their words of no file, the zone in the box of the variants file, then the five tabs with the Variants tab shown", async () => {
+  test("with no file: the two boxes, Variants and Individuals, each with its zone alone, then the five tabs with the Variants tab shown", async () => {
     await drawPage();
-    const variantsBox = region("Variants file");
-    const individualsBox = region("Individuals file");
+    const variantsBox = region("Variants");
+    const individualsBox = region("Individuals");
     expect(variantsBox).not.toBeNull();
     expect(individualsBox).not.toBeNull();
     expect(variantsBox?.contains(buttonOf("Open variants file…"))).toBe(true);
-    expect(individualsBox?.querySelector("p")?.textContent).toBe(
-      "No individuals file: every individual is unclassified.",
+    expect(individualsBox?.contains(buttonOf("Open individuals file…"))).toBe(
+      true,
     );
+    // The individuals box holds its button alone: no words and no table.
+    expect(individualsBox?.querySelector("p")).toBeNull();
+    expect(individualsBox?.querySelector("table")).toBeNull();
     const tabs = [...container.querySelectorAll('[role="tab"]')];
     expect(tabs.map((tab) => tab.textContent)).toEqual([
       "Variants",
@@ -437,26 +454,73 @@ describe("IN3 the page in two boxes and the row of tabs", () => {
           0,
     ).toBe(true);
     expect(container.textContent).toContain(
-      "No variants file open. Open one in the box Variants file.",
+      "No variants file open. Open one in the box Variants.",
     );
     // The tabs not shown are drawn, inert, those of the analyses with
     // their reasons, and their content hidden under them.
     const hidden = [...container.querySelectorAll("[inert]")];
     expect(hidden.map(shownText)).toEqual([
       "No individuals file open.",
-      "The PCA needs a variants file. Open one in the box Variants file.",
-      "The analyses of the populations need a variants file. Open one in the box Variants file.",
-      "The distances between populations need a variants file. Open one in the box Variants file.",
+      "The PCA needs a variants file. Open one in the box Variants.",
+      "The analyses of the populations need a variants file. Open one in the box Variants.",
+      "The distances between populations need a variants file. Open one in the box Variants.",
     ]);
   });
 
-  test("with a variants file read, the box of the individuals file says how many individuals of it are unclassified", async () => {
+  test("NU8 R1 with a variants file read and no individuals file, the box of the individuals has the counts of one row, Unclassified, with no caption and no Download", async () => {
     const { store } = await drawPage();
     await open(store, "a".repeat(32), "first.nei");
-    expect(region("Individuals file")?.querySelector("p")?.textContent).toBe(
-      "No individuals file: all 2 individuals of first.nei are unclassified, and the analyses per population will take them as one population.",
+    const individualsBox = region("Individuals");
+    const rows = [...(individualsBox?.querySelectorAll("tr") ?? [])].map((tr) =>
+      [...tr.querySelectorAll("th, td")].map((cell) => cell.textContent),
     );
+    expect(rows).toEqual([
+      ["Population", "Individuals"],
+      ["Unclassified", "2"],
+    ]);
+    // No words on the screen but the table's: its caption, the one
+    // paragraph, names it for a screen reader alone, hidden by the style
+    // of the box, which jsdom does not apply.
+    const named = individualsBox
+      ?.querySelector("table")
+      ?.getAttribute("aria-labelledby");
+    expect(
+      [...(individualsBox?.querySelectorAll("p") ?? [])].map((p) => p.id),
+    ).toEqual([named]);
+    expect(
+      [...(individualsBox?.querySelectorAll("button") ?? [])].some((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent).startsWith("Download"),
+      ),
+    ).toBe(false);
     expect(container.textContent).not.toContain("No variants file open.");
+  });
+
+  test("NU8 R1 the box of the variants file shows its name, individuals and variants; the size, the chromosomes and the ploidy are at the top of the Variants tab", async () => {
+    const { store, requests } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+    expect(
+      [...(box()?.querySelectorAll("p") ?? [])].map((p) => p.textContent),
+    ).toEqual(["first.nei", "Individuals: 2", "Variants: counting…"]);
+    const facts = factsOfTab();
+    expect(facts).toEqual([
+      "File size: 1 KB",
+      "Chromosomes: counting…",
+      "Ploidy: 2",
+    ]);
+    await act(async () => {
+      requests
+        .at(-1)
+        ?.soFar(summaryResult(["1", "2"], [100, 100], ["i1", "i2"]));
+      await Promise.resolve();
+    });
+    expect(
+      [...(box()?.querySelectorAll("p") ?? [])].map((p) => p.textContent),
+    ).toEqual(["first.nei", "Individuals: 2", "Variants: 200 so far"]);
+    expect(factsOfTab()).toEqual([
+      "File size: 1 KB",
+      "Chromosomes: 2 so far",
+      "Ploidy: 2",
+    ]);
   });
 
   test("the zone is outside the boundary made for each file: its button is the same element after a throw in the box of one file and the opening of the next", async () => {
@@ -464,7 +528,7 @@ describe("IN3 the page in two boxes and the row of tabs", () => {
     await open(store, "a".repeat(32), "first.nei");
     const button = buttonOf("Open another variants file…");
     expect(button).not.toBeNull();
-    inject.throwAt = 3;
+    inject.throwAt = 300;
     await act(async () => {
       requests
         .at(-1)
@@ -475,7 +539,7 @@ describe("IN3 the page in two boxes and the row of tabs", () => {
     expect(buttonOf("Open another variants file…")).toBe(button);
     await open(store, "b".repeat(32), "second.nei");
     expect(buttonOf("Open another variants file…")).toBe(button);
-    expect(region("Variants file")?.contains(button)).toBe(true);
+    expect(region("Variants")?.contains(button)).toBe(true);
   });
 });
 
@@ -509,9 +573,9 @@ describe("IN3 the boundary of the zone that opens a variants file", () => {
     );
     // The page's heading, Popnei, is in the band, in the other root.
     expect(headings).toEqual([
-      "H2 Variants file",
+      "H2 Variants",
       "H3 Opening a variants file",
-      "H2 Individuals file",
+      "H2 Individuals",
       // The heading of the PCA tab, greyed, drawn hidden under its
       // reason, with the heading of its filters.
       "H2 PCA",
@@ -528,12 +592,10 @@ describe("IN3 the boundary of the zone that opens a variants file", () => {
     expect(tabOf("Individuals").getAttribute("aria-selected")).toBe("true");
     const button = buttonOf("Open variants file…");
     expect(button).not.toBeNull();
-    expect(region("Variants file")?.contains(button)).toBe(true);
+    expect(region("Variants")?.contains(button)).toBe(true);
 
     const input =
-      region("Variants file")?.querySelector<HTMLInputElement>(
-        'input[type="file"]',
-      );
+      region("Variants")?.querySelector<HTMLInputElement>('input[type="file"]');
     if (input === null || input === undefined) throw new Error("no input");
     const picked = new File(["##fileformat=VCFv4.2\n"], "panel.vcf");
     Object.defineProperty(input, "files", { value: [picked] });
@@ -644,8 +706,8 @@ describe("AP1 the row of five tabs on the page", () => {
     expect(caught).toEqual([
       new Error("popnei_web defect: an individuals file read gave no counts."),
     ]);
-    expect(region("Variants file")).not.toBeNull();
-    expect(region("Individuals file")).not.toBeNull();
+    expect(region("Variants")).not.toBeNull();
+    expect(region("Individuals")).not.toBeNull();
     expect(buttonOf("Open variants file…")).not.toBeNull();
     expect(container.querySelector('[role="tablist"]')).toBeNull();
   });
@@ -763,8 +825,8 @@ describe("AP6 the boundary of the PCA tab", () => {
       tabOf("Individuals").click();
       await Promise.resolve();
     });
-    expect(region("Variants file")).not.toBeNull();
-    expect(region("Individuals file")).not.toBeNull();
+    expect(region("Variants")).not.toBeNull();
+    expect(region("Individuals")).not.toBeNull();
     expect(container.querySelector('[role="tablist"]')).not.toBeNull();
   });
 });

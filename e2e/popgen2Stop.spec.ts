@@ -293,7 +293,9 @@ test("SF10 D2 another file drops the plots of the Stop", async ({
   await stop(page);
 
   await pick(page, join(FIXTURES, "panel.nei"));
-  await expect(info(page).getByText(/^panel\.nei · /u)).toBeVisible();
+  await expect(
+    info(page).getByText("panel.nei", { exact: true }),
+  ).toBeVisible();
   await expect(stats(page).locator("svg.chart")).toHaveCount(0);
   await release(page, "allSoFar");
   await release(page, "result");

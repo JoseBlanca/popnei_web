@@ -32,12 +32,12 @@ const MISSING = "Proportion of missing genotypes";
 
 /** The box of the variants file, named by its heading. */
 function variantsBox(page: Page): Locator {
-  return page.getByRole("region", { name: "Variants file", exact: true });
+  return page.getByRole("region", { name: "Variants", exact: true });
 }
 
 /** The box of the individuals file, named by its heading. */
 function individualsBox(page: Page): Locator {
-  return page.getByRole("region", { name: "Individuals file", exact: true });
+  return page.getByRole("region", { name: "Individuals", exact: true });
 }
 
 /** The label of the tab named `name`. */
@@ -158,7 +158,7 @@ test("IN3 D2 the tabs by the keyboard alone: the row is one stop of the Tab key,
   }
   await expect(tab(page, "Variants")).toHaveAttribute("aria-selected", "true");
   await expect(
-    page.getByText("No variants file open. Open one in the box Variants file."),
+    page.getByText("No variants file open. Open one in the box Variants."),
   ).toBeVisible();
   await expect(page.getByText("No individuals file open.")).toBeHidden();
 
@@ -170,7 +170,7 @@ test("IN3 D2 the tabs by the keyboard alone: the row is one stop of the Tab key,
   );
   await expect(page.getByText("No individuals file open.")).toBeVisible();
   await expect(
-    page.getByText("No variants file open. Open one in the box Variants file."),
+    page.getByText("No variants file open. Open one in the box Variants."),
   ).toBeHidden();
 
   await page.keyboard.press("ArrowLeft");
@@ -375,9 +375,15 @@ test("IN3 D2 axe on the page with each tab shown, light and dark, with no file a
   makeAxeBuilder,
 }) => {
   await openPage(page);
-  await expect(individualsBox(page)).toContainText(
-    "No individuals file: every individual is unclassified.",
-  );
+  // With no file, the box of the individuals holds its button alone
+  // (NU8 R1).
+  await expect(
+    individualsBox(page).getByRole("button", {
+      name: "Open individuals file…",
+    }),
+  ).toBeVisible();
+  await expect(individualsBox(page).getByRole("paragraph")).toHaveCount(0);
+  await expect(individualsBox(page).getByRole("table")).toHaveCount(0);
   await expectAxeBothSchemes(page, makeAxeBuilder);
   await tab(page, "Individuals").click();
   await expectAxeBothSchemes(page, makeAxeBuilder);
@@ -385,9 +391,10 @@ test("IN3 D2 axe on the page with each tab shown, light and dark, with no file a
   await tab(page, "Variants").click();
   await pick(page, "panel.vcf.gz");
   await expect(page.locator("svg.chart")).toHaveCount(6, { timeout: 20_000 });
-  await expect(individualsBox(page)).toContainText(
-    "No individuals file: all 200 individuals of panel.vcf.gz are unclassified, and the analyses per population will take them as one population.",
-  );
+  // With a variants file and no individuals file, the counts of one row,
+  // Unclassified (NU8 R1).
+  await expectCounts(page, [["Unclassified", "200"]]);
+  await expect(individualsBox(page)).not.toContainText("No individuals file");
   await expectAxeBothSchemes(page, makeAxeBuilder);
   await tab(page, "Individuals").click();
   await expectAxeBothSchemes(page, makeAxeBuilder);
@@ -535,13 +542,43 @@ test("IN6 D2 panel.nei then panel_pops.csv, and the other order: the list on pop
     await expect(individualsBox(page).getByText(/^Unclassified/u)).toHaveCount(
       0,
     );
+    // No caption on the screen, no Download and no line of the rows not
+    // used, in the box or the tab, since every row of panel_pops.csv is
+    // an individual of panel.nei (NU8 R1).
+    // The caption names the table for a screen reader, in a box of one
+    // pixel clipped to nothing, as words for a screen reader alone are.
+    const caption = await individualsBox(page)
+      .getByText(/after the filters of individuals/u)
+      .boundingBox();
+    expect(caption?.width ?? 0).toBeLessThanOrEqual(1);
+    expect(caption?.height ?? 0).toBeLessThanOrEqual(1);
     await expect(
-      individualsBox(page).getByText(
-        "Individuals in panel_pops.csv but not in panel.nei: 0",
-        { exact: true },
-      ),
-    ).toBeVisible();
+      individualsBox(page).getByRole("button", { name: /^Download/u }),
+    ).toHaveCount(0);
+    await expect(page.getByText(/but not in panel\.nei/u)).toHaveCount(0);
   }
+});
+
+test("NU8 R1 an individuals file with two rows panel.nei does not have: the line of the rows not used in the Individuals tab, not in the box", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, "panel.nei");
+  const lines = await panelPopsLines();
+  await pickIndividuals(page, {
+    name: "extra.csv",
+    text: `${[...lines, "x001,p0", "x002,p1"].join("\n")}\n`,
+  });
+  await expectCounts(page, ALL_COUNTS);
+  await expect(individualsBox(page)).not.toContainText("but not in");
+  await tab(page, "Individuals").click();
+  await expect(
+    page
+      .getByRole("tabpanel")
+      .getByText("Individuals in extra.csv but not in panel.nei: 2", {
+        exact: true,
+      }),
+  ).toBeVisible();
 });
 
 for (const [variants, file, column, pops] of [
@@ -925,7 +962,7 @@ test("IN6 D2 a CSV of semicolons read with the comma: the refusal of its row in 
   await expect(individualsBox(page)).toContainText("line 2");
   await expect(
     panel.getByText(
-      "decimals.csv could not be read; the box Individuals file says why.",
+      "decimals.csv could not be read; the box Individuals says why.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -989,7 +1026,7 @@ test("IN6 D2 a CSV named .xlsx is read as text, with its options under the tab; 
   await expect(panel.getByRole("button", { name: "Separator" })).toHaveCount(0);
   await expect(
     panel.getByText(
-      "old.csv could not be read; the box Individuals file says why.",
+      "old.csv could not be read; the box Individuals says why.",
       { exact: true },
     ),
   ).toBeVisible();

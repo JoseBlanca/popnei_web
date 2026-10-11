@@ -52,7 +52,7 @@ const SUBJECTS: Readonly<Record<AnalysisTabId, string>> = {
 const TWO_POPULATIONS = `${SUBJECTS.distances} at least two populations`;
 
 /** Where the user chooses another column. */
-const ANOTHER_COLUMN = "Choose another column in the box Individuals file.";
+const ANOTHER_COLUMN = "Choose another column in the box Individuals.";
 
 /** What to do when the filters leave too few populations. */
 const LOOSEN = "Loosen the filters of the individuals in the Variants tab.";
@@ -69,26 +69,26 @@ export function greyedText(tab: AnalysisTabId, reason: TabGreyed): string {
   const subject = SUBJECTS[tab];
   switch (reason.kind) {
     case "noVariants":
-      return `${subject} a variants file. Open one in the box Variants file.`;
+      return `${subject} a variants file. Open one in the box Variants.`;
     case "variantsOpening":
       return `${subject} a variants file: ${escaped(reason.name)} is being opened.`;
     case "variantsFailed":
-      return `${subject} a variants file: ${escaped(reason.name)} could not be opened; the box Variants file says why and what to do.`;
+      return `${subject} a variants file: ${escaped(reason.name)} could not be opened; the box Variants says why and what to do.`;
     case "noIndividuals":
       return `${TWO_POPULATIONS}. Open an individuals file that assigns the individuals to them.`;
     case "individualsReading":
       return `${TWO_POPULATIONS}: ${escaped(reason.name)} is being read.`;
     case "individualsFailed":
-      return `${TWO_POPULATIONS}: ${escaped(reason.name)} could not be read; the box Individuals file says why and what to do.`;
+      return `${TWO_POPULATIONS}: ${escaped(reason.name)} could not be read; the box Individuals says why and what to do.`;
     case "noColumnToChoose":
       if (!reason.oneColumn) {
-        return `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again in the box Individuals file.`;
+        return `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again in the box Individuals.`;
       }
       return reason.textFile
         ? `${TWO_POPULATIONS}, and ${escaped(reason.name)} was read as a single column, the names of the individuals. If its columns are separated by another character, choose that separator in the Individuals tab.`
-        : `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column to choose besides the names of the individuals. Add a column of the populations to it and open it again in the box Individuals file.`;
+        : `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column to choose besides the names of the individuals. Add a column of the populations to it and open it again in the box Individuals.`;
     case "noColumn":
-      return `${TWO_POPULATIONS}, and no column of the populations is chosen. Choose one in the box Individuals file.`;
+      return `${TWO_POPULATIONS}, and no column of the populations is chosen. Choose one in the box Individuals.`;
     case "tooManyValues":
       return `${TWO_POPULATIONS}, and ${shown(reason.column)} has ${grouped(reason.numValues)} values, more than the ${String(MAX_LISTED_POPULATIONS)} a column of populations can have. ${ANOTHER_COLUMN}`;
     case "fewPopulations":
@@ -107,7 +107,7 @@ function fewPopulationsText(
 ): string {
   const variants = escaped(reason.variantsName);
   const individuals = escaped(reason.individualsName);
-  const choose = `Choose another column of the populations in the box Individuals file, or add the populations to ${individuals} and open it again.`;
+  const choose = `Choose another column of the populations in the box Individuals, or add the populations to ${individuals} and open it again.`;
   if (reason.numPopulations === 1) {
     return `${shown(reason.column)} gives 1 population among the individuals of ${variants}. ${choose}`;
   }

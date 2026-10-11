@@ -2,12 +2,13 @@
  * The lines of the variants file on popgen2.html, in its box above the
  * zone that opens one (docs/specs/steps/popgen2-input.md, "The box of
  * the variants file"; docs/plans/open-variants.md, "Two widgets" and "Round 3"; the owner's
- * layouts and decisions of 6 October 2026). It says what is known of the
- * file open, line by line: its name and size, its individuals, its
- * variants, the variants that failed their FILTER, its chromosomes and
- * its ploidy, the file's. What the opening knows is shown at once; the
- * individuals and the ploidy once the file is read; the variants, the
- * FILTER failures and the chromosomes once they are counted, by the one
+ * layouts and decisions of 6 and 11 October 2026). It says what matters
+ * most of the file open, line by line: its name, its individuals, its
+ * variants and the variants that failed their FILTER; the size, the
+ * chromosomes and the ploidy are at the top of the Variants tab since 11
+ * October 2026 (FileFacts.tsx). The name is shown at once; the
+ * individuals once the file is read; the variants and the
+ * FILTER failures once they are counted, by the one
  * pass that also calculates the statistics of the file, which starts by
  * itself (autoRuns.ts; docs/plans/live-stats.md), with those of the
  * variants read so far while it runs, from its results so far. The line
@@ -28,7 +29,7 @@
  */
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 
-import { numChroms } from "../../core/analyses/variantsSummary.ts";
+import { escaped } from "../../core/project.ts";
 import type { VariantSource } from "../../core/project.ts";
 import type { AnalysisStatus } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
@@ -46,31 +47,21 @@ import type { Refusal } from "./OpenVariants.tsx";
 import { chainButton, chainStatuses } from "./chain.ts";
 import styles from "./Variants.module.css";
 import {
-  CHROMOSOMES_COUNTING,
-  CHROMOSOMES_NOT_COUNTED,
-  CHROMOSOMES_READING,
   COUNT_BAR_LABEL,
   FAILURES_READING,
   INDIVIDUALS_READING,
   INFO_NAME,
-  PLOIDY_READING,
   PYTHON_NAME,
   READING_TIME_LINE,
   START_AGAIN_LABEL,
-  VARIANTS_NOT_COUNTED,
   VARIANTS_READING,
-  chromosomesLine,
-  chromosomesSoFarLine,
-  countingVariantsLine,
   failedText,
   failuresLineOf,
   individualsLine,
-  nameAndSizeText,
   openFailure,
-  ploidyLine,
   stoppedText,
   summaryStatus,
-  variantsLine,
+  variantsLineOf,
 } from "./words.ts";
 
 /** What the box is drawn with. */
@@ -162,7 +153,7 @@ function Load({
   const { read } = variants;
   return (
     <div ref={linesRef} className={classOf(styles, "lines")}>
-      <p className={classOf(styles, "fileName")}>{nameAndSizeText(variants)}</p>
+      <p className={classOf(styles, "fileName")}>{escaped(variants.name)}</p>
       {read.kind === "pending" && (
         <>
           <p className={classOf(styles, "line")}>{INDIVIDUALS_READING}</p>
@@ -170,8 +161,6 @@ function Load({
           {variants.format === "vcf" && (
             <p className={classOf(styles, "line")}>{FAILURES_READING}</p>
           )}
-          <p className={classOf(styles, "line")}>{CHROMOSOMES_READING}</p>
-          <p className={classOf(styles, "line")}>{PLOIDY_READING}</p>
           <div className={classOf(styles, "progress")}>
             <p className={classOf(styles, "progressLine")}>
               {READING_TIME_LINE}{" "}
@@ -211,7 +200,6 @@ function Load({
           <Count
             autoRuns={autoRuns}
             onCountButton={onCountButton}
-            ploidy={ploidyLine(read.ploidy)}
             refused={refused}
             recordsFilter={read.keepsPassed}
           />
@@ -225,9 +213,6 @@ function Load({
 interface CountProps {
   readonly autoRuns: AutoRuns;
   readonly onCountButton: (node: HTMLButtonElement | null) => void;
-  /** The line of the ploidy, drawn between the lines of the count and
-      the row of its progress. */
-  readonly ploidy: string;
   /** Whether the words of a file not opened follow the lines. */
   readonly refused: boolean;
   /** Whether the file records the FILTER of its variants, as its opening
@@ -236,13 +221,12 @@ interface CountProps {
   readonly recordsFilter: boolean;
 }
 
-/** The lines of the variants and of the chromosomes, in each state of
-    their count, the line of the ploidy, the row of the progress with Stop
-    or Start again, and a failure of the count after them. */
+/** The lines of the variants and of the FILTER failures, in each state
+    of their count, the row of the progress with Stop or Start again, and
+    a failure of the count after them. */
 function Count({
   autoRuns,
   onCountButton,
-  ploidy,
   refused,
   recordsFilter,
 }: CountProps): React.JSX.Element {
@@ -296,7 +280,6 @@ function Count({
           recordsFilter={recordsFilter}
         />
       </div>
-      <p className={classOf(styles, "line")}>{ploidy}</p>
       {/* The row goes when it holds nothing and words of a problem
           follow, a failure of the count or a file not opened, for them
           to follow the lines: the height of the box changes then
@@ -364,61 +347,23 @@ interface CountLinesProps {
   readonly recordsFilter: boolean;
 }
 
-/** The lines of the variants, of the FILTER failures and of the
-    chromosomes: their numbers, or the state of their count in their
-    place; no line of the FILTER failures for a file that did not record
-    them. */
+/** The lines of the variants and of the FILTER failures: their numbers,
+    or the state of their count in their place; no line of the FILTER
+    failures for a file that did not record them. */
 function CountLines({
   status,
   stopped,
   recordsFilter,
 }: CountLinesProps): React.JSX.Element {
   const failures = failuresLineOf(status, stopped, recordsFilter);
-  let lines: readonly [string, string];
-  switch (status.kind) {
-    case "running":
-      // From the first result so far, the variants and the chromosomes
-      // read so far, and the share on the bar alone.
-      lines =
-        status.soFar === null
-          ? [
-              countingVariantsLine(
-                status.progress === null
-                  ? null
-                  : progressShare(status.progress),
-              ),
-              CHROMOSOMES_COUNTING,
-            ]
-          : [
-              countingVariantsLine(null, status.soFar.passStats.numVars),
-              chromosomesSoFarLine(numChroms(status.soFar)),
-            ];
-      break;
-    case "ready":
-    case "removed":
-      // Not stopped, the count starts by itself in a moment.
-      lines = stopped
-        ? [VARIANTS_NOT_COUNTED, CHROMOSOMES_NOT_COUNTED]
-        : [countingVariantsLine(null), CHROMOSOMES_COUNTING];
-      break;
-    case "locked":
-    case "error":
-      lines = [VARIANTS_NOT_COUNTED, CHROMOSOMES_NOT_COUNTED];
-      break;
-    case "done":
-      lines = [
-        variantsLine(status.result.passStats.numVars),
-        chromosomesLine(numChroms(status.result)),
-      ];
-      break;
-  }
   return (
     <>
-      <p className={classOf(styles, "line")}>{lines[0]}</p>
+      <p className={classOf(styles, "line")}>
+        {variantsLineOf(status, stopped)}
+      </p>
       {failures !== null && (
         <p className={classOf(styles, "line")}>{failures}</p>
       )}
-      <p className={classOf(styles, "line")}>{lines[1]}</p>
     </>
   );
 }

@@ -1,9 +1,9 @@
 /**
  * The words of the box and of the tab of the individuals file on
  * popgen2.html (docs/specs/steps/popgen2-input.md, "The box of the
- * individuals file", "The Individuals tab" and "Its words"): with no
- * file, the list of the column of the populations, the counts and the
- * lines under them, what the tab shows from the read and its format, and
+ * individuals file", "The Individuals tab" and "Its words"): the counts
+ * with no file, the list of the column of the populations, the counts and
+ * the lines under them, the line of the rows not used in the tab, what the tab shows from the read and its format, and
  * what the status region says of a read. Pure, so that a test in node
  * checks them; the widgets draw them.
  */
@@ -24,11 +24,7 @@ import {
   individualsBoxNeeds,
   shown,
 } from "../../core/project.ts";
-import type {
-  IndividualsSource,
-  Project,
-  VariantSource,
-} from "../../core/project.ts";
+import type { IndividualsSource, Project } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import type {
   IndividualsTable,
@@ -38,29 +34,54 @@ import type {
 import { firstSheetText, sizeText } from "../steps/individuals/words.ts";
 import { chainButton, chainStatuses } from "./chain.ts";
 
-/** The heading of the box of the individuals file. */
-export const INDIVIDUALS_BOX_NAME = "Individuals file";
+/** The heading of the box of the individuals file; "Individuals file"
+    until 11 October 2026. */
+export const INDIVIDUALS_BOX_NAME = "Individuals";
 
 /** What the tab of the individuals file says with no individuals file. */
 export const NO_INDIVIDUALS_FILE_TAB = "No individuals file open.";
 
-/** What the box of the individuals file says with no individuals file,
-    from the variants file of the project, or null with none:
-    that every individual is unclassified, and, once the variants file
-    has given its individuals, how many and what the analyses per
-    population will do with them. */
-export function noIndividualsFileText(variants: VariantSource | null): string {
-  const first = "No individuals file: every individual is unclassified.";
-  if (variants?.read.kind !== "read") return first;
-  const name = escaped(variants.name);
-  const numIndividuals = variants.read.individuals.length;
-  return numIndividuals === 1
-    ? `No individuals file: the one individual of ${name} is unclassified.`
-    : `No individuals file: all ${grouped(numIndividuals)} individuals of ${name} are unclassified, and the analyses per population will take them as one population.`;
+/** The one row of the counts with no individuals file, whose individuals
+    are all unclassified. */
+export const UNCLASSIFIED_ROW = "Unclassified";
+
+/** What the box shows of the counts with no individuals file: the
+    individuals kept, every one unclassified, or null while the count waits
+    for the one pass, and the line of why it waits. */
+export interface NoFileCounts {
+  readonly kept: number | null;
+  readonly lines: readonly CountsLine[];
+}
+
+/** The counts of `p`, a project with no individuals file, with the
+    individuals kept `kept` and, while they are not known, why they wait,
+    `wait`; null before its variants file has given its individuals, and
+    when it could not be opened, so that the box holds its button alone
+    (the owner, 11 October 2026). */
+export function noFileCounts(
+  p: Project,
+  kept: IndividualsKept | null,
+  wait: PassWait,
+): NoFileCounts | null {
+  const variants = p.variants;
+  if (p.individuals !== null || variants?.read.kind !== "read") return null;
+  const list = kept?.list;
+  if (list?.kind !== "known") {
+    return {
+      kept: null,
+      lines: [
+        { kind: "line", text: waitingText(wait, escaped(variants.name)) },
+      ],
+    };
+  }
+  return {
+    kept: (list.individuals ?? variants.read.individuals).length,
+    lines: [],
+  };
 }
 
 /** The heading drawn in the box in place of the lines of the file open
-    when their code throws, under the box's "Individuals file". */
+    when their code throws, under the box's "Individuals". */
 export const INDIVIDUALS_LINES_NAME = "What the individuals file holds";
 
 /** The heading drawn in the tab "Individuals" in place of what it
@@ -141,8 +162,9 @@ export function noColumnQualifiedText(p: Project): string | null {
     : null;
 }
 
-/** The caption of the table of the counts, of the variants file
-    `variantsName`. */
+/** The name of the table of the counts, of the variants file
+    `variantsName`, for a screen reader alone: the screen has shown no
+    caption since 11 October 2026. */
 export function countsCaption(variantsName: string): string {
   return `Individuals of ${escaped(variantsName)} after the filters of individuals`;
 }
@@ -209,8 +231,9 @@ export interface CountsShown {
  * the file, the line of why the counts wait, `wait`, while the list of
  * the individuals kept is not known, the line of every individual kept
  * unclassified, or the table with the line of the unclassified kept if
- * any, the first of these that holds; and last, always, the line of the
- * rows of the file the variants file does not have.
+ * any, the first of these that holds. The line of the rows of the file
+ * the variants file does not have is the Individuals tab's,
+ * `rowsNotUsedText`.
  */
 export function countsShown(
   p: Project,
@@ -232,15 +255,25 @@ export function countsShown(
   }
   const variantsName = escaped(p.variants.name);
   const fileName = escaped(p.individuals?.name ?? "");
-  const rowsLine: CountsLine = {
-    kind: "line",
-    text: `Individuals in ${fileName} but not in ${variantsName}: ${grouped(counts.rowsNotInVariants ?? 0)}`,
-  };
   const shownFirst = firstShown(counts, wait, variantsName, fileName, p);
   return {
     table: shownFirst.table,
-    lines: [...tooMany, ...shownFirst.lines, rowsLine],
+    lines: [...tooMany, ...shownFirst.lines],
   };
+}
+
+/** The line of the Individuals tab of the rows of the individuals file
+    of `p` that name no individual of its variants file, from its counts
+    `counts`: "Individuals in panel_pops.csv but not in panel.nei: 18";
+    null when there are none, and before the variants file is read
+    (the owner, 11 October 2026). */
+export function rowsNotUsedText(
+  p: Project,
+  counts: PopulationCounts,
+): string | null {
+  const numRows = counts.rowsNotInVariants;
+  if (numRows === null || numRows === 0 || p.variants === null) return null;
+  return `Individuals in ${escaped(p.individuals?.name ?? "")} but not in ${escaped(p.variants.name)}: ${grouped(numRows)}`;
 }
 
 /** The warning of too many values of `counts`, or none. */
@@ -254,8 +287,8 @@ function tooManyWarning(counts: PopulationCounts): CountsLine[] {
   ];
 }
 
-/** What `countsShown` shows between the warning of too many values and
-    the line of the rows, once the variants file is read. */
+/** What `countsShown` shows after the warning of too many values, once
+    the variants file is read. */
 function firstShown(
   counts: PopulationCounts,
   wait: PassWait,
@@ -415,7 +448,7 @@ export function individualsTabShows(
     case "failed":
       return {
         kind: "refused",
-        text: `${name} could not be read; the box Individuals file says why.`,
+        text: `${name} could not be read; the box Individuals says why.`,
         options: read.format === "text",
       };
     case "read":
@@ -452,15 +485,6 @@ export function tableLabel(name: string): string {
     `name` downloads, after "Download ": "the table of panel_pops.csv". */
 export function tableWhat(name: string): string {
   return `the table of ${escaped(name)}`;
-}
-
-/** What the menu "Download…" of the counts per population of the
-    individuals file `individualsName` downloads: "the counts per
-    population of panel_pops.csv", as the table of the downloads names
-    them, not from their caption, which names the individuals of the
-    variants file (docs/specs/steps/popgen2-pca.md, "Its words"). */
-export function countsWhat(individualsName: string): string {
-  return `the counts per population of ${escaped(individualsName)}`;
 }
 
 /** The line over the table of the individuals file, its size, "200

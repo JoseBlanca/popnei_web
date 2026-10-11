@@ -337,9 +337,10 @@ file open. Open one in the box Variants."
 
 **The size, the chromosomes and the ploidy** of the file open, which the
 box of the variants file showed until 11 October 2026, stand at the top
-of the tab, before "Filters of the variants", on one line that wraps
-between them at 320 px: "File size: 261 KB", "Chromosomes: 1", "Ploidy:
-2". While the file is read, "Chromosomes: reading…" and "Ploidy:
+of the tab, before "Filters of the variants", in columns of one width,
+three on a line on a wide page and one under the other at 320 px, so
+that a line that grows at a Stop does not move the plots under them:
+"File size: 261 KB", "Chromosomes: 1", "Ploidy: 2". While the file is read, "Chromosomes: reading…" and "Ploidy:
 reading…"; while the one pass counts, "Chromosomes: counting…" before its
 first result so far and "Chromosomes: 1 so far" after it; after a Stop
 or a failure of the pass, "Chromosomes: not counted". The words of the
@@ -727,7 +728,7 @@ which sets the size above which the light worker is ended after a read
 From the design, and open to the owner's change after trying the page:
 the column chosen by the page; the words of the box and its lines; the
 headers of the counts; the words "File size:" at the top of the Variants
-tab, and its three values on one line; "…" for a count that waits; the
+tab, and its three values in columns; "…" for a count that waits; the
 status region silent at a change of the counts; the tab shown first and
 never changed by the page; the order of the parts of the Individuals tab; the zone of the individuals file taking any file,
 with no check of its name; Remove putting the focus on the zone.

@@ -784,7 +784,7 @@ describe("SF10 D2 the plots after a Stop, in the section", () => {
       expect(menu.getAttribute("aria-disabled")).toBe("true");
       const describedBy = menu.getAttribute("aria-describedby") ?? "";
       expect(document.getElementById(describedBy)?.textContent).toBe(
-        "Download once panel.nei is read to the end: its reading was stopped; start it again in the box Variants file.",
+        "Download once panel.nei is read to the end: its reading was stopped; start it again in the box Variants.",
       );
     }
   });

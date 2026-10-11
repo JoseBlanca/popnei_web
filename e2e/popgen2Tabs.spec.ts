@@ -42,11 +42,11 @@ type Label = (typeof LABELS)[number];
 /** The reasons of the three tabs of the analyses with no variants
     file. */
 const NO_VARIANTS = {
-  PCA: "The PCA needs a variants file. Open one in the box Variants file.",
+  PCA: "The PCA needs a variants file. Open one in the box Variants.",
   Populations:
-    "The analyses of the populations need a variants file. Open one in the box Variants file.",
+    "The analyses of the populations need a variants file. Open one in the box Variants.",
   Distances:
-    "The distances between populations need a variants file. Open one in the box Variants file.",
+    "The distances between populations need a variants file. Open one in the box Variants.",
 } as const;
 
 /** The reason of Distances with a variants file and no individuals
@@ -86,12 +86,12 @@ async function expectShown(page: Page, text: string): Promise<void> {
 
 /** The box of the variants file, named by its heading. */
 function variantsBox(page: Page): Locator {
-  return page.getByRole("region", { name: "Variants file", exact: true });
+  return page.getByRole("region", { name: "Variants", exact: true });
 }
 
 /** The box of the individuals file, named by its heading. */
 function individualsBox(page: Page): Locator {
-  return page.getByRole("region", { name: "Individuals file", exact: true });
+  return page.getByRole("region", { name: "Individuals", exact: true });
 }
 
 /** Opens popgen2.html. */
@@ -532,6 +532,15 @@ test("AP1 D4 on a short window the arrow key onto a greyed tab of the second lin
 }) => {
   await page.setViewportSize({ width: 320, height: 500 });
   await openPage(page);
+  // The window ends just above the bottom of the second line of tabs,
+  // so that the arrow key onto Populations scrolls it into view, however
+  // high the boxes above are.
+  const second = await tab(page, "Populations").boundingBox();
+  if (second === null) throw new Error("the tab Populations is not drawn");
+  await page.setViewportSize({
+    width: 320,
+    height: Math.floor(second.y + second.height) - 2,
+  });
   await tab(page, "Variants").focus();
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowRight");

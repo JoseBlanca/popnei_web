@@ -8,7 +8,9 @@
  * threshold's line and the CSV of their bins; the table of the
  * Individuals tab, sorted, saved and read back in that order, every row
  * of individuals_10000.xlsx, longer than its frame, which no test in
- * jsdom can tell from the rows in view; the counts per population saved;
+ * jsdom can tell from the rows in view; no menu for the counts per
+ * population, which the box of the individuals file lost on 11 October
+ * 2026;
  * a histogram's menu waiting, with its tooltip, while the one pass is
  * held (holdWorker.ts); "Saving …" in the status region; and axe with a
  * menu open, light and dark. The PCA's menus are work package 6's.
@@ -193,11 +195,11 @@ function stats(page: Page): Locator {
 }
 
 function variantsBox(page: Page): Locator {
-  return page.getByRole("region", { name: "Variants file", exact: true });
+  return page.getByRole("region", { name: "Variants", exact: true });
 }
 
 function individualsBox(page: Page): Locator {
-  return page.getByRole("region", { name: "Individuals file", exact: true });
+  return page.getByRole("region", { name: "Individuals", exact: true });
 }
 
 /** The button "Download…" named `what`, after "Download ". */
@@ -441,28 +443,17 @@ test("AP5 D4 the table of individuals_10000.xlsx, longer than its frame, sorted 
   await expect(grid.getByRole("rowheader").first()).toHaveText(firstName);
 });
 
-test("AP5 D4 the counts per population of panel_pops.csv saved by the keyboard: panel.population_counts.csv, a row per population in the order shown", async ({
+test("NU8 R1 the counts per population of panel_pops.csv have no menu Download…: the box of the individuals file holds no download", async ({
   page,
 }) => {
-  await recordAnnouncements(page);
   await openDone(page);
   await pickIndividuals(page, "panel_pops.csv");
-  const button = menuButton(
-    individualsBox(page),
-    "the counts per population of panel_pops.csv",
-  );
-  await expect(button).not.toHaveAttribute("aria-disabled", "true", {
-    timeout: 20_000,
-  });
-  await button.focus();
-  const download = await chooseByKeys(page, "Table as CSV", 0);
-  expect(download.suggestedFilename()).toBe("panel.population_counts.csv");
-  expect(await textOf(download)).toBe(
-    "Population,Individuals\np0,48\np2,84\np1,68\n",
-  );
-  await expect
-    .poll(async () => (await announced(page)).join(" "))
-    .toContain("Saving panel.population_counts.csv.");
+  await expect(
+    individualsBox(page).getByRole("rowheader", { name: "p0", exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(
+    individualsBox(page).getByRole("button", { name: /^Download/u }),
+  ).toHaveCount(0);
 });
 
 /** Checks that the button `button` is drawn below the table `table`:

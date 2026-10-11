@@ -95,7 +95,7 @@ async function pick(page: Page, name: string): Promise<void> {
 
 /** The box of the individuals file. */
 function individualsBox(page: Page): Locator {
-  return page.getByRole("region", { name: "Individuals file", exact: true });
+  return page.getByRole("region", { name: "Individuals", exact: true });
 }
 
 /** Opens the individuals file `name`, a fixture, with the button of its
