@@ -31,7 +31,9 @@ import { join } from "node:path";
 import type AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page, Route } from "@playwright/test";
 
+import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { dropFiles } from "./dropFiles.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -982,6 +984,256 @@ test.describe("PT1 D7 the filters and the download while the diversity runs", ()
       "run diversity",
       "result diversity",
     ]);
+    await workersListening(page);
+  });
+});
+
+/** The reason of the lock of the populations while the diversity runs
+    alone. */
+const POPULATIONS_LOCKED =
+  "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again.";
+
+/** The tab Individuals of the row. */
+function individualsTab(page: Page): Locator {
+  return page
+    .getByRole("tablist", { name: "Files and analyses" })
+    .getByRole("tab", { name: "Individuals", exact: true });
+}
+
+/** The controls of the box Individuals that give the populations, in the
+    order of the Tab key: the list of the column, the zone's hidden button
+    of the paste, its button and Remove. */
+function populationControls(page: Page): readonly Locator[] {
+  const box = individualsBox(page);
+  return [
+    box.getByRole("button", { name: /Column of the populations$/u }),
+    box.getByRole("button", { name: "Paste an individuals file", exact: true }),
+    box.getByRole("button", { name: "Open another individuals file…" }),
+    box.getByRole("button", { name: "Remove panel_pops.csv" }),
+  ];
+}
+
+/** The three lists of how a text file is read, in the Individuals tab
+    shown. */
+function readerLists(page: Page): readonly Locator[] {
+  return ["Encoding", "Separator", "Decimal mark"].map((label) =>
+    shown(page).getByRole("button", { name: new RegExp(`${label}$`, "u") }),
+  );
+}
+
+/** Pastes the text `text` as a file named `name` into the zone's hidden
+    button of the box Individuals, as popgen2Input.spec.ts does. */
+async function pasteIndividuals(
+  page: Page,
+  name: string,
+  text: string,
+): Promise<void> {
+  const paste = individualsBox(page).getByRole("button", {
+    name: "Paste an individuals file",
+    exact: true,
+  });
+  await paste.focus();
+  await paste.evaluate(
+    (button, given) => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its item, by call
+      const entryOf = DataTransferItem.prototype.webkitGetAsEntry;
+      DataTransferItem.prototype.webkitGetAsEntry = function (
+        this: DataTransferItem,
+      ) {
+        return (
+          entryOf.call(this) ??
+          ({ isFile: true, isDirectory: false } as FileSystemEntry)
+        );
+      };
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([given.text], given.name));
+      const event = new ClipboardEvent("paste", {
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(event, "clipboardData", { value: transfer });
+      button.dispatchEvent(event);
+    },
+    { name, text },
+  );
+}
+
+/** Whether a press of `control` opens a file picker within half a
+    second. */
+async function opensPicker(page: Page, control: Locator): Promise<boolean> {
+  let opened = false;
+  const onChooser = (): void => {
+    opened = true;
+  };
+  page.on("filechooser", onChooser);
+  // Forced, since Playwright waits for a control marked aria-disabled to
+  // be enabled before it clicks.
+  await control.click({ force: true });
+  await page.waitForTimeout(500);
+  page.off("filechooser", onChooser);
+  return opened;
+}
+
+/** Opens panel.nei and panel_pops.csv with the worker holding the
+    analyses `hold`, waits for the one pass, and shows the tab `back`. */
+async function bothOpened(
+  page: Page,
+  hold: { readonly holdDiversity?: boolean; readonly holdPca?: boolean },
+): Promise<void> {
+  await holdSummary(page, hold);
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await release(page, "allSoFar");
+  await release(page, "result");
+  await pickIndividuals(page, "panel_pops.csv");
+  await expect(
+    individualsBox(page).getByRole("button", {
+      name: /Column of the populations$/u,
+    }),
+  ).toContainText("popcat", { timeout: RESULT_TIMEOUT });
+}
+
+test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () => {
+  test("PT3 D3 the diversity held running: the filters, its options, the column, the zone, Remove and the reader's lists greyed with their reasons, reached by the Tab key; the list opens no popover, the button no picker; a drop and a paste open nothing and show the reason, said; the PCA's options open; after the diversity's result everything open; axe light and dark", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    test.setTimeout(150_000);
+    await recordAnnouncements(page);
+    await bothOpened(page, { holdDiversity: true });
+    await tab(page, "Populations").click();
+    await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+    await button(page, "Run").click();
+    await expect(button(page, "Stop")).toBeVisible();
+
+    // The options of the diversity, with the words of the filters.
+    const options = shown(page).getByRole("textbox");
+    expect(await options.count()).toBeGreaterThan(0);
+    for (const option of await options.all()) {
+      await expect(option).toHaveAttribute("aria-disabled", "true");
+      await expect(option).toHaveAccessibleDescription(
+        new RegExp(LOCKED_DIVERSITY.replaceAll(".", "\\."), "u"),
+      );
+    }
+
+    // The box Individuals, each control greyed and described, a stop of
+    // the Tab key in its order.
+    const controls = populationControls(page);
+    for (const control of controls) {
+      await expect(control).toHaveAttribute("aria-disabled", "true");
+      await expect(control).toHaveAccessibleDescription(
+        new RegExp(POPULATIONS_LOCKED.replaceAll(".", "\\."), "u"),
+      );
+    }
+    const [list, paste, open, remove] = controls;
+    if (
+      list === undefined ||
+      paste === undefined ||
+      open === undefined ||
+      remove === undefined
+    ) {
+      throw new Error("the box has not its four controls");
+    }
+    // The mouse, left on Run, is off every control, whose tooltip it
+    // would open.
+    await page.mouse.move(0, 0);
+    await list.focus();
+    await expect(page.getByRole("tooltip")).toHaveText(POPULATIONS_LOCKED);
+    for (const next of [paste, open, remove]) {
+      await page.keyboard.press("Tab");
+      await expect(next).toBeFocused();
+    }
+    await expect(page.getByRole("tooltip")).toHaveText(POPULATIONS_LOCKED);
+
+    // The list opens no popover; the button no picker; Remove removes
+    // nothing.
+    // Playwright waits for a control marked aria-disabled to be enabled
+    // before it clicks; the user's click is not held so.
+    await list.click({ force: true });
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+    await expect(page.getByRole("tooltip")).toHaveText(POPULATIONS_LOCKED);
+    expect(await opensPicker(page, open)).toBe(false);
+    await remove.click({ force: true });
+    await expect(remove).toBeVisible();
+
+    // A file dropped, and one pasted, open nothing and show the reason,
+    // said once each.
+    // The paragraph of the box, and not the hidden descriptions of its
+    // controls, which hold the same words.
+    const reason = individualsBox(page).locator("p", {
+      hasText: POPULATIONS_LOCKED,
+    });
+    await expect(reason).toHaveCount(0);
+    const other = "IID,pop\ns000,q\n";
+    await dropFiles(page, open, [{ name: "other.csv", text: other }]);
+    await expect(reason).toBeVisible();
+    await expect
+      .poll(async () =>
+        (await announced(page)).filter((text) => text === POPULATIONS_LOCKED),
+      )
+      .toHaveLength(1);
+    await pasteIndividuals(page, "other.csv", other);
+    await expect
+      .poll(async () =>
+        (await announced(page)).filter((text) => text === POPULATIONS_LOCKED),
+      )
+      .toHaveLength(2);
+    await expect(individualsBox(page)).not.toContainText("other.csv");
+    await expect(list).toContainText("popcat");
+    expect(await runsOf(page, "diversity")).toBe(1);
+
+    // The lists of the reader in the Individuals tab.
+    await individualsTab(page).click();
+    for (const reader of readerLists(page)) {
+      await expect(reader).toHaveAttribute("aria-disabled", "true");
+      await expect(reader).toHaveAccessibleDescription(
+        new RegExp(POPULATIONS_LOCKED.replaceAll(".", "\\."), "u"),
+      );
+    }
+    await expectNoAxeViolations(page, makeAxeBuilder);
+
+    // The PCA's options stay open.
+    await tab(page, "PCA").click();
+    await expect(
+      shown(page).getByRole("button", { name: /Method$/u }),
+    ).not.toHaveAttribute("aria-disabled");
+    await expect(
+      shown(page).getByRole("textbox", { name: DISTANCE }),
+    ).not.toHaveAttribute("aria-disabled");
+    await expectNoAxeViolations(page, makeAxeBuilder);
+
+    // The diversity's result: everything open, the reason gone.
+    await release(page, "diversity");
+    await tab(page, "Populations").click();
+    await expect(table(page, CAPTION)).toBeVisible({ timeout: RESULT_TIMEOUT });
+    for (const control of controls) {
+      await expect(control).not.toHaveAttribute("aria-disabled");
+    }
+    await expect(reason).toHaveCount(0);
+    await individualsTab(page).click();
+    for (const reader of readerLists(page)) {
+      await expect(reader).not.toHaveAttribute("aria-disabled");
+    }
+    await workersListening(page);
+  });
+
+  test("PT3 D3 the PCA held running: the column, the zone, Remove and the reader's lists not greyed, and the zone's button opens the picker", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await bothOpened(page, { holdPca: true });
+    await runPca(page, false);
+    await expect(button(page, "Stop")).toBeVisible();
+    for (const control of populationControls(page)) {
+      await expect(control).not.toHaveAttribute("aria-disabled");
+    }
+    await individualsTab(page).click();
+    for (const reader of readerLists(page)) {
+      await expect(reader).not.toHaveAttribute("aria-disabled");
+    }
+    const open = populationControls(page)[2];
+    if (open === undefined) throw new Error("no button of the zone");
+    expect(await opensPicker(page, open)).toBe(true);
     await workersListening(page);
   });
 });

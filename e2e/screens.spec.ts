@@ -6076,6 +6076,55 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-populations-running${at}-${theme}`);
       });
 
+      test("the box Individuals and the Individuals tab greyed while the diversity runs; then the reason of the zone's button in its tooltip", async ({
+        page,
+      }) => {
+        // The result of the diversity kept back by the worker, so that
+        // the run lasts for the picture.
+        await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
+          const response = await route.fetch();
+          const script = await response.text();
+          const front = `{ const realPost = self.postMessage.bind(self); self.postMessage = (m, t) => { if (m !== null && typeof m === "object" && m.kind === "result" && m.result !== null && typeof m.result === "object" && m.result.analysis === "diversity") return; realPost(m, t); }; }\n`;
+          await route.fulfill({ response, body: front + script });
+        });
+        await page.goto("popgen2.html");
+        const panel = await populationsReady(page);
+        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(
+          panel.getByRole("button", { name: "Stop", exact: true }),
+        ).toBeVisible();
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "Individuals", exact: true })
+          .click();
+        const box = page.getByRole("region", {
+          name: "Individuals",
+          exact: true,
+        });
+        const open = box.getByRole("button", {
+          name: "Open another individuals file…",
+        });
+        await expect(open).toHaveAttribute("aria-disabled", "true");
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-individuals-box-locked${at}-${theme}`);
+        // Reached by the Tab key from the zone's hidden button of the
+        // paste, since React Aria shows the tooltip of a button on the
+        // focus of the keyboard.
+        await box
+          .getByRole("button", {
+            name: "Paste an individuals file",
+            exact: true,
+          })
+          .focus();
+        await page.keyboard.press("Tab");
+        await expect(open).toBeFocused();
+        await expect(page.getByRole("tooltip")).toBeVisible();
+        await save(
+          page,
+          `popgen2-individuals-box-locked-tooltip${at}-${theme}`,
+        );
+      });
+
       for (const shot of ["done", "one-population-done"] as const) {
         test(`the Populations tab done: ${shot === "done" ? "the table of the three populations" : "the one row Unclassified"} and the spectrum`, async ({
           page,
