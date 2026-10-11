@@ -26,10 +26,11 @@
  * appearance; panel_meta.csv adds the column altitude, of 198 values.
  */
 import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type AxeBuilder from "@axe-core/playwright";
-import type { Locator, Page, Route } from "@playwright/test";
+import type { Download, Locator, Page, Route } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
@@ -1236,4 +1237,356 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
     expect(await opensPicker(page, open)).toBe(true);
     await workersListening(page);
   });
+});
+
+/** The line of the Populations tab while the diversity waits for the
+    PCA that runs. */
+const WAITS_FOR_PCA =
+  "The diversity starts once the PCA, which is running, ends.";
+
+/** The line of the PCA tab while the PCA waits for the diversity that
+    runs. */
+const WAITS_FOR_DIVERSITY =
+  "The PCA starts once the diversity, which is running, ends.";
+
+/** What the status region says at the first start of a round of the PCA
+    and the diversity, until the band offers Stop all. */
+const ROUND =
+  "Calculating the PCA and then the diversity again. To change the filters, stop each in its tab.";
+
+/** The texts the status region took that hold `text`. */
+async function saidWith(page: Page, text: string): Promise<readonly string[]> {
+  return (await announced(page)).filter((said) => said.includes(text));
+}
+
+test.describe("PT2 D3 the Populations tab while the diversity waits, and what the status region says", () => {
+  test("PT2 D3 both live, a threshold moved with the PCA held running: the Populations tab shows the line of waiting for the PCA; the round is said once and never joined with an end; axe light and dark", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    test.setTimeout(120_000);
+    await recordAnnouncements(page);
+    await holdSummary(page);
+    await openPage(page);
+    await pick(page, "panel.nei");
+    await release(page, "allSoFar");
+    await release(page, "result");
+    await pickIndividuals(page, "panel_pops.csv");
+    await runPca(page);
+    await runDiversity(page);
+
+    await expect
+      .poll(() => saidWith(page, "Diversity of panel.nei calculated."))
+      .toHaveLength(1);
+    await release(page, "holdPcaAgain");
+    const from = (await announced(page)).length;
+    await setMissing(page, "0.05", "Populations");
+    await expect(
+      shown(page).getByText(WAITS_FOR_PCA, { exact: true }),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(button(page, "Stop recalculating")).toBeVisible();
+    await expectNoAxeViolations(page, makeAxeBuilder);
+
+    await release(page, "pca");
+    await expect(table(page, CAPTION_005)).toBeVisible({
+      timeout: RESULT_TIMEOUT,
+    });
+    await expect(
+      shown(page).getByText(WAITS_FOR_PCA, { exact: true }),
+    ).toHaveCount(0);
+    await expect
+      .poll(async () =>
+        (await announced(page))
+          .slice(from)
+          .some((said) => said.includes("Diversity of panel.nei calculated.")),
+      )
+      .toBe(true);
+    const since = (await announced(page)).slice(from);
+    // The round once, alone: its later start, the diversity's, says
+    // nothing, and no end is joined to it.
+    expect(since.filter((said) => said.includes("Calculating the"))).toEqual([
+      ROUND,
+    ]);
+    expect(
+      since.filter((said) => said.includes("PCA of panel.nei calculated.")),
+    ).toHaveLength(1);
+  });
+
+  test("PT2 D3 a Run of the diversity while the PCA runs: the line of waiting, said once; at the PCA's end its start and its end are said", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await recordAnnouncements(page);
+    // Both results held, so that each start is said before its end,
+    // which would otherwise replace it within the region's pause.
+    await holdSummary(page, { holdPca: true, holdDiversity: true });
+    await openPage(page);
+    await pick(page, "panel.nei");
+    await release(page, "allSoFar");
+    await release(page, "result");
+    await runPca(page, false);
+    await tab(page, "Populations").click();
+    await button(page, "Run").click();
+    await expect(button(page, "Stop recalculating")).toBeFocused();
+    await expect(
+      shown(page).getByText(WAITS_FOR_PCA, { exact: true }),
+    ).toBeVisible();
+    await expect.poll(() => saidWith(page, WAITS_FOR_PCA)).toHaveLength(1);
+
+    await release(page, "pca");
+    await expect(button(page, "Stop")).toBeFocused({
+      timeout: RESULT_TIMEOUT,
+    });
+    await expect
+      .poll(() => saidWith(page, "Calculating the diversity of panel.nei."))
+      .toHaveLength(1);
+    await release(page, "diversity");
+    await expect(table(page, CAPTION)).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(button(page, "Stop recalculating")).toBeFocused();
+    await expect
+      .poll(() => saidWith(page, "Diversity of panel.nei calculated."))
+      .toHaveLength(1);
+    expect(await saidWith(page, WAITS_FOR_PCA)).toHaveLength(1);
+  });
+
+  test("PT2 D3 a Run of the PCA while the diversity runs: the PCA tab's line of waiting for the diversity, said once; at the diversity's end the PCA's start is said; axe light and dark", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    test.setTimeout(120_000);
+    await recordAnnouncements(page);
+    await holdSummary(page, { holdDiversity: true, holdPca: true });
+    await openPage(page);
+    await pick(page, "panel.nei");
+    await release(page, "allSoFar");
+    await release(page, "result");
+    await tab(page, "Populations").click();
+    await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+    await button(page, "Run").click();
+    await expect(button(page, "Stop")).toBeVisible();
+
+    await runPca(page, false);
+    await expect(button(page, "Stop recalculating")).toBeFocused();
+    await expect(
+      shown(page).getByText(WAITS_FOR_DIVERSITY, { exact: true }),
+    ).toBeVisible();
+    await expect
+      .poll(() => saidWith(page, WAITS_FOR_DIVERSITY))
+      .toHaveLength(1);
+    await expectNoAxeViolations(page, makeAxeBuilder);
+
+    await release(page, "diversity");
+    await expect
+      .poll(() => saidWith(page, "Calculating the PCA of panel.nei."))
+      .toHaveLength(1);
+    await release(page, "pca");
+    await expect(
+      page.getByText(/^The place of each of the 200 individuals/u),
+    ).toContainText("from 548 variants.", { timeout: RESULT_TIMEOUT });
+    expect(await saidWith(page, WAITS_FOR_DIVERSITY)).toHaveLength(1);
+  });
+
+  test("PT2 D3 the diversity's Stop while it runs, and its crash, are said; the tab shows the line of a Stop, then the words of the failure; axe light and dark", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    test.setTimeout(120_000);
+    await recordAnnouncements(page);
+    await holdSummary(page, { holdDiversity: true });
+    await openPage(page);
+    await pick(page, "panel.nei");
+    await release(page, "allSoFar");
+    await release(page, "result");
+    await tab(page, "Populations").click();
+    await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+    await button(page, "Run").click();
+    await button(page, "Stop").click();
+    await expect(button(page, "Run")).toBeFocused();
+    await expect(
+      shown(page).getByText(
+        "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect
+      .poll(() =>
+        saidWith(
+          page,
+          "Diversity stopped. Press Run in the Populations tab to calculate it again.",
+        ),
+      )
+      .toHaveLength(1);
+    await expectNoAxeViolations(page, makeAxeBuilder);
+
+    await workersListening(page);
+    await button(page, "Run").click();
+    await expect(button(page, "Stop")).toBeVisible();
+    await release(page, "crash");
+    const failed =
+      "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the box Variants.";
+    await expect(shown(page).getByText(failed, { exact: true })).toBeVisible({
+      timeout: RESULT_TIMEOUT,
+    });
+    await expect
+      .poll(() =>
+        saidWith(
+          page,
+          `The diversity of panel.nei could not be calculated: ${failed}`,
+        ),
+      )
+      .toHaveLength(1);
+    await expectNoAxeViolations(page, makeAxeBuilder);
+  });
+
+  test("PT2 D3 about to start after a change of the minimum: Stop recalculating, the line of the quiet second and no table; axe light and dark", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    test.setTimeout(120_000);
+    await openPage(page);
+    await pick(page, "panel.nei");
+    await pickIndividuals(page, "panel_pops.csv");
+    await runDiversity(page);
+    const minimum = shown(page).getByRole("textbox", {
+      name: /^Individuals with a called genotype needed in each population, per variant/u,
+    });
+    await minimum.fill("10");
+    await minimum.press("Enter");
+    // A key typed and not yet given holds the start, a change under way,
+    // so that the quiet second lasts for the checks.
+    await minimum.press("Backspace");
+    const line = shown(page).getByText(
+      "The diversity starts again in a moment, once the filters and its options stop changing.",
+      { exact: true },
+    );
+    await expect(line).toBeVisible();
+    await expect(button(page, "Stop recalculating")).toBeVisible();
+    await expect(table(page, CAPTION)).toHaveCount(0);
+    await expectNoAxeViolations(page, makeAxeBuilder);
+    await minimum.press("0");
+    await minimum.press("Enter");
+    await expect(table(page, CAPTION)).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(line).toHaveCount(0);
+  });
+});
+
+/** The button "Download…" of `what` in the tab shown. */
+function menuButton(page: Page, what: string): Locator {
+  return shown(page).getByRole("button", {
+    name: `Download ${what}`,
+    exact: true,
+  });
+}
+
+/** Opens the menu of the focused button with Enter, goes down to `item`
+    with the arrow keys, chooses it with Enter, and gives the file. */
+async function chooseByKeys(
+  page: Page,
+  item: "Table as CSV" | "Image as SVG" | "Image as PNG" | "Data as CSV",
+): Promise<Download> {
+  const index = ["Table as CSV", "Image as SVG", "Image as PNG", "Data as CSV"]
+    .filter((one) => item === "Table as CSV" || one !== "Table as CSV")
+    .indexOf(item);
+  await page.keyboard.press("Enter");
+  const menu = page.getByRole("menu");
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole("menuitem").first()).toBeFocused();
+  for (let at = 0; at < index; at += 1) await page.keyboard.press("ArrowDown");
+  await expect(menu.getByRole("menuitem", { name: item })).toBeFocused();
+  const download = page.waitForEvent("download");
+  await page.keyboard.press("Enter");
+  return download;
+}
+
+/** The text of a downloaded file. */
+async function textOf(download: Download): Promise<string> {
+  return readFile(await download.path(), "utf8");
+}
+
+/** Whether the top of `below` is under the bottom of `above` on the
+    page. */
+async function isBelow(below: Locator, above: Locator): Promise<boolean> {
+  const [top, bottom] = await Promise.all([
+    below.boundingBox(),
+    above.boundingBox(),
+  ]);
+  if (top === null || bottom === null) return false;
+  return top.y >= bottom.y + bottom.height - 1;
+}
+
+test.describe("PT2 D3 the downloads of the Populations tab", () => {
+  for (const width of [null, 320] as const) {
+    test(`PT2 D3 the table, a histogram and the table of the spectrum saved by the keyboard alone and read back${width === null ? "" : `, at ${String(width)} px`}: each "Download…" of a table below it, each histogram's above it; axe with a menu open, light and dark`, async ({
+      page,
+      makeAxeBuilder,
+    }) => {
+      test.setTimeout(120_000);
+      if (width !== null) await page.setViewportSize({ width, height: 900 });
+      await recordAnnouncements(page);
+      await openPage(page);
+      await pick(page, "panel.nei");
+      await pickIndividuals(page, "panel_pops.csv");
+      await runDiversity(page);
+
+      // The table of the diversity, its menu below it.
+      const tableMenu = menuButton(page, "the table of the diversity");
+      expect(await isBelow(tableMenu, table(page, CAPTION))).toBe(true);
+      await tableMenu.focus();
+      const tableFile = await chooseByKeys(page, "Table as CSV");
+      expect(tableFile.suggestedFilename()).toBe("panel.diversity.csv");
+      const lines = (await textOf(tableFile)).trimEnd().split("\n");
+      expect(lines[0]).toBe(
+        'Population,Individuals,Expected heterozygosity (unbiased),Observed heterozygosity,Proportion of polymorphic variants,F,Alleles per variant,"Alleles per variant, rarefied to 40 chromosomes",Private alleles,Private alleles per variant,"Private alleles per variant, rarefied to 40 chromosomes"',
+      );
+      expect(lines[1]).toMatch(/^p0,48,0\.35193160994408107,/u);
+      await expect
+        .poll(() => saidWith(page, "Saving panel.diversity.csv."))
+        .toHaveLength(1);
+
+      // The histogram of p0, its menu above its plot.
+      const p0 = shown(page).getByRole("group", { name: "p0", exact: true });
+      const p0Menu = menuButton(page, "the spectrum of p0");
+      expect(await isBelow(p0.locator("svg.chart"), p0Menu)).toBe(true);
+      await p0Menu.focus();
+      const p0File = await chooseByKeys(page, "Data as CSV");
+      expect(p0File.suggestedFilename()).toBe("panel.sfs.p0.csv");
+      const p0Lines = (await textOf(p0File)).trimEnd().split("\n");
+      expect(p0Lines.length).toBeGreaterThan(2);
+      expect(p0Lines.slice(1).every((line) => line.startsWith("p0,"))).toBe(
+        true,
+      );
+      await p0Menu.focus();
+      const p0Svg = await chooseByKeys(page, "Image as SVG");
+      expect(p0Svg.suggestedFilename()).toBe("panel.sfs.p0.svg");
+
+      // The table of the spectrum, by its tab, its menu below it.
+      await shown(page).getByRole("tab", { name: "Histograms" }).focus();
+      await page.keyboard.press("ArrowRight");
+      await expect(
+        shown(page).getByRole("tab", { name: "Table" }),
+      ).toHaveAttribute("aria-selected", "true");
+      const spectrumMenu = menuButton(page, "the table of the spectrum");
+      expect(
+        await isBelow(
+          spectrumMenu,
+          shown(page).getByRole("table", {
+            name: "The folded site frequency spectrum of each population, as numbers",
+          }),
+        ),
+      ).toBe(true);
+      await spectrumMenu.focus();
+      await page.keyboard.press("Enter");
+      await expect(page.getByRole("menu")).toBeVisible();
+      await expectNoAxeViolations(page, makeAxeBuilder);
+      await page.keyboard.press("Escape");
+      await expect(spectrumMenu).toBeFocused();
+      const spectrumFile = await chooseByKeys(page, "Table as CSV");
+      expect(spectrumFile.suggestedFilename()).toBe("panel.sfs.csv");
+      const spectrumLines = (await textOf(spectrumFile)).trimEnd().split("\n");
+      expect(spectrumLines[0]).toBe(
+        'Copies of the rarer allele,"p0, variants","p0, share","p2, variants","p2, share","p1, variants","p1, share"',
+      );
+      expect(spectrumLines).toHaveLength(22);
+    });
+  }
 });
