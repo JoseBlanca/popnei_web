@@ -1230,6 +1230,41 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
     await workersListening(page);
   });
 
+  test("PT3 D3 at 320 px the diversity held running: the tooltip of the list of the column and of Remove, greyed, stands within the window, 12 px at least from each edge", async ({
+    page,
+  }) => {
+    test.setTimeout(150_000);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await bothOpened(page, { holdDiversity: true });
+    await tab(page, "Populations").click();
+    await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+    await button(page, "Run").click();
+    await expect(button(page, "Stop")).toBeVisible();
+    await page.mouse.move(0, 0);
+    // The list by its focus, and Remove, at the window's right edge, by
+    // the Tab key, as a user of the keyboard reaches them, which shows
+    // their tooltips; the zone between shows none of its own.
+    const controls = populationControls(page);
+    const [list, , , remove] = controls;
+    if (list === undefined || remove === undefined) {
+      throw new Error("the box has not its four controls");
+    }
+    await list.focus();
+    for (const control of [list, remove]) {
+      while (!(await control.evaluate((e) => e === document.activeElement))) {
+        await page.keyboard.press("Tab");
+      }
+      const tooltip = page.getByRole("tooltip");
+      await expect(tooltip).toHaveText(POPULATIONS_LOCKED);
+      const box = await tooltip.boundingBox();
+      if (box === null) throw new Error("no tooltip");
+      expect(box.x).toBeGreaterThanOrEqual(12);
+      expect(box.x + box.width).toBeLessThanOrEqual(320 - 12);
+    }
+    await release(page, "diversity");
+    await workersListening(page);
+  });
+
   test("PT3 D3 the PCA held running: the column, the zone, Remove and the reader's lists not greyed, and the zone's button opens the picker", async ({
     page,
   }) => {
