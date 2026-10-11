@@ -1051,6 +1051,11 @@ describe("AP3 D3 the changes of the individuals file are no steps of Undo; the c
 const POPULATIONS_LOCKED =
   "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again.";
 
+/** The words of other.csv dropped, pasted or picked while the diversity
+    runs. */
+const OTHER_NOT_OPENED =
+  "other.csv was not opened: the populations cannot change while the diversity runs. Stop the diversity in the Populations tab, then open other.csv again.";
+
 /** Ends the one pass of panel.nei, the last request, with every
     individual kept. */
 async function passEnded(
@@ -1210,7 +1215,7 @@ describe("PT3 D2 the box Individuals and the Individuals tab greyed while the di
     expect(greyed(tab())).toEqual([]);
   });
 
-  test("while the diversity runs, the column chosen, Remove, the zone's button, a separator chosen and a file pasted change nothing; the paste shows the reason in the box, until the diversity ends", async () => {
+  test("while the diversity runs, the column chosen, Remove, the zone's button, a separator chosen and a file pasted change nothing; the paste shows the file not opened and what to do, until the diversity ends, and not again at its next run", async () => {
     const { store } = await bothRead();
     await running(store, "diversity");
     const before = store.getState().project;
@@ -1229,14 +1234,73 @@ describe("PT3 D2 the box Individuals and the Individuals tab greyed while the di
 
     await pasteFile("other.csv");
     expect(store.getState().project).toBe(before);
-    expect(paragraphs(box())).toContain(POPULATIONS_LOCKED);
+    expect(paragraphs(box())).toContain(OTHER_NOT_OPENED);
 
     await act(async () => {
       store.cancelRun("diversity");
       await Promise.resolve();
     });
     await settled();
+    expect(paragraphs(box())).not.toContain(OTHER_NOT_OPENED);
+
+    // The words of the refusal do not come back with the next run.
+    await running(store, "diversity");
+    expect(paragraphs(box())).not.toContain(OTHER_NOT_OPENED);
     expect(paragraphs(box())).not.toContain(POPULATIONS_LOCKED);
+  });
+
+  test("a file picked while the diversity runs, in a picker opened before it started, opens nothing and shows the file not opened", async () => {
+    const { store } = await bothRead();
+    await running(store, "diversity");
+    const before = store.getState().project;
+    await pickIndividuals("other.csv");
+    expect(store.getState().project).toBe(before);
+    expect(paragraphs(box())).toContain(OTHER_NOT_OPENED);
+  });
+
+  test("the paste button loses the reason as its description when the diversity ends", async () => {
+    const { store } = await bothRead();
+    await running(store, "diversity");
+    const paste = buttonNamed(box(), "Paste an individuals file");
+    expect(descriptionOf(paste)).toBe(POPULATIONS_LOCKED);
+    await act(async () => {
+      store.cancelRun("diversity");
+      await Promise.resolve();
+    });
+    await settled();
+    expect(
+      buttonNamed(box(), "Paste an individuals file").hasAttribute(
+        "aria-describedby",
+      ),
+    ).toBe(false);
+    expect(
+      buttonNamed(box(), "Paste an individuals file").hasAttribute(
+        "aria-disabled",
+      ),
+    ).toBe(false);
+  });
+
+  test("the zone's button empties its input before it opens the picker, so that the same file picked again opens it again", async () => {
+    const { store } = await drawPage();
+    await openVariants(store);
+    const input = box().querySelector<HTMLInputElement>('input[type="file"]');
+    if (input === null) throw new Error("the box has no input of a file");
+    const done: string[] = [];
+    Object.defineProperty(input, "value", {
+      configurable: true,
+      get: () => "",
+      set: (value: string) => {
+        done.push(`value ${value}`);
+      },
+    });
+    input.click = () => {
+      done.push("click");
+    };
+    await act(async () => {
+      buttonNamed(box(), "Open individuals file…").click();
+      await Promise.resolve();
+    });
+    expect(done).toEqual(["value ", "click"]);
   });
 
   test("the zone not greyed: the zone's button opens the picker, and a file pasted opens it", async () => {

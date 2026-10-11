@@ -255,8 +255,11 @@ widgets, and what is left to check is what we add around them.
 - Plots: an SVG plot has a name, and its numbers are in a table the user
   can reach. The 3D PCA on a canvas is operated by pointer; rotation by
   dragging needs a way without dragging (2.5.7), and its points a table.
-- Files: the drop zone has a file picker beside it, which React Aria's
-  `DropZone` with `FileTrigger` gives, since dropping is dragging.
+- Files: the drop zone has a file picker beside it, since dropping is
+  dragging: `FileZone.tsx`, React Aria's `DropZone` with a button that
+  opens the picker from an input of the zone's own (not React Aria's
+  `FileTrigger`, whose press a zone that waits could not refuse, since
+  11 October 2026).
 - Target size (2.5.8): targets of 24 by 24 CSS pixels or spaced as the
   criterion allows.
 - Zoom and reflow (1.4.4, 1.4.10): the page at 200% zoom and at 320 CSS

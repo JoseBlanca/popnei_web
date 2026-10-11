@@ -17,13 +17,15 @@
  * (docs/specs/steps/popgen2-input.md, "While the diversity runs"): its
  * button is greyed, marked `aria-disabled`, with the reason as its
  * tooltip and its description, and opens no picker; the hidden button of
- * the paste is marked `aria-disabled` and described by the reason; and a
- * file dropped or pasted opens nothing and is given to `onWaitingDrop`,
- * which shows the reason. The drop is still taken by the zone, so that
- * the browser does not open the file dropped in the tab in place of the
- * page. The picker is opened from an input of the zone's own, and not
- * from React Aria's `FileTrigger`, whose press reaches the button through
- * a context that a button that waits cannot refuse.
+ * the paste is marked `aria-disabled` and described by the reason, with
+ * no tooltip, since it is drawn nowhere; and a file dropped, pasted, or
+ * picked in a picker opened before the zone waited, opens nothing: its
+ * name is given to the `onRefused` of `waiting`, which says it was not
+ * opened. The drop is still taken by the zone, so that the browser does
+ * not open the file dropped in the tab in place of the page. The picker
+ * is opened from an input of the zone's own, and not from React Aria's
+ * `FileTrigger`, whose press reaches the button through a context that a
+ * button that waits cannot refuse.
  */
 import { useId, useLayoutEffect, useRef } from "react";
 import { DropZone, Text } from "react-aria-components";
@@ -35,6 +37,18 @@ import { droppedOf } from "./dropped.ts";
 import type { Dropped } from "./dropped.ts";
 import styles from "./FileZone.module.css";
 import { ariaDisabledRef, describedByOf } from "./waiting.ts";
+
+/** Why a zone waits, and what it does with a file it then refuses. */
+export interface ZoneWaiting {
+  /** The reason the zone waits, its button's tooltip and the
+      description of its two buttons. */
+  readonly reason: string;
+  /** Called for a drop or a paste while the zone waits, and for a file
+      picked then in a picker opened before, which open nothing: with the
+      name of the one file, or `null` for anything else, several files, a
+      folder, a piece of text. */
+  readonly onRefused: (name: string | null) => void;
+}
 
 /** What a zone to load a file is drawn with. */
 export interface FileZoneProps {
@@ -59,12 +73,16 @@ export interface FileZoneProps {
   readonly children?: React.ReactNode;
   /** What can be done with the file, after the button. */
   readonly actions?: React.ReactNode;
-  /** The reason the zone waits, while it opens no file; or `null`, when
-      it does not wait. `null` when absent. */
-  readonly waiting?: string | null;
-  /** Called for a file, or anything else, dropped or pasted while the
-      zone waits, which opens nothing; given with `waiting`. */
-  readonly onWaitingDrop?: () => void;
+  /** Why the zone waits, while it opens no file, and what it does with a
+      file refused; or `null`, when it does not wait. `null` when
+      absent. */
+  readonly waiting?: ZoneWaiting | null;
+}
+
+/** The name of the one file of `names`, or `null` for none or several. */
+function oneName(names: readonly string[]): string | null {
+  const [only, ...others] = names;
+  return only !== undefined && others.length === 0 ? only : null;
 }
 
 /** A zone to drop a file on, with the button that picks one. */
@@ -78,26 +96,45 @@ export function FileZone({
   children,
   actions,
   waiting = null,
-  onWaitingDrop,
 }: FileZoneProps): React.JSX.Element {
   const zoneRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const reasonId = useId();
   const waits = waiting !== null;
+  // Whether the zone waits at the latest drawing, read when a file
+  // arrives after it: a drop whose files are still being read, a pick
+  // in a picker opened before the zone waited.
+  const waitingNow = useRef<ZoneWaiting | null>(waiting);
   // The hidden button of the paste is React Aria's, drawn by the zone:
   // its marks are put on it by hand, after each drawing, React Aria
   // setting neither.
   useLayoutEffect(() => {
-    const paste = zoneRef.current?.querySelector("button") ?? null;
-    if (paste === null) return;
+    waitingNow.current = waiting;
+    const zone = zoneRef.current;
+    if (zone === null) return;
+    const paste = pasteButtonOf(zone, pasteLabel);
     ariaDisabledRef(waits)(paste);
     const describedBy = describedByOf(waits ? reasonId : undefined);
     if (describedBy === undefined) paste.removeAttribute("aria-describedby");
     else paste.setAttribute("aria-describedby", describedBy);
   });
+  // Files that arrive while the zone waits are refused by their names;
+  // otherwise opened.
+  const take = (files: readonly File[]): void => {
+    const refusing = waitingNow.current;
+    if (refusing !== null) {
+      refusing.onRefused(oneName(files.map((file) => file.name)));
+    } else if (files.length > 0) {
+      onFiles(files);
+    }
+  };
   const onDrop = (event: { readonly items: readonly DropItem[] }): void => {
-    if (waits) {
-      onWaitingDrop?.();
+    if (waiting !== null) {
+      waiting.onRefused(
+        oneName(
+          event.items.map((item) => (item.kind === "file" ? item.name : "")),
+        ),
+      );
       return;
     }
     const dropped = droppedOf(event.items.map((item) => item.kind));
@@ -110,9 +147,7 @@ export function FileZone({
       if (item.kind === "file") reads.push(item.getFile());
     }
     // A rejection reaches the window's handler and the error bar.
-    void Promise.all(reads).then((files) => {
-      if (files.length > 0) onFiles(files);
-    });
+    void Promise.all(reads).then(take);
   };
   const openPicker = (): void => {
     const input = inputRef.current;
@@ -133,9 +168,9 @@ export function FileZone({
           it writes an empty aria-labelledby, which names nothing. Empty,
           it adds nothing to the name, "Paste a variants file". */}
       <Text slot="label" />
-      {waits && (
+      {waiting !== null && (
         <span id={reasonId} hidden>
-          {waiting}
+          {waiting.reason}
         </span>
       )}
       <div className={classOf(styles, "content")}>{children}</div>
@@ -143,7 +178,7 @@ export function FileZone({
         <Button
           label={buttonLabel}
           onPress={openPicker}
-          waiting={waiting}
+          waiting={waiting?.reason ?? null}
           {...(buttonRef !== undefined && { ref: buttonRef })}
         />
         <input
@@ -158,12 +193,29 @@ export function FileZone({
           }}
           onChange={(event) => {
             const list = event.currentTarget.files;
-            const files = list === null ? [] : Array.from(list);
-            if (files.length > 0) onFiles(files);
+            if (list !== null && list.length > 0) take(Array.from(list));
           }}
         />
         {actions}
       </div>
     </DropZone>
   );
+}
+
+/** The hidden button of React Aria's zone `zone`, which takes a paste:
+    the button of the zone's first element, which React Aria draws before
+    what the zone is given. A defect when it is not there, or not named
+    `pasteLabel`, so that the marks of a zone that waits never land on
+    another button if React Aria draws its zone otherwise. */
+function pasteButtonOf(zone: HTMLElement, pasteLabel: string): HTMLElement {
+  const paste = zone.firstElementChild?.querySelector(":scope > button");
+  if (
+    !(paste instanceof HTMLElement) ||
+    paste.getAttribute("aria-label") !== pasteLabel
+  ) {
+    throw new Error(
+      `popnei_web defect: React Aria's zone "${pasteLabel}" has no hidden button of the paste as its first element.`,
+    );
+  }
+  return paste;
 }

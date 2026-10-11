@@ -507,8 +507,14 @@ focus goes to the place of the tab's content, and to the heading
 **A greyed control of the box Individuals** carries `aria-disabled`, is
 still reached by the Tab key, and gives its reason on the mouse, the
 focus and a press, as the greyed thresholds do (`popgen2-input.md`,
-"While the diversity runs"). A file dropped or pasted on the greyed
-zone opens nothing and shows the reason in the box.
+"While the diversity runs"), but for the zone's hidden button that
+takes a paste, which has the reason as its description and no tooltip,
+since it is drawn nowhere (`popgen2-input.md`, "Accessibility"). A
+file dropped or pasted on the greyed zone opens nothing, and the box
+shows and says that it was not opened and what to do: "other.csv was
+not opened: the populations cannot change while the diversity runs.
+Stop the diversity in the Populations tab, then open other.csv
+again."
 
 **Not yet heard in VoiceOver**, which the session cannot run: the round
 said once with two analyses live, the Populations tab's line of

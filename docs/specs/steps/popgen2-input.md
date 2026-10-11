@@ -487,12 +487,22 @@ Populations tab to change the populations; then press Run there to
 calculate it again.", also while the PCA is live, since the PCA does
 not read the populations (`popgen2-populations.md`, "While the
 diversity runs", corrected on 11 October 2026). A file dropped or
-pasted on the greyed zone opens nothing and the box shows the same
-words where it shows the words of a folder dropped, and the status
-region says them; a drop elsewhere on the page opens nothing, as now.
-When the diversity ends, fails or is stopped, each is as before. The
-zone of a file, `src/ui/widgets/FileZone.tsx`, takes no greyed state
-today and gains one, with its reason.
+pasted on the greyed zone opens nothing, nor does a file picked in a
+picker the button opened before the diversity started; the box shows,
+where it shows the words of a folder dropped, what happened to the file
+and what works, "other.csv was not opened: the populations cannot
+change while the diversity runs. Stop the diversity in the Populations
+tab, then open other.csv again.", "Nothing was opened: …, then open the
+individuals file again." for a drop of anything but one file, and the
+status region says them once. Until 11 October 2026, after the review
+of work packages 2 and 3, the box showed the words of the lock, which
+named no file and sent the user to Stop and then Run, which calculated
+again with the old file. The words go when the diversity ends, fails
+or is stopped, and each control is then as before; they do not come
+back at the next run. A drop elsewhere on the page opens nothing, as
+now. The zone of a file, `src/ui/widgets/FileZone.tsx`, has a greyed
+state for this, `waiting`: its reason, and what the screen does with
+the name of a file refused while it waits.
 
 Not greyed: the counts, the table of the file, its sort and scroll,
 and the copy of the names, which change nothing. While only the PCA
@@ -631,6 +641,7 @@ the project's (`docs/architecture.md`, section 7).
 | the line over the table of the file, and while a sort is drawn | "200 rows, 2 columns"; "200 rows, 2 columns. Sorting…" |
 | the status region, a file read | "panel_pops.csv read: 200 rows, the populations from popcat."; with no column chosen, "panel_pops.csv read: 200 rows, no column chosen for the populations."; with rows not used, at the end, "18 individuals in panel_pops.csv are not in panel.nei, as the Individuals tab says." |
 | the status region, a file refused | the words of the box |
+| the box, and the status region, a file dropped, pasted or picked while the diversity runs | "other.csv was not opened: the populations cannot change while the diversity runs. Stop the diversity in the Populations tab, then open other.csv again."; for anything but one file, "Nothing was opened: the populations cannot change while the diversity runs. Stop the diversity in the Populations tab, then open the individuals file again." |
 | the status region, the names copied | the old step's, "4 names copied." |
 
 The other words are given above, where they stand. "Warning: " opens
@@ -706,7 +717,16 @@ its label and by the weight of its words; each warning by the word
 **The greyed controls while the diversity runs** (from 11 October
 2026): each keeps its place in the order of the Tab key and says its
 reason as its description; a drop or a paste on the greyed zone says
-the reason in the status region, since nothing on the screen moved.
+in the status region the words of the file not opened, since the focus
+does not move to them. One exception to the tooltip on the focus: the
+zone's hidden button that takes a paste, reached by the Tab key before
+the zone's button, has the reason as its description for a screen
+reader and no tooltip, since it is drawn nowhere a tooltip could stand
+by; the next stop of the Tab key, the zone's button, shows the reason
+as its tooltip, and a paste shows and says the words of the file not
+opened (decided by the session on 11 October 2026 after the review of
+work packages 2 and 3; WCAG 2.2, 3.3.2 and 4.1.2, met by the
+description).
 
 **Not yet heard in VoiceOver**, which the session cannot run: the row of
 the tabs read as "The files, tab list", each label with its position;

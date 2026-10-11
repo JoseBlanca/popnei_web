@@ -28,6 +28,7 @@ import type { AnalysisId } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { liveBeside, runningAnalysisOf } from "../analyses/status.ts";
+import type { LiveAnalysisName } from "../analyses/status.ts";
 import {
   STOP_ALL_OFFERED,
   filtersLockedText,
@@ -108,4 +109,14 @@ export function useOptionsLock(id: AnalysisId): string | null {
     component is drawn again only when it changes. */
 export function usePopulationsLock(): string | null {
   return useLive(populationsLockOf);
+}
+
+/** The live analysis running that reads the populations, the diversity,
+    whose run locks them; `null` while none runs; the component is drawn
+    again only when it changes. */
+export function usePopulationsRunning(): LiveAnalysisName | null {
+  return useLive((s) => {
+    const running = runningAnalysisOf(s);
+    return running?.readsPopulations === true ? running : null;
+  });
 }

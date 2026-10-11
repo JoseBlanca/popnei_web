@@ -994,6 +994,11 @@ test.describe("PT1 D7 the filters and the download while the diversity runs", ()
 const POPULATIONS_LOCKED =
   "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again.";
 
+/** What the box shows and says of other.csv dropped or pasted while the
+    diversity runs. */
+const OTHER_NOT_OPENED =
+  "other.csv was not opened: the populations cannot change while the diversity runs. Stop the diversity in the Populations tab, then open other.csv again.";
+
 /** The tab Individuals of the row. */
 function individualsTab(page: Page): Locator {
   return page
@@ -1059,9 +1064,9 @@ async function pasteIndividuals(
   );
 }
 
-/** Whether a press of `control` opens a file picker within half a
-    second. */
-async function opensPicker(page: Page, control: Locator): Promise<boolean> {
+/** Whether a press of `control` opens no file picker within half a
+    second, the time a picker opened takes on the owner's Mac by far. */
+async function opensNoPicker(page: Page, control: Locator): Promise<boolean> {
   let opened = false;
   const onChooser = (): void => {
     opened = true;
@@ -1072,7 +1077,14 @@ async function opensPicker(page: Page, control: Locator): Promise<boolean> {
   await control.click({ force: true });
   await page.waitForTimeout(500);
   page.off("filechooser", onChooser);
-  return opened;
+  return !opened;
+}
+
+/** Presses `control` and waits for the file picker it opens. */
+async function opensPicker(page: Page, control: Locator): Promise<void> {
+  const chooser = page.waitForEvent("filechooser");
+  await control.click();
+  await chooser;
 }
 
 /** Opens panel.nei and panel_pops.csv with the worker holding the
@@ -1095,7 +1107,7 @@ async function bothOpened(
 }
 
 test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () => {
-  test("PT3 D3 the diversity held running: the filters, its options, the column, the zone, Remove and the reader's lists greyed with their reasons, reached by the Tab key; the list opens no popover, the button no picker; a drop and a paste open nothing and show the reason, said; the PCA's options open; after the diversity's result everything open; axe light and dark", async ({
+  test("PT3 D3 the diversity held running: the filters, its options, the column, the zone, Remove and the reader's lists greyed with their reasons, reached by the Tab key; the list opens no popover, the button no picker; a drop and a paste open nothing and show the file not opened, said; the PCA's options open; after the diversity's result everything open; axe light and dark", async ({
     page,
     makeAxeBuilder,
   }) => {
@@ -1153,16 +1165,14 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
     await list.click({ force: true });
     await expect(page.getByRole("listbox")).toHaveCount(0);
     await expect(page.getByRole("tooltip")).toHaveText(POPULATIONS_LOCKED);
-    expect(await opensPicker(page, open)).toBe(false);
+    expect(await opensNoPicker(page, open)).toBe(true);
     await remove.click({ force: true });
     await expect(remove).toBeVisible();
 
-    // A file dropped, and one pasted, open nothing and show the reason,
-    // said once each.
-    // The paragraph of the box, and not the hidden descriptions of its
-    // controls, which hold the same words.
-    const reason = individualsBox(page).locator("p", {
-      hasText: POPULATIONS_LOCKED,
+    // A file dropped, and one pasted, open nothing and show that the
+    // file was not opened and what to do, said once each.
+    const reason = individualsBox(page).getByText(OTHER_NOT_OPENED, {
+      exact: true,
     });
     await expect(reason).toHaveCount(0);
     const other = "IID,pop\ns000,q\n";
@@ -1170,16 +1180,18 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
     await expect(reason).toBeVisible();
     await expect
       .poll(async () =>
-        (await announced(page)).filter((text) => text === POPULATIONS_LOCKED),
+        (await announced(page)).filter((text) => text === OTHER_NOT_OPENED),
       )
       .toHaveLength(1);
     await pasteIndividuals(page, "other.csv", other);
     await expect
       .poll(async () =>
-        (await announced(page)).filter((text) => text === POPULATIONS_LOCKED),
+        (await announced(page)).filter((text) => text === OTHER_NOT_OPENED),
       )
       .toHaveLength(2);
-    await expect(individualsBox(page)).not.toContainText("other.csv");
+    await expect(
+      individualsBox(page).getByText("panel_pops.csv", { exact: true }),
+    ).toBeVisible();
     await expect(list).toContainText("popcat");
     expect(await runsOf(page, "diversity")).toBe(1);
 
@@ -1234,7 +1246,7 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
     }
     const open = populationControls(page)[2];
     if (open === undefined) throw new Error("no button of the zone");
-    expect(await opensPicker(page, open)).toBe(true);
+    await opensPicker(page, open);
     await workersListening(page);
   });
 });

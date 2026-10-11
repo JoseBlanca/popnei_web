@@ -31,6 +31,7 @@ import type {
   JobResult,
   TableFormat,
 } from "../../worker/protocol.ts";
+import type { LiveAnalysisName } from "../analyses/status.ts";
 import { firstSheetText, sizeText } from "../steps/individuals/words.ts";
 import { chainButton, chainStatuses } from "./chain.ts";
 
@@ -114,6 +115,25 @@ export const INDIVIDUALS_TEXT_DROPPED =
   "Open an individuals file, a CSV, a TSV or an xlsx, not a piece of text.";
 export const INDIVIDUALS_SEVERAL_DROPPED =
   "Open one individuals file at a time.";
+
+/**
+ * What the box says of a drop, a paste or a pick refused while `running`,
+ * a live analysis that reads the populations, runs: of the one file
+ * `name`, "other.csv was not opened: the populations cannot change while
+ * the diversity runs. Stop the diversity in the Populations tab, then
+ * open other.csv again."; of anything else, `null`, "Nothing was opened:
+ * … then open the individuals file again."
+ * (docs/specs/steps/popgen2-input.md, "While the diversity runs").
+ */
+export function notOpenedWhileRunningText(
+  name: string | null,
+  running: LiveAnalysisName,
+): string {
+  const why = `the populations cannot change while ${running.name} runs. Stop ${running.name} in the ${running.tab} tab, then open`;
+  return name === null
+    ? `Nothing was opened: ${why} the individuals file again.`
+    : `${escaped(name)} was not opened: ${why} ${escaped(name)} again.`;
+}
 
 /** The label of the list of the column of the populations, and its first
     item, the grouping with no column. */
