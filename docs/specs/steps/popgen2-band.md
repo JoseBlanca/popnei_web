@@ -37,7 +37,11 @@ diversity as it names the PCA, says which analyses wait after the one
 running or are about to start together, and gains "Stop all" whenever
 two or more analyses are live and one of them runs, waits or is about
 to start; the link points to the first result of the order
-of the tabs that has warnings or failed. The section "Several live
+of the tabs that has warnings or failed. The words of an analysis about to
+start follow its tab's line from that day, which says no "again", since
+an analysis whose Run waited behind another and was then stopped never
+ran: "The PCA starts in a moment", and after a crash "The PCA starts
+after the next change". The section "Several live
 analyses", below, says so; the tables of "The line", of the short forms
 and of "Its words" gain their rows. Approved by the owner on 11 October 2026; not yet built; its plan is
 `docs/plans/population-tab.md`.
@@ -138,16 +142,16 @@ to a screen reader:
 | "PCA running · 1:20" | "PCA · 1:20" |
 | "Writing panel.filtered.vcf.gz · 45%" | "Writing · 45%" |
 | "Stopping the PCA…" | "Stopping…" |
-| "The PCA starts again in a moment" | "PCA soon" |
+| "The PCA starts in a moment" | "PCA soon" |
 | "The PCA starts again when the download is written or closed" | "PCA later" |
-| "The PCA starts again after the next change" | "PCA later" |
+| "The PCA starts after the next change" | "PCA later" |
 | "PCA: 2 warnings, in the PCA tab" | "PCA: 2 warnings" |
 | "PCA: could not be calculated, in the PCA tab" | "PCA: failed" |
 | "Diversity running · 0:12" | "Diversity · 0:12" |
 | "PCA running · 1:20 · then the diversity" | "PCA · 1:20" |
 | "Stopping the diversity…" | "Stopping…" |
-| "The diversity starts again in a moment" | "Diversity soon" |
-| "The PCA and the diversity start again in a moment" | "Analyses soon" |
+| "The diversity starts in a moment" | "Diversity soon" |
+| "The PCA and the diversity start in a moment" | "Analyses soon" |
 | "The PCA and the diversity start again when the download is written or closed" | "Analyses later" |
 | "Diversity: 2 warnings, in the Populations tab" | "Diversity: 2 warnings" |
 | "Diversity: could not be calculated, in the Populations tab" | "Diversity: failed" |
@@ -192,7 +196,7 @@ line of the band under it (below, "An error of the application").
 | the PCA is running, started by Run or by itself | "PCA running · 1:20", the time since it started, minutes and seconds, as the clock of the PCA tab; "PCoA running · 1:20" under the PCoA | Stop |
 | the filtered variants are being written | "Writing panel.filtered.vcf.gz · 45%", the name the dialog of the download shows | none: the dialog has the Stop, and keeps the band out of reach while it is open |
 | a Stop of the PCA or of the one pass is under way (below, "Stopping") | "Stopping the PCA…", "Stopping the PCoA…"; "Stopping the statistics of panel.vcf.gz…" | none |
-| the PCA is about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment"; while the dialog of the download holds it, the dialog's words, "The PCA starts again when the download is written or closed" (`popgen2-pca.md`, "Its words") | Stop recalculating, the PCA tab's |
+| the PCA is about to start | "The PCA starts in a moment"; "The PCoA starts in a moment"; while the dialog of the download holds it, the dialog's words, "The PCA starts again when the download is written or closed" (`popgen2-pca.md`, "Its words"); held after a crash of the calculation worker ended another live analysis, "The PCA starts after the next change", the first words of the tab's line, "The PCA starts after the next change of the filters or of its options, or when Run is pressed." | Stop recalculating, the PCA tab's |
 | the PCA has a result with warnings, and the PCA tab is not the tab shown | "PCA: 1 warning, in the PCA tab"; "PCA: 2 warnings, in the PCA tab"; "PCoA: …" under the PCoA; the words are a link | none |
 | the PCA could not be calculated, and the PCA tab is not the tab shown | "PCA: could not be calculated, in the PCA tab"; "PCoA: …"; a link | none |
 | none of these | nothing after "Popnei" | none |
@@ -289,8 +293,8 @@ PCA name any live analysis, in the words of its tab, "PCA", "PCoA",
 |---|---|---|
 | a live analysis runs and others wait after it | "PCA running · 1:20 · then the diversity"; with two waiting, "… · then the diversity and the LD decay" | Stop, of the one running, and Stop all |
 | a live analysis runs and none waits | "Diversity running · 0:12" | Stop; and Stop all while another analysis is live |
-| two or more are about to start | "The PCA and the diversity start again in a moment"; while the dialog of the download holds them, "The PCA and the diversity start again when the download is written or closed" | Stop all |
-| one is about to start | "The diversity starts again in a moment", as the PCA's row | Stop recalculating, that analysis's; and Stop all while another analysis is live |
+| two or more are about to start | "The PCA and the diversity start in a moment"; while the dialog of the download holds them, "The PCA and the diversity start again when the download is written or closed" | Stop all |
+| one is about to start | "The diversity starts in a moment", as the PCA's row; held after a crash, "The diversity starts after the next change" | Stop recalculating, that analysis's; and Stop all while another analysis is live |
 | a Stop of the diversity under way | "Stopping the diversity…" | none |
 | results with warnings, or failed, in tabs not shown | the first in the order of the tabs: "Diversity: 2 warnings, in the Populations tab"; "Diversity: could not be calculated, in the Populations tab" | none |
 
@@ -430,7 +434,7 @@ screen that cannot happen says why.
 | empty | "Popnei" alone: nothing runs, nothing to point to, no error; also while the PCA is live and not about to start | nothing in the band |
 | locked | cannot happen: the band has no action that can be refused; a Stop is shown only while there is something to stop | |
 | ready | as empty: nothing runs | |
-| running | "Statistics of panel.vcf.gz · 45%" or "PCA running · 1:20" with Stop; "Writing …" with nothing to press; "Stopping …"; "The PCA starts again in a moment" with Stop recalculating | Stop or Stop recalculating, where there is one |
+| running | "Statistics of panel.vcf.gz · 45%" or "PCA running · 1:20" with Stop; "Writing …" with nothing to press; "Stopping …"; "The PCA starts in a moment" with Stop recalculating; with two analyses live, Stop all beside them | Stop, Stop recalculating or Stop all, where there is one |
 | done | the link to the warnings or the error of the PCA while another tab is shown; otherwise as empty | follow the link |
 | results removed | cannot happen: the band shows no result | |
 | error | the line of an error of the application under the line of the heading, whatever that line says, with Details and Close | Details, Copy the details, Close |
@@ -504,10 +508,10 @@ change; it is still the screen's, not the project's
 | the write | "Writing panel.filtered.vcf.gz · 45%"; "Writing panel.filtered.nei · 45%" |
 | a Stop under way | "Stopping the PCA…"; "Stopping the PCoA…"; "Stopping the statistics of panel.vcf.gz…"; "Stopping the diversity…" ("Stopping the calculation of Diversity…" until 11 October 2026) |
 | an analysis running with others waiting after it | "PCA running · 1:20 · then the diversity"; "Diversity running · 0:12" with none |
-| several about to start | "The PCA and the diversity start again in a moment"; "The PCA and the diversity start again when the download is written or closed" |
-| the diversity about to start | "The diversity starts again in a moment"; "The diversity starts again when the download is written or closed" |
+| several about to start | "The PCA and the diversity start in a moment"; "The PCA and the diversity start again when the download is written or closed" |
+| the diversity about to start | "The diversity starts in a moment"; "The diversity starts again when the download is written or closed" |
 | the link of the diversity | "Diversity: 1 warning, in the Populations tab"; "Diversity: could not be calculated, in the Populations tab" |
-| the PCA about to start | "The PCA starts again in a moment"; "The PCoA starts again in a moment"; while the dialog of the download is open, "The PCA starts again when the download is written or closed"; "The PCoA starts again when the download is written or closed" |
+| the PCA about to start | "The PCA starts in a moment"; "The PCoA starts in a moment"; held after a crash, "The PCA starts after the next change"; while the dialog of the download is open, "The PCA starts again when the download is written or closed"; "The PCoA starts again when the download is written or closed" |
 | the link to the warnings | "PCA: 1 warning, in the PCA tab"; "PCA: 2 warnings, in the PCA tab"; "PCoA: 1 warning, in the PCA tab" |
 | the link to an error | "PCA: could not be calculated, in the PCA tab"; "PCoA: could not be calculated, in the PCA tab" |
 | the buttons | "Stop"; "Stop recalculating"; "Stop all"; "Details"; "Close"; "Copy the details" |
@@ -717,7 +721,7 @@ pass held by `e2e/holdWorker.ts`:
   the status region says "PCA stopped. Press Run in the PCA tab to
   calculate it again.", and a threshold moved then starts nothing;
 - the PCA live, a threshold moved in the Variants tab: "The PCA starts
-  again in a moment" with Stop recalculating, then "PCA running", read
+  in a moment" with Stop recalculating, then "PCA running", read
   at every change of the band, never a line of nothing between the two,
   and "Popnei" alone once the result is shown;
 - the PCoA with the LD pruning off, done, the Variants tab shown: the
