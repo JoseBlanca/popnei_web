@@ -704,3 +704,10 @@ package that changes code, with:
 Each work package adds its entry here: its commits, the counts of its
 checks, its review with the findings not taken, and the decisions made
 along the way.
+
+### Before the first task, 11 October 2026
+
+At 12991743: typecheck, lint and format clean; Vitest 163 files, 5,207
+tests; no test named `PT` and a digit (`npx vitest list`, `npx
+playwright test --list`); the flows of `popgen2.html`,
+`e2e/popgen2*.spec.ts`, 344 passed in Chromium and WebKit.
