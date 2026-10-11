@@ -15,6 +15,7 @@ import { useState } from "react";
 import type { AppState } from "../../../core/store.ts";
 import type { JobResult } from "../../../worker/protocol.ts";
 import { createCodeDownload } from "../../codeDownload.ts";
+import { codeFilesReady } from "../../codeFiles.ts";
 import { useAppState } from "../../store.tsx";
 import { CodeSplit } from "../CodeSplit.tsx";
 import {
@@ -23,7 +24,10 @@ import {
 } from "./tabLoadWords.ts";
 
 /** The download of the code of the tab. */
-const TAB_CODE = createCodeDownload(() => import("./PopulationsTabView.tsx"));
+const TAB_CODE = createCodeDownload(
+  () => import("./PopulationsTabView.tsx"),
+  () => codeFilesReady("src/ui/analyses/diversity/PopulationsTabView.tsx"),
+);
 
 /** What the Populations tab is drawn with. */
 export interface PopulationsTabProps {

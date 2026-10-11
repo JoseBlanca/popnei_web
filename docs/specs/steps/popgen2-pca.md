@@ -1232,7 +1232,13 @@ answer 2a to `docs/designs/population-tab.md`).
   tab is shown. Until 10 October 2026 such a failure emptied the tab
   until the page was reloaded, and the error bar called it an error of
   the application's own; the review of work package 6 of the plan found
-  it.
+  it. Since 11 October 2026 every file of the code is asked of the
+  network before the code is run, and Try again asks for each again:
+  Chromium 153 and WebKit 26.6 keep the failure of a file the code ran
+  into for the life of the page, so before, a file shared with
+  popgen.html that failed once left Try again without a result until a
+  reload (the review of work package 1 of
+  `docs/plans/population-tab.md`).
 
 The numbers are written as on the old panel: a coordinate to four
 decimals in the table, "−0.7139"; the percentages to two, "3.55%";

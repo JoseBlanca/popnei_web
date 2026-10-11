@@ -138,6 +138,12 @@ export default defineConfig(({ mode }) => {
     build: {
       target: ["chrome111", "edge111", "firefox115", "safari16.4"],
       ...(testPagesOnly && { emptyOutDir: false, assetsDir: "e2e/assets" }),
+      // The files of each source loaded with import(), which the page
+      // asks of the network before the import(), so that a browser keeps
+      // no failure of them (src/ui/codeFiles.ts); beside the pages, at
+      // /popnei_web/manifest.json. Not for the pages of the tests, whose
+      // build would write over it.
+      ...(!testPagesOnly && { manifest: "manifest.json" }),
       // A file loaded with import(), the 3D view of the PCA or the
       // statistics of the open file, has none of its scripts preloaded
       // with a link before its import, neither its own nor those it

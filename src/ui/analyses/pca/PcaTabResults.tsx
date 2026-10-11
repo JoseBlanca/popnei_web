@@ -16,13 +16,17 @@ import { pcaOptions } from "../../../core/analyses/pca.ts";
 import type { AppState } from "../../../core/store.ts";
 import type { JobResult } from "../../../worker/protocol.ts";
 import { createCodeDownload } from "../../codeDownload.ts";
+import { codeFilesReady } from "../../codeFiles.ts";
 import { useAppState } from "../../store.tsx";
 import { CodeSplit } from "../CodeSplit.tsx";
 import type { ResultsProps } from "../panels.ts";
 import { LOADING_RESULT, pcaTabResultFailed } from "./tabWords.ts";
 
 /** The download of the code of the result. */
-const RESULTS_CODE = createCodeDownload(() => import("./PcaTabResultView.tsx"));
+const RESULTS_CODE = createCodeDownload(
+  () => import("./PcaTabResultView.tsx"),
+  () => codeFilesReady("src/ui/analyses/pca/PcaTabResultView.tsx"),
+);
 
 /** Starts the download of the code of the result, when it has not
     arrived; a failure is left to the result drawn, which asks again. */

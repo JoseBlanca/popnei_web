@@ -638,6 +638,55 @@ test.describe("PT1 D3 the code of the Populations tab", () => {
     await button(page, "Run").click();
     await expect(table(page, CAPTION)).toBeVisible({ timeout: RESULT_TIMEOUT });
   });
+
+  for (const kind of ["js", "css"] as const) {
+    test(`PT1 D3 a file the tab imports, shared with popgen.html, fails once, its ${kind === "js" ? "script" : "styles"}: Try again draws the tab, and Run the table with its styles`, async ({
+      page,
+    }) => {
+      test.setTimeout(90_000);
+      await openPage(page);
+      await pick(page, "panel.nei");
+      // A file the first file of the tab imports, which a browser keeps
+      // the failure of for the life of the page once an import() met it
+      // (the review of work package 1 of docs/plans/population-tab.md);
+      // only its first request fails.
+      const sharedFile = new RegExp(
+        `/shared~popgen~PopulationsTabView-[^~/]*\\.${kind}(\\?.*)?$`,
+        "u",
+      );
+      let failed = 0;
+      await page.route(sharedFile, async (route) => {
+        if (failed === 0) {
+          failed += 1;
+          await route.abort();
+        } else {
+          await route.continue();
+        }
+      });
+      await tab(page, "Populations").click();
+      const tryAgain = shown(page).getByRole("button", { name: "Try again" });
+      await expect(tryAgain).toBeVisible({ timeout: RESULT_TIMEOUT });
+      expect(failed).toBe(1);
+      await tryAgain.click();
+      await expect(button(page, "Run")).toBeEnabled({
+        timeout: RESULT_TIMEOUT,
+      });
+      await button(page, "Run").click();
+      await expect(table(page, CAPTION)).toBeVisible({
+        timeout: RESULT_TIMEOUT,
+      });
+      // The styles of the tab are in force.
+      expect(
+        await page.evaluate(() =>
+          [...document.styleSheets].some(
+            (sheet) =>
+              sheet.href?.includes("shared~popgen~PopulationsTabView-") ===
+              true,
+          ),
+        ),
+      ).toBe(true);
+    });
+  }
 });
 
 // PT1 D7: the flows of the lock of the filters and of the download's

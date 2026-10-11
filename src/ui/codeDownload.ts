@@ -2,26 +2,29 @@
  * A download of code that the bundler makes a file of its own, apart
  * from the page's first load, because nothing imports it but an
  * `import()`: the 3D view with three.js (docs/specs/charts/pca3d.md,
- * "Loading three.js"), and the result of the PCA tab of popgen2.html
- * (docs/specs/steps/popgen2-pca.md, "The result"). Asked for the first
- * time it is needed, and kept once it arrives, so that what needs it
- * next is drawn at once. A download that failed is forgotten, so that
- * "Try again" asks the network again; its state, which a screen draws,
- * is told to its listeners at each change.
+ * "Loading three.js"), the result of the PCA tab of popgen2.html
+ * (docs/specs/steps/popgen2-pca.md, "The result", its code) and the
+ * Populations tab (docs/specs/steps/popgen2-populations.md, "The
+ * result", its code). Asked for the first time it is needed, and kept
+ * once it arrives, so that what needs it next is drawn at once. A
+ * download that failed is forgotten, so that "Try again" asks the
+ * network again; its state, which a screen draws, is told to its
+ * listeners at each change.
  *
- * A browser may give the same failure to a later `import()` of the same
- * address without asking the network, which the standard leaves open:
- * Chromium 153 does, for the life of the page, where WebKit 26.6 asks
- * again (the review of work package 8 of docs/plans/individuals-pca.md,
- * 29 September 2026). So a retry asks for the same file at another
- * address, with `?retry=‹n›` after it. The address of the file is known
- * only to the bundler, which writes it into the `import()` of the
- * caller; the browser gives it in the message of the failure, "Failed to
- * fetch dynamically imported module: ‹address›" in Chromium, and the
- * retry takes the first address of http or https in that message,
- * whatever its words. When the message holds none, as WebKit's does, the
- * retry is the caller's `import()`, which such a browser asks the
- * network for again.
+ * Chromium 153 and WebKit 26.6 give a later `import()` the failure an
+ * earlier one met, without asking the network, for the file and for
+ * every file it imports (the review of work package 1 of
+ * docs/plans/population-tab.md, 11 October 2026). So a download may be
+ * given `ready`, which asks the network for every file of the code
+ * first (`codeFiles.ts`), and the `import()` is made only once each has
+ * arrived: a failure there leaves nothing kept. Should the `import()`
+ * fail all the same, the retry asks for its first file at another
+ * address, with `?retry=‹n›` after it: the browser gives that address in
+ * the message of the failure, "Failed to fetch dynamically imported
+ * module: ‹address›" in Chromium, and the retry takes the first address
+ * of a script in that message, and not that of styles, "Unable to
+ * preload CSS for ‹address›", which is no script; with none, the retry
+ * is the caller's `import()` again.
  */
 
 /** Where a download is: not asked for yet, coming, arrived, or failed
@@ -42,19 +45,24 @@ export interface CodeDownload<T> {
   readonly subscribe: (listener: () => void) => () => void;
 }
 
-/** The first address of http or https in the message of a failure. */
-const ADDRESS = /https?:\/\/[^\s"'<>]+/u;
+/** The first address of http or https of a script, `.js` with or
+    without a query, in the message of a failure. */
+const ADDRESS = /https?:\/\/[^\s"'<>?]+\.js(?:\?[^\s"'<>]*)?(?=$|[\s"'<>])/u;
 
-/** The first address of http or https in `error`'s message, or `null`. */
+/** The first address of a script, of http or https, in `error`'s
+    message, or `null`. */
 export function failedAddressOf(error: unknown): string | null {
   const message = error instanceof Error ? error.message : String(error);
   return ADDRESS.exec(message)?.[0] ?? null;
 }
 
 /** The download of the code that `first`, the caller's `import()`,
-    asks for, not asked for yet. */
+    asks for, not asked for yet; `ready`, when given, is asked before
+    each `import()` and settles once every file of the code has
+    arrived, or is refused, and then no `import()` is made. */
 export function createCodeDownload<T>(
   first: () => Promise<T>,
+  ready?: () => Promise<void>,
 ): CodeDownload<T> {
   /** The download under way or done, or `null` before the first and
       after a failure. */
@@ -87,8 +95,17 @@ export function createCodeDownload<T>(
     load: () => {
       if (loading === null) {
         failed = false;
+        // The address of a failure is taken from the import()'s alone:
+        // a file `ready` could not download is not the code's first.
+        const importNow = (): Promise<T> =>
+          (failedAddress === null ? first() : importAgain(failedAddress)).catch(
+            (error: unknown) => {
+              failedAddress = failedAddressOf(error) ?? failedAddress;
+              throw error;
+            },
+          );
         loading = (
-          failedAddress === null ? first() : importAgain(failedAddress)
+          ready === undefined ? importNow() : ready().then(importNow)
         ).then(
           (module) => {
             loaded = module;
@@ -98,7 +115,6 @@ export function createCodeDownload<T>(
           (error: unknown) => {
             loading = null;
             failed = true;
-            failedAddress = failedAddressOf(error) ?? failedAddress;
             tell();
             throw error instanceof Error
               ? error

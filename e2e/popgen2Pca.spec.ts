@@ -1717,4 +1717,58 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     await expect(tableCaptionOf(page)).toBeVisible({ timeout: RESULT_TIMEOUT });
     await expect(shown(page).getByText(words, { exact: true })).toHaveCount(0);
   });
+
+  for (const kind of ["js", "css"] as const) {
+    test(`AP6 D3 a file the result imports, shared with popgen.html, fails until Try again is shown, its ${kind === "js" ? "script" : "styles"}: Try again draws the result with its styles`, async ({
+      page,
+    }) => {
+      test.setTimeout(90_000);
+      await page.goto("popgen2.html");
+      await pick(page, "panel.nei");
+      // A file the first file of the result imports, which a browser
+      // keeps the failure of for the life of the page once an import()
+      // met it (the review of work package 1 of
+      // docs/plans/population-tab.md): it fails until the result shows
+      // Try again, both when the tab is first shown, which asks for the
+      // code, and when the result is drawn, which asks again.
+      const sharedFile = new RegExp(
+        `/shared~popgen~PcaTabResultView-[^~/]*\\.${kind}(\\?.*)?$`,
+        "u",
+      );
+      let failing = true;
+      let failed = 0;
+      await page.route(sharedFile, async (route) => {
+        if (failing) {
+          failed += 1;
+          await route.abort();
+        } else {
+          await route.continue();
+        }
+      });
+      await tab(page, "PCA").click();
+      await expect(run(page)).toHaveAccessibleDescription(NO_DISTANCE, {
+        timeout: 30_000,
+      });
+      await typeDistance(page, "50000");
+      await run(page).click();
+      const tryAgain = shown(page).getByRole("button", { name: "Try again" });
+      await expect(tryAgain).toBeVisible({ timeout: RESULT_TIMEOUT });
+      expect(failed).toBeGreaterThan(0);
+      failing = false;
+      await tryAgain.click();
+      await expect(tableCaptionOf(page)).toBeVisible({
+        timeout: RESULT_TIMEOUT,
+      });
+      await expect(tryAgain).toHaveCount(0);
+      // The styles of the result are in force.
+      expect(
+        await page.evaluate(() =>
+          [...document.styleSheets].some(
+            (sheet) =>
+              sheet.href?.includes("shared~popgen~PcaTabResultView-") === true,
+          ),
+        ),
+      ).toBe(true);
+    });
+  }
 });

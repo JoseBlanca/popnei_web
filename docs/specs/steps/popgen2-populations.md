@@ -323,7 +323,9 @@ of the panel"), with these differences:
   variants file open; the page loads only the tab's name and its
   heading, and the store the definition of the diversity. Until the
   code arrives the tab shows "Loading the Populations tab…"; when it
-  cannot be downloaded, the words of "Its words" and "Try again". (Since
+  cannot be downloaded, the words of "Its words" and "Try again", which
+  asks the network for every file of the code again, as the PCA tab's
+  does (`popgen2-pca.md`, "The result", its code). (Since
   11 October 2026, after the review of work package 1: the result alone
   was downloaded apart before, and the rest of the tab was in the first
   load of the page.)

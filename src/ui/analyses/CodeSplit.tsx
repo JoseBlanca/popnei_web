@@ -1,22 +1,20 @@
 /**
  * What a tab of popgen2.html draws from code downloaded apart from the
  * page's, `src/ui/codeDownload.ts`: the result of the PCA tab
- * (docs/specs/steps/popgen2-pca.md, "The result", its code) and of the
- * Populations tab (docs/specs/steps/popgen2-populations.md, "The
- * result", its code).
- * Until the code is there, a line that says it loads; a download that
+ * (docs/specs/steps/popgen2-pca.md, "The result", its code) and the
+ * whole Populations tab (docs/specs/steps/popgen2-populations.md, "The
+ * result", its code). Until the code is there, a line that says it loads; a download that
  * failed is caught here, not by the boundary of the tab, which would
  * keep the tab empty until a reload and give the error bar a network
  * failure as an error of the application's own: its words stand in the
  * place of what the code draws, with "Try again", which asks for the
  * code again, and the status region says them once the place is shown.
  *
- * Try again asks for the code at another address in a browser that
- * keeps a failed `import()` (src/ui/codeDownload.ts). Chromium 153 keeps
- * the failure of each file for the life of the page, and the retry asks
- * for the first file of the code at another address, but not the files
- * it imports, which popgen.html shares: when one of those failed, only a
- * reload mends it there, as the words say.
+ * Try again asks the network for every file of the code again: the
+ * download asks for each with `fetch` before the `import()`
+ * (src/ui/codeFiles.ts), since a browser keeps the failure an `import()`
+ * met, of the file and of every file it imports, for the life of the
+ * page (src/ui/codeDownload.ts).
  */
 import {
   useEffect,
