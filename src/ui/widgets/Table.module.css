@@ -151,11 +151,11 @@
 }
 
 /* A table given a download: the menu "Download…" on a line of its own
-   above the table's top right corner (docs/specs/widgets/downloads.md,
-   "A table"), in a box as wide as the table, or as the frame when the
-   table is wider and scrolls in it. The caption, longer than a narrow
-   table, stays on its own line above, where it put the menu at the left
-   of the table's 212 pixels in the box of the individuals file. */
+   below the table's bottom right corner (docs/specs/widgets/downloads.md,
+   "A table"; below since 11 October 2026, as the owner asked), in a box
+   as wide as the table, or as the frame when the table is wider and
+   scrolls in it. The caption, longer than a narrow table, stays on its
+   own line above, outside the box. */
 .withMenu {
   display: grid;
   gap: var(--space-2);
@@ -164,6 +164,6 @@
   min-inline-size: 0;
 }
 
-.withMenu > :first-child {
+.withMenu > :last-child {
   justify-self: end;
 }

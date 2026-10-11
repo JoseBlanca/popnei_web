@@ -111,7 +111,7 @@ export type SortableTableProps<Id extends string> = SortableTableLook<Id> &
             each with its values as stored, which the CSV holds. */
         readonly rows: readonly (SortableRow & RowValues)[];
         /** The download of the table, which draws the menu "Download…"
-            above it. */
+            below it. */
         readonly download: TableDownload;
       }
   );
@@ -171,8 +171,8 @@ export function SortableTable<Id extends string>(
   const moreId = useId();
   // The grid is the same element with a download and without, so that
   // one given or taken away after the first draw keeps its scroll and its
-  // focus: the menu is a line of its own before it, and nothing wraps the
-  // two.
+  // focus: the menu is a line of its own after it, below the table as the
+  // owner asked on 11 October 2026, and nothing wraps the two.
   let menuLine: React.JSX.Element | null = null;
   if (props.download !== undefined) {
     checkValues(props.rows, props.columns.length);
@@ -208,7 +208,6 @@ export function SortableTable<Id extends string>(
   );
   return (
     <>
-      {menuLine}
       {props.moreColumnsCue === true ? (
         // The fade is placed over the right edge of the grid's box.
         <div className={classOf(styles, "frame")}>
@@ -225,6 +224,7 @@ export function SortableTable<Id extends string>(
           {MORE_COLUMNS_TEXT}
         </p>
       )}
+      {menuLine}
     </>
   );
 }

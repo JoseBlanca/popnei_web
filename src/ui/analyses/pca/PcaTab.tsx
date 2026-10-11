@@ -33,12 +33,7 @@ import type { PanelLive } from "../AnalysisPanel.tsx";
 import { passLock } from "./passLock.ts";
 import { pcaTabPanel } from "./pcaTabPanel.ts";
 import { prefetchPcaResults } from "./PcaTabResults.tsx";
-import {
-  aboutToStartLine,
-  liveResultLine,
-  pcaTabLock,
-  stoppedLine,
-} from "./tabWords.ts";
+import { aboutToStartLine, pcaTabLock, stoppedLine } from "./tabWords.ts";
 
 /** The id of the PCA among the analyses started by themselves. */
 const PCA = pcaOnPopgen2.id;
@@ -68,7 +63,6 @@ function panelLive(state: LiveState, method: PcaMethod): PanelLive {
           state.aboutToStart === null
             ? null
             : aboutToStartLine(method, state.aboutToStart),
-        resultLine: liveResultLine(method),
       };
   }
 }

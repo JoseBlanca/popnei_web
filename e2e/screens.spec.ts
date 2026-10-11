@@ -6055,7 +6055,7 @@ for (const theme of ["light", "dark"] as const) {
         });
       }
 
-      test("NU4 D5 the PCA live and done, Stop recalculating above its result", async ({
+      test("NU4 D5 the PCA live and done, Stop recalculating above its result, with no line under it", async ({
         page,
       }) => {
         const panel = await pcaLive(page);
@@ -6065,9 +6065,10 @@ for (const theme of ["light", "dark"] as const) {
             exact: true,
           }),
         ).toBeVisible();
+        // No line under it since 11 October 2026, as the owner asked.
         await expect(
           panel.getByText(/^The PCA is calculated again after each change/u),
-        ).toBeVisible();
+        ).toHaveCount(0);
         await page.mouse.move(0, 0);
         await save(page, `popgen2-pca-live-done${at}-${theme}`);
       });

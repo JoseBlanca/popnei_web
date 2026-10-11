@@ -26,7 +26,6 @@ import type { Popgen2PageStore } from "../../popgen2Store.ts";
 import { WAITS_FOR_STATISTICS_TEXT } from "../words.ts";
 import {
   aboutToStartLine,
-  liveResultLine,
   liveStoppedText,
   pcaEndAnnouncement,
   startedByItselfText,
@@ -381,15 +380,6 @@ describe("NU4 D2 the words of the PCA started again by itself, by the method", (
     // With no Run to press, Run disabled or the result shown.
     expect(liveStoppedText("pca", false)).toBe("PCA stopped.");
     expect(liveStoppedText("pcoa", false)).toBe("PCoA stopped.");
-  });
-
-  test("the line under Stop recalculating while the result is shown", () => {
-    expect(liveResultLine("pca")).toBe(
-      "The PCA is calculated again after each change of the filters or of its options.",
-    );
-    expect(liveResultLine("pcoa")).toBe(
-      "The PCoA is calculated again after each change of the filters or of its options.",
-    );
   });
 
   test("the line beside Run after a Stop", () => {

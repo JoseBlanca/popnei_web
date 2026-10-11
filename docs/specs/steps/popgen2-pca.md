@@ -46,8 +46,8 @@ parts that named Undo say so where they changed. Built on the branch
 what is written here: whenever the PCA is live and none runs, the tab
 offers "Stop recalculating" in Run's place, so that the automatic runs
 can be ended from the keyboard before the next change (WCAG 2.2.1),
-with a line under it while the result shows, and Run beside it after a
-crash that keeps the PCA live; the lines of the quiet second, of the
+with a line under it while the result showed until 11 October 2026,
+and Run beside it after a crash that keeps the PCA live; the lines of the quiet second, of the
 dialog of the download and after a Stop are drawn in the place of the
 bar, in normal text, and the first names the options as well as the
 filters; a crash for lack of memory, and a failure that only a reload
@@ -58,7 +58,12 @@ filtered variants are written; a number box holds the change under way
 from its first key to its commit, and a slider's thumb from its press,
 moved or held still; the holds carry their kind, the dialog of the
 download among them; and `autoRuns.ts` gives the live state in one
-snapshot that the tab and the band read.
+snapshot that the tab and the band read. The owner tried the page on
+11 October 2026 and asked, in round 1 of work package 8 of that plan,
+for the line under the heading of the PCA's filters in their own words,
+"PCA filters can be stricter than the general analysis ones."; for no
+line under "Stop recalculating" while the result shows; and for the
+"Download…" of every table below the table, the plots keeping theirs.
 
 The PCA tab is the panel of the old page, `popgen.html`, which is built
 and which the owner approved on 28 September 2026: its screen spec is
@@ -375,11 +380,13 @@ PCA runs or is about to start and Stop in the tab, after a run, was
 gone; a button named "Stop" beside a lock would have stopped nothing
 that the user could see (WCAG 2.2.1; the session's decision of 10
 October 2026, from the review of work package 4). With the result
-shown, the line "The PCA is calculated again after each change of the
-filters or of its options." ("The PCoA …") stands under the button, in
-the place of the bar and in the page's normal text, so that the button
-is explained; the status region does not say it, since nothing
-changed. After a failure that leaves the PCA live and that Run may
+shown, nothing stands under the button: the line "The PCA is calculated
+again after each change of the filters or of its options.", which the
+review of work package 4 had put there to explain the button, was taken
+away by the owner on 11 October 2026 (round 1 of work package 8), and
+the button's name says what it does. It has no description, as before,
+since the lines under it are not its description ("Run and Stop",
+below). After a failure that leaves the PCA live and that Run may
 mend, a crash of the worker not of the memory, the tab shows Run, which
 tries again under the same key and keeps the PCA live, and "Stop
 recalculating" beside it, Run first in the order of the Tab key, under
@@ -623,9 +630,12 @@ trying the page (`docs/plans/analyses-pca.md`, work package 10, round
 1); two radio buttons before, as on the old panel, which keeps them.
 
 **Its filters**, under the heading "Filters of the variants for the
-PCA", an `<h3>`, with the line "The PCA reads the variants the Variants
-tab keeps. Its own missing data and MAF filters can only be stricter."
-Every "PCA" of this part is "PCoA" under the PCoA, as in the old panel.
+PCA", an `<h3>`, with the line "PCA filters can be stricter than the
+general analysis ones.", the owner's words of 11 October 2026 (round 1
+of work package 8 of `docs/plans/no-undo.md`); "The PCA reads the
+variants the Variants tab keeps. Its own missing data and MAF filters
+can only be stricter." before. Every "PCA" of this part is "PCoA" under
+the PCoA, as in the old panel.
 Then three, in this order:
 
 - **Missing data** and **MAF**, each a slider, React Aria's `Slider`,
@@ -944,11 +954,13 @@ every negative number on the screen with "−", the minus sign.
 
 ### The downloads
 
-Every table and every plot of the page has one button, "Download…", at
-the right end of a line of its own above it, or beside the title of the
+Every table and every plot of the page has one button, "Download…",
+which opens a menu: for a table, at the right end of a line of its own
+below the table, as the owner asked on 11 October 2026 (round 1 of work
+package 8 of `docs/plans/no-undo.md`; above it before); for a plot, at
+the right end of a line of its own above it, beside the title of the
 PCA's plot, and under the row of the threshold's box for a histogram
-(`docs/specs/widgets/downloads.md`, "A plot"), which opens a
-menu, React Aria's `MenuTrigger` and `Menu`:
+(`docs/specs/widgets/downloads.md`, "A plot"). The menu is React Aria's `MenuTrigger` and `Menu`:
 
 | on | the menu |
 |---|---|
@@ -1009,7 +1021,7 @@ greyed or shows its line of not built yet.
 | ready | the options, the line of the individuals, Run: before the first Run for the file, and after a Stop, with "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change." under it, in the place of the bar | change the options; Run |
 | about to start | the PCA live, during the quiet second after a change: the options, the line of the individuals, no result, no Run, "Stop recalculating" in its place, and under it, in the place of the bar, "The PCA starts again in a moment, once the filters and its options stop changing."; while the dialog of the download is open, "The PCA starts again when the download is written or closed." | go on changing the options and the thresholds, which puts the start off; Stop recalculating, which ends the live state |
 | running | Stop, the bar and the clock, and the line under them; the options and the thresholds and FILTER box of the Variants tab greyed, with "Stop the PCA in the PCA tab to change the filters; then press Run there to calculate it again." (above, "While a PCA runs"); the same whether Run or a change started it | Stop; change the individuals file, its column of the populations and the colour of the points; turn to another tab, where the PCA goes on; open another variants file, which stops it |
-| done | the result, its warnings and notes, the downloads; "Loading the result…" in its place while its code downloads, or the words of its code that could not be downloaded, with "Try again"; above them, while the PCA is live, "Stop recalculating" with "The PCA is calculated again after each change of the filters or of its options." under it, and after a Stop the line of a Stop, with no button | colour, turn, highlight, sort, download; change the options; Try again; Stop recalculating |
+| done | the result, its warnings and notes, the downloads; "Loading the result…" in its place while its code downloads, or the words of its code that could not be downloaded, with "Try again"; above them, while the PCA is live, "Stop recalculating", with no line under it, and after a Stop the line of a Stop, with no button | colour, turn, highlight, sort, download; change the options; Try again; Stop recalculating |
 | results removed | not a state of its own on this page: a change that takes the result off the screen gives about to start while the PCA is live, and ready, with Run, while it is not (before its first Run is impossible, so only after a Stop); the page makes no notice, as the owner decided on 8 October 2026, and keeps no result to bring back, since 10 October 2026 | as in about to start, or as in ready |
 | error | what happened and what to do, the old panel's words with this page's names, below; while the failure leaves the PCA live, "Stop recalculating" under them, with Run before it after a crash not of the memory, and after a failure that ends it, the line of a Stop | Run again after a failure that is not popnei's refusal, once the PCA is not live; change the options or the thresholds after a refusal; open the variants file again after it could no longer be read |
 
@@ -1084,7 +1096,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | Distances, the individuals in the file, but none with a value in the column | "The distances between populations need at least two populations, and no individual of panel.nei has a value in popcat. Choose another column of the populations in the box Individuals file, or add the populations to panel_pops.csv and open it again." |
 | the heading of the tab | "PCA"; "PCoA" |
 | the drop-down list of the method, its items and the line under it | "PCA of the genotypes"; "PCoA of the Kosman distances"; "The PCoA suits data with many missing genotypes." |
-| the filters | "Filters of the variants for the PCA"; "The PCA reads the variants the Variants tab keeps. Its own missing data and MAF filters can only be stricter."; "Maximum proportion of missing genotypes for the PCA"; "Maximum major allele frequency for the PCA"; "Prune the variants by linkage disequilibrium (LD)" |
+| the filters | "Filters of the variants for the PCA"; "PCA filters can be stricter than the general analysis ones."; "Maximum proportion of missing genotypes for the PCA"; "Maximum major allele frequency for the PCA"; "Prune the variants by linkage disequilibrium (LD)" |
 | the value of a slider | "0.1, as in the Variants tab"; "Off, as in the Variants tab"; "0.05" |
 | the ends of a slider, under its track | "0" and "0.1"; "0.5" and "Off" |
 | a filter whose slider would have no range | "0, as in the Variants tab. The PCA cannot be stricter than the Variants tab here." |
@@ -1100,7 +1112,6 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | the end of a run, in the status region | "PCA of panel.nei calculated."; "PCoA of panel.nei calculated."; a refusal or a failure, "The PCA of panel.nei could not be calculated: " followed by the words of its error |
 | under the button, in the place of the bar, during the quiet second | "The PCA starts again in a moment, once the filters and its options stop changing."; "The PCoA starts again in a moment, once the filters and its options stop changing."; while the dialog of the download is open, "The PCA starts again when the download is written or closed."; "The PCoA starts again when the download is written or closed." |
 | the button while the PCA is live and no PCA runs | "Stop recalculating" |
-| under it, in the place of the bar, while the PCA is live and its result shown | "The PCA is calculated again after each change of the filters or of its options."; "The PCoA is calculated again after each change of the filters or of its options." |
 | under the button, in the place of the bar, after a Stop, until Run or another variants file | "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change."; "Stopped: the PCoA …" |
 | the status region, a PCA started by itself | "Calculating the PCA again. To change the filters, stop it in the PCA tab."; "Calculating the PCoA again. To change the filters, stop it in the PCA tab." |
 | the status region, a Stop of the PCA, in the tab or in the band | "PCA stopped. Press Run in the PCA tab to calculate it again."; "PCoA stopped. …"; with no Run to press, Run disabled or the result shown, "PCA stopped."; "PCoA stopped." |
@@ -1174,9 +1185,11 @@ first and the last; then
 the content of the tab shown. In the PCA tab: the method; the slider of
 the missing data; that of the MAF; the LD switch and its two fields; Run, Stop or Stop recalculating, one stop in one place, and after a failure that leaves the PCA live, Run and then Stop recalculating; the warnings; the plot's "Download…",
 beside the title of the plot; the bar of controls; the legend; the link
-to the table; the "Download…" of the explained variance; the
-"Download…" of the table of the individuals, then the table. Each
-"Download…" comes before what it downloads, where it is drawn. (Until
+to the table; the explained variance, when it scrolls, and its
+"Download…"; the table of the individuals, then its "Download…". Each
+"Download…" of a plot comes before the plot, and each of a table after
+the table, where it is drawn (below the table since 11 October 2026, as
+the owner asked; before it until then). (Until
 10 October 2026 this list put the plot's "Download…" after the
 explained variance, which is not the order drawn; the review of work
 package 6 of the plan found it.)
@@ -1409,7 +1422,11 @@ engines that start on the owner's Mac, on `panel.nei`,
   `s000` beginning `s000,-0.7138853335304419,7.676473141448964`; the
   table of the PCA, sorted by PC1, saved, its rows in that order; the
   SVG of a histogram, with its threshold's line; a PNG of the 3D view;
-  a histogram's menu disabled while the pass is held, with its tooltip.
+  a histogram's menu disabled while the pass is held, with its tooltip;
+  the "Download…" of the explained variance, of the table of the
+  individuals of the PCA and of the table of the Individuals tab after
+  its table in the page and drawn below it, at 1280 and at 320 px (from
+  11 October 2026).
 - **Kept drawn**: the PCA in 3D, turned by a drag, the Variants
   tab shown and back: the same view, in Chromium and in WebKit, whose
   WebGL context must survive the hidden tab.
@@ -1449,8 +1466,8 @@ and after it could not be; a menu of a download open; about to start,
 `popgen2-pca-about-to-start`, and running started by itself with the
 Variants tab shown and a threshold greyed, `popgen2-pca-live-locked`;
 ready after a Stop, with its line under Run, `popgen2-pca-stopped`;
-done with the PCA live, "Stop recalculating" and its line above the
-result, `popgen2-pca-live-done`; a crash that leaves it live, Run and
+done with the PCA live, "Stop recalculating" above the result with no
+line under it, `popgen2-pca-live-done`; a crash that leaves it live, Run and
 Stop recalculating side by side, `popgen2-pca-live-failed`;
 light and dark; 1280 and 320 px. The screens `popgen2-undo`,
 `popgen2-undo-redo` and `popgen2-undo-waiting` go.

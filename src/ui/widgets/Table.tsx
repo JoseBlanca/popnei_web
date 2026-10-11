@@ -73,7 +73,7 @@ export type TableProps = TableLook &
             in place of what is shown. */
         readonly rows: readonly (TableRow & RowValues)[];
         /** The download of the table, which draws the menu "Download…"
-            above it. */
+            below it. */
         readonly download: TableDownload;
       }
   );
@@ -197,14 +197,15 @@ export function Table(props: TableProps): React.JSX.Element {
       {menu === null ? (
         scrollBox
       ) : (
-        // The menu above the table's top right corner: the two in a box
-        // as wide as the table, or as the frame when the table is wider.
-        // A table that gains or loses its download is drawn again in it;
-        // the tables of popgen2.html have theirs from their first draw,
-        // and those of popgen.html none.
+        // The menu below the table's bottom right corner, as the owner
+        // asked on 11 October 2026: the two in a box as wide as the
+        // table, or as the frame when the table is wider. A table that
+        // gains or loses its download is drawn again in it; the tables of
+        // popgen2.html have theirs from their first draw, and those of
+        // popgen.html none.
         <div className={classOf(styles, "withMenu")}>
-          {menu}
           {scrollBox}
+          {menu}
         </div>
       )}
     </div>

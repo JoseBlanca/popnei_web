@@ -56,6 +56,9 @@ const ABOUT_DIALOG =
   "The PCA starts again when the download is written or closed.";
 const STOPPED =
   "Stopped: the PCA no longer starts by itself after a change. Run calculates it and starts it again after each change.";
+/** The line under Stop recalculating with the result shown until 11
+    October 2026, when the owner took it away (round 1 of work package 8
+    of docs/plans/no-undo.md). */
 const LIVE_DONE =
   "The PCA is calculated again after each change of the filters or of its options.";
 const NO_DISTANCE = "Type the LD distance above, or turn the LD pruning off.";
@@ -313,7 +316,7 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
     expect(page.autoRuns.isLive("pca")).toBe(false);
   });
 
-  test("live and done: Stop recalculating, the same button as Stop, the focus kept; pressed, the result kept with the line of a Stop and no button, the focus on the heading", async () => {
+  test("NU8 R1 live and done: Stop recalculating, the same button as Stop, the focus kept, with no line under it; pressed, the result kept with the line of a Stop and no button, the focus on the heading", async () => {
     const page = await drawTab();
     const run = button("Run");
     run?.focus();
@@ -325,10 +328,11 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
     expect(document.activeElement).toBe(stop);
     expect(button("Stop")).toBeNull();
     expect(descriptionOf(stop)).toBe("");
-    expect(lineShown(LIVE_DONE)).toBe(true);
+    expect(lineShown(LIVE_DONE)).toBe(false);
+    expect(lineShown(ABOUT)).toBe(false);
+    expect(lineShown(STOPPED)).toBe(false);
 
     await press(stop);
-    expect(lineShown(LIVE_DONE)).toBe(false);
     expect(page.autoRuns.isLive("pca")).toBe(false);
     expect(button("Run")).toBeNull();
     expect(button("Stop recalculating")).toBeNull();

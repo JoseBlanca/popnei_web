@@ -465,6 +465,46 @@ test("AP5 D4 the counts per population of panel_pops.csv saved by the keyboard: 
     .toContain("Saving panel.population_counts.csv.");
 });
 
+/** Checks that the button `button` is drawn below the table `table`:
+    after it in the page, and its top at or under the table's bottom. */
+async function expectDrawnBelow(
+  button: Locator,
+  table: Locator,
+): Promise<void> {
+  const after = await table.evaluate(
+    (element, other) =>
+      (element.compareDocumentPosition(other) &
+        Node.DOCUMENT_POSITION_FOLLOWING) !==
+      0,
+    await button.elementHandle(),
+  );
+  expect(after).toBe(true);
+  const tableBox = await table.boundingBox();
+  const buttonBox = await button.boundingBox();
+  expect(tableBox).not.toBeNull();
+  expect(buttonBox).not.toBeNull();
+  expect(buttonBox?.y ?? 0).toBeGreaterThanOrEqual(
+    (tableBox?.y ?? 0) + (tableBox?.height ?? 0) - 0.5,
+  );
+}
+
+test("NU8 R1 the Download… of the table of panel_pops.csv in the Individuals tab is drawn below the table, at 1280 and at 320 pixels", async ({
+  page,
+}) => {
+  await page.goto("popgen2.html");
+  await pickIndividuals(page, "panel_pops.csv");
+  await page.getByRole("tab", { name: "Individuals", exact: true }).click();
+  const grid = page.getByRole("grid", { name: "The table of panel_pops.csv" });
+  await expect(grid).toBeVisible({ timeout: 20_000 });
+  const button = menuButton(
+    page.getByRole("tabpanel"),
+    "the table of panel_pops.csv",
+  );
+  await expectDrawnBelow(button, grid);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await expectDrawnBelow(button, grid);
+});
+
 /** The reason of a menu that waits for the one pass of held.vcf.gz. */
 const HELD_REASON = "Download once held.vcf.gz is read to the end.";
 

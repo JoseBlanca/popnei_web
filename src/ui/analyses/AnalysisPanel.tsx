@@ -103,14 +103,13 @@ export type PanelLive =
       the page, so that the user can end it before the lock lifts; and,
       while it is about to start, `aboutToStartLine`, the line of the
       quiet second, under it in the place of the bar, `null` while it is
-      not about to start; with its result shown, `resultLine`, which says
-      what the button stops, there. After a failure that leaves it live
-      and that Run may mend, Run stands first, which tries again under the
+      not about to start; with its result shown, no line, as the owner
+      asked on 11 October 2026. After a failure that leaves it live and
+      that Run may mend, Run stands first, which tries again under the
       same key, and "Stop recalculating" beside it. */
   | {
       readonly kind: "live";
       readonly aboutToStartLine: string | null;
-      readonly resultLine: string;
     };
 
 /** The attribute of the heading of a panel, by which the band's link to
@@ -309,10 +308,7 @@ function pageButton(
         button: { kind: "stop" },
         line: button?.kind === "run" ? button.reason : null,
         stopLabel: STOP_RECALCULATING,
-        under:
-          status.kind === "done"
-            ? page.live.resultLine
-            : page.live.aboutToStartLine,
+        under: status.kind === "done" ? null : page.live.aboutToStartLine,
         stopBeside: false,
       };
   }

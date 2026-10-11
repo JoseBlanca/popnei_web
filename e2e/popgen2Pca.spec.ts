@@ -1043,6 +1043,29 @@ function menuButton(page: Page, what: string): Locator {
   });
 }
 
+/** Checks that the button `button` is drawn below the table `table`:
+    after it in the page, and its top at or under the table's bottom. */
+async function expectDrawnBelow(
+  button: Locator,
+  table: Locator,
+): Promise<void> {
+  const after = await table.evaluate(
+    (element, other) =>
+      (element.compareDocumentPosition(other) &
+        Node.DOCUMENT_POSITION_FOLLOWING) !==
+      0,
+    await button.elementHandle(),
+  );
+  expect(after).toBe(true);
+  const tableBox = await table.boundingBox();
+  const buttonBox = await button.boundingBox();
+  expect(tableBox).not.toBeNull();
+  expect(buttonBox).not.toBeNull();
+  expect(buttonBox?.y ?? 0).toBeGreaterThanOrEqual(
+    (tableBox?.y ?? 0) + (tableBox?.height ?? 0) - 0.5,
+  );
+}
+
 /** Focuses the button `button`, opens its menu with Enter, goes down to
     `item`, the `index`th, with the arrow keys, chooses it with Enter, and
     gives the file the page hands to the browser. */
@@ -1447,6 +1470,31 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     expect(rows.find((row) => row.startsWith("s000,"))).toMatch(
       /^s000,,-0\.7138853335304419,/u,
     );
+  });
+
+  test("NU8 R1 the Download… of the explained variance and that of the table of the individuals drawn below their tables, at 1280 and at 320 pixels", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await openReady(page);
+    await runToResult(page);
+    const variance = shown(page).getByRole("table", {
+      name: /^The variance of the individuals explained by each component/u,
+    });
+    const pairs: readonly (readonly [Locator, Locator])[] = [
+      [menuButton(page, "the explained variance of the PCA"), variance],
+      [
+        menuButton(page, "the table of the individuals of the PCA"),
+        individualsGrid(page),
+      ],
+    ];
+    for (const width of [1280, 320]) {
+      await page.setViewportSize({ width, height: 800 });
+      for (const [button, table] of pairs) {
+        await expect(table).toBeVisible();
+        await expectDrawnBelow(button, table);
+      }
+    }
   });
 
   test("AP6 D3 kept drawn: the 3D view turned by a drag, the Variants tab shown and back, the same view; a run that ends while the tab is hidden draws its view when the tab is shown, its loading not said meanwhile", async ({

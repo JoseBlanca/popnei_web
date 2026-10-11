@@ -1,7 +1,7 @@
 /* The tokens are those of src/ui/tokens.css. */
 
-/* The button, at the end of the line above the table or the plot, and
-   the words of a PNG refused, placed under it. */
+/* The button, at the end of its line, below a table or above a plot,
+   and the words of a PNG refused, placed under it. */
 .download {
   position: relative;
   display: grid;

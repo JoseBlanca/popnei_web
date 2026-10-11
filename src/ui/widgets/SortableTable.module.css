@@ -150,10 +150,10 @@
   white-space: nowrap;
 }
 
-/* A table given a download: the line of the menu "Download…" above the
-   box, its button at the end. */
+/* A table given a download: the line of the menu "Download…" below the
+   box, as the owner asked on 11 October 2026. */
 .menuLine {
-  margin-block-end: var(--space-2);
+  margin-block-start: var(--space-2);
 }
 
 /* A table that says when columns are cut off at its right: its box, and

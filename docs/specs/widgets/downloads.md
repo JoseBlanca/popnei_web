@@ -90,8 +90,11 @@ errors of the page shows; the menu closes as after any choice.
 ### A table
 
 `SortableTable` and `Table` of `src/ui/widgets/` take an optional
-`download`. With it they draw the menu above the table's top right
-corner, with one item, "Table as CSV". Its menu can wait, as a plot's
+`download`. With it they draw the menu below the table's bottom right
+corner, on a line of its own, with one item, "Table as CSV": below the
+table since 11 October 2026, as the owner asked on trying the page
+(round 1 of work package 8 of `docs/plans/no-undo.md`), and above it
+before. Its menu can wait, as a plot's
 does, with the reason the screen gives: the counts per population of
 the box of the individuals file wait for the one pass, "…" in place of
 each (`docs/specs/steps/popgen2-input.md`, "The counts that wait"), and
@@ -355,13 +358,16 @@ columns: a defect as it is drawn, and one with none: a type error, by a
 `@ts-expect-error`; a `DownloadMenu` with a `save` that throws
 `PngError("tooLarge")`: the words under the button and in the status
 region; a waiting menu: `aria-disabled`, its tooltip, and no menu on
-Enter.
+Enter; a `SortableTable` and a `Table` given a download: the button
+"Download…" after the table in the document.
 
 With Playwright, in Chromium and WebKit, on the built site, as
 `docs/specs/steps/popgen2-pca.md`, "How it is checked", lists: each
 menu by the keyboard alone, the files saved and read back, the SVG of a
 histogram with its threshold's line, a PNG of the 3D view, and axe with
-no finding.
+no finding; and the "Download…" of the PCA's explained variance, of its
+table of the individuals and of the table of the Individuals tab after
+its table in the page and drawn below it, at 1280 and 320 px.
 
 ## Not in this spec
 

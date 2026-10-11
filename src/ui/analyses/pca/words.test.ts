@@ -37,10 +37,10 @@ describe("AP6 D1 the words of the PCA tab", () => {
   test("the heading of the filters and the line under it, by the method", () => {
     expect(filtersHeading("pca")).toBe("Filters of the variants for the PCA");
     expect(popgen2FiltersLine("pca")).toBe(
-      "The PCA reads the variants the Variants tab keeps. Its own missing data and MAF filters can only be stricter.",
+      "PCA filters can be stricter than the general analysis ones.",
     );
     expect(popgen2FiltersLine("pcoa")).toBe(
-      "The PCoA reads the variants the Variants tab keeps. Its own missing data and MAF filters can only be stricter.",
+      "PCoA filters can be stricter than the general analysis ones.",
     );
   });
 

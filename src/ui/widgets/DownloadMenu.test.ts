@@ -830,6 +830,47 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
   });
 });
 
+describe("NU8 R1 the menu Download… of a table drawn below it", () => {
+  // As the owner asked on 11 October 2026 (round 1 of work package 8 of
+  // docs/plans/no-undo.md): the button after the table in the page, so
+  // after it for the Tab key and for a screen reader too.
+  test.each(["sortable", "plain"])(
+    "a %s table given a download has its button Download… after the table",
+    (kind) => {
+      const download = { what: "the table", fileName: "x.csv", waiting: null };
+      draw(
+        kind === "sortable"
+          ? createElement(SortableTable<Id>, {
+              label: "The individuals",
+              columns: SORTABLE_COLUMNS,
+              rows: SORTED_ROWS,
+              sort: null,
+              onSortChange: () => undefined,
+              moreColumnsCue: true,
+              download,
+            })
+          : createElement(Table, {
+              caption: "Counts",
+              columns: [
+                { id: "pair", label: "Populations", isRowHeader: true },
+              ],
+              rows: [{ id: "p1", cells: ["p1"], values: ["p1"] }],
+              download,
+            }),
+      );
+      // The sortable table is a grid of React Aria's, drawn without a
+      // <table>.
+      const table = container.querySelector('table, [role="grid"]');
+      expect(table).not.toBeNull();
+      const button = trigger("the table");
+      expect(
+        table?.compareDocumentPosition(button) ??
+          Node.DOCUMENT_POSITION_PRECEDING,
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    },
+  );
+});
+
 describe("NU3 D2 the menu Download… holds while it is open", () => {
   /** The menu of the plot of the MAF, with one item that saves at once,
       under `gate`, as popgen2.html draws it. */

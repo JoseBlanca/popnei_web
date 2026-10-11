@@ -70,10 +70,12 @@ export function filtersLine(method: PcaMethod): string {
 }
 
 /** The line under the heading of the filters on popgen2.html, whose
-    filters of the PCA narrow those of the Variants tab
-    (docs/specs/steps/popgen2-pca.md, "Its filters"). */
+    filters of the PCA narrow those of the Variants tab, in the owner's
+    words of 11 October 2026 (docs/specs/steps/popgen2-pca.md, "Its
+    filters"): "PCA filters can be stricter than the general analysis
+    ones."; "PCoA filters …" under the PCoA. */
 export function popgen2FiltersLine(method: PcaMethod): string {
-  return `The ${methodName(method)} reads the variants the Variants tab keeps. Its own missing data and MAF filters can only be stricter.`;
+  return `${methodName(method)} filters can be stricter than the general analysis ones.`;
 }
 
 /** The name of the slider of a missing data or a MAF filter of the
