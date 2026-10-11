@@ -455,7 +455,10 @@ function isOnePopulation(p: Project, page: DiversityPage): boolean {
  * Unclassified: 200 individuals. No individual is assigned to a
  * population, so the diversity is of every individual kept as one
  * population.", and a sentence that says why and how to get populations
- * for a refused file, a column absent and a column of too many values
+ * for a refused file, a column absent and a column of too many values;
+ * and, when the one population stands for an individuals file or a
+ * column the user opened, one that says what it does to the numbers if
+ * the individuals belong to several populations
  * (docs/specs/steps/popgen2-populations.md, "The populations it runs
  * on"). Throws a defect when popgen2.html runs populations of a column.
  */
@@ -468,7 +471,35 @@ export function onePopulationLine(p: Project, numIndividuals: number): string {
   }
   const line = `1 population, ${UNCLASSIFIED_POPULATION}: ${counted(numIndividuals, "individual")}. No individual is assigned to a population, so the diversity is of every individual kept as one population.`;
   const why = onePopulationWhy(p, cause);
-  return why === null ? line : `${line} ${why}`;
+  return [line, why, standsForOpened(cause) ? MIXED_POPULATIONS : null]
+    .filter((sentence) => sentence !== null)
+    .join(" ");
+}
+
+/** What the one population does to the numbers when its individuals
+    belong to several populations: the Wahlund effect, F pooled above F
+    within each (docs/functionality.md: nothing misleads without
+    warning). */
+const MIXED_POPULATIONS =
+  "If the individuals belong to several populations, the expected heterozygosity and F are those of their mixture, and F comes out higher than within the populations.";
+
+/** Whether the one population of the cause `cause` stands for an
+    individuals file or a column of the populations the user opened, and
+    not for no file or "None", chosen to have none: a refused file, a
+    column absent, not offered, of too many values or that classifies
+    nobody. */
+function standsForOpened(cause: OnePopulationCause): boolean {
+  switch (cause.kind) {
+    case "refused":
+    case "noSuchColumn":
+    case "notOffered":
+    case "tooMany":
+    case "noneClassified":
+      return true;
+    case "noFile":
+    case "noColumn":
+      return false;
+  }
 }
 
 /** The sentence of the line of the one population that says why, for

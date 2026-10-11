@@ -23,7 +23,9 @@ populations it runs on").
 Corrected on 11 October 2026 after the review of work package 1 of
 the plan: a failure that ends the diversity's live state has its own
 line, which does not say "Stopped", since the user pressed no Stop
-("Its words"); `autoRuns.run` answers "kept" when the store starts
+("Its words"); the line of the one population says what it does to F
+when it stands for a file or a column the user opened ("The populations
+it runs on"); `autoRuns.run` answers "kept" when the store starts
 nothing for the diversity ("Accessibility" and "How it is checked");
 and until the band offers Stop all, the words of the locks name the
 Stop of each tab in its place ("While the diversity runs").
@@ -172,7 +174,18 @@ box Individuals says; open it again, or another file, there to get
 populations."; "country has 35 values, more than the 20 a column of
 populations can have; choose another column in the box Individuals to
 get populations."; "panel_pops.csv has no column popcat; choose a
-column of the populations in the box Individuals." With a threshold of the
+column of the populations in the box Individuals." When the one
+population stands for an individuals file or a column the user opened,
+a refused file, a column absent, not offered, of more than 20 values
+or that classifies nobody, a last sentence says what it does to the
+numbers: "If the individuals belong to several populations, the
+expected heterozygosity and F are those of their mixture, and F comes
+out higher than within the populations." With no individuals file and
+with "None", chosen to have one population, it is not said. (Added on
+11 October 2026 after the review of work package 1 of the plan: on
+`panel.nei` with `panel_pops.csv` the one population gives F 0.0564,
+where its three populations give −0.013 to −0.019, and nothing said
+so.) With a threshold of the
 individuals on and the one pass not finished, the counts are not known;
 Run is then locked by the one pass anyway (below), and the line gives
 the populations before the thresholds, with "The thresholds of the

@@ -3209,6 +3209,11 @@ function sentPops(
   return jobs.map((job) => job.pops);
 }
 
+/** The sentence of the line of the one population when it stands for an
+    individuals file or a column the user opened. */
+const MIXED =
+  "If the individuals belong to several populations, the expected heterozygosity and F are those of their mixture, and F comes out higher than within the populations.";
+
 /** The first sentence of the warning of the private alleles of the one
     population on popgen2.html. */
 const NO_PRIVATE_ONE =
@@ -3602,6 +3607,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
   test("the line of the one population, and its second sentence for a refused file, a column absent and a column of 21 values", () => {
     const first =
       "No individual is assigned to a population, so the diversity is of every individual kept as one population.";
+    const mixed = MIXED;
     expect(
       onePopulationLine(
         deepFreeze<Project>({ ...project(), individuals: null }),
@@ -3612,7 +3618,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       `1 population, Unclassified: 1 individual. ${first}`,
     );
     expect(onePopulationLine(refusedProject(), 4)).toBe(
-      `1 population, Unclassified: 4 individuals. ${first} pops.csv could not be read, as the box Individuals says; open it again, or another file, there to get populations.`,
+      `1 population, Unclassified: 4 individuals. ${first} pops.csv could not be read, as the box Individuals says; open it again, or another file, there to get populations. ${mixed}`,
     );
     expect(
       onePopulationLine(
@@ -3623,12 +3629,27 @@ describe("PT1 D1 the definition of popgen2.html", () => {
         4,
       ),
     ).toBe(
-      `1 population, Unclassified: 4 individuals. ${first} pops.csv has no column country; choose a column of the populations in the box Individuals.`,
+      `1 population, Unclassified: 4 individuals. ${first} pops.csv has no column country; choose a column of the populations in the box Individuals. ${mixed}`,
     );
     expect(onePopulationLine(tooManyProject(), 21)).toBe(
-      `1 population, Unclassified: 21 individuals. ${first} pop has 21 values, more than the 20 a column of populations can have; choose another column in the box Individuals to get populations.`,
+      `1 population, Unclassified: 21 individuals. ${first} pop has 21 values, more than the 20 a column of populations can have; choose another column in the box Individuals to get populations. ${mixed}`,
     );
     expect(() => onePopulationLine(project(), 3)).toThrow("popnei_web defect");
+  });
+
+  test("the line of the one population of a column that classifies nobody says the numbers may mix populations; with no file and with None it does not", () => {
+    const first =
+      "No individual is assigned to a population, so the diversity is of every individual kept as one population.";
+    expect(onePopulationLine(noneClassifiedProject(), 4)).toBe(
+      `1 population, Unclassified: 4 individuals. ${first} ${MIXED}`,
+    );
+    expect(onePopulationLine(noneProject(), 4)).not.toContain(MIXED);
+    expect(
+      onePopulationLine(
+        deepFreeze<Project>({ ...project(), individuals: null }),
+        4,
+      ),
+    ).not.toContain(MIXED);
   });
 
   test("the key: None and no individuals file give the same key, a column and None different keys, and the same table opened again the same key", () => {
