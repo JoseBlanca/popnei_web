@@ -13,7 +13,9 @@ the diversity runs), and section 6 of `docs/functionality.md`,
 6 of case 4 of `docs/use-cases.md`, "Characterise populations and the
 distances between them", the first of the three pieces of that case.
 Written on 11 October 2026, before any code; its plan is
-`docs/plans/population-tab.md`. Not yet approved by the owner; one open point, at the end. The name of
+`docs/plans/population-tab.md`. Approved by the owner on 11 October
+2026, with their answer to its one open point (below, "Open points").
+The name of
 the one population and what "None" chosen does were settled by the session
 on 11 October 2026 from the owner's earlier decisions (below, "The
 populations it runs on").
@@ -126,10 +128,15 @@ owner's of 9 October 2026:
 
 - some individual of the variants file classified: the unclassified are
   left out of the table;
-- none classified, with no individuals file, with "None" chosen, or
-  with a column that gives none of the individuals of the variants file
-  a population: the table has the one population, "Unclassified", every
-  individual kept. The design's choice 8 said that no column chosen
+- none classified, with no individuals file, with "None" chosen, with
+  a column that gives none of the individuals of the variants file a
+  population, with an individuals file that could not be read, with a
+  column the file does not have or its list does not offer, or with a
+  column of more than 20 different values, which by the owner's bound
+  of 9 October 2026 is no column of populations: the table has the one
+  population, "Unclassified", every individual kept, as the owner
+  answered on 11 October 2026 for the refused file and the column of
+  too many values. The design's choice 8 said that no column chosen
   locks the diversity; it was corrected on 11 October 2026 to the
   owner's answer of 9 October, which came first.
 
@@ -150,7 +157,14 @@ empty, of those under the minimum and of those that hold fewer
 chromosomes than the draw, with "the Variants tab" for "the Variants
 step". For the one population: "1 population, Unclassified: 200
 individuals. No individual is assigned to a population, so the
-diversity is of every individual kept as one population." With a threshold of the
+diversity is of every individual kept as one population." When the
+cause is the individuals file or its column, a second sentence says it
+and how to get populations: "panel_pops.csv could not be read, as the
+box Individuals says; open it again, or another file, there to get
+populations."; "country has 35 values, more than the 20 a column of
+populations can have; choose another column in the box Individuals to
+get populations."; "panel_pops.csv has no column popcat; choose a
+column of the populations in the box Individuals." With a threshold of the
 individuals on and the one pass not finished, the counts are not known;
 Run is then locked by the one pass anyway (below), and the line gives
 the populations before the thresholds, with "The thresholds of the
@@ -197,9 +211,6 @@ disabled, or beside Stop recalculating while the diversity is live:
 | the one pass stopped by the user, or failed in a way its box offers Start again for | "Run once panel.nei is read to the end: Start again its reading in the box Variants." |
 | the one pass refused by popnei, or the file no longer readable | "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again there, or open another." |
 | the individuals file being read | "The diversity waits for panel_pops.csv to be read." |
-| the individuals file refused, or its read failed | "panel_pops.csv could not be read, as the box Individuals says. Open it again there, or remove it to take every individual as one population." |
-| a column chosen that the file does not have, or that its list does not offer | "panel_pops.csv has no column popcat. Choose the column of the populations in the box Individuals." |
-| a column of more than 20 values | "country has 35 values, more than the 20 a column of populations can have. Choose another column in the box Individuals." |
 | the filters of the individuals keep no individual at all | the store's words of `keptNoneReason`, as the PCA tab gives them, "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them." |
 | the filters of the individuals keep no individual of any population | the old panel's words of `populationsKeptNeeds`, with "the Variants tab" |
 | the draw larger than the chromosomes of the largest population | the old panel's words of the draw, with "the thresholds of the individuals in the Variants tab" where they name the filters |
@@ -506,10 +517,9 @@ each choice back").
 Open to the owner's change once they try the page: the heading
 "Diversity" in the tab and "Site frequency spectrum" under it; the
 line of the unclassified in the ready state and the caption, and no
-warning for them; a refused individuals file and a column of more than
-20 values locking the diversity, where the PCA takes every point as
-unclassified, since a result of the one population while the user's
-file is refused would not be the populations they asked for; the CSV
+warning for them; (a refused individuals file and a column of more than
+20 values giving the one population is the owner's answer and no
+longer the session's; the CSV
 of the table with the labels of its columns as header, as every table
 of the page, where the old page wrote the names of the Python script;
 one "Download…" per histogram of the spectrum; the population's name
@@ -526,18 +536,14 @@ while it scrolls sideways.
 
 ## Open points
 
-1. **A refused individuals file, and a column of more than 20 values.**
-   This spec locks the diversity in both. The owner's answer of 9
-   October 2026 gives the one population whenever no individual is
-   classified; a refused file classifies nobody, and a column of more
-   than 20 values is, by the owner's bound of 20, no column of
-   populations, with no counts in the box. (a) Lock both, as written:
-   the user's file did not give the populations they meant, and a
-   table of every individual would pass for the one they asked for.
-   (b) The one population "Unclassified" in both, as the rule of 9
-   October reads, with the line of the populations saying why.
-   Recommended: (a). Meanwhile (a); an answer (b) changes two rows of
-   "The locks" and `needs` of the definition (task 1.1 of the plan).
+None. The owner answered the one left on 11 October 2026, when they
+approved this spec: "When the individuals file cannot be read, or the
+chosen column has more than 20 different values, we just show each
+individual as unclassified until the user chooses a column." So a
+refused individuals file and a column of more than 20 values give the
+one population, "Unclassified", with a line that says why ("The
+populations it runs on"); the option not taken was to lock the
+diversity in both.
 
 The two points of the first draft were settled by the session on
 11 October 2026 from the owner's earlier decisions: the one population

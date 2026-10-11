@@ -39,7 +39,7 @@ two or more analyses are live and one of them runs, waits or is about
 to start; the link points to the first result of the order
 of the tabs that has warnings or failed. The section "Several live
 analyses", below, says so; the tables of "The line", of the short forms
-and of "Its words" gain their rows. Not yet built; its plan is
+and of "Its words" gain their rows. Approved by the owner on 11 October 2026; not yet built; its plan is
 `docs/plans/population-tab.md`.
 
 It reads what the other specs of the page give, and repeats none of

@@ -1,6 +1,7 @@
 # Plan: the Populations tab of popgen2.html, the diversity calculated again by itself beside the PCA
 
-11 October 2026. A draft, for the owner to approve with its specs.
+11 October 2026. Approved by the owner on 11 October 2026, with its
+specs and their answer to the one open point.
 
 ## For the owner
 
@@ -8,8 +9,11 @@ This plan builds the Populations tab of `popgen2.html`: the diversity of
 each population and its site frequency spectrum, calculated again by
 itself after each change, as the PCA tab is since 10 October 2026. It
 builds the design you approved today, `docs/designs/population-tab.md`.
-What is asked of you now is to approve it and its specs, and to answer
-one question, below.
+You approved it and its specs on 11 October 2026, and answered its one
+question: when the individuals file cannot be read, or the column
+chosen has more than 20 different values, every individual is
+unclassified, and the diversity is of all of them as one population,
+"Unclassified", until a column is chosen, with a line that says why.
 
 **The words used here.** An analysis is **live** once you press its
 Run: from then on it is calculated again by itself after each change of
@@ -56,16 +60,6 @@ change:
   approved today said, in its section on a change of the populations,
   that no column chosen locks the diversity; that sentence was
   corrected to your earlier answer, with a dated line saying why.
-
-**The question.** When the individuals file cannot be read, or the
-column chosen has more than 20 different values, which the box
-Individuals does not take as populations: (a) the Populations tab says
-why and calculates nothing until the file or the column is changed;
-(b) it calculates the diversity of every individual as one population,
-"Unclassified", as it does with no file, and says why. Recommended:
-(a), since you opened a file to get populations, and a table of every
-individual would pass for the one you asked for. The work follows (a)
-meanwhile; (b) changes two of the tab's reasons.
 
 **The packages, by what each gives:**
 
@@ -196,14 +190,14 @@ Out, each with where it goes:
 
 ## The open points of the specs
 
-The screen spec has one, at the top of this plan for the owner: a
-refused individuals file and a column of more than 20 values lock the
-diversity, meanwhile; an answer (b) changes task 1.1 (two reasons of
-`needs`) and a case of deliverable 1.1. The screen spec's two points of its first draft were settled by
-the session on 11 October 2026 from the owner's earlier decisions: the
-one population is named "Unclassified", and "None" chosen gives it; the
-design's choice 8, which said "None" locks, was corrected the same day.
-The report to the owner (task 6.3) names the correction.
+None. The owner answered the screen spec's last one on 11 October
+2026: a refused individuals file and a column of more than 20 values
+give the one population, "Unclassified", with a line that says why;
+task 1.1 builds it, and deliverable 1.1 checks it. The two points of
+the first draft were settled by the session from the owner's earlier
+decisions: the one population is named "Unclassified", and "None" gives
+it; the design's choice 8, which said "None" locks, was corrected the
+same day. The report to the owner (task 6.3) names the correction.
 
 ## The stops
 

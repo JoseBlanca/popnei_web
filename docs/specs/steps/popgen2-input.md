@@ -41,7 +41,7 @@ paste, and Remove, and the Individuals tab greys the three lists of how
 a text file is read, each with the reason (below, "While the diversity
 runs"); while the PCA runs they stay open, as before. A change of the
 individuals file or of the column now takes the diversity's result off
-the screen, and starts it again while it is live ("The states"). Not
+the screen, and starts it again while it is live ("The states"). Approved by the owner on 11 October 2026; not
 yet built; its plan is `docs/plans/population-tab.md`.
 
 The two tabs were called "Variants file" and "Individuals file" until 9

@@ -45,7 +45,7 @@ Populations tab as a second analysis calculated again by itself
 (`docs/specs/steps/popgen2-populations.md`): the button waits while any
 analysis of the page runs, the diversity as the PCA, and for those
 waiting after it, with words that name them (below, "While an analysis
-runs", and "Its words"). The rest is unchanged. Not yet built; its plan
+runs", and "Its words"). The rest is unchanged. Approved by the owner on 11 October 2026; not yet built; its plan
 is `docs/plans/population-tab.md`.
 
 The module specs it reads, revised for it the same day: the write

@@ -80,7 +80,7 @@ approved by the owner that day: on `popgen2.html` the spectrum is in
 the Populations tab, with the words of that page in its warning, a
 "Download…" on each histogram and below its table, and the names of
 those files (below, "On popgen2.html"). The old page changes in
-nothing. Not yet built; its plan is `docs/plans/population-tab.md`.
+nothing. Approved by the owner on 11 October 2026; not yet built; its plan is `docs/plans/population-tab.md`.
 
 ## What is decided here, and what is asked
 

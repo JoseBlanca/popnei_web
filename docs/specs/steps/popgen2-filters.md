@@ -80,7 +80,7 @@ and with Stop all named while another analysis is live
 by themselves", "The lock"; `popgen2-populations.md`, "While the
 diversity runs"). A change of a threshold or of the FILTER box starts
 again every live analysis whose key it changes, one after the other.
-Nothing else here changes. Not yet built; its plan is
+Nothing else here changes. Approved by the owner on 11 October 2026; not yet built; its plan is
 `docs/plans/population-tab.md`.
 
 The commands of the project, the kind `passed`, the opening of a file

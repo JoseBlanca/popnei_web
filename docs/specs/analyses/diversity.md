@@ -123,7 +123,7 @@ approved by the owner that day: the Populations tab of `popgen2.html`
 runs the diversity through a definition of its own,
 `diversityOnPopgen2`, with the populations of that page, where the
 unclassified are left out or are one population, its locks and its
-words (below, "On popgen2.html"). The old page changes in nothing. Not
+words (below, "On popgen2.html"). The old page changes in nothing. Approved by the owner on 11 October 2026; not
 yet built; its plan is `docs/plans/population-tab.md`.
 
 The walking skeleton is stage 2 of `docs/build-order.md`, the smallest
@@ -1837,9 +1837,12 @@ the result are the old ones.
   the grouping `{ kind: "populations", column: null }`, for which
   `populationsOf` gives `null`; the populations
   of the column chosen, as `populationsOf` gives them, otherwise; and
-  `null`, which locks, while the file is read, after it was refused,
-  and for a column the file does not have or its list does not offer,
-  a column of booleans among them.
+  `null`, which locks, only while the file is read. A refused file, a
+  column the file does not have or its list does not offer, a column
+  of booleans among them, and a column of more than
+  `MAX_LISTED_POPULATIONS`, 20, values, counted as `populationCounts`
+  counts them, give `"all"`, every individual unclassified until the
+  user chooses a column, as the owner answered on 11 October 2026.
 - **The populations to run**, `popgen2PopulationsToRun(p)` and
   `popgen2PopulationsKept(p, kept)` of `src/core/project.ts`, the
   counterparts on this page of `populationsToRun` and `populationsKept`:
@@ -1867,12 +1870,7 @@ the result are the old ones.
   from the file, and without `populationsNeeds`, which locks with no
   column and with a column that classifies none. Its reasons, the first
   that holds, each with the words of `popgen2-populations.md`, "The
-  locks": the individuals file being read; refused, or its read failed;
-  a column the file does not have, or that the list does not offer; a
-  column of more than `MAX_LISTED_POPULATIONS`, 20, values, counted as
-  `populationCounts` counts them, the bound the owner set for a column
-  of populations on 9 October 2026 (answer 5 of the same design); and
-  last the draw larger than the chromosomes of the largest population,
+  locks": the individuals file being read; and last the draw larger than the chromosomes of the largest population,
   `drawNeeds`, with "the thresholds of the individuals in the Variants
   tab" where the old words name the filters of individuals, and no
   words of the lists to keep and to remove, which this page does not
@@ -1952,8 +1950,9 @@ export const diversityOnPopgen2: AnalysisDef<Job, JobResult>;
 export function diversityPageOf(def: AnalysisDef<Job, JobResult>): DiversityPage;
 
 /** In src/core/project.ts: the populations of the key on popgen2.html, "all" with no individuals
-    file and with no column chosen, those of the column otherwise, null while the file is not
-    read, refused, or for a column its list does not offer. Never reads p.variants. The same
+    file, with no column chosen, with the file refused, with a column its list does not offer
+    and with a column of more than 20 values; those of the column otherwise; null while the file
+    is read. Never reads p.variants. The same
     frozen value for the same frozen table and column. */
 export function popgen2Populations(p: Project): Pops | "all" | null;
 
@@ -2015,7 +2014,9 @@ cases, which stay:
 
 - `popgen2Populations`: no individuals file, `"all"`; "None", `"all"`;
   the column `pop` of the worked example, its populations; the file
-  pending, refused, a column absent and a column of booleans, `null`;
+  refused, a column absent, a column of booleans and a column of 21
+  values, `"all"`, and of 20 values its populations; the file pending,
+  `null`;
   none reads `p.variants`, which the test makes a getter that throws.
 - `popgen2PopulationsToRun` and `popgen2PopulationsKept`, and `run`
   with a fake client, which sends what they give: the worked example
@@ -2040,8 +2041,9 @@ cases, which stay:
 - `needs` of `diversityOnPopgen2`: each row of "The locks" of
   `popgen2-populations.md` but those of the one pass, which are the
   screen's, with its words whole; a project with an individual missing
-  from the file, `null`; a column of 21 values, the words of too many,
-  and of 20, `null`.
+  from the file, a refused file and a column of 21 values, `null`.
+- The line of the one population, with its second sentence for a
+  refused file, a column absent and a column of 21 values.
 - The words: each warning and refusal that names a place, with this
   page's words, and `individualsWithoutPopulation` absent from
   `warnings` of a result of the worked example; the old page's words

@@ -80,7 +80,7 @@ runs" says that the column of the populations and the individuals file
 stay open while the PCA runs and are greyed while the diversity runs;
 "The tabs not built yet" no longer names the Populations tab; the lines
 of the PCA's tab while it waits for the diversity are in "About to
-start". Not yet built; its plan is `docs/plans/population-tab.md`.
+start". Approved by the owner on 11 October 2026; not yet built; its plan is `docs/plans/population-tab.md`.
 
 The PCA tab is the panel of the old page, `popgen.html`, which is built
 and which the owner approved on 28 September 2026: its screen spec is
