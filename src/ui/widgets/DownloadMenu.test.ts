@@ -947,3 +947,37 @@ describe("NU3 D2 the menu Download… holds while it is open", () => {
     expect(gate.underWay()).toBe(0);
   });
 });
+
+describe("PT23 R31 Tab in an open menu Download…", () => {
+  for (const shiftKey of [false, true]) {
+    test(`${shiftKey ? "Shift+Tab" : "Tab"} closes it and puts the focus on the button, with the default of the key left to the browser, which moves it on from there`, () => {
+      draw(
+        createElement(DownloadMenu, {
+          what: "the plot of the MAF",
+          items: [
+            { label: "Image as SVG", save: () => Promise.resolve("x.svg") },
+          ],
+          waiting: null,
+        }),
+      );
+      const button = trigger("the plot of the MAF");
+      focusByKeyboard(button);
+      press("Enter");
+      expect(menuItems()).toEqual(["Image as SVG"]);
+      const item = document.activeElement;
+      if (!(item instanceof HTMLElement)) throw new Error("no focus");
+      const tab = new KeyboardEvent("keydown", {
+        key: "Tab",
+        shiftKey,
+        bubbles: true,
+        cancelable: true,
+      });
+      act(() => {
+        item.dispatchEvent(tab);
+      });
+      expect(menuItems()).toBeNull();
+      expect(document.activeElement).toBe(button);
+      expect(tab.defaultPrevented).toBe(false);
+    });
+  }
+});

@@ -5,8 +5,9 @@
  * "Widgets: React Aria, wrapped once"). The button is named for a screen
  * reader by what it downloads, "Download the plot of the PCA", so that
  * the buttons of a page are not all "Download"; Enter, Space or the Down
- * arrow key open the menu, the arrow keys move in it, Enter chooses, and
- * Escape closes it and gives the focus back to the button. A choice calls
+ * arrow key open the menu, the arrow keys move in it, Enter chooses,
+ * Escape closes it and gives the focus back to the button, and Tab or
+ * Shift+Tab closes it and moves the focus on from the button. A choice calls
  * the item's function, which hands the file to the browser, and the
  * status region says "Saving ‹the file's name›."; the page cannot know
  * that the file was saved, since the browser may ask where.
@@ -34,6 +35,7 @@
  * from its opening to its closing, or until it leaves the page.
  */
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   Button as AriaButton,
   Menu,
@@ -150,6 +152,26 @@ export function DownloadMenu({
     setOpen(open);
   };
 
+  // Tab and Shift+Tab close the menu and move on from its button, as the
+  // menu button pattern of the WAI-ARIA Authoring Practices has it. React
+  // Aria's popover holds the focus inside it, and Tab would leave the menu
+  // open with the focus on the menu itself. So the menu closes at once,
+  // taking its hold of the focus with it, the button takes the focus, and
+  // the key's own move, which the browser makes after this handler, goes
+  // from the button to the next element or the one before.
+  const onMenuKeyDown = (event: React.KeyboardEvent): void => {
+    if (event.key !== "Tab" || event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
+    // Not to React Aria's own handlers of Tab, in the menu and on the
+    // document, which would keep the focus in the popover.
+    event.stopPropagation();
+    flushSync(() => {
+      setOpen(false);
+    });
+    buttonRef.current?.focus();
+  };
+
   const onAction = (key: Key): void => {
     const item = items.find((candidate) => candidate.label === key);
     if (item === undefined) {
@@ -201,17 +223,21 @@ export function DownloadMenu({
           )}
         </WithTooltip>
         <Popover className={classOf(styles, "popover")} placement="bottom end">
-          <Menu
-            className={classOf(styles, "menu")}
-            items={items}
-            onAction={onAction}
-          >
-            {(item) => (
-              <MenuItem id={item.label} className={classOf(styles, "item")}>
-                {item.label}
-              </MenuItem>
-            )}
-          </Menu>
+          {/* A key pressed in the menu reaches this element first, before
+              React Aria's handlers in the menu. */}
+          <div onKeyDownCapture={onMenuKeyDown}>
+            <Menu
+              className={classOf(styles, "menu")}
+              items={items}
+              onAction={onAction}
+            >
+              {(item) => (
+                <MenuItem id={item.label} className={classOf(styles, "item")}>
+                  {item.label}
+                </MenuItem>
+              )}
+            </Menu>
+          </div>
         </Popover>
       </MenuTrigger>
       {failure !== null && (

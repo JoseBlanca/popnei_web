@@ -642,6 +642,61 @@ test("AP5 D4 axe with a histogram's menu open and with the table's menu open, li
   }
 });
 
+/** Whether the focus is on the element `handle` holds. */
+async function focusIsOn(
+  page: Page,
+  handle: Awaited<ReturnType<Page["evaluateHandle"]>>,
+): Promise<boolean> {
+  return page.evaluate((element) => element === document.activeElement, handle);
+}
+
+/** With the focus on the menu's button `button`: each of `keys`, Tab or
+    Shift+Tab, with the menu open closes it and moves the focus to the
+    element after the button or to the one before it, which the key
+    reaches from the button with the menu closed. */
+async function expectTabLeavesMenu(
+  page: Page,
+  button: Locator,
+  keys: readonly ("Tab" | "Shift+Tab")[],
+): Promise<void> {
+  for (const key of keys) {
+    const back = key === "Tab" ? "Shift+Tab" : "Tab";
+    await button.focus();
+    await page.keyboard.press(key);
+    const beside = await page.evaluateHandle(() => document.activeElement);
+    await page.keyboard.press(back);
+    await expect(button).toBeFocused();
+
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("menu")).toBeVisible();
+    await expect(page.getByRole("menuitem").first()).toBeFocused();
+    await page.keyboard.press(key);
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    expect(await focusIsOn(page, beside)).toBe(true);
+  }
+}
+
+test("PT23 R31 Tab and Shift+Tab in a histogram's menu and in the menu of the table of panel_pops.csv close the menu and move the focus past its button, as with the menu closed", async ({
+  page,
+}) => {
+  await openDone(page);
+  await pickIndividuals(page, "panel_pops.csv");
+  const [what] = HISTOGRAMS[1];
+  await expectTabLeavesMenu(page, menuButton(stats(page), what), [
+    "Tab",
+    "Shift+Tab",
+  ]);
+
+  // The table's button is the last stop of the page, after which Tab
+  // leaves the page for the browser's bar.
+  await page.getByRole("tab", { name: "Individuals", exact: true }).click();
+  await expectTabLeavesMenu(
+    page,
+    menuButton(page, "the table of panel_pops.csv"),
+    ["Shift+Tab"],
+  );
+});
+
 test("NU2 D3 Ctrl+Z, or Cmd+Z, with a histogram's menu open changes nothing, the threshold changed before kept, and the menu stays open", async ({
   page,
 }) => {

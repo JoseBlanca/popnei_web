@@ -42,8 +42,15 @@ that the browser saves the second one as "(1)".
 named for a screen reader "Download " followed by what it downloads,
 "Download the plot of the PCA"; the menu of its items; Enter, Space or
 the Down arrow key open it, the arrow keys move in it, Enter chooses,
-Escape closes it and gives the focus back to the button. A choice calls
-the item's function, which hands the file to the browser at once
+Escape closes it and gives the focus back to the button, and Tab or
+Shift+Tab closes it and moves the focus to the element after the button
+or before it, as the menu button pattern of the WAI-ARIA Authoring
+Practices, the W3C's guide to such widgets, asks. React Aria's menu
+holds the focus inside its popover, so that until 11 October 2026 Tab
+left the menu open, with the focus on the menu itself and on none of its
+items, as the review of work packages 2 and 3 of
+`docs/plans/population-tab.md` found. A choice calls the
+item's function, which hands the file to the browser at once
 (`downloadText` and `downloadFile` of `src/ui/download.ts`), and the
 status region says "Saving ‹the file's name›." The page cannot know that
 the file was saved: a browser set to ask where to save opens its own
@@ -364,14 +371,19 @@ columns: a defect as it is drawn, and one with none: a type error, by a
 `@ts-expect-error`; a `DownloadMenu` with a `save` that throws
 `PngError("tooLarge")`: the words under the button and in the status
 region; a waiting menu: `aria-disabled`, its tooltip, and no menu on
-Enter; a `SortableTable` and a `Table` given a download: the button
+Enter; Tab in an open menu: the menu closed and the focus on the
+button, from where the browser's own move of Tab goes on; a `SortableTable` and a `Table` given a download: the button
 "Download…" after the table in the document.
 
 With Playwright, in Chromium and WebKit, on the built site, as
 `docs/specs/steps/popgen2-pca.md`, "How it is checked", lists: each
 menu by the keyboard alone, the files saved and read back, the SVG of a
 histogram with its threshold's line, a PNG of the 3D view, and axe with
-no finding; and the "Download…" of the PCA's explained variance, of its
+no finding; Tab and Shift+Tab in the open menu of a histogram, and
+Shift+Tab in that of the table of the individuals file, whose button is
+the last stop of the page, the menu closed and the focus on the element
+after the button or before it, on `popgen2.html`, the one page that
+draws the menu; and the "Download…" of the PCA's explained variance, of its
 table of the individuals and of the table of the Individuals tab after
 its table in the page and drawn below it, at 1280 and 320 px.
 
