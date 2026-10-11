@@ -495,7 +495,7 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     );
   });
 
-  test("None chosen: every individual kept unclassified, no table", async () => {
+  test("None chosen: the one row Unclassified, as with no individuals file, and no line under it", async () => {
     const { store } = await drawPage();
     await openVariants(store);
     await pickIndividuals("pops.csv");
@@ -503,10 +503,11 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     await choose(store, "popcat");
     await choose(store, null);
     expect(listValue()).toBe("None: every individual unclassified");
-    expect(countRows()).toEqual([]);
-    expect(paragraphs(box())).toContain(
-      "All 5 individuals kept are unclassified, and the analyses per population will take them as one population.",
-    );
+    expect(countRows()).toEqual([
+      ["Population", "Individuals"],
+      ["Unclassified", "5"],
+    ]);
+    expect(box().textContent).not.toContain("are unclassified");
   });
 
   test("a grouping whose column the table does not have: the list on None", async () => {

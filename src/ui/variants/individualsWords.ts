@@ -216,10 +216,16 @@ export interface CountsLine {
   readonly text: string;
 }
 
-/** What the box shows of the counts: whether the table is drawn, and the
-    lines under it, or in its place, in their order. */
+/** The table of the counts the box draws: none; a row per population;
+    or, when the column classifies none of the individuals of the
+    variants file, as None does, the one row "Unclassified", with the
+    individuals kept, as with no individuals file. */
+export type CountsTable = "none" | "populations" | "unclassified";
+
+/** What the box shows of the counts: the table drawn, and the lines
+    under it, or in its place, in their order. */
 export interface CountsShown {
-  readonly table: boolean;
+  readonly table: CountsTable;
   readonly lines: readonly CountsLine[];
 }
 
@@ -229,9 +235,9 @@ export interface CountsShown {
  * if any and the line of the counts to come; once it is read, the
  * warning of too many values, the warning of none of the individuals in
  * the file, the line of why the counts wait, `wait`, while the list of
- * the individuals kept is not known, the line of every individual kept
- * unclassified, or the table with the line of the unclassified kept if
- * any, the first of these that holds. The line of the rows of the file
+ * the individuals kept is not known, or the table with the line of the
+ * unclassified kept if any, the first of these that holds; the table is
+ * the one row "Unclassified" when the column classifies nobody. The line of the rows of the file
  * the variants file does not have is the Individuals tab's,
  * `rowsNotUsedText`.
  */
@@ -243,7 +249,7 @@ export function countsShown(
   const tooMany = tooManyWarning(counts);
   if (!counts.variantsRead || p.variants === null) {
     return {
-      table: false,
+      table: "none",
       lines: [
         ...tooMany,
         {
@@ -296,7 +302,7 @@ function firstShown(
   fileName: string,
   p: Project,
 ): CountsShown {
-  if (counts.tooMany) return { table: false, lines: [] };
+  if (counts.tooMany) return { table: "none", lines: [] };
   const none = counts.noneInFile;
   if (none !== null) {
     const numIndividuals =
@@ -306,7 +312,7 @@ function firstShown(
         ? `the one individual of ${variantsName} is not in ${fileName}, so it is unclassified`
         : `none of the ${grouped(numIndividuals)} individuals of ${variantsName} is in ${fileName}, so all of them are unclassified`;
     return {
-      table: false,
+      table: "none",
       lines: [
         {
           kind: "warning",
@@ -315,27 +321,21 @@ function firstShown(
       ],
     };
   }
+  // A column that classifies nobody, None among them, has the one row of
+  // the unclassified, as no individuals file has (the owner, 11 October
+  // 2026), and no line under it.
+  const table = counts.populations.length > 0 ? "populations" : "unclassified";
   const unclassified = counts.unclassified;
   if (!counts.known || unclassified === null) {
     return {
-      table: counts.populations.length > 0,
+      table,
       lines: [{ kind: "line", text: waitingText(wait, variantsName) }],
     };
   }
-  const classified = counts.populations.reduce(
-    (sum, { kept }) => sum + (kept ?? 0),
-    0,
-  );
-  if (classified === 0 && unclassified.kept > 0) {
-    return {
-      table: false,
-      lines: [{ kind: "line", text: allUnclassifiedText(unclassified.kept) }],
-    };
-  }
   return {
-    table: counts.populations.length > 0,
+    table,
     lines:
-      unclassified.kept === 0
+      table === "unclassified" || unclassified.kept === 0
         ? []
         : [
             {
@@ -357,13 +357,6 @@ function waitingText(wait: PassWait, variantsName: string): string {
     case "failed":
       return `Not counted: ${variantsName} could not be read to the end; the box of ${variantsName} says why.`;
   }
-}
-
-/** The line of every one of the `numKept` individuals kept unclassified. */
-function allUnclassifiedText(numKept: number): string {
-  return numKept === 1
-    ? "The one individual kept is unclassified."
-    : `All ${grouped(numKept)} individuals kept are unclassified, and the analyses per population will take them as one population.`;
 }
 
 /**

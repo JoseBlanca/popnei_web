@@ -780,7 +780,7 @@ test("IN6 D2 a column of 21 values chosen: its warning, and no table", async ({
   await expectAxeBothSchemes(page, makeAxeBuilder);
 });
 
-test("IN6 D2 None chosen: every individual kept unclassified; the separator set to the semicolon and back to the comma, the list still on None with the same line", async ({
+test("IN6 D2 None chosen: the one row Unclassified with every individual kept, as with no individuals file; the separator set to the semicolon and back to the comma, the list still on None with the same line", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -794,12 +794,8 @@ test("IN6 D2 None chosen: every individual kept unclassified; the separator set 
     "Column of the populations",
     "None: every individual unclassified",
   );
-  const all = individualsBox(page).getByText(
-    "All 200 individuals kept are unclassified, and the analyses per population will take them as one population.",
-    { exact: true },
-  );
-  await expect(all).toBeVisible();
-  await expect(counts(page)).toHaveCount(0);
+  await expectCounts(page, [["Unclassified", "200"]]);
+  await expect(individualsBox(page)).not.toContainText("are unclassified");
   await expectAxeBothSchemes(page, makeAxeBuilder);
 
   await tab(page, "Individuals").click();
@@ -818,7 +814,7 @@ test("IN6 D2 None chosen: every individual kept unclassified; the separator set 
   await expect(columnList(page)).toContainText(
     "None: every individual unclassified",
   );
-  await expect(all).toBeVisible();
+  await expectCounts(page, [["Unclassified", "200"]]);
 });
 
 test("IN6 D2 the missing rate of the individuals at 0.03, the pass held: … and the line of waiting; after Stop, the line of a Stop; at the end of Start again, the counts p0 29, p2 51 and p1 36", async ({

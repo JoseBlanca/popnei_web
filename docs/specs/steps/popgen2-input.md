@@ -276,10 +276,14 @@ Under the table, the first that holds:
   unclassified. The first column of panel_pops.csv has to hold their
   names as panel.nei writes them: panel.nei starts with s000, and
   panel_pops.csv with S-000."
-- every individual kept unclassified, for another cause, the table not
-  drawn: "All 200 individuals kept are unclassified, and the analyses per
-  population will take them as one population."; for one, "The one
-  individual kept is unclassified."
+- a column that classifies none of the individuals of the variants
+  file, "None" among them: no line, and the table has the one row
+  "Unclassified" with the individuals kept, as with no individuals file
+  (below); the sentence "All 200 individuals kept are unclassified, and
+  the analyses per population will take them as one population." went on
+  11 October 2026, so that the two look the same. A column whose
+  populations the filters leave empty keeps its rows, with 0, and the
+  line of the unclassified.
 
 The line of the rows of the individuals file that the variants file
 does not have, which stood last in the box until 11 October 2026, is in
@@ -657,9 +661,9 @@ core and of the entry in their module specs.
 - a CSV of the names in capitals, `S000`: the warning of none in the
   file;
 - a CSV with a column of 21 values: its warning, and no table;
-- "None" chosen: "All 200 individuals kept are unclassified, …"; the
+- "None" chosen: the one row "Unclassified", 200; the
   separator set to the semicolon and back to the comma afterwards: the
-  list still on "None", with the same line;
+  list still on "None", with the same row;
 - with the missing rate of the individuals at 0.03: the counts change to
   those of `individualsKept` for 0.03, p0 29, p2 51 and p1 36, which the
   flow reads from popnei

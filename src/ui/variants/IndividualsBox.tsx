@@ -6,7 +6,8 @@
  * individuals, and then the counts with one row, "Unclassified"; with a
  * file, its name and, as it is read, refused or read, the words of the
  * read, of the refusal, or the list "Column of the populations" with the
- * individuals the filters keep in each population and the lines under
+ * individuals the filters keep in each population, or in the one row
+ * "Unclassified" when the column classifies nobody, and the lines under
  * them. The counts have no caption on the screen and no menu
  * "Download…", as the owner asked on 11 October 2026, so that the box,
  * which stands above every tab, stays small. It ends with the zone that
@@ -283,13 +284,21 @@ function ColumnAndCounts({
           store.apply(step.description, step.command);
         }}
       />
-      {shown.table && project.variants !== null && (
+      {shown.table !== "none" && project.variants !== null && (
         <CountsTable
           variantsName={project.variants.name}
-          rows={counts.populations.map(({ pop, kept: numKept }) => ({
-            id: pop,
-            cells: [escaped(pop), countCell(numKept)],
-          }))}
+          rows={
+            shown.table === "populations"
+              ? counts.populations.map(({ pop, kept: numKept }) => ({
+                  id: pop,
+                  cells: [escaped(pop), countCell(numKept)],
+                }))
+              : [
+                  unclassifiedRow(
+                    counts.known ? (counts.unclassified?.kept ?? null) : null,
+                  ),
+                ]
+          }
         />
       )}
       {shown.lines.map((line) => (
@@ -316,12 +325,7 @@ function NoFileCounts({
     <div className={classOf(styles, "lines")}>
       <CountsTable
         variantsName={project.variants.name}
-        rows={[
-          {
-            id: UNCLASSIFIED_ROW,
-            cells: [UNCLASSIFIED_ROW, countCell(counts.kept)],
-          },
-        ]}
+        rows={[unclassifiedRow(counts.kept)]}
       />
       {counts.lines.map((line) => (
         <CountsLineShown key={line.text} line={line} />
@@ -353,6 +357,12 @@ function CountsTable({
       rows={rows}
     />
   );
+}
+
+/** The one row of the counts, "Unclassified", of every individual kept,
+    `kept`, or null while the count waits. */
+function unclassifiedRow(kept: number | null): TableRow {
+  return { id: UNCLASSIFIED_ROW, cells: [UNCLASSIFIED_ROW, countCell(kept)] };
 }
 
 /** A count of the table: its number, or "…" while it is not known, read
