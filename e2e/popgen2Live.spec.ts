@@ -695,7 +695,14 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     await stop(page).click();
     await expect(shown(page).getByText(STOPPED, { exact: true })).toBeVisible();
     const posted = await runsPosted(page);
-    await expect.poll(() => announced(page)).toContain(STOPPED_SAID);
+    // The words of the Stop may be joined with the end of the statistics,
+    // which the region says once their section is drawn: on a loaded
+    // machine that comes within the region's pause before the Stop.
+    await expect
+      .poll(async () =>
+        (await announced(page)).some((text) => text.includes(STOPPED_SAID)),
+      )
+      .toBe(true);
 
     await tab(page, "Variants").click();
     const missing = histogram(page, MISSING_TITLE);
