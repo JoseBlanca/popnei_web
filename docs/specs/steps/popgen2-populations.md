@@ -306,7 +306,7 @@ population that would give the same name gets "_2" after it, then "_3".
 | running | Stop, the bar and the clock of the old panel, "Calculating · pass 1 of 2 · 17% · 0:12"; the options greyed; the filters and the box Individuals greyed, with their reasons | Stop; colour the PCA; turn to another tab, where it goes on; open another variants file, which stops it |
 | done | the warnings, the table and its "Download…", the line of the versions, the spectrum; "Loading the result…" in its place while its code downloads, or its words with "Try again"; above them, while live, Stop recalculating, and after a Stop the line of a Stop | download; change the options; Stop recalculating |
 | results removed | not a state of this page: a change that takes the result off the screen gives about to start while the diversity is live, and ready while it is not, as in the PCA tab | as in about to start, or ready |
-| error | the words of the failure, the old panel's with this page's names (`diversity.md`, "On popgen2.html"); while the failure leaves it live, Stop recalculating under them, with Run before it after a crash of the worker; after one that ends it, the line of a Stop | Run again after a failure that is not popnei's refusal; change the options or the thresholds after a refusal; open the variants file again after it could no longer be read |
+| error | the words of the failure, the old panel's with this page's names (`diversity.md`, "On popgen2.html"); while the failure leaves it live, popnei's refusal, Stop recalculating under them; after a failure that ends it, every crash of the worker and those only a reload mends, Run with the line of a Stop under it, or the line alone when Run is not offered (`popgen2-pca.md`, "For the implementer", `endsLive`) | Run again after a failure that is not popnei's refusal; change the options or the thresholds after a refusal; open the variants file again after it could no longer be read |
 
 About to start and waiting are two rows more than the seven states
 every screen spec has, as about to start is in the PCA tab; waiting is
@@ -397,7 +397,12 @@ quiet second and of waiting are not said: they come and go at each
 change, and the start that follows them is said; but a Run pressed
 while another calculation runs, which starts nothing, is said once,
 "The diversity starts once the PCA, which is running, ends.", so that
-a user of a screen reader learns why no bar comes.
+a user of a screen reader learns why no bar comes. It is said by
+`announceRunWaiting` of `src/ui/variants/announceChanges.ts`, which the
+Run of a tab calls when `autoRuns.run` gives "waiting", with the words
+of that tab; the PCA's Run, which can wait for the diversity, says
+"The PCA starts once the diversity, which is running, ends." the same
+way ("The PCoA …").
 
 **The focus at a Stop and at the end**, as in the PCA tab
 (`popgen2-pca.md`, "The focus at a Stop"): the button keeps the focus
@@ -418,7 +423,10 @@ Individuals.
 
 ## How it is checked
 
-**In Vitest, in node**: the words of the tab, by state and by what it
+**In Vitest, in node**: `announceRunWaiting`, given "waiting" from
+`run`, says the line once, for the diversity behind the PCA and for the
+PCA behind the diversity, and says nothing for "started" and
+"refused"; the words of the tab, by state and by what it
 waits for, from the functions of its words; the line of the
 populations, at `popgen2PopulationsKept` and the function of the tab's
 words that writes it, with the unclassified, with the one population of

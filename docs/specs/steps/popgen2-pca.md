@@ -388,7 +388,10 @@ of the PCA changed while the diversity runs, which the diversity's lock
 leaves open, or Run pressed then. The tab then shows the same, with the
 line "The PCA starts once the diversity, which is running, ends." ("The
 PCoA …"), and the PCA starts at the diversity's end with no second
-more ("Several analyses calculated again by themselves").
+more ("Several analyses calculated again by themselves"). A Run of the
+PCA that waits so is said once in the status region, "The PCA starts
+once the diversity, which is running, ends.", by `announceRunWaiting`
+(`popgen2-populations.md`, "Accessibility").
 
 **Stop recalculating.** Whenever the PCA is live and no PCA runs, with
 its result, during the quiet second, live and locked, or after a
@@ -765,7 +768,8 @@ interface AutoRuns {
   analyses waiting from `autoRuns`.
 - `announceLive` of `src/ui/variants/announceChanges.ts` says the round,
   the start of a Run that waited, a Stop and Stop all, each analysis in
-  its own words.
+  its own words; `announceRunWaiting`, beside it, says a Run that
+  waits, when `run` gives "waiting".
 
 ### The row of tabs
 
@@ -1581,7 +1585,8 @@ focus is on a threshold of the Variants tab.
   starts nothing; the round is told once, with both, at the PCA's
   start, and the diversity's start of the same round with an empty
   `round`; a crash of the memory of the PCA ends its live state and
-  not the diversity's.
+  not the diversity's; a crash of the diversity, of any kind, ends its
+  live state and leaves the PCA's live.
 - No Undo: the page's store has no `undo` nor `redo` in its type; a
   press of Ctrl+Z on the page sends no command.
 - The CSV of each table and plot, in `docs/specs/widgets/downloads.md`.

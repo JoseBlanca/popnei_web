@@ -398,7 +398,7 @@ Deliverables:
    download never queues behind it: `runningAnalysisOf` of
    `src/ui/analyses/status.ts` giving the live analysis running, the
    words of the lock of the PCA and of the diversity, with and without
-   an analysis waiting after it, and the words of the download's wait,
+   another analysis live, and the words of the download's wait,
    under `PT1 D7` in the tests of `status.ts`, `src/ui/analyses/words.ts`
    and `src/ui/variants/downloadWords.ts`, at least 8 tests; and the
    flows under `PT1 D7` in `e2e/popgen2Populations.spec.ts`: the

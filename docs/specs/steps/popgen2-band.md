@@ -302,9 +302,9 @@ change two thresholds, and must end both before the diversity starts
 again a second after the first change. It calls `autoRuns.pauseAll()`,
 which stops the one running and ends the live state of every one, and
 the status region says so ("Its words"). While nothing runs, waits or
-is about to start, the band shows "Popnei" alone, as the owner decided
-on 10 October 2026, whatever is live, and each tab keeps its own Stop
-recalculating. With one live analysis its own Stop or Stop
+is about to start, the band shows no button, whatever is live: "Popnei"
+alone, as the owner decided on 10 October 2026, or the link to a result
+of another tab, and each tab keeps its own Stop recalculating. With one live analysis its own Stop or Stop
 recalculating stands alone, as until now.
 
 **The tab shown.** While the tab of the analysis that runs, or of the
@@ -670,7 +670,12 @@ words and Stop; both about to start, the words of both and Stop all
 alone, and while the dialog of the download holds them; the PCA tab
 shown with the PCA running and the diversity waiting, the words with
 Stop all and no Stop; the Populations tab shown with the diversity
-about to start alone, no button; the link of the diversity's warnings
+about to start alone, no button; the diversity running alone with the
+PCA live and idle, as after a change of the populations, its words with
+Stop and Stop all; the diversity about to start alone with the PCA
+live, its words with Stop recalculating and Stop all; both live and
+nothing running, waiting nor about to start, no button; the link of
+the diversity's warnings
 while the PCA has none, and the PCA's when both have them; "Stopping
 the diversity…".
 

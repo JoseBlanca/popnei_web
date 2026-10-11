@@ -372,7 +372,14 @@ The band says one thing, the first that holds of its list
 
 - while one runs and others wait: "PCA running · 1:20 · then the
   diversity", with "Stop all" after it; with nothing waiting, "Stop", as
-  now;
+  now. Corrected on 11 October 2026, after the approval, by the session
+  that wrote the specs, to follow choice 5 and the owner's answer 1a:
+  "Stop all" shows whenever two or more analyses are live and one of
+  them runs, waits or is about to start, also with nothing waiting,
+  since a Stop of the one running then lets the other start a second
+  after the next change; while nothing runs, waits or is about to
+  start, the band shows "Popnei" alone, the owner's rule of 10 October
+  2026;
 - while several are about to start: "The PCA and the diversity start
   again in a moment", with "Stop all";
 - the link to the warnings or the error of a result, in another tab:
@@ -670,7 +677,10 @@ The owner can stop reading here. What follows names the code.
    `src/ui/analyses/pca/liveEnd.ts` is the PCA's; `endsLive` of
    `LiveDeps` dispatches by analysis, and the diversity's crash for
    memory and failures only a reload mends end its live state as the
-   PCA's do.
+   PCA's do. Corrected on 11 October 2026, after the approval, by the
+   session that wrote the specs: every crash of the diversity ends its
+   live state, since its words cannot tell a crash for memory from
+   another.
 7. A Stop restarts no quiet second. The timer of the second is started
    again only by a change of the project and by the page's count of the
    controls in the middle of a change, a slider held, a list open, a
