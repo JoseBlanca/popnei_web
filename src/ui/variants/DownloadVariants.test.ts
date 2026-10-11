@@ -26,12 +26,21 @@ import type {
   Written,
 } from "../../worker/protocol.ts";
 import { downloadFile } from "../download.ts";
-import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
+import {
+  POPGEN2_AUTO_GROUPS,
+  POPGEN2_LIVE,
+  createPopgen2Store,
+  openVariantsFile,
+  popgen2EndsLive,
+} from "../popgen2Store.ts";
 import type { Popgen2PageStore } from "../popgen2Store.ts";
+import { LIVE_QUIET_MS, createAutoRuns } from "../autoRuns.ts";
+import type { AutoRunStore, AutoRuns } from "../autoRuns.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
 import { StoreProvider } from "../store.tsx";
 import { DownloadVariants } from "./DownloadVariants.tsx";
+import { AutoRunsProvider } from "./filtersLock.ts";
 import { RunGateProvider } from "./runGate.tsx";
 import { createRunGate, gatedStore } from "./thresholdRun.ts";
 import { ChangeHoldsProvider } from "../widgets/changeHold.ts";
@@ -51,6 +60,24 @@ const NONE =
   "None of the 100 variants of panel.vcf.gz pass the filters, so there is nothing to download.";
 
 const DOWNLOAD = "Download filtered variants…";
+
+/** The analyses the page starts by itself over `store`, which start
+    nothing: none is live, so the lock and the wait read only what runs
+    in the store. */
+function idleAutoRuns(store: AutoRunStore): AutoRuns {
+  return createAutoRuns({
+    store,
+    groups: POPGEN2_AUTO_GROUPS,
+    start: () => null,
+    live: {
+      analyses: POPGEN2_LIVE,
+      changes: createRunGate(),
+      runStart: () => null,
+      quietMs: LIVE_QUIET_MS,
+      endsLive: popgen2EndsLive,
+    },
+  });
+}
 
 let container: HTMLDivElement;
 let root: Root;
@@ -183,7 +210,11 @@ function draw(store: Popgen2PageStore<JobResult, Blob>, gate: RunGate): void {
               createElement(
                 AnnouncerProvider,
                 { value: createAnnouncer() },
-                createElement(DownloadVariants),
+                createElement(
+                  AutoRunsProvider,
+                  { value: idleAutoRuns(store) },
+                  createElement(DownloadVariants),
+                ),
               ),
             ),
           ),

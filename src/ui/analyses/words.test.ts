@@ -3,10 +3,12 @@ import { describe, expect, test } from "vitest";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
 import type { Project } from "../../core/project.ts";
 import type { AnalysisError, Notice } from "../../core/store.ts";
+import type { RunningAnalysis } from "./status.ts";
 import {
   clockText,
   failedWordsOf,
   failureText,
+  filtersLockedText,
   popgen2FailureText,
   minimumRefusedText,
   progressShare,
@@ -397,5 +399,64 @@ describe("AP6 D1 failedWordsOf, the words a panel gives the errors of its analys
         kept,
       ),
     ).toThrow(/^popnei_web defect: /u);
+  });
+});
+
+/** The PCA, the PCoA and the diversity as `liveAnalysisOf` of status.ts
+    names them. */
+const PCA: RunningAnalysis = {
+  id: "pca",
+  name: "the PCA",
+  tab: "PCA",
+  readsPopulations: false,
+};
+const PCOA: RunningAnalysis = { ...PCA, name: "the PCoA" };
+const DIVERSITY: RunningAnalysis = {
+  id: "diversity",
+  name: "the diversity",
+  tab: "Populations",
+  readsPopulations: true,
+};
+
+describe("PT1 D7 the words of the lock of the filters, with and without another analysis live", () => {
+  test("the PCA alone, and the PCoA, as before", () => {
+    expect(filtersLockedText(PCA, [])).toBe(
+      "Stop the PCA in the PCA tab to change the filters; then press Run there to calculate it again.",
+    );
+    expect(filtersLockedText(PCOA, [])).toBe(
+      "Stop the PCoA in the PCA tab to change the filters; then press Run there to calculate it again.",
+    );
+  });
+
+  test("the diversity alone names its tab, Populations", () => {
+    expect(filtersLockedText(DIVERSITY, [])).toBe(
+      "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again.",
+    );
+  });
+
+  test("the PCA running with the diversity live adds Stop all, which stops the diversity too", () => {
+    expect(filtersLockedText(PCA, [DIVERSITY])).toBe(
+      "Stop the PCA in the PCA tab to change the filters, or press Stop all beside the heading Popnei to stop the diversity too; then press Run in each tab to calculate them again.",
+    );
+    expect(filtersLockedText(PCOA, [DIVERSITY])).toBe(
+      "Stop the PCoA in the PCA tab to change the filters, or press Stop all beside the heading Popnei to stop the diversity too; then press Run in each tab to calculate them again.",
+    );
+  });
+
+  test("the diversity running with the PCA live adds Stop all, which stops the PCA too", () => {
+    expect(filtersLockedText(DIVERSITY, [PCA])).toBe(
+      "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again.",
+    );
+  });
+
+  test("two analyses live beside the one running are named both, in their order", () => {
+    expect(
+      filtersLockedText(PCA, [
+        DIVERSITY,
+        { ...DIVERSITY, name: "the LD decay" },
+      ]),
+    ).toBe(
+      "Stop the PCA in the PCA tab to change the filters, or press Stop all beside the heading Popnei to stop the diversity and the LD decay too; then press Run in each tab to calculate them again.",
+    );
   });
 });

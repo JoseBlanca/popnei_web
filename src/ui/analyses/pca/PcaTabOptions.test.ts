@@ -15,10 +15,19 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { setVariantFilter } from "../../../core/project.ts";
 import type { ProjectVariantFilter } from "../../../core/project.ts";
 import type { Run } from "../../../worker/protocol.ts";
-import { createPopgen2Store } from "../../popgen2Store.ts";
+import {
+  POPGEN2_AUTO_GROUPS,
+  POPGEN2_LIVE,
+  createPopgen2Store,
+  popgen2EndsLive,
+} from "../../popgen2Store.ts";
+import { LIVE_QUIET_MS, createAutoRuns } from "../../autoRuns.ts";
+import type { AutoRunStore, AutoRuns } from "../../autoRuns.ts";
 import { AnnouncerProvider } from "../../shell/announcer.tsx";
 import { createAnnouncer } from "../../shell/status.ts";
 import { StoreProvider } from "../../store.tsx";
+import { AutoRunsProvider } from "../../variants/filtersLock.ts";
+import { createRunGate } from "../../variants/thresholdRun.ts";
 import { PcaTabOptions } from "./PcaTabOptions.tsx";
 import {
   ChangeHoldsProvider,
@@ -27,6 +36,24 @@ import {
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
+}
+
+/** The analyses the page starts by itself over `store`, which start
+    nothing: none is live, so the lock and the wait read only what runs
+    in the store. */
+function idleAutoRuns(store: AutoRunStore): AutoRuns {
+  return createAutoRuns({
+    store,
+    groups: POPGEN2_AUTO_GROUPS,
+    start: () => null,
+    live: {
+      analyses: POPGEN2_LIVE,
+      changes: createRunGate(),
+      runStart: () => null,
+      quietMs: LIVE_QUIET_MS,
+      endsLive: popgen2EndsLive,
+    },
+  });
 }
 
 let container: HTMLDivElement;
@@ -76,7 +103,11 @@ function drawWith(filters: readonly ProjectVariantFilter[]): void {
             createElement(
               AnnouncerProvider,
               { value: createAnnouncer() },
-              createElement(PcaTabOptions),
+              createElement(
+                AutoRunsProvider,
+                { value: idleAutoRuns(store) },
+                createElement(PcaTabOptions),
+              ),
             ),
           ),
         ),

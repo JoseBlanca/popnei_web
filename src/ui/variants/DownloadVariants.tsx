@@ -27,7 +27,7 @@
  * can leave nothing to download.
  *
  * The dialog open is a change under way (src/ui/widgets/changeHold.ts),
- * so that the PCA does not start by itself while the user chooses, held
+ * so that no live analysis starts by itself while the user chooses, held
  * as a hold of the download, which the PCA tab names.
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -36,7 +36,6 @@ import { writtenName } from "../../core/fileNames.ts";
 import type { WriteFormat } from "../../core/keys.ts";
 import type { WriteStatus } from "../../core/store.ts";
 import type { Progress } from "../../worker/protocol.ts";
-import { runningAnalysisOf } from "../analyses/status.ts";
 import { progressShare } from "../analyses/words.ts";
 import { classOf } from "../classOf.ts";
 import { downloadFile } from "../download.ts";
@@ -51,7 +50,13 @@ import { whenNoDialog } from "../widgets/dialogMark.ts";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import { RadioGroup } from "../widgets/RadioGroup.tsx";
 import styles from "./DownloadVariants.module.css";
-import { downloadPlace, endOfWrite, saveAgain } from "./downloadState.ts";
+import {
+  downloadPlace,
+  downloadWaitOf,
+  endOfWrite,
+  saveAgain,
+} from "./downloadState.ts";
+import { useAutoRuns } from "./filtersLock.ts";
 import { useRunGate } from "./runGate.tsx";
 import type { DownloadPlace, WriteEnd } from "./downloadState.ts";
 import {
@@ -126,8 +131,11 @@ export function DownloadVariants(): React.JSX.Element {
   // of a write stopped does nothing.
   const attempt = useRef(0);
 
-  const running = useAppState(runningAnalysisOf);
-  const place = downloadPlace(summary, write, project, kept, { running });
+  // The live analysis running and those waiting after it, which the
+  // write would wait for in the worker's queue.
+  const autoRuns = useAutoRuns();
+  const wait = useAppState((s) => downloadWaitOf(s, autoRuns));
+  const place = downloadPlace(summary, write, project, kept, { wait });
 
   // Listened to on the element itself, not through React, whose events
   // come up from the dialog drawn elsewhere in the page.
@@ -280,7 +288,7 @@ export function DownloadVariants(): React.JSX.Element {
               now.write,
               now.project,
               now.individualsKept,
-              { running: runningAnalysisOf(now) },
+              { wait: downloadWaitOf(now, autoRuns) },
             ).kind !== "enabled"
           ) {
             focusFrom.current = "enabled";

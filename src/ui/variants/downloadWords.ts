@@ -9,7 +9,7 @@
  * them; `DownloadVariants.tsx` draws them.
  */
 
-import { escaped, counted, grouped } from "../../core/project.ts";
+import { bothOf, escaped, counted, grouped } from "../../core/project.ts";
 import type { Project } from "../../core/project.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
 import { VARIANT_FILTER_ORDER } from "../../core/project.ts";
@@ -22,7 +22,7 @@ import type {
 } from "../../worker/protocol.ts";
 import type { WriteFormat } from "../../core/keys.ts";
 import type { RunningAnalysis } from "../analyses/status.ts";
-import { clockText } from "../analyses/words.ts";
+import { STOP_ALL_PLACE, clockText } from "../analyses/words.ts";
 import { failedText } from "./words.ts";
 
 /** The words of the button, whose three dots say that it opens a
@@ -41,10 +41,18 @@ export const DOWNLOAD_NEEDS =
 
 /** Why the button is disabled while an analysis runs, `running`, once
     the one pass is finished: "Waits for the PCA to end; or stop it in the
-    PCA tab." (docs/specs/steps/popgen2-download.md, "While a PCA
-    runs"). */
-export function analysisWaitsText(running: RunningAnalysis): string {
-  return `Waits for ${running.name} to end; or stop it in the ${running.tab} tab.`;
+    PCA tab." (docs/specs/steps/popgen2-download.md, "While a PCA runs");
+    and, while others wait to start after it, `waiting`, in their order,
+    since each starts when the one before ends: "Waits for the PCA, and
+    the diversity after it, to end; or press Stop all beside the heading
+    Popnei." (the same, "While an analysis runs"). */
+export function analysisWaitsText(
+  running: RunningAnalysis,
+  waiting: readonly RunningAnalysis[],
+): string {
+  return waiting.length === 0
+    ? `Waits for ${running.name} to end; or stop it in the ${running.tab} tab.`
+    : `Waits for ${running.name}, and ${bothOf(waiting.map((one) => one.name))} after it, to end; or press ${STOP_ALL_PLACE}.`;
 }
 
 /** The heading of the dialog, which is also its name. */

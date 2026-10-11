@@ -49,6 +49,7 @@ import { createAnnouncer } from "../shell/status.ts";
 import { StoreProvider } from "../store.tsx";
 import { announceChanges } from "./announceChanges.ts";
 import { RunGateProvider } from "./runGate.tsx";
+import { AutoRunsProvider } from "./filtersLock.ts";
 import { StatsSection } from "./StatsSection.tsx";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
 import { createRunGate, gatedStore } from "./thresholdRun.ts";
@@ -207,7 +208,11 @@ async function drawPage(announced = true): Promise<Page> {
             AnnouncerProvider,
             { value: announcer },
             createElement("button", { ref: openButton }, "Open variants file…"),
-            createElement(StatsSection, { autoRuns, openButton, onShown }),
+            createElement(
+              AutoRunsProvider,
+              { value: autoRuns },
+              createElement(StatsSection, { autoRuns, openButton, onShown }),
+            ),
           ),
         ),
       ),

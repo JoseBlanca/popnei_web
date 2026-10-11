@@ -17,9 +17,12 @@
  * the switch turned on makes it appear, since the focus is then on the
  * switch; Run beside it says only a short line.
  *
- * While a PCA runs every option waits, with "Stop the PCA to change the
- * filters." as its tooltip and its description (`useFiltersLock`), so
- * that no change leaves the PCA behind.
+ * While the PCA runs every option waits, with "Stop the PCA in the PCA
+ * tab to change the filters; then press Run there to calculate it
+ * again." as its tooltip and its description, and Stop all when the
+ * diversity is live too (`useOptionsLock`), so that no change leaves the
+ * PCA behind; while the diversity runs they stay open, and a change
+ * makes the PCA wait after it.
  *
  * The step of each slider is of the decimals of the Variants tab's box of
  * that threshold, from the axis of its histogram once the one pass has
@@ -29,6 +32,7 @@
 import { useId } from "react";
 
 import {
+  pcaOnPopgen2,
   pcaOptions,
   pruningDistanceReason,
 } from "../../../core/analyses/pca.ts";
@@ -53,7 +57,7 @@ import { Select } from "../../widgets/Select.tsx";
 import { Slider } from "../../widgets/Slider.tsx";
 import { Switch } from "../../widgets/Switch.tsx";
 import type { OptionCommand } from "../optionCommand.ts";
-import { useFiltersLock } from "../../variants/filtersLock.ts";
+import { useOptionsLock } from "../../variants/filtersLock.ts";
 import { summaryStatus } from "../../variants/words.ts";
 import { followCommand, methodCommand, ownValueCommand } from "./commands.ts";
 import type { Popgen2CommandPage } from "./commands.ts";
@@ -93,7 +97,7 @@ export function PcaTabOptions(): React.JSX.Element {
     pruningDistanceReason(s.project, "popgen2"),
   );
   const page: Popgen2CommandPage = { page: "popgen2", method: options.method };
-  const lock = useFiltersLock();
+  const lock = useOptionsLock(pcaOnPopgen2.id);
   const headingId = useId();
   const lineId = useId();
   const ldLineId = useId();

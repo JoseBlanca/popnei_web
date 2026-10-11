@@ -27,6 +27,7 @@ import type {
   Written,
 } from "../../worker/protocol.ts";
 import { runningAnalysisOf } from "../analyses/status.ts";
+import type { AutoRuns } from "../autoRuns.ts";
 import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
 import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { ANNOUNCE_DELAY_MS, createAnnouncer } from "../shell/status.ts";
@@ -34,11 +35,13 @@ import { PAGE_TAB_LABELS } from "./analysisTabsWords.ts";
 import { announceChanges } from "./announceChanges.ts";
 import {
   downloadPlace,
+  downloadWaitOf,
   endOfWrite,
   noVariantAnnouncement,
   saveAgain,
 } from "./downloadState.ts";
 import type { DownloadPlace } from "./downloadState.ts";
+import { filtersLockOf, optionsLockOf } from "./filtersLock.ts";
 import { passedFilterChange } from "./passedFilter.ts";
 import { summaryStatus } from "./words.ts";
 
@@ -123,6 +126,12 @@ function pass(failedAll: boolean): VariantsSummaryResult {
   return summaryResult(["chr1"], [100], ["s000", "s001"], column);
 }
 
+/** The live analyses of a page none of whose analyses is live, as
+    `autoRuns` tells them. */
+const NONE_LIVE: Pick<AutoRuns, "liveState"> = {
+  liveState: () => ({ kind: "off" }),
+};
+
 /** What takes the place of the button in the store's state now. */
 function placeOf(store: Popgen2PageStore<JobResult, Blob>): DownloadPlace {
   const state = store.getState();
@@ -131,7 +140,7 @@ function placeOf(store: Popgen2PageStore<JobResult, Blob>): DownloadPlace {
     state.write,
     state.project,
     state.individualsKept,
-    { running: runningAnalysisOf(state) },
+    { wait: downloadWaitOf(state, NONE_LIVE) },
   );
 }
 
@@ -431,7 +440,7 @@ describe("DL7 D1 when there is nothing to download, and a file written and not h
         { kind: "locked", reason: "The store's words." },
         state.project,
         state.individualsKept,
-        { running: null },
+        { wait: null },
       ),
     ).toStrictEqual({ kind: "sentence", text: "The store's words." });
   });
@@ -447,7 +456,7 @@ describe("DL7 D1 when there is nothing to download, and a file written and not h
         { kind: "locked", reason: "Open a project first." },
         state.project,
         state.individualsKept,
-        { running: null },
+        { wait: null },
       ),
     ).toThrow(
       "popnei_web defect: the write of popgen2.html is locked once the one pass is finished, for another reason than no individual kept: Open a project first.",
@@ -656,8 +665,10 @@ describe("AP6 D3 the download waits while a PCA runs", () => {
     startPca(store);
 
     expect(runningAnalysisOf(store.getState())).toStrictEqual({
+      id: "pca",
       name: "the PCA",
       tab: PAGE_TAB_LABELS.pca,
+      readsPopulations: false,
     });
     expect(placeOf(store)).toStrictEqual({
       kind: "disabled",
@@ -701,8 +712,10 @@ describe("AP6 D3 the download waits while a PCA runs", () => {
     startPca(store, { method: "pcoa" });
 
     expect(runningAnalysisOf(store.getState())).toStrictEqual({
+      id: "pca",
       name: "the PCoA",
       tab: PAGE_TAB_LABELS.pca,
+      readsPopulations: false,
     });
     expect(placeOf(store)).toStrictEqual({
       kind: "disabled",
@@ -763,7 +776,7 @@ describe("AP6 D3 the download waits while a PCA runs", () => {
         store.getState().write,
         store.getState().project,
         store.getState().individualsKept,
-        { running: { name: "the PCA", tab: "PCA" } },
+        { wait: "Waits for the PCA to end; or stop it in the PCA tab." },
       ),
     ).toStrictEqual(WAITS);
   });
@@ -785,3 +798,124 @@ function pcaOf(numVars: number): JobResult {
     passStats: { numVars, filtering: {} },
   };
 }
+
+/** A fake of the live analyses of the page: `live`, the analyses live,
+    and `behind`, those of them about to start behind the one running. */
+function liveOf(
+  live: readonly string[],
+  behind: readonly string[] = [],
+): Pick<AutoRuns, "isLive" | "liveState"> {
+  return {
+    isLive: (id) => live.includes(id),
+    liveState: (id) =>
+      live.includes(id)
+        ? {
+            kind: "live",
+            aboutToStart: behind.includes(id) ? "behind" : null,
+            running: false,
+            after: null,
+          }
+        : { kind: "off" },
+  };
+}
+
+/** The store of panel.vcf.gz with the one pass finished and the
+    diversity of the one population started, which the fake worker never
+    ends. */
+function diversityRunning(): Popgen2PageStore<JobResult, Blob> {
+  const { store, jobs } = storeOfPanel();
+  finishPass(store, jobs, pass(false));
+  store.startRun("diversity");
+  expect(
+    store.getState().analyses.find((a) => a.id === "diversity")?.status.kind,
+  ).toBe("running");
+  return store;
+}
+
+describe("PT1 D7 the lock of the filters and the download's wait, for any live analysis", () => {
+  test("runningAnalysisOf gives the diversity running, by its tab, Populations, and that it reads the populations", () => {
+    const store = diversityRunning();
+    expect(runningAnalysisOf(store.getState())).toStrictEqual({
+      id: "diversity",
+      name: "the diversity",
+      tab: PAGE_TAB_LABELS.populations,
+      readsPopulations: true,
+    });
+    store.cancelRun("diversity");
+    expect(runningAnalysisOf(store.getState())).toBeNull();
+  });
+
+  test("while the diversity runs, the thresholds wait with its words, and with Stop all when the PCA is live beside it", () => {
+    const store = diversityRunning();
+    const state = store.getState();
+    expect(filtersLockOf(state, liveOf(["diversity"]))).toBe(
+      "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again.",
+    );
+    expect(filtersLockOf(state, liveOf(["pca", "diversity"]))).toBe(
+      "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again.",
+    );
+    store.cancelRun("diversity");
+    expect(
+      filtersLockOf(store.getState(), liveOf(["pca", "diversity"])),
+    ).toBeNull();
+  });
+
+  test("while the PCA runs with the diversity live, the thresholds name Stop all, which stops the diversity too", () => {
+    const { store, jobs } = storeOfPanel();
+    finishPass(store, jobs, pass(false));
+    startPca(store);
+    expect(filtersLockOf(store.getState(), liveOf(["pca"]))).toBe(
+      "Stop the PCA in the PCA tab to change the filters; then press Run there to calculate it again.",
+    );
+    expect(filtersLockOf(store.getState(), liveOf(["pca", "diversity"]))).toBe(
+      "Stop the PCA in the PCA tab to change the filters, or press Stop all beside the heading Popnei to stop the diversity too; then press Run in each tab to calculate them again.",
+    );
+  });
+
+  test("the options of an analysis wait while it runs alone: the PCA's stay open while the diversity runs", () => {
+    const store = diversityRunning();
+    const live = liveOf(["pca", "diversity"]);
+    expect(optionsLockOf(store.getState(), live, "pca")).toBeNull();
+    expect(optionsLockOf(store.getState(), live, "diversity")).toBe(
+      filtersLockOf(store.getState(), live),
+    );
+  });
+
+  test("while the diversity runs the download waits with its words, and the button is back when it ends", () => {
+    const store = diversityRunning();
+    const place = (): DownloadPlace => {
+      const state = store.getState();
+      return downloadPlace(
+        summaryStatus(state),
+        state.write,
+        state.project,
+        state.individualsKept,
+        { wait: downloadWaitOf(state, liveOf(["diversity"])) },
+      );
+    };
+    expect(place()).toStrictEqual({
+      kind: "disabled",
+      reason:
+        "Waits for the diversity to end; or stop it in the Populations tab.",
+    });
+    store.cancelRun("diversity");
+    expect(place()).toStrictEqual({ kind: "enabled" });
+  });
+
+  test("with the PCA running and the diversity waiting after it, the download waits for both and names Stop all; a live diversity not waiting is not named", () => {
+    const { store, jobs } = storeOfPanel();
+    finishPass(store, jobs, pass(false));
+    startPca(store);
+    expect(
+      downloadWaitOf(
+        store.getState(),
+        liveOf(["pca", "diversity"], ["diversity"]),
+      ),
+    ).toBe(
+      "Waits for the PCA, and the diversity after it, to end; or press Stop all beside the heading Popnei.",
+    );
+    expect(downloadWaitOf(store.getState(), liveOf(["pca", "diversity"]))).toBe(
+      "Waits for the PCA to end; or stop it in the PCA tab.",
+    );
+  });
+});

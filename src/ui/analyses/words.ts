@@ -15,6 +15,7 @@
  */
 
 import {
+  bothOf,
   counted,
   escaped,
   grouped,
@@ -546,7 +547,23 @@ export function minimumRefusedText(
     and what follows the Stop, which also ends its automatic runs: "Stop
     the PCA in the PCA tab to change the filters; then press Run there to
     calculate it again." (docs/specs/steps/popgen2-pca.md, "While a PCA
-    runs"). */
-export function filtersLockedText(running: RunningAnalysis): string {
-  return `Stop ${running.name} in the ${running.tab} tab to change the filters; then press Run there to calculate it again.`;
+    runs"; docs/specs/steps/popgen2-populations.md, "While the diversity
+    runs"). With other analyses live beside it, `beside`, in their order,
+    the words add Stop all, since a Stop of the one running alone lets
+    the others start a second after the next change and lock the filters
+    again: "Stop the PCA in the PCA tab to change the filters, or press
+    Stop all beside the heading Popnei to stop the diversity too; then
+    press Run in each tab to calculate them again." (popgen2-pca.md,
+    "Several analyses calculated again by themselves", "The lock"). */
+export function filtersLockedText(
+  running: RunningAnalysis,
+  beside: readonly RunningAnalysis[],
+): string {
+  const stop = `Stop ${running.name} in the ${running.tab} tab to change the filters`;
+  return beside.length === 0
+    ? `${stop}; then press Run there to calculate it again.`
+    : `${stop}, or press ${STOP_ALL_PLACE} to stop ${bothOf(beside.map((one) => one.name))} too; then press Run in each tab to calculate them again.`;
 }
+
+/** Stop all and where it is, in the words of a lock or of a wait. */
+export const STOP_ALL_PLACE = "Stop all beside the heading Popnei";

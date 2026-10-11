@@ -22,7 +22,8 @@ import type {
   Written,
 } from "../../worker/protocol.ts";
 import { runningAnalysisOf } from "../analyses/status.ts";
-import type { RunningAnalysis } from "../analyses/status.ts";
+import type { AutoRuns } from "../autoRuns.ts";
+import { waitingAfter } from "./filtersLock.ts";
 import type { FileHanded } from "./downloadWords.ts";
 import { summaryStatus } from "./words.ts";
 import {
@@ -37,16 +38,34 @@ import type { PageStore } from "../store.tsx";
 /** What `downloadPlace` reads beyond the one pass, the write and the
     filters. */
 export interface DownloadPlaceOptions {
-  /** The analysis running that locks the filters it reads,
-      `runningAnalysisOf` of src/ui/analyses/status.ts, which the write
-      waits for; `null` while none runs. */
-  readonly running: RunningAnalysis | null;
+  /** Why the write waits for the live analysis running and for those
+      waiting after it, `downloadWaitOf`; `null` while none runs. */
+  readonly wait: string | null;
+}
+
+/**
+ * Why the download of the filtered variants waits in `s`, with the live
+ * analyses `live` of the page: for the live analysis running,
+ * `runningAnalysisOf` of src/ui/analyses/status.ts, and for those waiting
+ * to start after it, since each starts when the one before ends and the
+ * calculation worker would put the write in its queue behind them all
+ * (docs/specs/steps/popgen2-download.md, "While an analysis runs");
+ * `null` while none runs. A string, so that a selector may return it.
+ */
+export function downloadWaitOf(
+  s: AppState<JobResult, unknown>,
+  live: Pick<AutoRuns, "liveState">,
+): string | null {
+  const running = runningAnalysisOf(s);
+  return running === null
+    ? null
+    : analysisWaitsText(running, waitingAfter(s, live));
 }
 
 /** What takes the place of the button. */
 export type DownloadPlace =
   /** The button, disabled, with its reason beside it: the one pass is not
-      finished, or failed, or a PCA runs. */
+      finished, or failed, or a live analysis runs. */
   | { readonly kind: "disabled"; readonly reason: string }
   /** The button, enabled: the write can start, or runs, or failed, which
       the dialog shows. */
@@ -69,12 +88,11 @@ export type DownloadPlace =
  * finished, with the reason of a pass not finished or of one failed;
  * once it is, the words of no individual kept, the text after a download
  * or the sentence of no variant after a write, the sentence of no variant
- * when the finished pass makes it certain, the button disabled while an
- * analysis that locks the filters runs, `running` of `options`, with the
- * reason that names it, since the
- * calculation worker would put the write in its queue behind the PCA
- * (docs/specs/steps/popgen2-download.md, "While a PCA runs"), and
- * otherwise the button.
+ * when the finished pass makes it certain, the button disabled while a
+ * live analysis runs, with the reason that names it and those waiting
+ * after it, `wait` of `options`, since the calculation worker would put
+ * the write in its queue behind them (docs/specs/steps/popgen2-download.md,
+ * "While an analysis runs"), and otherwise the button.
  * `noVariantForCertain` is asked only over the finished pass, never over
  * a result so far nor one kept after a Stop. A defect for a project with
  * no variants file read, for a store with no write, and for a lock that
@@ -126,25 +144,25 @@ export function downloadPlace(
     case "ready": {
       const certain = certainSentence(p, result, kept);
       return certain === null
-        ? buttonOf(options.running)
+        ? buttonOf(options.wait)
         : { kind: "sentence", text: certain };
     }
     case "error":
       // Download writes again from the dialog's failure, so the button
-      // waits for the PCA as before a first write.
-      return buttonOf(options.running);
+      // waits for the analyses as before a first write.
+      return buttonOf(options.wait);
     case "running":
-      // The dialog keeps the PCA's Run out of reach while it writes.
+      // The dialog keeps every Run out of reach while it writes.
       return { kind: "enabled" };
   }
 }
 
 /** The button once the one pass is finished: disabled with the reason
-    of the analysis that runs, `running`, and enabled while none runs. */
-function buttonOf(running: RunningAnalysis | null): DownloadPlace {
-  return running === null
+    it waits for the analyses, `wait`, and enabled while none runs. */
+function buttonOf(wait: string | null): DownloadPlace {
+  return wait === null
     ? { kind: "enabled" }
-    : { kind: "disabled", reason: analysisWaitsText(running) };
+    : { kind: "disabled", reason: wait };
 }
 
 /** Whether the filters of the individuals keep none, the one lock of the
@@ -207,7 +225,8 @@ export function noVariantAnnouncement(
     before.write,
     before.project,
     before.individualsKept,
-    { running: runningAnalysisOf(before) },
+    // The wait changes the button alone, not a sentence.
+    { wait: null },
   );
   return was.kind === "sentence" && was.text === now ? null : now;
 }

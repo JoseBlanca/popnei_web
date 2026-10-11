@@ -13,6 +13,7 @@ import { loadVariants } from "../../core/project.ts";
 import type { Project } from "../../core/project.ts";
 import type { AnalysisError } from "../../core/store.ts";
 import type { PassStats } from "../../worker/protocol.ts";
+import type { RunningAnalysis } from "../analyses/status.ts";
 import {
   DIALOG_HEADING,
   DOWNLOAD_LABEL,
@@ -22,6 +23,7 @@ import {
   FORMAT_LABEL,
   SAVE_AGAIN_LABEL,
   SAVE_IT_LABEL,
+  analysisWaitsText,
   downloadedText,
   noVariantText,
   stoppedText,
@@ -301,6 +303,41 @@ describe("DL6 D2 the words of the download", () => {
   test("the sentence of no variant kept", () => {
     expect(noVariantText("low_qual.vcf.gz", 1200)).toBe(
       "None of the 1,200 variants of low_qual.vcf.gz pass the filters, so there is nothing to download.",
+    );
+  });
+});
+
+/** The PCA and the diversity as `liveAnalysisOf` of
+    src/ui/analyses/status.ts names them. */
+const PCA: RunningAnalysis = {
+  id: "pca",
+  name: "the PCA",
+  tab: "PCA",
+  readsPopulations: false,
+};
+const DIVERSITY: RunningAnalysis = {
+  id: "diversity",
+  name: "the diversity",
+  tab: "Populations",
+  readsPopulations: true,
+};
+
+describe("PT1 D7 the words of the download's wait for the analyses", () => {
+  test("the PCA, and the diversity, running with none waiting after it: stop it in its tab", () => {
+    expect(analysisWaitsText(PCA, [])).toBe(
+      "Waits for the PCA to end; or stop it in the PCA tab.",
+    );
+    expect(analysisWaitsText(DIVERSITY, [])).toBe(
+      "Waits for the diversity to end; or stop it in the Populations tab.",
+    );
+  });
+
+  test("the PCA running and the diversity waiting after it: both named, and Stop all", () => {
+    expect(analysisWaitsText(PCA, [DIVERSITY])).toBe(
+      "Waits for the PCA, and the diversity after it, to end; or press Stop all beside the heading Popnei.",
+    );
+    expect(analysisWaitsText(DIVERSITY, [PCA])).toBe(
+      "Waits for the diversity, and the PCA after it, to end; or press Stop all beside the heading Popnei.",
     );
   });
 });

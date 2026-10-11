@@ -50,6 +50,7 @@ import {
 } from "./individualsCommands.ts";
 import type * as IndividualsWordsModule from "./individualsWords.ts";
 import { RunGateProvider } from "./runGate.tsx";
+import { AutoRunsProvider } from "./filtersLock.ts";
 import { createRunGate } from "./thresholdRun.ts";
 import { ChangeHoldsProvider } from "../widgets/changeHold.ts";
 import { VariantsPage } from "./VariantsPage.tsx";
@@ -244,12 +245,16 @@ async function drawPage(): Promise<Drawn> {
             createElement(
               FilesProvider,
               { value: files },
-              createElement(VariantsPage, {
-                autoRuns,
-                pageTab: createPageTab(),
-                onCountButton: () => undefined,
-                onStatsShown: () => () => undefined,
-              }),
+              createElement(
+                AutoRunsProvider,
+                { value: autoRuns },
+                createElement(VariantsPage, {
+                  autoRuns,
+                  pageTab: createPageTab(),
+                  onCountButton: () => undefined,
+                  onStatsShown: () => () => undefined,
+                }),
+              ),
             ),
           ),
         ),

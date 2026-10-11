@@ -8,7 +8,15 @@ import { describe, expect, test } from "vitest";
 import { keyFromWire } from "../../core/keys.ts";
 import type { AnalysisStatus, Notice } from "../../core/store.ts";
 import type { FilterCountsResult, JobResult } from "../../worker/protocol.ts";
-import { resultOf, stoppedNotice } from "./status.ts";
+import { pcaOnPopgen2 } from "../../core/analyses/pca.ts";
+import { setAnalysisOptions } from "../../core/project.ts";
+import { createPopgen2Store } from "../popgen2Store.ts";
+import {
+  liveAnalysisOf,
+  resultOf,
+  runningAnalysisOf,
+  stoppedNotice,
+} from "./status.ts";
 
 const KEY = keyFromWire("a".repeat(64));
 
@@ -57,5 +65,55 @@ describe("the result and the stop of an analysis, for its frame", () => {
     expect(stoppedNotice(READY, notice, "variantChecks")).toBeNull();
     expect(stoppedNotice(done(COUNTS), notice, "filterCounts")).toBeNull();
     expect(stoppedNotice(READY, null, "filterCounts")).toBeNull();
+  });
+});
+
+describe("PT1 D7 the live analyses of popgen2.html as the words name them", () => {
+  /** The store of popgen2.html, with a worker that is never sent
+      anything. */
+  function page(): ReturnType<typeof createPopgen2Store> {
+    return createPopgen2Store({
+      send: () => {
+        throw new Error("nothing is sent");
+      },
+      sendWrite: () => {
+        throw new Error("nothing is written");
+      },
+      appVersion: "0.1.0",
+    });
+  }
+
+  test("liveAnalysisOf names the PCA by its method, in the PCA tab, and the diversity in the Populations tab, the same object each time", () => {
+    const store = page();
+    const state = store.getState();
+    expect(liveAnalysisOf(state, "pca")).toStrictEqual({
+      id: "pca",
+      name: "the PCA",
+      tab: "PCA",
+      readsPopulations: false,
+    });
+    expect(liveAnalysisOf(state, "diversity")).toStrictEqual({
+      id: "diversity",
+      name: "the diversity",
+      tab: "Populations",
+      readsPopulations: true,
+    });
+    expect(liveAnalysisOf(state, "diversity")).toBe(
+      liveAnalysisOf(state, "diversity"),
+    );
+    store.apply("the method of the PCA changed", (p) =>
+      setAnalysisOptions(p, pcaOnPopgen2, {
+        ...pcaOnPopgen2.defaults,
+        method: "pcoa",
+      }),
+    );
+    expect(liveAnalysisOf(store.getState(), "pca").name).toBe("the PCoA");
+    expect(runningAnalysisOf(store.getState())).toBeNull();
+  });
+
+  test("liveAnalysisOf of an analysis that is not live on popgen2.html is a defect", () => {
+    expect(() => liveAnalysisOf(page().getState(), "variantsSummary")).toThrow(
+      "popnei_web defect: variantsSummary is not an analysis popgen2.html calculates again by itself.",
+    );
   });
 });

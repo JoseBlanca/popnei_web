@@ -46,6 +46,7 @@ import { StoreProvider } from "./store.tsx";
 import type { PageStore } from "./store.tsx";
 import { VariantsPage } from "./variants/VariantsPage.tsx";
 import { announceChanges, announceLive } from "./variants/announceChanges.ts";
+import { AutoRunsProvider } from "./variants/filtersLock.ts";
 import { RunGateProvider } from "./variants/runGate.tsx";
 import { createRunGate, gatedStore } from "./variants/thresholdRun.ts";
 import type { RunGate } from "./variants/thresholdRun.ts";
@@ -105,14 +106,18 @@ function startApplication(defects: Defects, drawBar: DrawBar<BandWith>): void {
         <ChangeHoldsProvider value={gate}>
           <AnnouncerProvider value={announcer}>
             <FilesProvider value={files}>
-              <VariantsPage
-                autoRuns={autoRuns}
-                pageTab={pageTab}
-                onCountButton={(node) => {
-                  countButton = node;
-                }}
-                onStatsShown={statsShown}
-              />
+              {/* The lock of the filters and the download's wait read
+                  which analyses are live from it. */}
+              <AutoRunsProvider value={autoRuns}>
+                <VariantsPage
+                  autoRuns={autoRuns}
+                  pageTab={pageTab}
+                  onCountButton={(node) => {
+                    countButton = node;
+                  }}
+                  onStatsShown={statsShown}
+                />
+              </AutoRunsProvider>
             </FilesProvider>
           </AnnouncerProvider>
         </ChangeHoldsProvider>
