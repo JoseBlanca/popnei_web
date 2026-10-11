@@ -373,7 +373,10 @@ the stem of the variants file:
 
 The name of the population in a file name has every character other
 than a letter, a digit, "-" and "_" written as "_", and a second
-population that would give the same name gets "_2" after it, then "_3".
+population that would give the same name gets "_2" after it, then "_3";
+two names that differ only in case, "P1" and "p1", count as the same
+name, since macOS and Windows keep one file for both (since 11 October
+2026).
 
 ## The states
 

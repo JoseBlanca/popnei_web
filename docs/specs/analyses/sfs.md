@@ -532,10 +532,18 @@ same request, as on the old page. Three things differ.
   download, serve the old page alone.
 - **The names of the files**: `downloadName(stem, "sfs.‹population›",
   ext)` for a histogram, `panel.sfs.p0.svg`, the population's name made
-  a part of a file name by `fileNameParts` of `src/core/fileNames.ts`,
+  a part of a file name by `fileNameParts` of `src/core/fileNameParts.ts`,
   every character other than a letter, a digit, "-" and "_" written
   "_", and "_2", "_3" after a name that an earlier population of the
-  result already gave; `panel.sfs.csv` for the table.
+  result already gave, the names compared without regard to case:
+  populations "P1" and "p1" give `P1` and `p1_2`, since the default file
+  systems of macOS and Windows hold one file for both names, and a
+  browser would save the second as `panel.sfs.p1 (1).svg`.
+  `panel.sfs.csv` for the table. (Since 11 October 2026, after the
+  review of work packages 2 and 3 of `docs/plans/population-tab.md`:
+  the names were compared as written before, and the function was in
+  `src/core/fileNames.ts`, which both pages load first, though only the
+  code of the Populations tab calls it.)
 
 ```ts
 /** sfs.ts: the rows of one population of `allSpectraCsv`, with its header; a defect for a
@@ -543,7 +551,7 @@ same request, as on the old page. Three things differ.
 export function populationSpectrumCsv(r: DiversityResult, population: string): string;
 export function spectrumWarnings(r: DiversityResult, p: Project, page: DiversityPage): Warning[];
 
-/** fileNames.ts: the parts of file names of `names`, in their order, as above. */
+/** fileNameParts.ts: the parts of file names of `names`, in their order, as above. */
 export function fileNameParts(names: readonly string[]): readonly string[];
 ```
 
@@ -551,7 +559,8 @@ Checked with Vitest: `populationSpectrumCsv` of the result of the flow at the
 missing data of 0.05, p0's rows equal to those of `allSpectraCsv` for p0;
 `spectrumWarnings` with page "popgen2", the text above; `fileNameParts`
 of `["p0", "a/b", "a?b", "é"]`, `["p0", "a_b", "a_b_2", "é"]`, a
-letter of another alphabet kept, since a browser saves it.
+letter of another alphabet kept, since a browser saves it, and of
+`["P1", "p1", "A/b", "a?B"]`, `["P1", "p1_2", "A_b", "a_B_2"]`.
 
 ## The block of the panel
 

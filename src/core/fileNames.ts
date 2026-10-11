@@ -7,7 +7,9 @@
  * (docs/specs/analyses/writeVariants.md, "The functions of core"); the
  * stem of an individuals file; and the name of a file the menu
  * "Download…" of a table or a plot saves (docs/specs/widgets/downloads.md,
- * "The names of the files").
+ * "The names of the files"). The parts of those names made of the names
+ * of populations are in fileNameParts.ts, which only the code of the
+ * Populations tab loads.
  */
 
 import { filtersApplied } from "./filtersApplied.ts";
@@ -86,32 +88,4 @@ export function downloadName(
   extension: "csv" | "svg" | "png",
 ): string {
   return `${stem}.${what}.${extension}`;
-}
-
-/** A character a part of a file name does not keep: anything but a
-    letter of any alphabet, with the accents a letter is written with, a
-    digit, "-" and "_". */
-const NOT_KEPT = /[^\p{L}\p{M}\p{N}_-]/gu;
-
-/**
- * The parts of file names of the names `names`, in their order, as the
- * files of the histograms of the spectrum name the populations
- * (docs/specs/analyses/sfs.md, "On popgen2.html"): every character other
- * than a letter, a digit, "-" and "_" written "_", so that a name with
- * "/" or "?" makes no folder nor a name a system refuses; and "_2",
- * "_3", … after a part an earlier name already gave, so that two
- * populations never save over each other's file. A letter of another
- * alphabet is kept, since a browser saves it.
- */
-export function fileNameParts(names: readonly string[]): readonly string[] {
-  const given = new Set<string>();
-  return names.map((name) => {
-    const base = name.replace(NOT_KEPT, "_");
-    let part = base;
-    for (let next = 2; given.has(part); next += 1) {
-      part = `${base}_${String(next)}`;
-    }
-    given.add(part);
-    return part;
-  });
 }

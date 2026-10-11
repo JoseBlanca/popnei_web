@@ -50,7 +50,8 @@ import {
   spectraOf,
   spectrumWarnings,
 } from "../../../core/analyses/sfs.ts";
-import { fileNameParts, variantsStem } from "../../../core/fileNames.ts";
+import { fileNameParts } from "../../../core/fileNameParts.ts";
+import { variantsStem } from "../../../core/fileNames.ts";
 import type { SpectrumOfPop } from "../../../core/analyses/sfs.ts";
 import { escaped } from "../../../core/project.ts";
 import type { DiversityResult } from "../../../worker/protocol.ts";
