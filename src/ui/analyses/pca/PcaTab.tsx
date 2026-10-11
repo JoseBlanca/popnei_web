@@ -18,8 +18,10 @@
  * live and no PCA runs, "Stop recalculating" stands in the place of Run,
  * beside the lock while it is locked, and, while it is about to start,
  * the line of the quiet second under it, which names the download when
- * its dialog holds the start, as autoRuns says; after a Stop, the line
- * that says why nothing starts by itself stands there.
+ * its dialog holds the start, and the diversity while the PCA waits for
+ * it, as autoRuns says; a Run that waits for the diversity says that
+ * line once in the status region, since no bar comes; after a Stop, the
+ * line that says why nothing starts by itself stands there.
  */
 import { useEffect, useSyncExternalStore } from "react";
 
@@ -27,10 +29,13 @@ import { pcaOnPopgen2, pcaOptions } from "../../../core/analyses/pca.ts";
 import type { LiveState } from "../../autoRuns.ts";
 import { useAutoRuns } from "../../autoRunsContext.ts";
 import type { PcaMethod } from "../../../worker/protocol.ts";
-import { useAppState } from "../../store.tsx";
+import { useAnnouncer } from "../../shell/announcer.tsx";
+import { useAppState, useStore } from "../../store.tsx";
+import { announceRunWaiting } from "../../variants/announceChanges.ts";
 import { summaryStatus } from "../../variants/words.ts";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
 import type { PanelLive } from "../AnalysisPanel.tsx";
+import { waitsAfterName } from "../status.ts";
 import { passLock } from "./passLock.ts";
 import { pcaTabPanel } from "./pcaTabPanel.ts";
 import { prefetchPcaResults } from "./PcaTabResults.tsx";
@@ -53,8 +58,13 @@ export interface PcaTabProps {
 }
 
 /** The live state `state` of the PCA as its panel draws it, with the
-    words of its lines by the method `method`. */
-function panelLive(state: LiveState, method: PcaMethod): PanelLive {
+    words of its lines by the method `method`, the line of waiting naming
+    `before`. */
+function panelLive(
+  state: LiveState,
+  method: PcaMethod,
+  before: string | null,
+): PanelLive {
   switch (state.kind) {
     case "off":
       return { kind: "off" };
@@ -68,7 +78,7 @@ function panelLive(state: LiveState, method: PcaMethod): PanelLive {
         aboutToStartLine:
           state.aboutToStart === null
             ? null
-            : aboutToStartLine(method, state.aboutToStart),
+            : aboutToStartLine(method, state.aboutToStart, before),
       };
   }
 }
@@ -86,6 +96,8 @@ export function PcaTab({ shown }: PcaTabProps): React.JSX.Element {
   // pass stopped from one about to start, and which a Stop with no pass
   // running changes and the store does not.
   const autoRuns = useAutoRuns();
+  const store = useStore();
+  const announcer = useAnnouncer();
   const method = useAppState((s) => pcaOptions(s.project, "popgen2").method);
   const lock = useAppState((s) =>
     pcaTabLock(
@@ -98,15 +110,27 @@ export function PcaTab({ shown }: PcaTabProps): React.JSX.Element {
   const state = useSyncExternalStore(autoRuns.subscribe, () =>
     autoRuns.liveState(PCA),
   );
+  const before = useAppState((s) => waitsAfterName(s, state));
   return (
     <AnalysisPanel
       id={PCA}
       ui={pcaTabPanel(method)}
       page={{
         lock,
-        live: panelLive(state, method),
+        live: panelLive(state, method, before),
         onRun: () => {
-          autoRuns.run(PCA);
+          const answer = autoRuns.run(PCA);
+          // Read after the Run, which made it live and waiting.
+          const now = autoRuns.liveState(PCA);
+          announceRunWaiting(
+            announcer,
+            answer,
+            aboutToStartLine(
+              method,
+              "behind",
+              waitsAfterName(store.getState(), now),
+            ),
+          );
         },
         onStop: () => {
           autoRuns.pause(PCA);

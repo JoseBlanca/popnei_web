@@ -110,6 +110,8 @@ interface Page {
   readonly diversityRequests: () => readonly Request[];
   readonly endPass: (outcome?: Outcome<JobResult>) => Promise<void>;
   readonly endDiversity: () => Promise<void>;
+  /** The texts the status region was given, in their order. */
+  readonly said: readonly string[];
 }
 
 /** A result of the diversity of the one population. */
@@ -194,6 +196,13 @@ async function drawTab(): Promise<Page> {
     keepsPassed: false,
   });
   await settle();
+  const announcer = createAnnouncer();
+  const said: string[] = [];
+  const announce = announcer.announce.bind(announcer);
+  announcer.announce = (text, options) => {
+    said.push(text);
+    announce(text, options);
+  };
   await act(async () => {
     root.render(
       createElement(
@@ -204,7 +213,7 @@ async function drawTab(): Promise<Page> {
           { value: store },
           createElement(
             AnnouncerProvider,
-            { value: createAnnouncer() },
+            { value: announcer },
             createElement(
               RunGateProvider,
               { value: gate },
@@ -232,6 +241,7 @@ async function drawTab(): Promise<Page> {
     autoRuns,
     requests,
     diversityRequests,
+    said,
     endPass: async (outcome?: Outcome<JobResult>) => {
       const pass = requests[0];
       if (pass === undefined) throw new Error("the one pass did not start");
@@ -597,5 +607,148 @@ describe("the Populations tab's Stop and its options while an analysis runs", ()
       expect(input.getAttribute("aria-disabled")).toBeNull();
       expect(descriptionOf(input)).not.toContain("Stop the");
     }
+  });
+});
+
+/** A result of the PCA of the ten individuals. */
+function pcaResult(): JobResult {
+  return {
+    analysis: "pca",
+    method: "pca",
+    individuals: INDIVIDUALS,
+    numComps: 1,
+    numCompsFound: 1,
+    projections: Float64Array.from(INDIVIDUALS, (_, i) => i - 4.5),
+    explainedVariancePercent: Float64Array.from([100]),
+    numVarsUsed: 548,
+    lingoesConstant: null,
+    negativeEigenvaluesPercent: null,
+    passStats: { numVars: 548, filtering: {} },
+  };
+}
+
+/** Gives the PCA its LD distance and runs it through autoRuns, as the
+    PCA tab's Run does, the quiet second after the change of its
+    distance run out; its request is left running. */
+async function runPca(page: Page): Promise<void> {
+  await apply(page, (p) =>
+    setAnalysisOptions(p, pcaOnPopgen2, {
+      ...pcaOptions(p, "popgen2"),
+      ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
+    }),
+  );
+  await quietSecond();
+  await act(async () => {
+    expect(page.autoRuns.run("pca")).toBe("started");
+    await Promise.resolve();
+  });
+  await settle();
+}
+
+/** Ends the last request of the PCA with its result. */
+async function endPca(page: Page): Promise<void> {
+  const last = page.requests.filter((r) => r.job.analysis === "pca").at(-1);
+  if (last === undefined) throw new Error("no PCA sent");
+  last.end({ kind: "done", key: last.key, result: pcaResult() });
+  await settle();
+}
+
+/** Lets the quiet second of the page run out. */
+async function quietSecond(): Promise<void> {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(LIVE_QUIET_MS + 10);
+  });
+  await settle();
+}
+
+describe("PT2 D2 the Populations tab while the diversity is live and does not run", () => {
+  const IN_A_MOMENT =
+    "The diversity starts again in a moment, once the filters and its options stop changing.";
+  const AFTER_PCA =
+    "The diversity starts after the PCA, once the filters and the options stop changing.";
+  const BEHIND_PCA =
+    "The diversity starts once the PCA, which is running, ends.";
+
+  test("about to start after a change of its options: Stop recalculating, the line of the quiet second, and no result; then it starts by itself", async () => {
+    const page = await readyTab();
+    await press(button("Run"));
+    await page.endDiversity();
+    await apply(page, (p) =>
+      setAnalysisOptions(p, diversityOnPopgen2, {
+        ...diversityOptions(p),
+        minNumIndividuals: 5,
+      }),
+    );
+    expect(button("Stop recalculating")).not.toBeNull();
+    expect(lines()).toContain(IN_A_MOMENT);
+    expect(container.textContent).not.toContain("the result");
+    await quietSecond();
+    expect(page.diversityRequests()).toHaveLength(2);
+    expect(lines()).not.toContain(IN_A_MOMENT);
+  });
+
+  test("a Run while the PCA runs waits: Stop recalculating, the line that names the PCA, said once by the status region; the focus kept on the button as it becomes Stop and then Stop recalculating", async () => {
+    const page = await readyTab();
+    await runPca(page);
+    const run = button("Run");
+    run?.focus();
+    await press(run);
+    expect(page.diversityRequests()).toHaveLength(0);
+    const waiting = button("Stop recalculating");
+    expect(waiting).toBe(run);
+    expect(document.activeElement).toBe(waiting);
+    expect(lines()).toContain(BEHIND_PCA);
+    expect(page.said.filter((text) => text === BEHIND_PCA)).toHaveLength(1);
+
+    await endPca(page);
+    expect(page.diversityRequests()).toHaveLength(1);
+    expect(button("Stop")).toBe(run);
+    expect(document.activeElement).toBe(run);
+    expect(lines()).not.toContain(BEHIND_PCA);
+
+    await page.endDiversity();
+    expect(button("Stop recalculating")).toBe(run);
+    expect(document.activeElement).toBe(run);
+    expect(page.said.filter((text) => text === BEHIND_PCA)).toHaveLength(1);
+  });
+
+  test("Stop recalculating pressed while it waits: Run, with the focus kept on it, and the line of a Stop; nothing starts at the PCA's end", async () => {
+    const page = await readyTab();
+    await runPca(page);
+    const run = button("Run");
+    run?.focus();
+    await press(run);
+    await press(button("Stop recalculating"));
+    expect(button("Run")).toBe(run);
+    expect(document.activeElement).toBe(run);
+    expect(lines()).toContain(STOPPED);
+    await endPca(page);
+    await quietSecond();
+    expect(page.diversityRequests()).toHaveLength(0);
+  });
+
+  test("both live and done, a threshold of the individuals moved: in the quiet second the line names the PCA before it; while the PCA runs, the line of waiting for it", async () => {
+    const page = await readyTab();
+    await runPca(page);
+    await endPca(page);
+    await press(button("Run"));
+    await page.endDiversity();
+    expect(page.diversityRequests()).toHaveLength(1);
+
+    await apply(page, (p) =>
+      setIndividualFilter(p, {
+        kind: "keep",
+        individuals: INDIVIDUALS.slice(0, 9),
+      }),
+    );
+    expect(lines()).toContain(AFTER_PCA);
+    await quietSecond();
+    expect(page.requests.filter((r) => r.job.analysis === "pca")).toHaveLength(
+      2,
+    );
+    expect(lines()).toContain(BEHIND_PCA);
+    expect(page.diversityRequests()).toHaveLength(1);
+    await endPca(page);
+    expect(page.diversityRequests()).toHaveLength(2);
   });
 });

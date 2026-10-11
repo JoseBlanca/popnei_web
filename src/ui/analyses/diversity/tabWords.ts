@@ -13,14 +13,8 @@
  * in node checks them; `populationsTabPanel` and the result draw them.
  */
 
-import {
-  diversityOptions,
-  drawOf,
-  refusalText,
-  statisticsFailedText,
-} from "../../../core/analyses/diversity.ts";
+import { diversityOptions, drawOf } from "../../../core/analyses/diversity.ts";
 import { popgen2OnePopulationLine } from "../../../core/analyses/diversityOnePopulation.ts";
-import type { Failure } from "../../../core/analyses/individualChecks.ts";
 import type { IndividualsKept } from "../../../core/individualsKept.ts";
 import {
   counted,
@@ -30,11 +24,11 @@ import {
   popgen2PopulationsKept,
 } from "../../../core/project.ts";
 import type { Popgen2PopulationsKept, Project } from "../../../core/project.ts";
-import type { AnalysisError } from "../../../core/store.ts";
 import { passLockText } from "../pca/passLock.ts";
 import type { PassLock } from "../pca/passLock.ts";
-import { popgen2FailureText, populationsText } from "../words.ts";
-import type { PanelErrorWords } from "../words.ts";
+import type { AboutToStart, LiveState } from "../../autoRuns.ts";
+import type { PanelLive } from "../AnalysisPanel.tsx";
+import { populationsText } from "../words.ts";
 import { minimumAndDrawLines } from "./words.ts";
 
 /** The analysis in the middle of a sentence. */
@@ -46,9 +40,7 @@ export const DIVERSITY_STOPPED_LINE =
   "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.";
 
 /** The line in the place of the bar while a crash of the worker, which
-    ended another live state, holds the diversity until the next change;
-    the lines of its other waits come with work package 2 of
-    docs/plans/population-tab.md. */
+    ended another live state, holds the diversity until the next change. */
 export const DIVERSITY_AFTER_CRASH_LINE =
   "The diversity starts again after the next change of the filters, of its options or of the populations.";
 
@@ -158,18 +150,64 @@ export function diversityTabLock(
     : passLockText(lock, p.variants.name, DIVERSITY_TAB_NAME);
 }
 
-/** The words the tab gives its errors, as `AnalysisUi` takes them: those
-    of the definition of this page, and the failures that are not
-    popnei's refusals in the words of the page. */
-export const DIVERSITY_TAB_ERRORS: PanelErrorWords = Object.freeze({
-  refusalText: (message: string, p: Project): string =>
-    refusalText(message, p, "popgen2"),
-  statisticsFailedText: (
-    error: AnalysisError,
-    p: Project,
-    failureText: (failure: Failure) => string,
-    waited: boolean,
-  ): string => statisticsFailedText(error, p, failureText, waited, "popgen2"),
-  workerFailedText: null,
-  failureText: popgen2FailureText,
-});
+/**
+ * The line in the place of the bar while the diversity is live, does not
+ * run, and is about to start, waiting for `waits`, with `before` the
+ * live analysis its line names, "the PCA" or "the PCoA", `null` for none
+ * (docs/specs/steps/popgen2-populations.md, "Run and Stop", the line in
+ * the place of the bar): "behind", the analysis that runs, "The
+ * diversity starts once the PCA, which is running, ends."; "changes",
+ * the quiet second, "The diversity starts after the PCA, once the
+ * filters and the options stop changing." with one about to start before
+ * it, or "The diversity starts again in a moment, once the filters and
+ * its options stop changing."; "download", "The diversity starts again
+ * when the download is written or closed."; "afterCrash",
+ * `DIVERSITY_AFTER_CRASH_LINE`.
+ */
+export function diversityWaitingLine(
+  waits: AboutToStart,
+  before: string | null,
+): string {
+  const inAMoment =
+    "The diversity starts again in a moment, once the filters and its options stop changing.";
+  switch (waits) {
+    case "behind":
+      return before === null
+        ? inAMoment
+        : `The diversity starts once ${before}, which is running, ends.`;
+    case "changes":
+      return before === null
+        ? inAMoment
+        : `The diversity starts after ${before}, once the filters and the options stop changing.`;
+    case "download":
+      return "The diversity starts again when the download is written or closed.";
+    case "afterCrash":
+      return DIVERSITY_AFTER_CRASH_LINE;
+  }
+}
+
+/** The live state `state` of the diversity as its panel draws it, with
+    `before`, the live analysis its line of waiting names, "the PCA",
+    or `null`: the line of a Stop, of a failure that ended it, or of
+    what it waits for while it is about to start. */
+export function diversityPanelLive(
+  state: LiveState,
+  before: string | null,
+): PanelLive {
+  switch (state.kind) {
+    case "off":
+      return { kind: "off" };
+    case "stopped":
+      return { kind: "stopped", line: DIVERSITY_STOPPED_LINE };
+    case "endedByFailure":
+      return { kind: "stopped", line: DIVERSITY_FAILURE_ENDED_LINE };
+    case "live":
+      return {
+        kind: "live",
+        aboutToStartLine:
+          state.aboutToStart === null
+            ? null
+            : diversityWaitingLine(state.aboutToStart, before),
+      };
+  }
+}

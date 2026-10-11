@@ -11,10 +11,13 @@
  *
  * Its Run makes the diversity live, `autoRuns.run`, and its Stop and its
  * Stop recalculating end the live state, `autoRuns.pause` (the spec,
- * "Run and Stop"); after either, the line that says why nothing starts
- * by itself stands in the place of the bar. The lines in that place
- * while the diversity is about to start or waits come with work package
- * 2 of docs/plans/population-tab.md.
+ * "Run and Stop"). While it is live and does not run, the line of what
+ * it waits for stands in the place of the bar, the quiet second, the PCA
+ * before it or running, or the download, naming the analysis
+ * `autoRuns` says it waits after; a Run that waits for another
+ * calculation says that line once in the status region, since no bar
+ * comes. After a Stop or a failure that ended the live state, the line
+ * that says why nothing starts by itself stands there.
  *
  * A module of its own, which `PopulationsTab.tsx` alone imports with
  * `import()`, so that the bundler makes it and the result a file of their
@@ -24,43 +27,23 @@
 import { useSyncExternalStore } from "react";
 
 import { diversityOnPopgen2 } from "../../../core/analyses/diversity.ts";
-import type { LiveState } from "../../autoRuns.ts";
 import { useAutoRuns } from "../../autoRunsContext.ts";
-import { useAppState } from "../../store.tsx";
+import { useAnnouncer } from "../../shell/announcer.tsx";
+import { useAppState, useStore } from "../../store.tsx";
+import { announceRunWaiting } from "../../variants/announceChanges.ts";
 import { summaryStatus } from "../../variants/words.ts";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
-import type { PanelLive } from "../AnalysisPanel.tsx";
 import { passLock } from "../pca/passLock.ts";
+import { waitsAfterName } from "../status.ts";
 import { POPULATIONS_TAB_PANEL } from "./populationsTabPanel.ts";
 import {
-  DIVERSITY_FAILURE_ENDED_LINE,
-  DIVERSITY_AFTER_CRASH_LINE,
-  DIVERSITY_STOPPED_LINE,
+  diversityPanelLive,
   diversityTabLock,
+  diversityWaitingLine,
 } from "./tabWords.ts";
 
 /** The id of the diversity among the analyses started by themselves. */
 const DIVERSITY = diversityOnPopgen2.id;
-
-/** The live state `state` of the diversity as its panel draws it. */
-function panelLive(state: LiveState): PanelLive {
-  switch (state.kind) {
-    case "off":
-      return { kind: "off" };
-    case "stopped":
-      return { kind: "stopped", line: DIVERSITY_STOPPED_LINE };
-    case "endedByFailure":
-      return { kind: "stopped", line: DIVERSITY_FAILURE_ENDED_LINE };
-    case "live":
-      return {
-        kind: "live",
-        aboutToStartLine:
-          state.aboutToStart === "afterCrash"
-            ? DIVERSITY_AFTER_CRASH_LINE
-            : null,
-      };
-  }
-}
 
 /** The Populations tab: the heading of the diversity, its options, the
     line of the populations, Run or Stop with its lock, the run under
@@ -69,6 +52,8 @@ export function PopulationsTabView(): React.JSX.Element {
   // Drawn again at each change of what autoRuns knows, which tells a
   // pass stopped from one about to start, and which the store does not.
   const autoRuns = useAutoRuns();
+  const store = useStore();
+  const announcer = useAnnouncer();
   const lock = useAppState((s) =>
     diversityTabLock(
       s.project,
@@ -78,15 +63,26 @@ export function PopulationsTabView(): React.JSX.Element {
   const state = useSyncExternalStore(autoRuns.subscribe, () =>
     autoRuns.liveState(DIVERSITY),
   );
+  const before = useAppState((s) => waitsAfterName(s, state));
   return (
     <AnalysisPanel
       id={DIVERSITY}
       ui={POPULATIONS_TAB_PANEL}
       page={{
         lock,
-        live: panelLive(state),
+        live: diversityPanelLive(state, before),
         onRun: () => {
-          autoRuns.run(DIVERSITY);
+          const answer = autoRuns.run(DIVERSITY);
+          // Read after the Run, which made it live and waiting.
+          const now = autoRuns.liveState(DIVERSITY);
+          announceRunWaiting(
+            announcer,
+            answer,
+            diversityWaitingLine(
+              "behind",
+              waitsAfterName(store.getState(), now),
+            ),
+          );
         },
         onStop: () => {
           autoRuns.pause(DIVERSITY);

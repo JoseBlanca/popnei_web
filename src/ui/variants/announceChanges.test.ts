@@ -6,9 +6,13 @@
  */
 import { describe, expect, test, vi } from "vitest";
 
+import {
+  diversityOnPopgen2,
+  diversityOptions,
+} from "../../core/analyses/diversity.ts";
 import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
 import { setAnalysisOptions } from "../../core/project.ts";
-import { summaryResult } from "../../core/testSupport.ts";
+import { noPopDiversity, summaryResult } from "../../core/testSupport.ts";
 import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
 import { statusOf } from "../analyses/status.ts";
 import type { LiveEvent } from "../autoRuns.ts";
@@ -17,7 +21,11 @@ import type { Popgen2PageStore } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
 import { ANNOUNCE_DELAY_MS, createAnnouncer } from "../shell/status.ts";
 import type { Announcer } from "../shell/status.ts";
-import { announceChanges, announceLive } from "./announceChanges.ts";
+import {
+  announceChanges,
+  announceLive,
+  announceRunWaiting,
+} from "./announceChanges.ts";
 
 /** A result of the PCA of `s000` and `s001`. */
 function pcaResult(): JobResult {
@@ -32,6 +40,22 @@ function pcaResult(): JobResult {
     numVarsUsed: 548,
     lingoesConstant: null,
     negativeEigenvaluesPercent: null,
+    passStats: { numVars: 548, filtering: {} },
+  };
+}
+
+/** A result of the diversity of the one population of `s000` and
+    `s001`. */
+function diversityResult(): JobResult {
+  return {
+    analysis: "diversity",
+    pops: ["Unclassified"],
+    numIndividuals: Uint32Array.from([2]),
+    unbiasedExpHet: Float64Array.from([0.3]),
+    obsHet: Float64Array.from([0.3]),
+    polyRatio: Float64Array.from([0.9]),
+    numVarsWithValue: Uint32Array.from([548]),
+    ...noPopDiversity(1),
     passStats: { numVars: 548, filtering: {} },
   };
 }
@@ -94,6 +118,15 @@ async function setUpReady(announcer?: Announcer): Promise<
       ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
     }),
   );
+  // The diversity of the two individuals as one population, with a
+  // minimum and a draw they meet, so that its Run is enabled.
+  page.store.apply("the options of the diversity changed", (p) =>
+    setAnalysisOptions(p, diversityOnPopgen2, {
+      ...diversityOptions(p),
+      minNumIndividuals: 2,
+      numCalledAlleles: 4,
+    }),
+  );
   const pass = startAnalysis(page.store, "variantsSummary");
   const [end, key] = [ends[0], keys[0]];
   if (pass === null || end === undefined || key === undefined) {
@@ -102,6 +135,7 @@ async function setUpReady(announcer?: Announcer): Promise<
   end({ kind: "done", key, result: summaryResult(["1"], [1200]) });
   await pass;
   expect(statusOf(page.store.getState(), "pca").kind).toBe("ready");
+  expect(statusOf(page.store.getState(), "diversity").kind).toBe("ready");
   return {
     ...page,
     endLast: (outcome) => {
@@ -239,13 +273,6 @@ describe("NU4 D2 the status region says the PCA started by itself and its Stop",
     expect(said.at(-1)).toBe("PCoA stopped.");
   });
 
-  test("the diversity started by itself and its Stop are not said as the PCA's: nothing is said of them until their own words come", () => {
-    const { said, tell } = setUp();
-    tell({ kind: "startedByItself", id: "diversity", round: ["diversity"] });
-    tell({ kind: "paused", id: "diversity" });
-    expect(said).toEqual([]);
-  });
-
   test("a Stop is said with what to press to calculate it again", async () => {
     const { said, tell, toPcoa } = await setUpReady();
     tell({ kind: "paused", id: "pca" });
@@ -257,5 +284,166 @@ describe("NU4 D2 the status region says the PCA started by itself and its Stop",
     expect(said.at(-1)).toBe(
       "PCoA stopped. Press Run in the PCA tab to calculate it again.",
     );
+  });
+});
+
+describe("PT2 D2 the status region says a round of two analyses once, a Run that waited at its start, and the diversity's start, Stop and end", () => {
+  const ROUND =
+    "Calculating the PCA and then the diversity again. To change the filters, stop each in its tab.";
+
+  test("the first start of a round of the PCA and the diversity names both, once; the diversity's start in the same round says nothing", () => {
+    const { said, tell, toPcoa } = setUp();
+    tell({ kind: "startedByItself", id: "pca", round: ["pca", "diversity"] });
+    tell({ kind: "startedByItself", id: "diversity", round: [] });
+    expect(said).toEqual([ROUND]);
+    toPcoa();
+    tell({ kind: "startedByItself", id: "pca", round: ["pca", "diversity"] });
+    expect(said.at(-1)).toBe(
+      "Calculating the PCoA and then the diversity again. To change the filters, stop each in its tab.",
+    );
+    expect(said).toHaveLength(2);
+  });
+
+  test("the diversity started by itself alone says its own words", () => {
+    const { said, tell } = setUp();
+    tell({ kind: "startedByItself", id: "diversity", round: ["diversity"] });
+    expect(said).toEqual([
+      "Calculating the diversity again. To change the filters, stop it in the Populations tab.",
+    ]);
+  });
+
+  test("a Run that waited is said at its start, the diversity's and the PCA's", () => {
+    const { said, tell, toPcoa } = setUp();
+    tell({ kind: "startedAfterWaiting", id: "diversity" });
+    tell({ kind: "startedAfterWaiting", id: "pca" });
+    toPcoa();
+    tell({ kind: "startedAfterWaiting", id: "pca" });
+    expect(said).toEqual([
+      "Calculating the diversity of panel.nei.",
+      "Calculating the PCA of panel.nei.",
+      "Calculating the PCoA of panel.nei.",
+    ]);
+  });
+
+  test("a Stop of the diversity, with Run to press, or alone while Run is not offered", async () => {
+    const locked = setUp();
+    // panel.nei opened and not read: the diversity locked.
+    locked.tell({ kind: "paused", id: "diversity" });
+    expect(locked.said).toEqual(["Diversity stopped."]);
+    const ready = await setUpReady();
+    ready.tell({ kind: "paused", id: "diversity" });
+    expect(ready.said).toEqual([
+      "Diversity stopped. Press Run in the Populations tab to calculate it again.",
+    ]);
+  });
+
+  test("Stop all is said once, naming the analyses it stopped", () => {
+    const { said, tell } = setUp();
+    tell({ kind: "pausedAll", ids: ["pca", "diversity"] });
+    expect(said).toEqual([
+      "Stopped: the PCA and the diversity no longer start by themselves. Press Run in their tabs to calculate them again.",
+    ]);
+  });
+
+  test("the round's start is never joined with the PCA's end: an end within the region's pause is said alone", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const announcer = createAnnouncer();
+      const page = await setUpReady(announcer);
+      announceChanges(page.store, announcer, () => null);
+      const run = startAnalysis(page.store, "pca");
+      page.tell({
+        kind: "startedByItself",
+        id: "pca",
+        round: ["pca", "diversity"],
+      });
+      page.endLast((key) => ({ kind: "done", key, result: pcaResult() }));
+      await run;
+      await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+      expect(announcer.getState()).toBe("PCA of panel.nei calculated.");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("the round's start said, then the PCA's end, then the diversity's end, each alone", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const announcer = createAnnouncer();
+      const texts: string[] = [];
+      announcer.subscribe(() => {
+        const text = announcer.getState();
+        if (text !== "") texts.push(text);
+      });
+      const page = await setUpReady(announcer);
+      announceChanges(page.store, announcer, () => null);
+      const pca = startAnalysis(page.store, "pca");
+      page.tell({
+        kind: "startedByItself",
+        id: "pca",
+        round: ["pca", "diversity"],
+      });
+      await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+      page.endLast((key) => ({ kind: "done", key, result: pcaResult() }));
+      await pca;
+      await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+      const diversity = startAnalysis(page.store, "diversity");
+      page.tell({ kind: "startedByItself", id: "diversity", round: [] });
+      page.endLast((key) => ({
+        kind: "done",
+        key,
+        result: diversityResult(),
+      }));
+      await diversity;
+      await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+      expect(texts).toEqual([
+        ROUND,
+        "PCA of panel.nei calculated.",
+        "Diversity of panel.nei calculated.",
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a crash of the diversity is said, with what to do", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const announcer = createAnnouncer();
+      const page = await setUpReady(announcer);
+      announceChanges(page.store, announcer, () => null);
+      const run = startAnalysis(page.store, "diversity");
+      page.endLast(() => ({
+        kind: "failed",
+        error: { kind: "workerFailed", message: "a crash" },
+      }));
+      await run;
+      await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+      expect(announcer.getState()).toBe(
+        "The diversity of panel.nei could not be calculated: The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the box Variants.",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("announceRunWaiting says the line of a Run that waits once, and nothing for a Run started, kept or refused", () => {
+    const { said, announcer } = recorder();
+    const line = "The diversity starts once the PCA, which is running, ends.";
+    announceRunWaiting(announcer, "started", line);
+    announceRunWaiting(announcer, "kept", line);
+    announceRunWaiting(announcer, "refused", line);
+    expect(said).toEqual([]);
+    announceRunWaiting(announcer, "waiting", line);
+    expect(said).toEqual([line]);
+    announceRunWaiting(
+      announcer,
+      "waiting",
+      "The PCA starts once the diversity, which is running, ends.",
+    );
+    expect(said).toEqual([
+      line,
+      "The PCA starts once the diversity, which is running, ends.",
+    ]);
   });
 });

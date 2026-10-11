@@ -185,11 +185,15 @@ export function pcaTabResultFailed(
     filtered variants holds it, "download", "The PCA starts again when
     the download is written or closed."; after a crash ended another
     live state, "afterCrash", "The PCA starts again after the next
-    change of the filters or of its options."; "The PCoA …" under the
+    change of the filters or of its options."; while another live
+    analysis runs, "behind", that one named by `before`, "the diversity":
+    "The PCA starts once the diversity, which is running, ends.", or the
+    line of the quiet second when none is named; "The PCoA …" under the
     PCoA. */
 export function aboutToStartLine(
   method: PcaMethod,
   waits: AboutToStart,
+  before: string | null = null,
 ): string {
   const name = methodName(method);
   switch (waits) {
@@ -197,10 +201,13 @@ export function aboutToStartLine(
       return `The ${name} starts again when the download is written or closed.`;
     case "afterCrash":
       return `The ${name} starts again after the next change of the filters or of its options.`;
-    // Behind another calculation, which no tab of the page starts yet
-    // beside the PCA: the line that names it comes with the Populations
-    // tab (docs/plans/population-tab.md, work package 2).
     case "behind":
+      if (before !== null) {
+        return `The ${name} starts once ${before}, which is running, ends.`;
+      }
+      return `The ${name} starts again in a moment, once the filters and its options stop changing.`;
+    // No live analysis comes before the PCA in the order of the tabs, so
+    // none is named while the quiet second runs.
     case "changes":
       return `The ${name} starts again in a moment, once the filters and its options stop changing.`;
   }

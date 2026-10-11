@@ -23,8 +23,10 @@ import {
   DIVERSITY_AFTER_CRASH_LINE,
   DIVERSITY_FAILURE_ENDED_LINE,
   DIVERSITY_STOPPED_LINE,
+  diversityPanelLive,
   diversityTabLock,
   diversityTabReadyLines,
+  diversityWaitingLine,
 } from "./tabWords.ts";
 import { unclassifiedCaption, unclassifiedLeftOutOf } from "./resultWords.ts";
 import {
@@ -213,5 +215,87 @@ describe("PT1 D3 the words of the Populations tab", () => {
     expect(populationsTabFailed("panel.nei")).toBe(
       "The Populations tab could not be loaded. Press Try again. If it fails again, the site may have been updated since this page was opened: reload the page and open panel.nei again; what the page has calculated is lost.",
     );
+  });
+});
+
+describe("PT2 D1 the lines of the Populations tab while the diversity is live and does not run", () => {
+  test("the quiet second, or a change under way, with no live analysis before it about to start", () => {
+    expect(diversityWaitingLine("changes", null)).toBe(
+      "The diversity starts again in a moment, once the filters and its options stop changing.",
+    );
+  });
+
+  test("the quiet second with the PCA live and about to start before it, by the method", () => {
+    expect(diversityWaitingLine("changes", "the PCA")).toBe(
+      "The diversity starts after the PCA, once the filters and the options stop changing.",
+    );
+    expect(diversityWaitingLine("changes", "the PCoA")).toBe(
+      "The diversity starts after the PCoA, once the filters and the options stop changing.",
+    );
+  });
+
+  test("waiting for the PCA that runs, by the method", () => {
+    expect(diversityWaitingLine("behind", "the PCA")).toBe(
+      "The diversity starts once the PCA, which is running, ends.",
+    );
+    expect(diversityWaitingLine("behind", "the PCoA")).toBe(
+      "The diversity starts once the PCoA, which is running, ends.",
+    );
+  });
+
+  test("the dialog of the download or its write, also with the PCA about to start before it", () => {
+    const line =
+      "The diversity starts again when the download is written or closed.";
+    expect(diversityWaitingLine("download", null)).toBe(line);
+    expect(diversityWaitingLine("download", "the PCA")).toBe(line);
+  });
+
+  test("after a crash ended another live state, the next change", () => {
+    expect(diversityWaitingLine("afterCrash", null)).toBe(
+      DIVERSITY_AFTER_CRASH_LINE,
+    );
+  });
+
+  test("each live state as the panel draws it: the line of a Stop, of a failure that ended it, none with nothing to wait for, and the line of what it waits for", () => {
+    expect(diversityPanelLive({ kind: "off" }, null)).toEqual({ kind: "off" });
+    expect(diversityPanelLive({ kind: "stopped" }, null)).toEqual({
+      kind: "stopped",
+      line: DIVERSITY_STOPPED_LINE,
+    });
+    expect(diversityPanelLive({ kind: "endedByFailure" }, null)).toEqual({
+      kind: "stopped",
+      line: DIVERSITY_FAILURE_ENDED_LINE,
+    });
+    expect(
+      diversityPanelLive(
+        { kind: "live", aboutToStart: null, running: false, after: null },
+        null,
+      ),
+    ).toEqual({ kind: "live", aboutToStartLine: null });
+    expect(
+      diversityPanelLive(
+        { kind: "live", aboutToStart: "behind", running: false, after: "pca" },
+        "the PCA",
+      ),
+    ).toEqual({
+      kind: "live",
+      aboutToStartLine:
+        "The diversity starts once the PCA, which is running, ends.",
+    });
+    expect(
+      diversityPanelLive(
+        {
+          kind: "live",
+          aboutToStart: "changes",
+          running: false,
+          after: "pca",
+        },
+        "the PCA",
+      ),
+    ).toEqual({
+      kind: "live",
+      aboutToStartLine:
+        "The diversity starts after the PCA, once the filters and the options stop changing.",
+    });
   });
 });

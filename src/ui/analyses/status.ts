@@ -12,7 +12,7 @@ import type { Popgen2LiveId } from "../../core/apps.ts";
 import type { AnalysisId } from "../../core/project.ts";
 import type { AnalysisStatus, AppState, Notice } from "../../core/store.ts";
 import type { JobResult, PcaMethod } from "../../worker/protocol.ts";
-import type { AutoRuns } from "../autoRuns.ts";
+import type { AutoRuns, LiveState } from "../autoRuns.ts";
 import { methodName } from "./pca/words.ts";
 
 /** The state of the analysis `id` in `s`; a defect when the store has
@@ -229,4 +229,17 @@ function namedOf(
   ids: readonly AnalysisId[],
 ): readonly LiveAnalysisName[] {
   return ids.map((id) => liveAnalysisOf(s, id));
+}
+
+/** The analysis the line of waiting of the live state `state` names
+    in `s`, as the words of the page name it, "the PCA", "the
+    diversity": the one `after` holds, that runs or is about to start
+    before it; `null` for none. */
+export function waitsAfterName(
+  s: AppState<JobResult, unknown>,
+  state: LiveState,
+): string | null {
+  return state.kind === "live" && state.after !== null
+    ? liveAnalysisOf(s, state.after).name
+    : null;
 }

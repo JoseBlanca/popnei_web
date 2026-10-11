@@ -14,12 +14,9 @@
 import type { AnalysisUi } from "../panels.ts";
 import { DiversityTabOptions } from "./DiversityTabOptions.tsx";
 import { PopulationsTabResultView } from "./PopulationsTabResultView.tsx";
+import { DIVERSITY_TAB_ERRORS } from "./liveWords.ts";
 import { DIVERSITY_TAB_TITLE } from "./tabLoadWords.ts";
-import {
-  DIVERSITY_TAB_ERRORS,
-  DIVERSITY_TAB_NAME,
-  diversityTabReadyLines,
-} from "./tabWords.ts";
+import { DIVERSITY_TAB_NAME, diversityTabReadyLines } from "./tabWords.ts";
 
 /** The panel of the diversity of the Populations tab. */
 export const POPULATIONS_TAB_PANEL: AnalysisUi = Object.freeze({
