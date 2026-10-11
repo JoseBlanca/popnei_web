@@ -495,8 +495,9 @@ export function tableSizeText(
  * `p`, with the individuals kept `kept`: for a table, "panel_pops.csv
  * read: 200 rows, the populations from popcat." or "…, no column chosen
  * for the populations.", then the warning the box shows, if any, of too
- * many values or of none of the individuals in the file, and the line of
- * no column qualified; for a refusal, the words of the box; null with no
+ * many values or of none of the individuals in the file, the line of no
+ * column qualified, and the count of the rows that name no individual of
+ * the variants file, whose line is in the Individuals tab; for a refusal, the words of the box; null with no
  * file or a file being read.
  */
 export function individualsReadAnnouncement(
@@ -526,5 +527,32 @@ export function individualsReadAnnouncement(
   }
   const noColumn = noColumnQualifiedText(p);
   if (noColumn !== null) said.push(noColumn);
+  if (counts !== null) {
+    const notUsed = rowsNotUsedAnnounced(p, counts);
+    if (notUsed !== null) said.push(notUsed);
+  }
   return said.join(" ");
+}
+
+/** What the status region says of the rows of the individuals file of
+    `p` that name no individual of its variants file, from its counts
+    `counts`, since the line that counts them is in the Individuals tab,
+    which may not be shown: "18 individuals in panel_pops.csv are not in
+    panel.nei, as the Individuals tab says."; null when `rowsNotUsedText`
+    gives no line, and after the warning of none of the individuals in
+    the file, which says as much. */
+function rowsNotUsedAnnounced(
+  p: Project,
+  counts: PopulationCounts,
+): string | null {
+  const numRows = counts.rowsNotInVariants;
+  if (
+    rowsNotUsedText(p, counts) === null ||
+    numRows === null ||
+    counts.noneInFile !== null
+  ) {
+    return null;
+  }
+  const verb = numRows === 1 ? "is" : "are";
+  return `${counted(numRows, "individual")} in ${escaped(p.individuals?.name ?? "")} ${verb} not in ${escaped(p.variants?.name ?? "")}, as the Individuals tab says.`;
 }

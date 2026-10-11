@@ -567,7 +567,7 @@ the project's (`docs/architecture.md`, section 7).
 | the end of every other refusal of a file | "Open a corrected file." |
 | a read that failed in the worker, a crash | "panel_pops.csv could not be read: the page stopped while it read it. Open the file again." |
 | the line over the table of the file, and while a sort is drawn | "200 rows, 2 columns"; "200 rows, 2 columns. Sorting…" |
-| the status region, a file read | "panel_pops.csv read: 200 rows, the populations from popcat."; with no column chosen, "panel_pops.csv read: 200 rows, no column chosen for the populations." |
+| the status region, a file read | "panel_pops.csv read: 200 rows, the populations from popcat."; with no column chosen, "panel_pops.csv read: 200 rows, no column chosen for the populations."; with rows not used, at the end, "18 individuals in panel_pops.csv are not in panel.nei, as the Individuals tab says." |
 | the status region, a file refused | the words of the box |
 | the status region, the names copied | the old step's, "4 names copied." |
 
@@ -607,7 +607,13 @@ The end of a read of the individuals file, its words above, once, said
 by the entry after it has sent the column it chooses, so that it names
 that column (`docs/specs/entry.md`), with, after it, the warning the box
 then shows, if any: of no individual in the file, of too many values, or
-of no column qualified, each of which appears with no act of the user; a
+of no column qualified, each of which appears with no act of the user;
+and last, when some rows of the file name no individual of the variants
+file, their count and the tab that shows it, "18 individuals in
+panel_pops.csv are not in panel.nei, as the Individuals tab says.", "1
+individual … is …" for one, since that line, in the box until 11
+October 2026, now stands in a tab the user may not be looking at; not
+after the warning of no individual in the file, which says as much; a
 refusal, its words, once; the words of a zone given a folder, a piece of
 text or several files, as the zone of the variants file says them; the
 names copied. A change of the counts after

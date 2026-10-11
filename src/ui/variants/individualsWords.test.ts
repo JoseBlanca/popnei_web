@@ -757,6 +757,29 @@ describe("IN5 D1 what the status region says of a read of the individuals file",
     );
   });
 
+  test("a file with rows that name no individual of the variants file: their count and the tab that shows it, last", () => {
+    const fewer = project({
+      variantsIndividuals: PANEL_INDIVIDUALS.slice(0, 182),
+    });
+    expect(individualsReadAnnouncement(fewer, keptOf(fewer))).toBe(
+      "panel_pops.csv read: 200 rows, the populations from popcat. 18 individuals in panel_pops.csv are not in panel.nei, as the Individuals tab says.",
+    );
+    const one = project({
+      read: tableRead(
+        panelPopsWith([], (row) => (row[0] === "s199" ? ["s199", null] : row)),
+      ),
+      variantsIndividuals: PANEL_INDIVIDUALS.slice(0, 199),
+      grouping: { kind: "populations", column: null },
+    });
+    expect(individualsReadAnnouncement(one, keptOf(one))).toBe(
+      "panel_pops.csv read: 200 rows, no column chosen for the populations. 1 individual in panel_pops.csv is not in panel.nei, as the Individuals tab says.",
+    );
+    const before = project({ variantsIndividuals: null });
+    expect(individualsReadAnnouncement(before, keptOf(before))).toBe(
+      "panel_pops.csv read: 200 rows, the populations from popcat.",
+    );
+  });
+
   test("a file of one row", () => {
     const p = project({
       read: tableRead(panelPopsWith(PANEL_INDIVIDUALS.slice(1))),
