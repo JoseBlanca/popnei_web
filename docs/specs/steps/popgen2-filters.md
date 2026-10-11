@@ -706,7 +706,7 @@ heading the user can find.
 | the line's value for a screen reader | on: its number, "0.05"; on and grey: "0.1, keeps every variant of the plot", "… every individual of the plot"; off: "1, keeps every variant", "1, keeps every individual" |
 | the description of the box, for a screen reader alone | on and grey: "This filter removes no variant of the plot.", "… no individual of the plot."; off: "This filter removes nothing."; none otherwise |
 | a number refused while off | "1.5 is more than 1; the threshold stays 1." |
-| announced when a number committed in the box, or a run of the keys made a change, changes the look | into on and grey: "This filter removes no variant of the plot.", "… no individual of the plot."; into off: "This filter removes nothing."; back to removing some: the number alone, as the line reads it, "0.05"; nothing when the look stays |
+| announced when a number committed in the box, or a run of the keys made a change, changes the look | into on and grey: "This filter removes no variant of the plot.", "… no individual of the plot."; into off: "This filter removes nothing."; back to removing some: "This filter removes some variants of the plot.", "… some individuals of the plot." (the number alone, "0.05", until 11 October 2026: React Aria's field already says its number as it changes, so a screen reader heard the number twice and not that the grey went); nothing when the look stays |
 | the FILTER box | "Leave out the variants that failed their FILTER" |
 | under it | "The plots show every variant. The ones that failed are left out of what is downloaded or analysed." |
 | over a part, after a Stop with plots | "Stopped. The plots are of the variants read before the Stop." |
@@ -881,8 +881,9 @@ they stand until the owner asks for others.
   after the build, on 8 October 2026, in the words of the set: a
   number committed in the box, or a run of the keys made a change, that
   turns a threshold on, grey or off from another of the three says the
-  box's description of the new look, or the number alone when it
-  removes some again (above, "Its words").
+  box's description of the new look, or, when it removes some again,
+  "This filter removes some variants of the plot." (the number alone
+  until 11 October 2026; above, "Its words").
 - "1.5 is more than 1; the threshold stays 1." for a number refused
   while the threshold is off, the words of a threshold on with 1, the
   number the box shows.

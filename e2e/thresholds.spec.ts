@@ -43,6 +43,7 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 /** What a screen reader hears of the box of a threshold of the variants
     on that keeps every variant of its plot. */
 const REMOVES_NO_VARIANT = "This filter removes no variant of the plot.";
+const REMOVES_SOME = "This filter removes some variants of the plot.";
 
 /** What a screen reader hears of the box of a threshold that is off. */
 const REMOVES_NOTHING = "This filter removes nothing.";
@@ -537,11 +538,12 @@ test("SF9 D5 a number committed in the box, or a run of the keys made a change, 
   const said = async (): Promise<readonly string[]> =>
     (await announced(page)).slice(start);
 
-  // Grey to on by Enter: the number alone.
+  // Grey to on by Enter: that it removes some, and not the number, which
+  // React Aria's field says itself.
   await missing.box.fill("0.05");
   await missing.box.press("Enter");
   await expectGrey(missing, false);
-  await expect.poll(said).toEqual(["0.05"]);
+  await expect.poll(said).toEqual([REMOVES_SOME]);
   // On to on: nothing.
   await missing.box.fill("0.04");
   await missing.box.press("Enter");
@@ -550,10 +552,10 @@ test("SF9 D5 a number committed in the box, or a run of the keys made a change, 
   await missing.box.press("Tab");
   await expectGrey(missing, true);
   await expect(missing.box).toHaveAccessibleDescription(REMOVES_NO_VARIANT);
-  await expect.poll(said).toEqual(["0.05", REMOVES_NO_VARIANT]);
+  await expect.poll(said).toEqual([REMOVES_SOME, REMOVES_NO_VARIANT]);
 
-  // Grey to on by a run of the line: nothing at the presses, the number
-  // once the run is a change, at the focus leaving it.
+  // Grey to on by a run of the line: nothing at the presses, that it
+  // removes some once the run is a change, at the focus leaving it.
   await missing.slider.focus();
   // 0.08 keeps the variant with 16 of 200 genotypes missing; 0.07 not.
   await page.keyboard.press("PageDown");
@@ -561,7 +563,9 @@ test("SF9 D5 a number committed in the box, or a run of the keys made a change, 
   await expectGrey(missing, false);
   await expect(missing.slider).toHaveAttribute("aria-valuetext", "0.07");
   await page.keyboard.press("Tab");
-  await expect.poll(said).toEqual(["0.05", REMOVES_NO_VARIANT, "0.07"]);
+  await expect
+    .poll(said)
+    .toEqual([REMOVES_SOME, REMOVES_NO_VARIANT, REMOVES_SOME]);
   // A run that keeps the look: nothing.
   await missing.slider.focus();
   await page.keyboard.press("ArrowLeft");
@@ -574,7 +578,7 @@ test("SF9 D5 a number committed in the box, or a run of the keys made a change, 
   await expect(missing.box).toHaveValue("1");
   await expect
     .poll(said)
-    .toEqual(["0.05", REMOVES_NO_VARIANT, "0.07", REMOVES_NOTHING]);
+    .toEqual([REMOVES_SOME, REMOVES_NO_VARIANT, REMOVES_SOME, REMOVES_NOTHING]);
 });
 
 test("TH5 the owner's first round: 0 typed for the variants is a threshold of 0, with nothing said, red where some variant has a value above it; the plot does not move", async ({

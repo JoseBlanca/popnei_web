@@ -86,24 +86,28 @@ describe("the words of the statistics of the open file", () => {
 });
 
 describe("SF9 D5 what is announced when a change made from the box or by a run of the keys changes the look of a threshold", () => {
-  test("into grey or off, the box's description; back to removing some, the number alone; nothing when the look stays", () => {
-    expect(thresholdLookChangeText("on", "grey", 0.09, "variant")).toBe(
+  test("into grey or off, the box's description; back to removing some, that it removes some; nothing when the look stays", () => {
+    expect(thresholdLookChangeText("on", "grey", "variant")).toBe(
       "This filter removes no variant of the plot.",
     );
-    expect(thresholdLookChangeText("off", "grey", 0.1, "individual")).toBe(
+    expect(thresholdLookChangeText("off", "grey", "individual")).toBe(
       "This filter removes no individual of the plot.",
     );
-    expect(thresholdLookChangeText("on", "off", 1, "variant")).toBe(
+    expect(thresholdLookChangeText("on", "off", "variant")).toBe(
       "This filter removes nothing.",
     );
-    expect(thresholdLookChangeText("grey", "off", 1, "individual")).toBe(
+    expect(thresholdLookChangeText("grey", "off", "individual")).toBe(
       "This filter removes nothing.",
     );
-    expect(thresholdLookChangeText("grey", "on", 0.05, "variant")).toBe("0.05");
-    expect(thresholdLookChangeText("off", "on", 0, "individual")).toBe("0");
-    expect(thresholdLookChangeText("on", "on", 0.05, "variant")).toBeNull();
-    expect(thresholdLookChangeText("grey", "grey", 0.1, "variant")).toBeNull();
-    expect(thresholdLookChangeText("off", "off", 1, "variant")).toBeNull();
+    expect(thresholdLookChangeText("grey", "on", "variant")).toBe(
+      "This filter removes some variants of the plot.",
+    );
+    expect(thresholdLookChangeText("off", "on", "individual")).toBe(
+      "This filter removes some individuals of the plot.",
+    );
+    expect(thresholdLookChangeText("on", "on", "variant")).toBeNull();
+    expect(thresholdLookChangeText("grey", "grey", "variant")).toBeNull();
+    expect(thresholdLookChangeText("off", "off", "variant")).toBeNull();
   });
 });
 

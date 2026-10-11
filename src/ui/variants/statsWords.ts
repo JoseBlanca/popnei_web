@@ -426,17 +426,20 @@ export function thresholdHiddenDescription(
     from `before` to `after` (docs/specs/steps/popgen2-filters.md, "Its
     words"): into grey or off, the description of the box in that look,
     "This filter removes no variant of the plot.", "This filter removes
-    nothing."; back to removing some, its number alone, `shown`, as the
-    line reads it, "0.05"; `null` when the look stays. A sighted user sees
-    the grey come or go; this is how a screen reader hears it. */
+    nothing."; back to removing some, "This filter removes some variants
+    of the plot.", and not the number, which React Aria's field says
+    itself as it changes; `null` when the look stays. A sighted user
+    sees the grey come or go; this is how a screen reader hears it. */
 export function thresholdLookChangeText(
   before: ThresholdLook,
   after: ThresholdLook,
-  shown: number,
   noun: Counted,
 ): string | null {
   if (before === after) return null;
-  return thresholdHiddenDescription(after, noun) ?? numberText(shown);
+  return (
+    thresholdHiddenDescription(after, noun) ??
+    `This filter removes some ${noun}s of the plot.`
+  );
 }
 
 /** The line under a histogram of the individuals of those with no value,

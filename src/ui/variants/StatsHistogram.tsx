@@ -176,7 +176,7 @@ export function StatsHistogram({
         onSetRef.current(to);
         if (before !== null && after !== null) {
           announceLook(
-            thresholdLookChangeText(before, after.look, to, after.counted),
+            thresholdLookChangeText(before, after.look, after.counted),
           );
         }
       },
@@ -306,7 +306,6 @@ export function StatsHistogram({
             thresholdLookChangeText(
               set.look,
               threshold.look,
-              committed,
               threshold.counted,
             ),
           );
@@ -315,7 +314,7 @@ export function StatsHistogram({
           runRef.current?.end();
           onSet(null);
           announceLook(
-            thresholdLookChangeText(set.look, "off", 1, threshold.counted),
+            thresholdLookChangeText(set.look, "off", threshold.counted),
           );
         }}
         // From where the line is, at the number typed when one is, which
