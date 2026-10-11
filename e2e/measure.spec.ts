@@ -131,6 +131,18 @@
  * second, and the time of each. The bound of the plan, the peak of the
  * second at most that of the first plus 0.25 GB, is checked in WebKit.
  *
+ * And the memory of the diversity started after the PCA (PT1 D5, the
+ * plan of the Populations tab, docs/plans/population-tab.md, work
+ * package 1): on popgen2.html, the VCF of 9,381 individuals of NU4 D6
+ * with the CSV of bigVcf.ts of three populations of 3,127, the PCA's LD
+ * pruning off. After a Stop near the PCA's peak: the PCA's Run, the
+ * diversity's Run, which waits, the PCA's Stop on its peak, 40 s into it
+ * or later, and the diversity started by itself a second after. After a PCA that ended: both live after a first
+ * round, a threshold moved, the PCA calculated again to its end and the
+ * diversity started at once. The bound of the plan, the tab held and the
+ * engine at most 4.33 GB from the Stop or the PCA's end on, is checked
+ * in WebKit.
+ *
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
  *
@@ -223,6 +235,8 @@ interface Logged {
   readonly numVarsUsed?: number;
   /** Of a result of the PCA, its method, "pca" or "pcoa". */
   readonly method?: string;
+  /** Of a run posted, the analysis of its job, "pca" or "diversity". */
+  readonly analysis?: string;
 }
 
 /** Put in the page before its scripts: every worker it makes is timed
@@ -307,6 +321,10 @@ function instrument(): void {
       message: unknown,
       options?: Transferable[] | StructuredSerializeOptions,
     ): void {
+      const job = (
+        message as { readonly job?: { readonly analysis?: unknown } } | null
+      )?.job;
+      const analysis = job?.analysis;
       log.push({
         worker: this.measureId,
         url: this.measureUrl,
@@ -314,6 +332,7 @@ function instrument(): void {
         kind: kindOf(message),
         t: performance.now(),
         wall: Date.now(),
+        ...(typeof analysis === "string" ? { analysis } : {}),
       });
       super.postMessage(message, options as StructuredSerializeOptions);
     }
@@ -6295,4 +6314,523 @@ test("NU5 D6 the time of Stopping the PCA in the band of popgen2.html: from the 
     ],
   );
   expect(got.goneMs).toBeGreaterThan(0);
+});
+
+// ---------------------------------------------------------------------
+// PT1 D5, the memory of the diversity started after the PCA.
+
+/** The bound of PT1 D5 in WebKit, in bytes: the most a tab of
+    popgen2.html is known to have held and survived (docs/architecture.md,
+    section 11). */
+const PT_BOUND = 4.33e9;
+
+/** What WebKit's engine holds at the PCA's Stop, at least, for the first
+    case of PT1 D5 to count, by the plan, in bytes. A PCA of these 9,381
+    individuals held 3.50 GB at its peak in WebKit on 11 October 2026,
+    so the Stop is made at that peak instead, and the floor reported. */
+const PT_STOP_FLOOR = 3.7e9;
+
+/** How long the PCA runs before its Stop, at least, in ms: 40 s, as the
+    Stop of docs/architecture.md, section 5; or MEASURE_PT_STOP_MS. */
+const PT_STOP_AFTER_MS = Number(process.env["MEASURE_PT_STOP_MS"] ?? "40000");
+
+/** The peak of the PCA: the memory holds the matrix of the individuals,
+    2.4 to 2.5 GB in WebKit, from the first seconds, and grows by about
+    1.1 GB more when the decomposition starts, 60 s into a run of 130 s
+    in WebKit, and stays there until the end. Past PT_STOP_AFTER_MS, the
+    Stop waits for the floor, or for a rise of PT_PEAK_RISE above what
+    the engine held then, after which the memory holds within
+    PT_PEAK_STILL over PT_PEAK_SETTLE_MS, so that it is pressed on that
+    last step. */
+const PT_PEAK_RISE = 0.5e9;
+const PT_PEAK_SETTLE_MS = 3_000;
+const PT_PEAK_STILL = 0.02e9;
+
+/** The latest Stop, in ms of the PCA: the whole run took 128 to 134 s
+    in WebKit (NU4 D6), so before its end there; and 215 s in Chromium,
+    where the rise came after 190 s on 11 October 2026, so the Stop there
+    waits for it, and a PCA that ends first fails the measurement. */
+const PT_STOP_LATEST_MS: Readonly<Record<string, number>> = {
+  webkit: 110_000,
+  chromium: 400_000,
+};
+
+/** How long after the diversity's answer the memory is taken last. */
+const PT_AFTER_MS = 11_000;
+
+/** The tab closed under the flow. */
+class TabClosed extends Error {}
+
+/** The moments of one case of PT1 D5, `Date.now()` of each, filled as
+    the flow goes, so that a tab that closes leaves those it reached. */
+interface PtMoments {
+  /** The Run of the PCA measured: the first case's, or the second
+      PCA's threshold moved in the second case. */
+  start?: number;
+  /** The PCA measured: its run posted, and its answer when it had one. */
+  pcaPosted?: Logged;
+  pcaAnswer?: Logged | undefined;
+  /** The PCA's Stop pressed, in the first case. */
+  stop?: number;
+  /** Whether the diversity was sent to the worker before the Stop. */
+  diversityBeforeStop?: boolean;
+  /** The diversity started after the Stop or the PCA's end. */
+  diversityPosted?: Logged;
+  diversityAnswer?: Logged | undefined;
+  /** The diversity's table shown. */
+  table?: number;
+  /** The last sample, PT_AFTER_MS after the diversity's answer. */
+  end?: number;
+  /** Where the flow was when the tab closed, or "" when it held. */
+  closedAt: string;
+}
+
+/** The first run of `analysis` posted to the calculation worker in the
+    log from `from` on, and, when `answered`, the answer of its worker. */
+async function ptNext(
+  page: Page,
+  from: number,
+  analysis: "pca" | "diversity",
+  answered: boolean,
+  closed: { crashed: boolean },
+  timeout: number,
+): Promise<{ posted: Logged; answer: Logged | undefined }> {
+  const until = Date.now() + timeout;
+  for (;;) {
+    if (closed.crashed) throw new TabClosed();
+    let log: readonly Logged[];
+    try {
+      log = (await logOf(page)).slice(from).filter(isCalc);
+    } catch (error) {
+      // A page that crashed refuses the read with words that say so.
+      if (/crash|closed/i.test(String(error))) {
+        throw new TabClosed();
+      }
+      throw error;
+    }
+    const at = log.findIndex(
+      (l) => l.event === "out" && l.kind === "run" && l.analysis === analysis,
+    );
+    const posted = log[at];
+    if (posted !== undefined) {
+      const answer = log
+        .slice(at + 1)
+        .find(
+          (l) =>
+            l.event === "in" &&
+            l.worker === posted.worker &&
+            AFTER_PASS_ENDS.has(l.kind),
+        );
+      if (!answered || answer !== undefined) return { posted, answer };
+    }
+    if (Date.now() > until) {
+      throw new Error(`no ${answered ? "answer to a " : ""}run of ${analysis}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+}
+
+/** Opens popgen2.html, the VCF at `vcf` and, once the one pass has
+    answered, the individuals file at `pops`; waits for the line of the
+    three populations in the Populations tab, turns the PCA's LD pruning
+    off and waits until 2 s after the pass's answer, so that the memory
+    of the pass settles. */
+async function ptOpen(page: Page, vcf: string, pops: string): Promise<void> {
+  await page.addInitScript(instrument);
+  await page.goto("popgen2.html");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  const variants = page.waitForEvent("filechooser");
+  await page
+    .getByRole("button", { name: /^Open (another )?variants file…$/u })
+    .click();
+  await (await variants).setFiles(vcf);
+  let pass: Logged | undefined;
+  await expect
+    .poll(
+      async () => {
+        pass = (await logOf(page)).find(
+          (l) => isCalc(l) && l.event === "in" && AFTER_PASS_ENDS.has(l.kind),
+        );
+        return pass !== undefined;
+      },
+      { timeout: 300_000, intervals: [200] },
+    )
+    .toBe(true);
+  if (pass?.kind !== "result") {
+    throw new Error(`the one pass ended with ${pass?.kind ?? "nothing"}`);
+  }
+  const individuals = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Individuals", exact: true })
+    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
+    .click();
+  await (await individuals).setFiles(pops);
+  const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+  const shown = page.getByRole("tabpanel");
+  await tabs.getByRole("tab", { name: "Populations", exact: true }).click();
+  await expect(
+    shown.getByText(/^3 populations: a, 3,127 individuals/u),
+  ).toBeVisible({ timeout: 60_000 });
+  await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+  await shown
+    .locator("label")
+    .filter({ hasText: "Prune the variants by linkage disequilibrium (LD)" })
+    .click();
+  await expect(
+    shown.getByRole("button", { name: "Run", exact: true }),
+  ).toBeEnabled();
+  const settleUntil = pass.wall + 2000;
+  if (Date.now() < settleUntil) {
+    await page.waitForTimeout(settleUntil - Date.now());
+  }
+}
+
+/** One case of PT1 D5 on a new page, with the memory of the engine
+    sampled every LIVE_PAUSE_MS and the time of a sample: "stop", the
+    diversity started a second after the PCA's Stop; "end", the diversity
+    started at once after the PCA calculated again to its end. */
+async function diversityAfterPca(
+  browser: Browser,
+  browserName: string,
+  which: "stop" | "end",
+  vcf: string,
+  pops: string,
+): Promise<{ moments: PtMoments; samples: readonly Sample[] }> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const closed = { crashed: false };
+  page.on("crash", () => {
+    closed.crashed = true;
+  });
+  const sampler = sampleMemory(browser, browserName, LIVE_PAUSE_MS);
+  const moments: PtMoments = { closedAt: "" };
+  const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+  const shown = page.getByRole("tabpanel");
+  const tab = (name: "Variants" | "PCA" | "Populations"): Locator =>
+    tabs.getByRole("tab", { name, exact: true });
+  const button = (name: "Run" | "Stop" | "Stop recalculating"): Locator =>
+    shown.getByRole("button", { name, exact: true });
+  const table = shown.getByRole("table", {
+    name: /^The diversity of each population/u,
+  });
+  let at = "the file and the individuals opened";
+  try {
+    await ptOpen(page, vcf, pops);
+    if (which === "stop") {
+      at = "the PCA's Run";
+      let logged = (await logOf(page)).length;
+      moments.start = Date.now();
+      await button("Run").click();
+      const pca = await ptNext(page, logged, "pca", false, closed, 60_000);
+      moments.pcaPosted = pca.posted;
+      at = "the diversity's Run while the PCA runs";
+      await tab("Populations").click();
+      await button("Run").click();
+      await expect(button("Stop recalculating")).toBeVisible();
+      await tab("PCA").click();
+      at = "the PCA running, before its Stop";
+      const stopFrom = pca.posted.wall + PT_STOP_AFTER_MS;
+      const stopLatest =
+        pca.posted.wall + (PT_STOP_LATEST_MS[browserName] ?? 110_000);
+      if (Date.now() < stopFrom) {
+        await page.waitForTimeout(stopFrom - Date.now());
+      }
+      const held = (): number => sampler.samples.at(-1)?.total ?? 0;
+      const rise = held() + PT_PEAK_RISE;
+      while (
+        held() < PT_STOP_FLOOR &&
+        held() < rise &&
+        Date.now() < stopLatest
+      ) {
+        await page.waitForTimeout(LIVE_PAUSE_MS);
+      }
+      // After the rise, the Stop waits until the memory holds still.
+      const still = (): boolean => {
+        const recent = sampler.samples
+          .filter((x) => x.t >= Date.now() - PT_PEAK_SETTLE_MS)
+          .map((x) => x.total);
+        return (
+          recent.length >= 4 &&
+          Math.max(...recent) - Math.min(...recent) <= PT_PEAK_STILL
+        );
+      };
+      while (
+        held() < PT_STOP_FLOOR &&
+        held() >= rise &&
+        !still() &&
+        Date.now() < stopLatest
+      ) {
+        await page.waitForTimeout(LIVE_PAUSE_MS);
+      }
+      const sofar = (await logOf(page)).slice(logged).filter(isCalc);
+      if (sofar.some((l) => l.event === "in" && AFTER_PASS_ENDS.has(l.kind))) {
+        throw new Error("the PCA ended before its Stop");
+      }
+      moments.diversityBeforeStop = sofar.some(
+        (l) => l.event === "out" && l.analysis === "diversity",
+      );
+      logged = (await logOf(page)).length;
+      at = "the PCA's Stop";
+      moments.stop = Date.now();
+      await button("Stop").click();
+      at = "after the Stop, before the diversity's answer";
+      const diversity = await ptNext(
+        page,
+        logged,
+        "diversity",
+        true,
+        closed,
+        120_000,
+      );
+      moments.diversityPosted = diversity.posted;
+      moments.diversityAnswer = diversity.answer;
+    } else {
+      at = "the first round";
+      let logged = (await logOf(page)).length;
+      await button("Run").click();
+      await ptNext(page, logged, "pca", true, closed, 300_000);
+      logged = (await logOf(page)).length;
+      await tab("Populations").click();
+      await button("Run").click();
+      await ptNext(page, logged, "diversity", true, closed, 120_000);
+      await expect(table).toBeVisible({ timeout: 30_000 });
+      await expect(button("Stop recalculating")).toBeVisible();
+      // The memory after the first round settles before the change.
+      await page.waitForTimeout(2000);
+      at = "the threshold moved";
+      await tab("Variants").click();
+      const missing = page
+        .getByRole("region", { name: "Statistics of the file" })
+        .getByRole("group", {
+          name: "Proportion of missing genotypes",
+          exact: true,
+        })
+        .getByRole("textbox");
+      const value = await missing.inputValue();
+      logged = (await logOf(page)).length;
+      moments.start = Date.now();
+      await missing.fill(value === "0.5" ? "0.4" : "0.5");
+      await missing.press("Enter");
+      at = "the PCA calculated again";
+      const pca = await ptNext(page, logged, "pca", true, closed, 300_000);
+      moments.pcaPosted = pca.posted;
+      moments.pcaAnswer = pca.answer;
+      if (pca.answer?.kind !== "result") {
+        throw new Error(`the PCA ended with ${pca.answer?.kind ?? "nothing"}`);
+      }
+      at = "after the PCA's end, before the diversity's answer";
+      const diversity = await ptNext(
+        page,
+        logged,
+        "diversity",
+        true,
+        closed,
+        120_000,
+      );
+      moments.diversityPosted = diversity.posted;
+      moments.diversityAnswer = diversity.answer;
+    }
+    if (moments.diversityAnswer?.kind !== "result") {
+      throw new Error(
+        `the diversity ended with ${moments.diversityAnswer?.kind ?? "nothing"}`,
+      );
+    }
+    at = "the diversity's table";
+    await tab("Populations").click();
+    await expect(table).toBeVisible({ timeout: 30_000 });
+    moments.table = Date.now();
+    at = "the 11 s after the diversity";
+    const endAt = moments.diversityAnswer.wall + PT_AFTER_MS;
+    if (Date.now() < endAt) await page.waitForTimeout(endAt - Date.now());
+    moments.end = Date.now();
+  } catch (error) {
+    if (
+      !(error instanceof TabClosed) &&
+      !closed.crashed &&
+      !/crash|closed/i.test(String(error))
+    ) {
+      throw error;
+    }
+    moments.closedAt = at;
+    moments.end = Date.now();
+  } finally {
+    await sampler.stop();
+    await context.close().catch(() => undefined);
+  }
+  return { moments, samples: sampler.samples };
+}
+
+/** The rows of the table of one case of PT1 D5, and the largest the
+    engine held from the Stop or the PCA's end to the last sample, which
+    the bound is read on. */
+function ptRows(
+  which: "stop" | "end",
+  m: PtMoments,
+  samples: readonly Sample[],
+): {
+  rows: string[][];
+  largest: number | null;
+  atStop: number | null;
+  peakBeforeStop: number | null;
+} {
+  const g = (x: number | null): string =>
+    x === null ? "not taken" : `${(x / 1e9).toFixed(3)} GB`;
+  const s = (x: number | null): string =>
+    x === null ? "not taken" : `${(x / 1000).toFixed(2)} s`;
+  const inside = (from: number, to: number): number[] =>
+    samples.filter((x) => x.t >= from && x.t <= to).map((x) => x.total);
+  const last = (to: number | undefined): number | null =>
+    to === undefined ? null : (inside(0, to).at(-1) ?? null);
+  const peak = (from: number | undefined, to: number | undefined) => {
+    if (from === undefined || to === undefined) return null;
+    const xs = inside(from, to);
+    return xs.length === 0 ? null : Math.max(...xs);
+  };
+  const minus = (a: number | undefined, b: number | undefined) =>
+    a === undefined || b === undefined ? null : a - b;
+  const divPosted = m.diversityPosted?.wall;
+  const divAnswer = m.diversityAnswer?.wall;
+  const divRunMs =
+    m.diversityAnswer === undefined || m.diversityPosted === undefined
+      ? null
+      : m.diversityAnswer.t - m.diversityPosted.t;
+  const turn = which === "stop" ? m.stop : m.pcaAnswer?.wall;
+  const largest = peak(turn, m.end);
+  const atStop = which === "stop" ? last(m.stop) : null;
+  const peakBeforeStop = which === "stop" ? peak(m.start, m.stop) : null;
+  const held = m.closedAt === "" ? "yes" : `no, closed at ${m.closedAt}`;
+  // The diversity's peak takes the sample after its answer too, since a
+  // sample lasts about as long as the diversity.
+  const divPeak = peak(
+    divPosted,
+    divAnswer === undefined ? undefined : divAnswer + 2 * LIVE_PAUSE_MS,
+  );
+  const common: string[][] = [
+    ["at the diversity's request", g(last(divPosted))],
+    ["peak of the diversity", g(divPeak)],
+    [
+      `${String(PT_AFTER_MS / 1000)} s after the diversity's answer`,
+      g(last(m.end)),
+    ],
+    [
+      `largest from the ${which === "stop" ? "Stop" : "PCA's end"} on`,
+      g(largest),
+    ],
+  ];
+  const rows =
+    which === "stop"
+      ? [
+          ["before the PCA's Run", g(last(m.start))],
+          ["the PCA run before its Stop", s(minus(m.stop, m.pcaPosted?.wall))],
+          ["peak of the PCA before the Stop", g(peakBeforeStop)],
+          ["at the Stop", g(atStop)],
+          [
+            "diversity sent before the Stop",
+            m.diversityBeforeStop === true ? "yes" : "no",
+          ],
+          ...common,
+          [
+            "from the Stop to the diversity's request",
+            s(minus(divPosted, m.stop)),
+          ],
+          ["the diversity, request to answer", s(divRunMs)],
+          ["the tab held", held],
+        ]
+      : [
+          ["at the threshold moved", g(last(m.start))],
+          ["peak of the PCA", g(peak(m.start, m.pcaAnswer?.wall))],
+          [
+            "the PCA, request to answer",
+            s(
+              m.pcaAnswer === undefined || m.pcaPosted === undefined
+                ? null
+                : m.pcaAnswer.t - m.pcaPosted.t,
+            ),
+          ],
+          ...common,
+          [
+            "from the PCA's answer to the diversity's request",
+            s(minus(divPosted, m.pcaAnswer?.wall)),
+          ],
+          ["the diversity, request to answer", s(divRunMs)],
+          ["the tab held", held],
+        ];
+  return { rows, largest, atStop, peakBeforeStop };
+}
+
+test.describe("PT1 D5 the memory of the diversity after the PCA", () => {
+  const titles = {
+    stop: "PT1 D5 after a Stop near the PCA's peak: the PCA's Run, the diversity's Run, which waits, the PCA's Stop on its peak, 40 s into it or later, and the diversity started by itself a second later; the tab held and the engine at most 4.33 GB in WebKit",
+    end: "PT1 D5 after a PCA that ended: both live after a first round, a threshold moved, the PCA calculated again to its end and the diversity started at once; the tab held and the engine at most 4.33 GB in WebKit",
+  } as const;
+  for (const which of ["stop", "end"] as const) {
+    test(titles[which], async ({ browser, browserName }) => {
+      // Under the 550,000 ms of a command of the measurement run.
+      test.setTimeout(540_000);
+      const loadBefore = machineLoad();
+      const vcf = await pcaVcf(LIVE_INDIVIDUALS);
+      const pops = join(
+        MEASURE_DIR,
+        `pca_${String(LIVE_INDIVIDUALS)}_pops.csv`,
+      );
+      await writeFile(pops, bigVcfPopsCsv(LIVE_INDIVIDUALS));
+      const { moments, samples } = await diversityAfterPca(
+        browser,
+        browserName,
+        which,
+        vcf,
+        pops,
+      );
+      const { rows, largest, atStop, peakBeforeStop } = ptRows(
+        which,
+        moments,
+        samples,
+      );
+      // The samples, for a look at the whole curve.
+      const t0 = samples[0]?.t ?? 0;
+      await writeFile(
+        join(MEASURE_DIR, `pt1d5_${which}_${browserName}.json`),
+        JSON.stringify({
+          moments,
+          samples: samples.map((x) => [x.t - t0, x.total]),
+          t0,
+        }),
+      );
+      // The Stop on the PCA's peak: within 0.05 GB of the most the engine
+      // held before it.
+      const onPeak =
+        atStop !== null &&
+        peakBeforeStop !== null &&
+        atStop >= peakBeforeStop - 0.05e9;
+      const held =
+        moments.closedAt === "" && largest !== null && largest <= PT_BOUND;
+      report(
+        titles[which],
+        `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; the gzipped VCF of ${String(PCA_VARIANTS)} variants and ${LIVE_INDIVIDUALS.toLocaleString("en-US")} individuals of e2e/bigVcf.ts of NU4 D6, its CSV of three populations of 3,127, the thresholds of a new page, the PCA's LD pruning off; the memory is the footprints of the engine's processes summed, taken every ${String(LIVE_PAUSE_MS)} ms and the time of a sample; each time of a calculation from its request posted to the calculation worker to its answer`,
+        ["moment", "value"],
+        [
+          ...rows,
+          ...(which === "stop"
+            ? [
+                ["the Stop on the PCA's peak", onPeak ? "yes" : "no"],
+                [
+                  "at least 3.7 GB at the Stop, the plan's floor",
+                  (atStop ?? 0) >= PT_STOP_FLOOR ? "yes" : "no",
+                ],
+              ]
+            : []),
+          ["the bound held (4.33 GB, the tab held)", held ? "yes" : "no"],
+        ],
+      );
+      // The bound is the plan's in WebKit, and so is the Stop near the
+      // PCA's peak; Chromium's numbers are reported.
+      if (browserName === "webkit") {
+        if (which === "stop")
+          expect(onPeak, "the Stop off the peak").toBe(true);
+        expect(held).toBe(true);
+      } else {
+        expect(moments.closedAt).toBe("");
+      }
+    });
+  }
 });
