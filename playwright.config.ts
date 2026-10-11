@@ -21,12 +21,15 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   // No field rather than `webServer: undefined`, which
-  // exactOptionalPropertyTypes refuses.
+  // exactOptionalPropertyTypes refuses. The run starts its own server and
+  // refuses one already on the port: several worktrees build their own
+  // dist/, and a server left by another would be tested in silence in
+  // place of this tree's build (testing.md, "Against the built site").
   ...(running === undefined && {
     webServer: {
       command: "npm run preview -- --port 4173 --strictPort",
       url: preview,
-      reuseExistingServer: !ci,
+      reuseExistingServer: false,
     },
   }),
   projects: [

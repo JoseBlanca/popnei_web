@@ -317,7 +317,7 @@ export default defineConfig({
     : {
         command: "npm run preview -- --port 4173 --strictPort",
         url: preview,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
       },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: /(screens|measure)\.spec\.ts/ },
@@ -330,6 +330,13 @@ export default defineConfig({
 });
 ```
 
+- A run starts its own preview server, `reuseExistingServer: false`, and
+  stops at once, saying that the address is already used, when another
+  server holds port 4173. Each worktree builds its own `dist/`, and a run
+  that took over a server left by another tree tested that tree's build
+  in silence, as the review of work package 1 of
+  `docs/plans/population-tab.md` found on 11 October 2026. The server on the port is stopped first, or the run
+  given `BASE_URL` to test it on purpose.
 - A page is opened with a path relative to the base and with no leading
   slash, `page.goto("popgen.html#variants")`. With a leading slash,
   `"/popgen.html"`, the base path is dropped and the test opens a page
