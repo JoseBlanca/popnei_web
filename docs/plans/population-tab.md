@@ -766,3 +766,10 @@ runs, before the diversity started, the tab open in both; the
 diversity then started at 3.5 GB. A stop of the plan, put to the
 owner. The diversity's own increment could not be measured (0.1 s,
 one or two samples); with the new worker it is at most 0.09 GB.
+
+The owner chose on 11 October 2026, asked about the case of two
+Stops: no change in this piece; the PCA run again within about a
+minute of its Stop, at about 4.97 GB in WebKit, is recorded as a known
+problem of the PCA in section 11 of `docs/architecture.md`, to be
+measured on a Mac with less memory and in Safari, and settled as a
+piece of its own.

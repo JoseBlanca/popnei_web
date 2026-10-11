@@ -3881,6 +3881,18 @@ tests of the application are the same with it.
   | the most from the diversity's request to 1 s after its answer | 3.597 | 3.599 | 3.303 |
   | 11 s after the diversity's answer | 3.407 | 3.414 | 0.230 |
 
+  A known problem of the PCA, recorded on 11 October 2026 by the
+  owner's decision and left for a piece of its own: a PCA of 9,381
+  individuals run again within about a minute of its Stop grows, in
+  WebKit, on top of the memory the stopped worker still holds, to
+  about 4.97 GB on an Apple M5 Pro with 64 GB, where the tab held. Where
+  WebKit closes a tab is not known, and on a Mac with less memory it
+  may be lower. Not caused by the diversity, and on `main` since 10
+  October 2026. Options weighed: no change; Run held after a Stop of
+  a large PCA until WebKit gives the memory back (it took 2 s in some
+  runs and 40 s and more in others, so the length would be a guess);
+  to be measured first on a Mac with less memory and in Safari itself.
+
   In WebKit the stopped worker's 2.4 GB stayed when the second PCA
   started: the engine reached 4.36 GB within 2 s of the second Run,
   gave back about 0.5 GB some 20 s later, and rose to 4.94 GB with the
