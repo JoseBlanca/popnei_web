@@ -210,7 +210,7 @@ describe("PT1 D3 the words of the Populations tab", () => {
       "Stopped: the diversity no longer starts by itself after a change. After the next change, Run calculates it and starts it again after each change.",
     );
     expect(DIVERSITY_AFTER_CRASH_LINE).toBe(
-      "The diversity starts again after the next change of the filters, of its options or of the populations.",
+      "The diversity starts after the next change of the filters, of its options or of the populations, or when Run is pressed.",
     );
     expect(DIVERSITY_FAILURE_ENDED_LINE).toBe(
       "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.",
@@ -290,7 +290,7 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
         null,
         false,
       ),
-    ).toEqual({ kind: "live", aboutToStartLine: null });
+    ).toEqual({ kind: "live", aboutToStartLine: null, runBeside: false });
     expect(
       diversityPanelLive(
         { kind: "live", aboutToStart: "behind", running: false, after: "pca" },
@@ -301,6 +301,7 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
       kind: "live",
       aboutToStartLine:
         "The diversity starts once the PCA, which is running, ends.",
+      runBeside: false,
     });
     expect(
       diversityPanelLive(
@@ -317,6 +318,24 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
       kind: "live",
       aboutToStartLine:
         "The diversity starts after the PCA, once the filters, the options and the populations stop changing.",
+      runBeside: false,
+    });
+    // Held by a crash: Run beside Stop recalculating, which starts it.
+    expect(
+      diversityPanelLive(
+        {
+          kind: "live",
+          aboutToStart: "afterCrash",
+          running: false,
+          after: null,
+        },
+        null,
+        false,
+      ),
+    ).toEqual({
+      kind: "live",
+      aboutToStartLine: DIVERSITY_AFTER_CRASH_LINE,
+      runBeside: true,
     });
   });
 });

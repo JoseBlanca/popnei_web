@@ -214,7 +214,10 @@ One button, in one place, as in the PCA tab
 - **Stop**, while it runs, ends the run and the live state.
 - **Stop recalculating**, while it is live and does not run: during its
   quiet second, while it waits, with its result, after a failure that
-  leaves it live, and beside a lock. It ends the live state.
+  leaves it live, and beside a lock. It ends the live state. After a
+  failure that leaves it live, and while a crash of the PCA holds its
+  start until the next change, Run stands before it, which starts the
+  diversity at once.
 
 After a Stop or a Stop recalculating, until Run or another variants
 file, the line "Stopped: the diversity no longer starts by itself after
@@ -435,7 +438,7 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 | the heading of the spectrum | "Site frequency spectrum" |
 | the line of the populations | the old panel's, with "the Variants tab"; "7 unclassified individuals kept are left out, as the box Individuals says."; "1 population, Unclassified: 200 individuals. No individual is assigned to a population, so the diversity is of every individual kept as one population." |
 | the locks | the table of "Run and Stop" |
-| the line in the place of the bar | the table of "Run and Stop"; after a crash of the worker ended the PCA's live state, until the next change or a Run, "The diversity starts again after the next change of the filters, of its options or of the populations." (`popgen2-pca.md`, "A failure that ends a live state"); after a Stop, "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.", or with the result shown "… After the next change, Run calculates it and starts it again after each change."; after a failure that ended the live state, "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change." |
+| the line in the place of the bar | the table of "Run and Stop"; after a crash of the worker ended the PCA's live state, until the next change or a Run, "The diversity starts after the next change of the filters, of its options or of the populations, or when Run is pressed.", with Run beside Stop recalculating (`popgen2-pca.md`, "A failure that ends a live state", corrected on 11 October 2026); after a Stop, "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.", or with the result shown "… After the next change, Run calculates it and starts it again after each change."; after a failure that ended the live state, "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change." |
 | the button while live and not running | "Stop recalculating" |
 | the filters, the options of the diversity, while it runs, as tooltip and description | "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again." |
 | the column, the zone, Remove and the lists of the reader, while it runs | "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again." |
@@ -444,6 +447,7 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 | the status region, a start by itself | "Calculating the diversity again. To change the filters or the populations, stop it in the Populations tab." ("To change the filters, …" until 11 October 2026); when it is the first start of a round of several, the words of `popgen2-pca.md`, "Several analyses calculated again by themselves" |
 | the status region, the start of a Run that waited | "Calculating the diversity of panel.nei." |
 | the status region, the end | "Diversity of panel.nei calculated."; a refusal or a failure, "The diversity of panel.nei could not be calculated: " and the words of its error |
+| the status region, the diversity held by a crash of the PCA | "The diversity did not start: it starts after the next change of the filters, of its options or of the populations, or when Run is pressed in the Populations tab." (`popgen2-pca.md`, "A failure that ends a live state") |
 | the status region, a Stop | "Diversity stopped. Press Run in the Populations tab to calculate it again."; with no Run to press, "Diversity stopped." |
 | the buttons of the downloads, for a screen reader | "Download the table of the diversity"; "Download the spectrum of p0"; "Download the table of the spectrum" |
 | the tab while its code downloads | "Loading the Populations tab…" |
@@ -468,7 +472,8 @@ holds for the fields, the table, the bar and the histograms.
 **The order of the Tab key** (2.4.3), after the row of tabs: the three
 fields and "Use the default" when it is there; Run, Stop or Stop
 recalculating, one stop in one place, and after a failure that leaves
-the diversity live, Run and then Stop recalculating; the warnings; the
+the diversity live, or while a crash of the PCA holds its start, Run and
+then Stop recalculating; the warnings; the
 table, when it scrolls; its "Download…"; then, in the spectrum, the
 tabs of the histograms and the table, each histogram's "Download…"
 before its plot, and the "Download…" of the table of the spectrum after

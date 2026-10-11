@@ -185,8 +185,9 @@ export function pcaTabResultFailed(
     diversity it waited for, when nothing changed; while the dialog of the download of the
     filtered variants holds it, "download", "The PCA starts again when
     the download is written or closed."; after a crash ended another
-    live state, "afterCrash", "The PCA starts again after the next
-    change of the filters or of its options."; while another live
+    live state, "afterCrash", "The PCA starts after the next change of
+    the filters or of its options, or when Run is pressed.", the tab
+    offering Run beside Stop recalculating; while another live
     analysis runs, "behind", that one named by `before`, "the diversity":
     "The PCA starts once the diversity, which is running, ends.", or the
     line of the quiet second when none is named; "The PCoA …" under the
@@ -201,7 +202,7 @@ export function aboutToStartLine(
     case "download":
       return `The ${name} starts again when the download is written or closed.`;
     case "afterCrash":
-      return `The ${name} starts again after the next change of the filters or of its options.`;
+      return `The ${name} starts after the next change of the filters or of its options, or when Run is pressed.`;
     case "behind":
       if (before !== null) {
         return `The ${name} starts once ${before}, which is running, ends.`;
@@ -220,6 +221,16 @@ export function aboutToStartLine(
     PCoA. */
 export function pcaStartedByItselfText(method: PcaMethod): string {
   return `Calculating the ${methodName(method)} again. To change the filters, stop it in the PCA tab.`;
+}
+
+/** What the status region says when a crash of the worker that ended
+    the diversity's live state holds the PCA, about to start, until the
+    next change or its Run (docs/specs/steps/popgen2-pca.md, "A failure
+    that ends a live state"): "The PCA did not start: it starts after
+    the next change of the filters or of its options, or when Run is
+    pressed in the PCA tab."; "The PCoA …" under the PCoA. */
+export function pcaHeldAfterCrashText(method: PcaMethod): string {
+  return `The ${methodName(method)} did not start: it starts after the next change of the filters or of its options, or when Run is pressed in the PCA tab.`;
 }
 
 /** What the status region says at a Stop of the PCA, in its tab or in

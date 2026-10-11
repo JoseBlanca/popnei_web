@@ -1438,6 +1438,57 @@ test.describe("PT2 D3 the Populations tab while the diversity waits, and what th
     await expectNoAxeViolations(page, makeAxeBuilder);
   });
 
+  test("PT2 D3 a Run of the PCA that waits for the diversity, which crashes: the PCA tab offers Run beside Stop recalculating with the line of the hold, the status region says the PCA did not start, and Run starts it; axe light and dark", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    test.setTimeout(120_000);
+    await recordAnnouncements(page);
+    await holdSummary(page, { holdDiversity: true });
+    await openPage(page);
+    await pick(page, "panel.nei");
+    await release(page, "allSoFar");
+    await release(page, "result");
+    await tab(page, "Populations").click();
+    await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+    await button(page, "Run").click();
+    await expect(button(page, "Stop")).toBeVisible();
+    await runPca(page, false);
+    await expect(
+      shown(page).getByText(
+        "The PCA starts once the diversity, which is running, ends.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+
+    await workersListening(page);
+    await release(page, "crash");
+    const held = shown(page).getByText(
+      "The PCA starts after the next change of the filters or of its options, or when Run is pressed.",
+      { exact: true },
+    );
+    await expect(held).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(button(page, "Run")).toBeEnabled();
+    await expect(button(page, "Stop recalculating")).toBeEnabled();
+    await expect
+      .poll(() =>
+        saidWith(
+          page,
+          "The PCA did not start: it starts after the next change of the filters or of its options, or when Run is pressed in the PCA tab.",
+        ),
+      )
+      .toHaveLength(1);
+    await expectNoAxeViolations(page, makeAxeBuilder);
+
+    await button(page, "Run").click();
+    await expect
+      .poll(() => saidWith(page, "PCA of panel.nei calculated."), {
+        timeout: RESULT_TIMEOUT,
+      })
+      .toHaveLength(1);
+    await expect(held).toHaveCount(0);
+  });
+
   test("PT2 D3 about to start after a change of the minimum: Stop recalculating, the line of the quiet second and no table; axe light and dark", async ({
     page,
     makeAxeBuilder,

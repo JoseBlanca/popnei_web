@@ -49,9 +49,10 @@ export function diversityStoppedLine(resultShown: boolean): string {
 }
 
 /** The line in the place of the bar while a crash of the worker, which
-    ended another live state, holds the diversity until the next change. */
+    ended another live state, holds the diversity until the next change
+    or a Run, which the tab then offers beside Stop recalculating. */
 export const DIVERSITY_AFTER_CRASH_LINE =
-  "The diversity starts again after the next change of the filters, of its options or of the populations.";
+  "The diversity starts after the next change of the filters, of its options or of the populations, or when Run is pressed.";
 
 /** The line after a failure that ended the live state, under the
     failure's words, until Run or another variants file, in the place of
@@ -220,6 +221,7 @@ export function diversityPanelLive(
           state.aboutToStart === null
             ? null
             : diversityWaitingLine(state.aboutToStart, before),
+        runBeside: state.aboutToStart === "afterCrash",
       };
   }
 }

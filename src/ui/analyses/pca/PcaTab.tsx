@@ -81,6 +81,7 @@ function panelLive(
           state.aboutToStart === null
             ? null
             : aboutToStartLine(method, state.aboutToStart, before),
+        runBeside: state.aboutToStart === "afterCrash",
       };
   }
 }

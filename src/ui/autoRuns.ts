@@ -178,7 +178,13 @@ export type LiveEvent =
   | { readonly kind: "paused"; readonly id: AnalysisId }
   /** Stop all, `pauseAll`: `ids`, the analyses whose live state it
       ended, in their order. */
-  | { readonly kind: "pausedAll"; readonly ids: readonly AnalysisId[] };
+  | { readonly kind: "pausedAll"; readonly ids: readonly AnalysisId[] }
+  /** A crash of the worker ended a live state and holds `ids`, the live
+      analyses about to start then, in their order, until the next
+      change of the project or their own Run: told once, at the crash,
+      so that a Run that waited for the analysis that crashed, said as
+      waiting, is said not to have started. */
+  | { readonly kind: "heldAfterCrash"; readonly ids: readonly AnalysisId[] };
 
 /** The answer to the user's Run of a live analysis: "started" at once;
     "waiting", made live behind a calculation that runs, which it starts
@@ -276,8 +282,9 @@ export interface AutoRuns {
       open, and no Run since. */
   stoppedByUser(id: AnalysisId): boolean;
   /** Calls `listener` at each start by itself of a live analysis, at
-      the start of a Run that waited, at each Stop of one and at Stop
-      all; returns the function that stops it. */
+      the start of a Run that waited, at each Stop of one, at Stop all,
+      and at a crash that holds others; returns the function that stops
+      it. */
   readonly onLive: (listener: (event: LiveEvent) => void) => () => void;
 }
 
@@ -709,6 +716,7 @@ export function createAutoRuns(deps: {
     for (const id of liveIds) toldLive.set(id, liveStateNow(id));
     store.subscribe(() => {
       const state = store.getState();
+      let crashed = false;
       for (const id of liveIds) {
         const status = statusOf(id);
         const key = "key" in status ? status.key : null;
@@ -724,7 +732,10 @@ export function createAutoRuns(deps: {
         lastKinds.set(id, status.kind);
         if (!wasError && isLive(id) && live.endsLive(state, id)) {
           endLive(id, "failure");
-          if (isCrash(status)) heldAfterCrash = true;
+          if (isCrash(status)) {
+            heldAfterCrash = true;
+            crashed = true;
+          }
           quietAgain();
         }
       }
@@ -735,6 +746,10 @@ export function createAutoRuns(deps: {
         quietAgain();
       }
       tellLiveChanges();
+      const held = crashed
+        ? liveOrder.filter((id) => aboutToStart(id) === "afterCrash")
+        : [];
+      if (held.length > 0) tellLive({ kind: "heldAfterCrash", ids: held });
     });
     live.changes.subscribe(() => {
       // Read on each call: the gate tells when its count rises from 0 or

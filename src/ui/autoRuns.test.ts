@@ -2224,6 +2224,39 @@ describe("PT1 D2 several analyses calculated again by themselves", () => {
     expect(page.pcaRequests()).toHaveLength(4);
   });
 
+  test("a Run of the PCA that waits for the diversity, which then crashes: the PCA is held, told once as held, and a Run starts it", async () => {
+    const page = await livePage();
+    expect(page.auto.run(DIV)).toBe("started");
+    expect(page.auto.run("pca")).toBe("waiting");
+    await endDiversity(page, {
+      kind: "failed",
+      error: { kind: "workerFailed", message: "the worker crashed" },
+    });
+    expect(page.auto.liveState(DIV)).toEqual({ kind: "endedByFailure" });
+    expect(page.auto.liveState("pca")).toEqual({
+      kind: "live",
+      aboutToStart: "afterCrash",
+      running: false,
+      after: null,
+    });
+    expect(page.told).toEqual([{ kind: "heldAfterCrash", ids: ["pca"] }]);
+    await wait(10_000);
+    expect(page.pcaRequests()).toHaveLength(0);
+    expect(page.auto.run("pca")).toBe("started");
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(page.told).toHaveLength(1);
+  });
+
+  test("a crash that holds no other live analysis tells nothing", async () => {
+    const page = await livePage();
+    expect(page.auto.run(DIV)).toBe("started");
+    await endDiversity(page, {
+      kind: "failed",
+      error: { kind: "workerFailed", message: "the worker crashed" },
+    });
+    expect(page.told).toEqual([]);
+  });
+
   test.each([
     { kind: "workerFailed", message: "the worker crashed" },
     { kind: "couldNotStart", reason: "no ready" },

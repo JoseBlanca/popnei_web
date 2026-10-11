@@ -522,3 +522,19 @@ describe("PT2 D2 a run of a live analysis that ends within the region's pause is
     },
   );
 });
+
+describe("PT2 D2 the status region says each live analysis a crash holds", () => {
+  test("each analysis held after a crash is said in its own words, with what starts it", () => {
+    const { said, tell, toPcoa } = setUp();
+    tell({ kind: "heldAfterCrash", ids: ["pca"] });
+    tell({ kind: "heldAfterCrash", ids: ["diversity"] });
+    toPcoa();
+    tell({ kind: "heldAfterCrash", ids: ["pca", "diversity"] });
+    expect(said).toEqual([
+      "The PCA did not start: it starts after the next change of the filters or of its options, or when Run is pressed in the PCA tab.",
+      "The diversity did not start: it starts after the next change of the filters, of its options or of the populations, or when Run is pressed in the Populations tab.",
+      "The PCoA did not start: it starts after the next change of the filters or of its options, or when Run is pressed in the PCA tab.",
+      "The diversity did not start: it starts after the next change of the filters, of its options or of the populations, or when Run is pressed in the Populations tab.",
+    ]);
+  });
+});

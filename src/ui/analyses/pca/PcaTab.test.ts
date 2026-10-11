@@ -15,6 +15,10 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import {
+  diversityOnPopgen2,
+  diversityOptions,
+} from "../../../core/analyses/diversity.ts";
 import { pcaOnPopgen2, pcaOptions } from "../../../core/analyses/pca.ts";
 import { setAnalysisOptions, setVariantFilter } from "../../../core/project.ts";
 import { summaryResult } from "../../../core/testSupport.ts";
@@ -26,6 +30,7 @@ import {
   POPGEN2_AUTO_GROUPS,
   createPopgen2Store,
   openVariantsFile,
+  popgen2EndsLive,
 } from "../../popgen2Store.ts";
 import type { Popgen2PageStore } from "../../popgen2Store.ts";
 import { startAnalysis } from "../../runs.ts";
@@ -38,7 +43,6 @@ import { createRunGate, gatedStore } from "../../variants/thresholdRun.ts";
 import type { RunGate } from "../../variants/thresholdRun.ts";
 import { ChangeHoldsProvider } from "../../widgets/changeHold.ts";
 import { PcaTab } from "./PcaTab.tsx";
-import { failureEndsLive } from "./liveEnd.ts";
 
 // The result drawn as nothing: its plots need a browser's layout, and
 // what is checked here is the button and its line.
@@ -106,6 +110,8 @@ interface Page {
   readonly gate: RunGate;
   readonly pcaRequests: () => readonly Request[];
   readonly endPca: () => Promise<void>;
+  /** The requests of the diversity sent so far. */
+  readonly diversityRequests: () => readonly Request[];
 }
 
 /** A result of the PCA of `s000` and `s001`. */
@@ -169,7 +175,7 @@ async function drawTab(): Promise<Page> {
       changes: gate,
       runStart: (id) => startAnalysis(store, id),
       quietMs: LIVE_QUIET_MS,
-      endsLive: failureEndsLive,
+      endsLive: popgen2EndsLive,
     },
   });
   raw.subscribe(() => {
@@ -239,11 +245,14 @@ async function drawTab(): Promise<Page> {
   });
   const pcaRequests = (): readonly Request[] =>
     requests.filter((r) => r.job.analysis === "pca");
+  const diversityRequests = (): readonly Request[] =>
+    requests.filter((r) => r.job.analysis === "diversity");
   return {
     store,
     autoRuns,
     gate,
     pcaRequests,
+    diversityRequests,
     endPca: async () => {
       const last = pcaRequests().at(-1);
       if (last === undefined) throw new Error("no PCA sent");
@@ -533,5 +542,58 @@ describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
     await settle();
     expect(button("Run")).not.toBeNull();
     expect(lineShown(STOPPED)).toBe(true);
+  });
+});
+
+describe("PT2 the PCA tab while a crash of the diversity holds its start", () => {
+  const HELD =
+    "The PCA starts after the next change of the filters or of its options, or when Run is pressed.";
+
+  test("a Run that waited for the diversity, which crashed: Run and then Stop recalculating, the line of the hold; Run starts the PCA", async () => {
+    const page = await drawTab();
+    await act(async () => {
+      page.store.apply("the options of the diversity changed", (p) =>
+        setAnalysisOptions(p, diversityOnPopgen2, {
+          ...diversityOptions(p),
+          minNumIndividuals: 2,
+          numCalledAlleles: 4,
+        }),
+      );
+      await Promise.resolve();
+    });
+    await settle();
+    await act(async () => {
+      expect(page.autoRuns.run(diversityOnPopgen2.id)).toBe("started");
+      await Promise.resolve();
+    });
+    await settle();
+    await press(button("Run"));
+    expect(page.pcaRequests()).toHaveLength(0);
+    const crashed = page.diversityRequests().at(-1);
+    if (crashed === undefined) throw new Error("no diversity sent");
+    crashed.end({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "the worker crashed" },
+    });
+    await settle();
+
+    const run = button("Run");
+    const stop = button("Stop recalculating");
+    expect(run).not.toBeNull();
+    expect(stop).not.toBeNull();
+    // Run first in the order of the Tab key, then Stop recalculating.
+    expect(
+      [...container.querySelectorAll("button")].filter(
+        (b) => b === run || b === stop,
+      ),
+    ).toEqual([run, stop]);
+    expect(lineShown(HELD)).toBe(true);
+    await wait(10_000);
+    expect(page.pcaRequests()).toHaveLength(0);
+
+    await press(run);
+    expect(page.pcaRequests()).toHaveLength(1);
+    expect(button("Stop")).not.toBeNull();
+    expect(lineShown(HELD)).toBe(false);
   });
 });

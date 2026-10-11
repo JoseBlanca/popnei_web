@@ -45,6 +45,13 @@ export const DIVERSITY_TAB_ERRORS: PanelErrorWords = Object.freeze({
 export const DIVERSITY_STARTED_BY_ITSELF =
   "Calculating the diversity again. To change the filters or the populations, stop it in the Populations tab.";
 
+/** What the status region says when a crash of the worker that ended
+    the PCA's live state holds the diversity, about to start, until the
+    next change or its Run (docs/specs/steps/popgen2-pca.md, "A failure
+    that ends a live state"). */
+export const DIVERSITY_HELD_AFTER_CRASH =
+  "The diversity did not start: it starts after the next change of the filters, of its options or of the populations, or when Run is pressed in the Populations tab.";
+
 /** What the status region says at a Stop of the diversity, in its tab or
     in the band, which may leave the tab out of sight: "Diversity
     stopped. Press Run in the Populations tab to calculate it again."

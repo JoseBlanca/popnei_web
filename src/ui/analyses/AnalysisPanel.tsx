@@ -106,10 +106,15 @@ export type PanelLive =
       not about to start; with its result shown, no line, as the owner
       asked on 11 October 2026. After a failure that leaves it live and
       that Run may mend, Run stands first, which tries again under the
-      same key, and "Stop recalculating" beside it. */
+      same key, and "Stop recalculating" beside it; the same, with the
+      line, while `runBeside`, a crash of the worker that ended another
+      live state holds its start until the next change or its Run
+      (docs/specs/steps/popgen2-pca.md, "A failure that ends a live
+      state"). */
   | {
       readonly kind: "live";
       readonly aboutToStartLine: string | null;
+      readonly runBeside: boolean;
     };
 
 /** The attribute of the heading of a panel, by which the band's link to
@@ -296,13 +301,20 @@ function pageButton(
       return { button, ...none, under: page.live.line };
     case "live":
       // A failure Run may mend: Run, which tries again, and Stop
-      // recalculating beside it.
-      if (
-        status.kind === "error" &&
-        button?.kind === "run" &&
-        button.reason === null
-      ) {
-        return { button, ...none, stopBeside: true };
+      // recalculating beside it; and a start held by a crash, which Run
+      // starts, with the line that says so.
+      if (button?.kind === "run" && button.reason === null) {
+        if (status.kind === "error") {
+          return { button, ...none, stopBeside: true };
+        }
+        if (page.live.runBeside) {
+          return {
+            button,
+            ...none,
+            under: page.live.aboutToStartLine,
+            stopBeside: true,
+          };
+        }
       }
       return {
         button: { kind: "stop" },

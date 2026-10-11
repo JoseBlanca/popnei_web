@@ -372,10 +372,10 @@ describe("NU4 D2 the words of the PCA started again by itself, by the method", (
 
   test("while a crash that ended another live state holds it, the line names the next change", () => {
     expect(aboutToStartLine("pca", "afterCrash")).toBe(
-      "The PCA starts again after the next change of the filters or of its options.",
+      "The PCA starts after the next change of the filters or of its options, or when Run is pressed.",
     );
     expect(aboutToStartLine("pcoa", "afterCrash")).toBe(
-      "The PCoA starts again after the next change of the filters or of its options.",
+      "The PCoA starts after the next change of the filters or of its options, or when Run is pressed.",
     );
   });
 

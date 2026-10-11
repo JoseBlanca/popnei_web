@@ -14,6 +14,7 @@ import type { AnalysisId } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult, PcaMethod } from "../../worker/protocol.ts";
 import {
+  DIVERSITY_HELD_AFTER_CRASH,
   DIVERSITY_STARTED_BY_ITSELF,
   diversityEndAnnouncement,
   diversityStoppedText,
@@ -25,6 +26,7 @@ import {
 } from "../analyses/liveWords.ts";
 import {
   pcaEndAnnouncement,
+  pcaHeldAfterCrashText,
   pcaStartedByItselfText,
   pcaStoppedText,
 } from "../analyses/pca/tabWords.ts";
@@ -48,6 +50,8 @@ interface LiveSaid {
   readonly runKind: string;
   /** Its start by itself, alone in its round. */
   readonly startedAlone: (s: AppState<JobResult, Blob>) => string;
+  /** That a crash of the worker holds it, and what starts it. */
+  readonly heldAfterCrash: (s: AppState<JobResult, Blob>) => string;
   /** Its Stop, with Run to press when `runOffered`. */
   readonly stopped: (
     s: AppState<JobResult, Blob>,
@@ -63,12 +67,15 @@ const LIVE_SAID: Readonly<Record<Popgen2LiveId, LiveSaid>> = Object.freeze({
     runKind: "pcaRun",
     startedAlone: (s: AppState<JobResult, Blob>) =>
       pcaStartedByItselfText(methodOf(s)),
+    heldAfterCrash: (s: AppState<JobResult, Blob>) =>
+      pcaHeldAfterCrashText(methodOf(s)),
     stopped: (s: AppState<JobResult, Blob>, runOffered: boolean) =>
       pcaStoppedText(methodOf(s), runOffered),
   }),
   diversity: Object.freeze({
     runKind: "diversityRun",
     startedAlone: () => DIVERSITY_STARTED_BY_ITSELF,
+    heldAfterCrash: () => DIVERSITY_HELD_AFTER_CRASH,
     stopped: (_s: AppState<JobResult, Blob>, runOffered: boolean) =>
       diversityStoppedText(runOffered),
   }),
@@ -208,6 +215,10 @@ function fileIdOf(s: AppState<JobResult, Blob>): string | null {
  *   sight, "PCA stopped. Press Run in the PCA tab to calculate it
  *   again.", "Diversity stopped. …", or the first sentence alone when the
  *   tab then offers no Run to press;
+ * - a crash of the worker that holds the others about to start, each
+ *   held, "The diversity did not start: it starts after the next change
+ *   of the filters, of its options or of the populations, or when Run is
+ *   pressed in the Populations tab.";
  * - Stop all, once: "Stopped: the PCA and the diversity no longer start
  *   by themselves. Press Run in their tabs to calculate them again.",
  *   with Run named only in the tabs that then offer it.
@@ -269,6 +280,12 @@ export function announceLive(
         );
         return;
       }
+      case "heldAfterCrash":
+        // After the crash's own words, said as the store changed.
+        for (const id of event.ids) {
+          announcer.announce(liveSaidOf(id).heldAfterCrash(s));
+        }
+        return;
     }
   });
 }
