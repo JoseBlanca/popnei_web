@@ -15,7 +15,9 @@ import {
   ldDecayCurve,
   ldDecayDescription,
   ldHalfMark,
-  ldLegendLabel,
+  LD_LEGEND_NAME_LENGTH,
+  ldLegendEnd,
+  ldLegendName,
   valueAt,
 } from "../../../core/analyses/ldDecay.ts";
 import type { LineData, LineSeries } from "../../../charts/line.ts";
@@ -90,7 +92,8 @@ export function ldDecayPlotData(
   const series = populationGroups(drawn, pops).map((group, i): LineSeries => {
     const mark = ldHalfMark(r, i, maxDist);
     return {
-      label: ldLegendLabel(r, i, maxDist),
+      label: ldLegendName(r, i),
+      labelEnd: ldLegendEnd(r, i, maxDist),
       group,
       points: pointsOf(r, i),
       line: ldDecayCurve(r, i, maxDist),
@@ -114,5 +117,8 @@ export function ldDecayPlotData(
     yDomain: [0, top],
     xWholeNumbers: true,
     yWholeNumbers: false,
+    // The names whole up to 16 characters, so that the legend beside the
+    // plot leaves it its room (decision C2 of the owner, 1 October 2026).
+    labelMost: LD_LEGEND_NAME_LENGTH,
   };
 }

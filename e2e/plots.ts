@@ -636,7 +636,8 @@ function lineDataOf(kind: LineKind): LineData {
             (_v, at) => (LD_MAX_DIST * at) / (LD_CURVE_POINTS - 1),
           );
           return {
-            label: pop.label,
+            label: pop.name,
+            labelEnd: pop.label.slice(pop.name.length),
             group,
             // The middle of each bin, (smallest + largest) / 2: 1,000.5
             // for the bin from 1 to 2,000.
@@ -661,6 +662,7 @@ function lineDataOf(kind: LineKind): LineData {
         yDomain: [0, 0.5],
         xWholeNumbers: true,
         yWholeNumbers: false,
+        labelMost: 16,
       };
     case "noCasing": {
       // One series of each colour whose line has no casing, 3:1 or more
@@ -674,6 +676,7 @@ function lineDataOf(kind: LineKind): LineData {
         yLabel: "y",
         series: groups.map((group, at) => ({
           label: `line ${String(group)}`,
+          labelEnd: "",
           group,
           points: { x: Float64Array.of(20, 60), y: Float64Array.of(0.8, 0.6) },
           line: {
@@ -686,6 +689,7 @@ function lineDataOf(kind: LineKind): LineData {
         yDomain: [0, 1],
         xWholeNumbers: false,
         yWholeNumbers: false,
+        labelMost: Number.POSITIVE_INFINITY,
       };
     }
   }

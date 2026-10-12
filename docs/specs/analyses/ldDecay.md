@@ -1179,9 +1179,12 @@ populations.
   plot"; "pop_a · no curve" for pairs with no curve; and "pop_a · no
   pair". A half distance below 10 bp is written to three significant
   digits, "half at 0.247 bp", and from 10 bp in whole base pairs. In
-  the legend a name is written whole up to 16 characters, and cut after
-  15 with an ellipsis, "…", above them, "Solanum_pimpine… · half at
-  7,548 bp", so that the legend, which stands beside the plot, leaves
+  the legend a name is written whole up to 16 characters, and above
+  them cut in the middle about an ellipsis by the line plot, "Solanum_…
+  r_wild1 · half at 7,548 bp", two that would still read alike numbered
+  by their place (`line.md`, "A label longer than its room"; from 12
+  October 2026, the review of the LD decay, where it was cut after 15
+  characters at its end), so that the legend, which stands beside the plot, leaves
   the plot its room (C2); the table has the name whole, and its rows
   are in the order of the legend's. With up to 49 populations in
   `populationsOf(p)`, each population keeps the colour and the shape of

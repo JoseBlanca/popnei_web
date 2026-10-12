@@ -17,7 +17,8 @@ import {
   ldDecayOnPopgen2,
   ldDecayPageOf,
   ldDecayPointsCsv,
-  ldLegendLabel,
+  ldLegendEnd,
+  ldLegendName,
   ldPlotOmittedText,
   maxDistFor,
   maxDistReason,
@@ -311,6 +312,12 @@ const NO_DISTANCE =
 /** What the options should be. */
 const OPTIONS_EXPECTED =
   "the largest distance of a pair, a whole number of base pairs from 50 to 9,007,199,254,740,991 or null, and the largest major allele frequency in each population, a number from 0.5 to 1, and nothing else";
+
+/** The text of a row of the legend before the plot cuts its name: the
+    name, then its end. */
+function ldLegendLabel(r: LdDecayResult, i: number, maxDist: number): string {
+  return `${ldLegendName(r, i)}${ldLegendEnd(r, i, maxDist)}`;
+}
 
 describe("PA2 D5 ldDecayFilters", () => {
   test("of the missing data filter at 0.1, the MAF filter at 0.9 and the LD pruning at r² 0.3 within 10,000 bp, gives the first two in their order", () => {

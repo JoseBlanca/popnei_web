@@ -124,11 +124,14 @@ describe("PA8 D1 the data of the plot of the LD decay", () => {
   test("the labels of the legend and the description are core's, and the axes are named", () => {
     const r = resultOf([1599810.0655818006, 8.3456, NAN]);
     const data = dataOf(r, 1000);
-    expect(data.series.map((one) => one.label)).toEqual([
+    expect(data.series.map((one) => `${one.label}${one.labelEnd}`)).toEqual([
       "pop_a · half at 1,599,810 bp, beyond the plot",
       "pop_b · half at 8.35 bp",
       "q2 · no curve",
     ]);
+    // The names whole up to 16 characters, the plot cutting longer ones
+    // in the middle (decision C2 of the owner, 1 October 2026).
+    expect(data.labelMost).toBe(16);
     expect(data.description).toBe(
       "The mean r² of pairs of variants against their distance, in 4 bins up to 1,000 base pairs, for 3 populations, with the curve fitted to each that has one. The curve falls to half at 1,599,810 bp in pop_a (beyond the plot) and 8.35 bp in pop_b. q2 has no curve.",
     );
@@ -188,7 +191,8 @@ describe("PA8 D1 the data of the plot of the LD decay", () => {
     expect(series.map((one) => one.group)).toEqual(
       Array.from({ length: 16 }, (_, i) => i),
     );
-    expect(series[15]?.label).toBe("q15 · half at 415 bp");
+    expect(series[15]?.label).toBe("q15");
+    expect(series[15]?.labelEnd).toBe(" · half at 415 bp");
   });
 
   test("the horizontal axis runs from 0 to the largest distance in whole base pairs, and the vertical from 0 to the largest value rounded up to a tenth", () => {

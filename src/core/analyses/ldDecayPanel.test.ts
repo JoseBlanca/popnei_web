@@ -17,7 +17,8 @@ import {
   ldDecayCsv,
   ldDecayDescription,
   ldDecayRows,
-  ldLegendLabel,
+  ldLegendEnd,
+  ldLegendName,
   threeSignificant,
 } from "./ldDecay.ts";
 import type { LdDecayResult } from "../../worker/protocol.ts";
@@ -144,6 +145,12 @@ function flowResult(): LdDecayResult {
     FLOW_SMALLEST,
     FLOW_LARGEST,
   );
+}
+
+/** The text of a row of the legend before the plot cuts its name: the
+    name, then its end. */
+function ldLegendLabel(r: LdDecayResult, i: number, maxDist: number): string {
+  return `${ldLegendName(r, i)}${ldLegendEnd(r, i, maxDist)}`;
 }
 
 describe("PA8 D1 ldDecayRows and ldBinRows", () => {
@@ -331,7 +338,7 @@ describe("PA8 D1 the labels of the legend", () => {
     ]);
   });
 
-  test("PA10 a name of 16 characters is whole, and one of 17 is cut after 15 with an ellipsis, in each kind of label", () => {
+  test("PA10, revised in the review of the LD decay (12 October 2026): core writes a long name whole, with each kind of end; the plot cuts it", () => {
     const sixteen = "Solanum_pimpinel";
     const longer = "Solanum_pimpinellifolium_from_N_Ecuador_a";
     const r = resultOf(
@@ -347,14 +354,14 @@ describe("PA8 D1 the labels of the legend", () => {
     );
     expect([0, 1, 2, 3, 4].map((i) => ldLegendLabel(r, i, 1000))).toEqual([
       "Solanum_pimpinel · half at 413 bp",
-      "Solanum_pimpine… · half at 413 bp",
-      "Solanum_pimpine… · half at 1,599,810 bp, beyond the plot",
-      "Solanum_pimpine… · no curve",
-      "Solanum_pimpine… · no pair",
+      "Solanum_pimpinell · half at 413 bp",
+      `${longer} · half at 1,599,810 bp, beyond the plot`,
+      `${longer}b · no curve`,
+      `${longer}c · no pair`,
     ]);
   });
 
-  test("the review of PA10: an escape counts as one character and is never cut, in a name of 16 characters with U+202E and in a longer one with \\u0007", () => {
+  test("the review of PA10: a hidden character is escaped in the name", () => {
     const r = resultOf(
       [
         popOf("Solanum_pimpi‮xx", 412.6),
@@ -365,7 +372,7 @@ describe("PA8 D1 the labels of the legend", () => {
     );
     expect([0, 1].map((i) => ldLegendLabel(r, i, 1000))).toEqual([
       "Solanum_pimpi\\u202exx · half at 413 bp",
-      "Solanum_pimpin\\u0007… · half at 413 bp",
+      "Solanum_pimpin\\u0007ellifolium · half at 413 bp",
     ]);
   });
 

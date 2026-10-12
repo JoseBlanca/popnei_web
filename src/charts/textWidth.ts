@@ -163,3 +163,42 @@ export function cutText(
   }
   return cutAbout(characters, options.least - 1);
 }
+
+/**
+ * `texts` as a plot writes them, each cut to its room, `rooms` in the
+ * same order, by `cutText` with `options`; and when two or more would
+ * read the same, each of those cut to its room less the width of its
+ * number and followed by the number of its place, from 1, in brackets,
+ * "Landr…A_1 (3)", the row of the table it stands for, so that no two
+ * read alike. The names of the bar plot and of the legend of the line
+ * plot (bars.md, line.md; the review of the LD decay, 12 October 2026).
+ */
+export function distinctCuts(
+  texts: readonly string[],
+  rooms: readonly number[],
+  options: CutOptions,
+): readonly string[] {
+  const roomAt = (place: number): number => {
+    const room = rooms[place];
+    if (room === undefined) {
+      throw new Error(
+        `popnei_web defect: the text ${String(place + 1)} of a plot has no room.`,
+      );
+    }
+    return room;
+  };
+  const cut = texts.map((text, place) => cutText(text, roomAt(place), options));
+  const counts = new Map<string, number>();
+  for (const text of cut) counts.set(text, (counts.get(text) ?? 0) + 1);
+  return texts.map((text, place) => {
+    const written = cut[place] ?? text;
+    if ((counts.get(written) ?? 0) < 2) return written;
+    const number = ` (${String(place + 1)})`;
+    const numberWidth = textWidth(
+      number,
+      options.fontSize,
+      options.perCharacter,
+    );
+    return `${cutText(text, roomAt(place) - numberWidth, options)}${number}`;
+  });
+}

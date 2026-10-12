@@ -893,13 +893,15 @@ test.describe("PA8 D2 the warnings of a panel on a narrow page", () => {
     ).toHaveCount(2, { timeout: RESULT_TIMEOUT });
     await expect(populations(page)).toBeVisible();
     await expect.poll(() => pageWidth(page)).toBeLessThanOrEqual(320);
-    // The legend, above the plot, has the names cut after 15 characters,
-    // and each text of it ends inside the picture, which scrolls sideways
-    // in its frame; the table has the names whole.
+    // The legend, above the plot, has the names cut in the middle to the
+    // room their ends leave, which keep them apart, and each text of it
+    // ends inside the picture, which scrolls sideways in its frame; the
+    // table has the names whole (the review of the LD decay, 12 October
+    // 2026).
     const texts = panel(page).locator("g.chart-legend-row text");
     await expect(texts).toHaveText([
-      /^Solanum_pimpine… · half at [\d,]+ bp, beyond the plot$/,
-      /^Solanum_pimpine… · half at [\d,]+ bp, beyond the plot$/,
+      /^S\S*…\S*1 · half at [\d,]+ bp, beyond the plot$/,
+      /^S\S*…\S*2 · half at [\d,]+ bp, beyond the plot$/,
     ]);
     const svgRight = await panel(page)
       .locator("svg.chart-line")

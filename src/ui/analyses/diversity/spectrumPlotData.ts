@@ -78,6 +78,7 @@ export function spectrumPlotData(
       const xy = { x: line.frequency, y: line.proportion };
       return {
         label: escaped(line.population),
+        labelEnd: "",
         group,
         points: xy,
         line: xy,
@@ -88,5 +89,8 @@ export function spectrumPlotData(
     yDomain: [0, linesTop(spectrum.largestProportion)],
     xWholeNumbers: false,
     yWholeNumbers: false,
+    // The names whole at the right of the plot, as before the LD decay
+    // limited its own; cut in the middle above it.
+    labelMost: Number.POSITIVE_INFINITY,
   };
 }

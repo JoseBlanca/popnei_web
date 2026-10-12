@@ -32,7 +32,8 @@ import {
 import type { ExportSize } from "./export.ts";
 import { createPlot2d } from "./plot2d.ts";
 import type { Frame, Margin, Plot2dDefinition, PlotText } from "./plot2d.ts";
-import { cutText, textWidth } from "./textWidth.ts";
+import { distinctCuts, textWidth } from "./textWidth.ts";
+import type { CutOptions } from "./textWidth.ts";
 import type { Chart } from "./types.ts";
 
 /**
@@ -55,12 +56,27 @@ export interface LineData extends PlotText {
   readonly xWholeNumbers: boolean;
   /** Ticks of the vertical axis at whole numbers, with commas. */
   readonly yWholeNumbers: boolean;
+  /**
+   * The most characters the label of a series keeps in the legend: 16
+   * for the names of the populations of the LD decay, which leave the
+   * plot its room beside the legend; `Infinity` for no limit. A longer
+   * label is cut in the middle, "Solanum_…r_wild1".
+   */
+  readonly labelMost: number;
 }
 
 /** One set of numbers drawn together, a population for the LD decay. */
 export interface LineSeries {
-  /** The label of the legend, written as text: "pop_a · half at 7,548 bp". */
+  /**
+   * The label of the legend, written as text and cut in the middle when
+   * the legend has no room for it, the name of a population: "pop_a".
+   */
   readonly label: string;
+  /**
+   * The words written after the label, never cut: " · half at 7,548
+   * bp"; "" for none.
+   */
+  readonly labelEnd: string;
   /**
    * Its group for the colour and the shape, by the rule of the scatter:
    * a whole number from 0, one series per mark: groups 0 and 49 have one
@@ -149,14 +165,47 @@ const LEGEND_LEAST = 4;
  */
 const MIN_FRAME_WIDTH = 300;
 
-/** The width of the longest row of the legend: its piece of line, the gap
-    and its label, measured. */
+/** How the labels of the legend are cut, at most `most` characters. */
+function legendCut(most: number): CutOptions {
+  return {
+    fontSize: LEGEND_FONT_SIZE,
+    perCharacter: LEGEND_CHARACTER,
+    most,
+    least: LEGEND_LEAST,
+  };
+}
+
+/**
+ * The texts of the rows of the legend of `data`, with `room` pixels for
+ * each: the label cut in the middle to the room its end leaves, and to
+ * `labelMost` characters, then its end, whole; two labels that would
+ * read alike numbered by their place, "Solanum_…olium_ (3)", as the bar
+ * plot numbers its names (the review of the LD decay, 12 October 2026).
+ * With no room given, at the right of the frame, the labels are cut to
+ * `labelMost` alone.
+ */
+function legendTexts(data: LineData, room: number): readonly string[] {
+  const labels = distinctCuts(
+    data.series.map((series) => series.label),
+    data.series.map(
+      (series) =>
+        room - textWidth(series.labelEnd, LEGEND_FONT_SIZE, LEGEND_CHARACTER),
+    ),
+    legendCut(data.labelMost),
+  );
+  return data.series.map(
+    (series, place) => `${labels[place] ?? series.label}${series.labelEnd}`,
+  );
+}
+
+/** The width of the longest row of the legend at the right of the frame:
+    its piece of line, the gap and its text, measured. */
 function legendRowWidth(data: LineData): number {
   let longest = 0;
-  for (const series of data.series) {
+  for (const text of legendTexts(data, Number.POSITIVE_INFINITY)) {
     longest = Math.max(
       longest,
-      textWidth(series.label, LEGEND_FONT_SIZE, LEGEND_CHARACTER),
+      textWidth(text, LEGEND_FONT_SIZE, LEGEND_CHARACTER),
     );
   }
   return LEGEND_LINE + LEGEND_GAP + Math.ceil(longest);
@@ -440,9 +489,11 @@ function markPath(group: number, x: number, y: number): string {
  * middle of that piece, and its text after it. The rows stand at the right
  * of the frame, from its top down, or, in a narrow element, above the
  * plot, from the top left corner of the SVG; `data-place` of the group
- * says which. Above the plot, a label longer than the SVG leaves it is
- * cut to its first characters and an ellipsis, measured, so that no row
- * passes the right edge of the SVG.
+ * says which. A label is cut in the middle to `labelMost` characters,
+ * and above the plot, longer than the SVG leaves it, to its first and
+ * last characters about an ellipsis, measured, so that no row passes
+ * the right edge of the SVG; its end is never cut; labels that would
+ * read alike are numbered (`legendTexts`).
  */
 function drawLegend(frame: Frame, data: LineData): void {
   const { margin } = frame;
@@ -462,13 +513,12 @@ function drawLegend(frame: Frame, data: LineData): void {
     LEGEND_LINE -
     LEGEND_GAP -
     (above ? LEGEND_FROM_EDGE : LEGEND_END);
-  const labelOf = (label: string): string =>
-    cutText(label, labelRoom, {
-      fontSize: LEGEND_FONT_SIZE,
-      perCharacter: LEGEND_CHARACTER,
-      most: Number.POSITIVE_INFINITY,
-      least: LEGEND_LEAST,
-    });
+  // At the right of the frame the margin holds every text whole but for
+  // `labelMost`; above the plot, each cut to the SVG.
+  const texts = legendTexts(data, above ? labelRoom : Number.POSITIVE_INFINITY);
+  const textOf = new Map(
+    data.series.map((series, place) => [series.group, texts[place] ?? ""]),
+  );
   frame.legend
     .attr("data-place", above ? "above" : "right")
     .selectAll<SVGGElement, LineSeries>("g.chart-legend-row")
@@ -507,7 +557,7 @@ function drawLegend(frame: Frame, data: LineData): void {
         .attr("class", "chart-legend-text")
         .attr("x", LEGEND_LINE + LEGEND_GAP)
         .attr("dy", "0.35em")
-        .text(labelOf(series.label));
+        .text(textOf.get(series.group) ?? "");
     });
 }
 

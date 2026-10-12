@@ -44,6 +44,7 @@ function xy(x: readonly number[], y: readonly number[]): XY {
 function seriesOf(group: number, label = `pop${String(group)}`): LineSeries {
   return {
     label,
+    labelEnd: "",
     group,
     points: xy([10, 20, 30], [0.2, 0.4, 0.6]),
     line: xy([0, 25, 50, 100], [0.5, 0.4, 0.3, 0.1]),
@@ -62,6 +63,7 @@ function lineOf(series: readonly LineSeries[]): LineData {
     yDomain: [0, 1],
     xWholeNumbers: false,
     yWholeNumbers: false,
+    labelMost: Number.POSITIVE_INFINITY,
   };
 }
 
@@ -387,6 +389,59 @@ describe("PA4 D4 the line plot under jsdom, its SVG", () => {
     ]);
   });
 
+  test("labels past labelMost are cut in the middle, their ends whole, and two that would still read alike numbered by their place, at the right and above the plot (the review of the LD decay, 12 October 2026)", () => {
+    const stem = "Solanum_pimpinellifolium_";
+    const named = (group: number, name: string, end: string): LineSeries => ({
+      ...seriesOf(group, name),
+      labelEnd: end,
+    });
+    const data: LineData = {
+      ...lineOf([
+        named(0, `${stem}A_wild1`, " · half at 7,548 bp"),
+        named(1, `${stem}B_wild1`, " · half at 7,340 bp"),
+        named(2, `${stem}weed2`, " · no pair"),
+        named(3, "pop_d", " · no curve"),
+      ]),
+      labelMost: 16,
+    };
+    const wide = sizedElement(1280, 600);
+    createLine(wide, data);
+    expect(
+      wide.querySelector("g.chart-legend")?.getAttribute("data-place"),
+    ).toBe("right");
+    expect(legendTexts(wide)).toEqual([
+      "Solanum_…A_wild1 · half at 7,548 bp",
+      "Solanum_…B_wild1 · half at 7,340 bp",
+      "Solanum_…m_weed2 · no pair",
+      "pop_d · no curve",
+    ]);
+    // Alike after the cut: each numbered by its place.
+    const alike: LineData = {
+      ...data,
+      series: [
+        named(0, `${stem}X_wild1`, " · half at 7,548 bp"),
+        named(1, `${stem}Y_X_wild1`, " · half at 7,340 bp"),
+      ],
+    };
+    const again = sizedElement(1280, 600);
+    createLine(again, alike);
+    expect(legendTexts(again)).toEqual([
+      "Solanum_…X_wild1 (1) · half at 7,548 bp",
+      "Solanum_…X_wild1 (2) · half at 7,340 bp",
+    ]);
+    // Above the plot at 320 pixels: the name cut to the room its end
+    // leaves, the end whole.
+    const narrow = sizedElement(320, 404);
+    createLine(narrow, data);
+    expect(
+      narrow.querySelector("g.chart-legend")?.getAttribute("data-place"),
+    ).toBe("above");
+    const texts = legendTexts(narrow);
+    expect(texts[0]).toMatch(/^Sol.*….*1 · half at 7,548 bp$/u);
+    expect(texts[3]).toBe("pop_d · no curve");
+    expect(new Set(texts).size).toBe(4);
+  });
+
   test("the legend has a row per series in their order, its label as text, its mark, and its piece of line on a casing for a light colour", () => {
     const element = sizedElement();
     createLine(
@@ -553,7 +608,8 @@ describe("PA4 D4 the line plot under jsdom, its SVG", () => {
   test("a series with no point and no line keeps its row in the legend and draws nothing in the frame; every series empty leaves the axes and the legend", () => {
     const element = sizedElement();
     const empty: LineSeries = {
-      label: "pop_c · no pair",
+      label: "pop_c",
+      labelEnd: " · no pair",
       group: 2,
       points: xy([], []),
       line: null,

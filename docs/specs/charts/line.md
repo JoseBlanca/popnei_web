@@ -196,11 +196,17 @@ export interface LineData extends PlotText {
   readonly yDomain: readonly [number, number];
   readonly xWholeNumbers: boolean;               // ticks at whole numbers, with commas
   readonly yWholeNumbers: boolean;
+  /** The most characters a label keeps, cut in the middle past them:
+      16 for the LD decay; Infinity for no limit. */
+  readonly labelMost: number;
 }
 
 export interface LineSeries {
-  /** The label of the legend, written as text. */
+  /** The label of the legend, written as text, cut in the middle when
+      it has no room: the name of a population. */
   readonly label: string;
+  /** The words after the label, never cut: " · half at 7,548 bp"; "". */
+  readonly labelEnd: string;
   /** Its group for the colour and the shape, by the rule of the scatter. */
   readonly group: number;
   /** Drawn one mark each; NaN skipped. */
@@ -336,10 +342,19 @@ definition's `margin` with the data from 1 October 2026 (`plot2d.md`,
   element higher by `narrowHeight` exactly when it is narrower than
   `narrowUnder`, and never narrower than `narrowWidth`, below which it
   scrolls sideways in its frame as it does under 320 pixels.
-- **A label longer than its room**: at the right of the frame the
-  margin holds it whole, measured; above the plot it is cut with an
-  ellipsis, as "The SVG it builds" says. The LD decay cuts the names of
-  its labels at 16 characters (`ldDecay.md`, "What it shows").
+- **A label longer than its room**: a label past `labelMost`
+  characters, 16 for the LD decay, is cut in the middle to them, as many
+  of its first and last characters about an ellipsis, "Solanum_…r_wild1";
+  at the right of the frame the margin then holds it whole, measured;
+  above the plot it is cut further to the room its end leaves, as "The
+  SVG it builds" says. Its end, `labelEnd`, " · half at 7,548 bp", is
+  never cut. Two labels that would still read alike are each followed
+  by the number of their place, from 1, in brackets, "Solanum_…X_wild1
+  (2) · half at 7,340 bp", as the bar plot numbers its names, by the
+  same function, `distinctCuts` of `textWidth.ts`. Until 12 October 2026
+  the LD decay cut the names itself at the end, after 15 characters, and
+  20 populations named alike in their first 15 read alike, told apart by
+  colour and mark alone (the review of the LD decay).
 - **A label with markup**, `<b>p1</b>`: written as text.
 - **A change of theme**: nothing is drawn again; the file is in the
   light theme.

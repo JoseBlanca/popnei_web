@@ -215,8 +215,9 @@ const NO_DISTANCE =
 const NO_DISTANCE_RUN = "Type the largest distance, above.";
 
 /** A name of a population is written whole in the legend of the plot up
-    to this many characters, and cut with "…" above them, so that the
-    legend, beside the plot, leaves the plot its room. */
+    to this many characters, and cut in the middle about "…" above them,
+    by the plot, so that the legend, beside the plot, leaves the plot its
+    room. */
 export const LD_LEGEND_NAME_LENGTH = 16;
 
 /** The words of that refusal, with how fewer individuals are kept on
@@ -648,42 +649,39 @@ export function ldHalfMark(
     : null;
 }
 
-/** A name of a population as the legend of the plot writes it: escaped,
-    whole up to `LD_LEGEND_NAME_LENGTH` characters, an escape counted as
-    one, and above them cut after one fewer, with "…", never inside an
-    escape. */
-function legendName(pop: string): string {
-  const characters = escapedCharacters(pop);
-  return characters.length > LD_LEGEND_NAME_LENGTH
-    ? `${characters.slice(0, LD_LEGEND_NAME_LENGTH - 1).join("")}…`
-    : characters.join("");
+/** The name of the population `i` of `r` as the legend of the plot
+    writes it, escaped; the plot cuts it in the middle beyond
+    `LD_LEGEND_NAME_LENGTH` characters, "Solanum_…r_wild1", and numbers
+    two that would read alike (line.md; the review of the LD decay, 12
+    October 2026). Throws a defect on a population the result does not
+    have. */
+export function ldLegendName(r: LdDecayResult, i: number): string {
+  return escapedCharacters(popAt(r, i)).join("");
 }
 
 /**
- * The label of the population `i` of `r` in the legend of the plot, at a
- * largest distance of `maxDist` (ldDecay.md, "What it shows"): "pop_a ·
- * half at 7,548 bp"; "pop_a · half at 1,599,810 bp, beyond the plot";
- * "pop_a · no curve" for pairs with no curve; "pop_a · no pair". A name of
- * more than 16 characters is cut, "Solanum_pimpine… · no pair"; the table
- * of the populations has it whole. Throws a defect on a population the
- * result does not have.
+ * The words after the name of the population `i` of `r` in the legend of
+ * the plot, at a largest distance of `maxDist` (ldDecay.md, "What it
+ * shows"), never cut: " · half at 7,548 bp", " · half at 1,599,810 bp,
+ * beyond the plot", " · no curve" for pairs with no curve, " · no pair".
+ * Throws a defect on a population the result does not have.
  */
-export function ldLegendLabel(
+export function ldLegendEnd(
   r: LdDecayResult,
   i: number,
   maxDist: number,
 ): string {
-  const name = legendName(popAt(r, i));
+  popAt(r, i);
   const half = halfShownOf(r, i, maxDist);
   switch (half.kind) {
     case "drawn":
-      return `${name} · half at ${halfDistText(half.halfDist)} bp`;
+      return ` · half at ${halfDistText(half.halfDist)} bp`;
     case "beyond":
-      return `${name} · half at ${halfDistText(half.halfDist)} bp, beyond the plot`;
+      return ` · half at ${halfDistText(half.halfDist)} bp, beyond the plot`;
     case "noPair":
-      return `${name} · no pair`;
+      return " · no pair";
     case "noCurve":
-      return `${name} · no curve`;
+      return " · no curve";
   }
 }
 

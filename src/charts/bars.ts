@@ -21,7 +21,8 @@ import {
 import type { ExportSize } from "./export.ts";
 import { createPlot2d } from "./plot2d.ts";
 import type { Frame, Margin, Plot2dDefinition, PlotText } from "./plot2d.ts";
-import { cutText, textWidth } from "./textWidth.ts";
+import { distinctCuts, textWidth } from "./textWidth.ts";
+import type { CutOptions } from "./textWidth.ts";
 import type { Chart } from "./types.ts";
 
 /** What a bar plot draws. Every text is the screen's. */
@@ -105,17 +106,15 @@ function nameRoom(width: number): number {
   return NAME_SHARE * width - NAME_EDGE - NAME_PADDING;
 }
 
-/** `name` cut to `room` pixels: whole when it has at most 20
-    characters and fits, measured; otherwise as many of its first and
-    last characters as fit about an ellipsis, from 3 and the ellipsis. */
-function cutName(name: string, room: number): string {
-  return cutText(name, room, {
-    fontSize: NAME_FONT_SIZE,
-    perCharacter: NAME_CHARACTER_WIDTH,
-    most: NAME_MOST,
-    least: NAME_LEAST,
-  });
-}
+/** How a name is cut: whole when it has at most 20 characters and
+    fits, measured; otherwise as many of its first and last characters as
+    fit about an ellipsis, from 3 and the ellipsis. */
+const NAME_CUT: CutOptions = Object.freeze({
+  fontSize: NAME_FONT_SIZE,
+  perCharacter: NAME_CHARACTER_WIDTH,
+  most: NAME_MOST,
+  least: NAME_LEAST,
+});
 
 /**
  * The name each row writes in an element `width` pixels wide, in the
@@ -126,16 +125,11 @@ function cutName(name: string, room: number): string {
  */
 function rowNames(data: BarsData, width: number): readonly string[] {
   const room = nameRoom(width);
-  const cut = data.bars.map((bar) => cutName(bar.name, room));
-  const counts = new Map<string, number>();
-  for (const name of cut) counts.set(name, (counts.get(name) ?? 0) + 1);
-  return data.bars.map((bar, place) => {
-    const name = cut[place] ?? bar.name;
-    if ((counts.get(name) ?? 0) < 2) return name;
-    const number = ` (${String(place + 1)})`;
-    const numberWidth = textWidth(number, NAME_FONT_SIZE, NAME_CHARACTER_WIDTH);
-    return `${cutName(bar.name, room - numberWidth)}${number}`;
-  });
+  return distinctCuts(
+    data.bars.map((bar) => bar.name),
+    data.bars.map(() => room),
+    NAME_CUT,
+  );
 }
 
 /** The margins for `data` in an element of `size`: at the left, the
