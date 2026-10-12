@@ -282,9 +282,15 @@ differences:
 
 - **The table**, one row per pair, its columns "Pair", "Hudson's Fst",
   "Jost's D" and "Variants", its caption "Distances between the
-  populations of panel.nei, over the 1,200 variants the filters kept.",
-  with, when unclassified individuals are left out, "7 unclassified
-  individuals kept are left out." Its "Download…" stands below it,
+  populations of panel.nei, over the 1,200 variants the filters kept.
+  3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68
+  individuals.", the populations of the result with the individuals
+  each was calculated with, as section 6 of `docs/functionality.md`
+  gives them, since the lines of the populations are not shown with a
+  result (since 12 October 2026, the review of the Distances tab: until
+  then no line said them once the result was shown); with, when
+  unclassified individuals are left out, "7 unclassified individuals
+  kept are left out." after them. Its "Download…" stands below it,
   on a line of its own, with "Table as CSV", in the place of the old
   button "Download the table as CSV". The CSV has the header "First
   population,Second population,Hudson's Fst,Jost's D,Variants", the
@@ -387,7 +393,7 @@ scroll of the heatmap and of the table, and the words of a PNG refused.
 | a file dropped or pasted on the greyed zone | "other.csv was not opened: the populations cannot change while the distances run. Stop the distances in the Distances tab, then open other.csv again." |
 | the download of the filtered variants, while they run | "Waits for the distances to end; or stop them in the Distances tab." |
 | under the heatmap, while its cells hold no values | "The cells are too small for their values, which the table below gives."; with a negative distance, "… A negative distance has the colour of 0." |
-| the caption of the table | "Distances between the populations of panel.nei, over the 1,200 variants the filters kept."; with unclassified left out, "… 7 unclassified individuals kept are left out." |
+| the caption of the table | "Distances between the populations of panel.nei, over the 1,200 variants the filters kept. 3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals."; with unclassified left out, "… 7 unclassified individuals kept are left out." |
 | the buttons of the downloads, for a screen reader | "Download the heatmap of Hudson's Fst", "Download the heatmap of Jost's D"; "Download the table of the distances" |
 | the status region, a start by itself | "Calculating the distances between populations again. To change the filters or the populations, stop them in the Distances tab."; the first start of a round of several, the words of `popgen2-pca.md`, "The status region", with "the distances" among the analyses |
 | the status region, a Run that waited behind another calculation, once | "The distances start once the PCA, which is running, ends." |

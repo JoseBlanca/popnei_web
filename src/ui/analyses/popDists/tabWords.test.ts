@@ -20,6 +20,7 @@ import {
   distancesTabFailed,
 } from "./tabLoadWords.ts";
 import {
+  distancesCaption,
   distancesPanelLive,
   distancesStoppedLine,
   distancesTabLock,
@@ -282,6 +283,21 @@ describe("DT1 D3 the words of the Distances tab", () => {
     );
     expect(heatmapValuesLine(true)).toBe(
       "The cells are too small for their values, which the table below gives. A negative distance has the colour of 0.",
+    );
+  });
+
+  test("the caption of the result ends with the populations and their individuals, then the unclassified left out (the review of the Distances tab, 12 October 2026)", () => {
+    expect(distancesCaption(flowResult(), "panel.nei", 0)).toBe(
+      "Distances between the populations of panel.nei, over the 1,200 variants the filters kept. 3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals.",
+    );
+    expect(
+      distancesCaption(
+        { ...flowResult(), numIndividuals: Uint32Array.from([1, 84, 68]) },
+        "panel.nei",
+        7,
+      ),
+    ).toBe(
+      "Distances between the populations of panel.nei, over the 1,200 variants the filters kept. 3 populations: p0, 1 individual; p2, 84 individuals; p1, 68 individuals. 7 unclassified individuals kept are left out.",
     );
   });
 

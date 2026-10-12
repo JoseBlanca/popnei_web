@@ -39,6 +39,7 @@ import { passLockText } from "../pca/passLock.ts";
 import type { PassLock } from "../pca/passLock.ts";
 import type { LiveAnalysisName } from "../status.ts";
 import { populationsText, runningUntilEnd } from "../words.ts";
+import { captionText } from "./words.ts";
 
 /** The analysis in the middle of a sentence of the tab's lock. */
 export const DISTANCES_TAB_NAME = "the distances";
@@ -102,6 +103,38 @@ function unclassifiedLine(numLeftOut: number): string {
 function emptiedLine(emptied: readonly string[]): string {
   const one = emptied.length === 1;
   return `${namesOf(emptied)} ${one ? "has" : "have"} no individual left after the thresholds of the individuals, and ${one ? "is" : "are"} left out. Loosen the thresholds of the individuals in the Variants tab to keep ${one ? "it" : "them"}.`;
+}
+
+/** The caption of the table of the result `r` of the variants file
+    `variantsName`: what it is, over how many variants, then the
+    populations with the individuals each was calculated with, as
+    docs/functionality.md, section 6, gives them, and, when
+    `numLeftOut` unclassified individuals kept are left out, that
+    sentence: "Distances between the populations of panel.nei, over the
+    1,200 variants the filters kept. 3 populations: p0, 48 individuals;
+    p2, 84 individuals; p1, 68 individuals." Once a result is shown, the
+    lines of the populations are not, and this is where their
+    individuals are read. */
+export function distancesCaption(
+  r: PopDistsResult,
+  variantsName: string,
+  numLeftOut: number,
+): string {
+  const pops = r.pops.map((pop, index) => {
+    const numIndividuals = r.numIndividuals[index];
+    if (numIndividuals === undefined) {
+      throw new Error(
+        `popnei_web defect: the result of the distances has no number of individuals for its population ${String(index)}.`,
+      );
+    }
+    return `${escaped(pop)}, ${counted(numIndividuals, "individual")}`;
+  });
+  const sentences = [
+    captionText(r.passStats.numVars, variantsName),
+    `${counted(r.pops.length, "population")}: ${pops.join("; ")}.`,
+    ...(numLeftOut > 0 ? [unclassifiedCaption(numLeftOut)] : []),
+  ];
+  return sentences.join(" ");
 }
 
 /** The sentence the caption of the table ends with when unclassified

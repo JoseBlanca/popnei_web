@@ -32,9 +32,15 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 /** How long a calculation of panel.nei may take to give its result. */
 const RESULT_TIMEOUT = 30_000;
 
-/** The caption of the table of panel.nei at the missing data of 0.1. */
-const CAPTION =
-  "Distances between the populations of panel.nei, over the 1,200 variants the filters kept.";
+/** The populations of panel_pops.csv with their individuals, which end
+    the caption of the table (since 12 October 2026, the review of the
+    Distances tab). */
+const POPS =
+  "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals.";
+
+/** The caption of the table of panel.nei and panel_pops.csv at the
+    missing data of 0.1. */
+const CAPTION = `Distances between the populations of panel.nei, over the 1,200 variants the filters kept. ${POPS}`;
 
 /** The heading of the tab. */
 const HEADING = "Distances between populations";
@@ -379,7 +385,7 @@ test.describe("DT1 D5 the Distances tab", () => {
     await expect(
       table(
         page,
-        "Distances between the populations of panel.nei, over the 1,152 variants the filters kept.",
+        `Distances between the populations of panel.nei, over the 1,152 variants the filters kept. ${POPS}`,
       ),
     ).toBeVisible({ timeout: RESULT_TIMEOUT });
     await expect(row(page, "p0 and p2")).toHaveText([
@@ -397,7 +403,10 @@ test.describe("DT1 D5 the Distances tab", () => {
     await openPage(page);
     await pick(page, "panel.nei");
     await pickIndividuals(page, "panel_split.csv");
-    await runDistances(page);
+    await runDistances(
+      page,
+      "Distances between the populations of panel.nei, over the 1,200 variants the filters kept. 4 populations: p0a, 24 individuals; p0b, 24 individuals; p2, 84 individuals; p1, 68 individuals.",
+    );
     await expect(
       shown(page).getByText(
         /p0a and p0b have a negative Hudson's Fst, −0\.0113, and Jost's D, −0\.0060/u,
@@ -451,7 +460,7 @@ test.describe("DT1 D5 the Distances tab", () => {
     ).toBeVisible();
     await runDistances(
       page,
-      `${CAPTION} 7 unclassified individuals kept are left out.`,
+      "Distances between the populations of panel.nei, over the 1,200 variants the filters kept. 3 populations: p2, 81 individuals; p1, 68 individuals; p0, 44 individuals. 7 unclassified individuals kept are left out.",
     );
   });
 

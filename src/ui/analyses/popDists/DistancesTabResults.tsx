@@ -3,7 +3,8 @@
  * of popgen2.html (docs/specs/steps/popgen2-distances.md, "The result"):
  * the heatmap of the measure the radio buttons choose, with its
  * "Download…" above it and its line of order under it; the table of the
- * pairs, its caption ending with the unclassified individuals left out,
+ * pairs, its caption ending with the populations and their individuals,
+ * and then the unclassified individuals left out,
  * and its "Download…" below it, whose CSV writes the two populations of
  * a pair in two fields; and the line of the versions. Above 200
  * populations, which this page's column of 20 values at most never
@@ -48,10 +49,10 @@ import {
   heatmapWhat,
   matrixCsv,
   pairsCsv,
-  unclassifiedCaption,
+  distancesCaption,
   unclassifiedLeftOutOf,
 } from "./tabWords.ts";
-import { captionText, heatmapTitle, numberCells, pairNames } from "./words.ts";
+import { heatmapTitle, numberCells, pairNames } from "./words.ts";
 
 /** The columns of the table (popDists.md, "What it shows"). */
 const COLUMNS: readonly TableColumn[] = Object.freeze([
@@ -86,7 +87,6 @@ export function DistancesTabResults({
     );
   }
   const tooMany = tooManyPopulationsText(result);
-  const caption = captionText(result.passStats.numVars, variantsName);
   return (
     <div className={classOf(styles, "results")}>
       {tooMany === null ? (
@@ -95,11 +95,7 @@ export function DistancesTabResults({
           <PairsTable
             result={result}
             variantsName={variantsName}
-            caption={
-              leftOut > 0
-                ? `${caption} ${unclassifiedCaption(leftOut)}`
-                : caption
-            }
+            caption={distancesCaption(result, variantsName, leftOut)}
           />
         </>
       ) : (
