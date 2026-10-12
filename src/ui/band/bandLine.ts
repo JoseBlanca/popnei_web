@@ -3,9 +3,10 @@
  * (docs/specs/steps/popgen2-band.md, "The line", "Stopping", "The
  * link", "An error of the application"): after the page's heading,
  * "Popnei", one line, the first of these that holds, the one pass
- * running or about to start, the PCA running, the filtered variants
- * being written, a Stop under way, the PCA about to start again by
- * itself, the link to the PCA's warnings or error while another tab is
+ * running or about to start, a live analysis running, the filtered
+ * variants being written, the live analyses about to start by
+ * themselves but the one a Stop under way stops, that Stop, the link to
+ * the warnings or the error of a live analysis while another tab is
  * shown; and, under it, the line of an error of the application, in the
  * words of the error bar of popgen.html.
  *
@@ -277,26 +278,14 @@ export function lineOf(page: BandPage): BandLine {
     };
   }
 
-  const stopped = state.stoppedAwaitingWorker;
-  if (
-    stopped !== null &&
-    (page.stoppingSince === null ||
-      page.now - page.stoppingSince < STOPPING_MAX_MS)
-  ) {
-    return {
-      kind: "stopping",
-      what: stoppingOf(
-        state,
-        stopped,
-        page.stoppedMethod ?? method,
-        variantsName,
-      ),
-    };
-  }
-
   // Those about to start that wait for the same as the first, so that
-  // the line says one thing true of each.
-  const about = live.filter((id) => aboutToStartOf(page.live[id]) !== null);
+  // the line says one thing true of each; over a Stop under way of
+  // another, so that the band keeps their Stop recalculating within the
+  // quiet second the Stop starts again (WCAG 2.2.1).
+  const stopped = state.stoppedAwaitingWorker;
+  const about = live.filter(
+    (id) => id !== stopped && aboutToStartOf(page.live[id]) !== null,
+  );
   const [first] = about;
   const waitsFor =
     first === undefined ? null : aboutToStartOf(page.live[first]);
@@ -310,6 +299,22 @@ export function lineOf(page: BandPage): BandLine {
       waitsFor,
       withStop: together.length === 1 && page.tab !== LIVE_TABS[first],
       stopAll,
+    };
+  }
+
+  if (
+    stopped !== null &&
+    (page.stoppingSince === null ||
+      page.now - page.stoppingSince < STOPPING_MAX_MS)
+  ) {
+    return {
+      kind: "stopping",
+      what: stoppingOf(
+        state,
+        stopped,
+        page.stoppedMethod ?? method,
+        variantsName,
+      ),
     };
   }
 

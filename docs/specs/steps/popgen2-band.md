@@ -222,7 +222,13 @@ most one of the first three holds. A running calculation wins over a
 Stop under way, since the next calculation after a Stop waits for the
 new worker and is what the user waits for; a Stop under way wins over
 the PCA about to start, which a Stop ends anyway; and anything under
-way wins over the link, which is about a result already there.
+way wins over the link, which is about a result already there. Another
+analysis about to start wins over a Stop under way: after the band's
+Stop of the PCA, with the diversity live and waiting, the band says
+the diversity about to start, with its Stop recalculating, and not
+"Stopping the PCA…" with no button, so that the diversity can be
+stopped from any tab within the quiet second the Stop starts again
+(WCAG 2.2.1; the review of work package 4, 12 October 2026).
 
 The name of the file is the variants file's own name, as its box shows
 it. When the line is too narrow for it, at 320 px with a long name, the

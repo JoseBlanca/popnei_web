@@ -765,6 +765,25 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
     ]);
   });
 
+  test("the band's Stop of the PCA running with the diversity waiting: the diversity about to start, with its Stop recalculating, never Stopping the PCA with no button while its quiet second runs (the review of package 4, 12 October 2026)", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    expect(testPage.auto.run("pca")).toBe("started");
+    await flush();
+    expect(testPage.auto.run("diversity")).toBe("waiting");
+    testPage.auto.pause("pca");
+    testPage.stoppingSince = 0;
+    await flush();
+
+    expect(testPage.store.getState().stoppedAwaitingWorker).toBe("pca");
+    expect(testPage.auto.aboutToStart("diversity")).toBe("changes");
+    expect(words(testPage.band())).toBe("The diversity starts in a moment");
+    expect(buttons(testPage.band())).toEqual([
+      "Stop recalculating the diversity",
+      null,
+    ]);
+  });
+
   test("Stopping the diversity while the store waits for the worker after its Stop", async () => {
     const testPage = page(SUMMARY);
     await testPage.endPass();
