@@ -852,6 +852,47 @@ Checks at 590caf53: typecheck, lint, format clean; Vitest 173 files,
 5,434 tests; Chromium and WebKit, `popgen2BandLive`, `popgen2Band`,
 `popgen2Populations`, `popgen2Live`, 128; the screens of the band, 56.
 
+The review of package 4, 12 October 2026, ten categories (`spec`,
+`tests`, `stale`, `errors`, `api`, `react`, `accessibility`, `ux`,
+`browser`, `bundle`) over 68769c2f^..590caf53: 22 findings held, one
+set aside, one put to the owner. The ones a user would meet: when the
+PCA ended with the keyboard on the band's "Stop the PCA", the same
+button became "Stop the diversity", so Enter stopped an analysis the
+user had not chosen (Chromium and WebKit); after a crash held the
+diversity, a Run of the PCA made the band say "then the diversity" and
+the tab that it starts once the PCA ends, and it never started; after
+the band's Stop of the PCA, "Stopping the PCA…" with no button while
+the diversity was about to start; at 320 px "Diversity · 0:12" with
+Stop and Stop all lost its clock (296 px of 288); from 480 to about 640
+px the band cut its own words beside both buttons; at 200% text Stop
+all went up to 109 px past the window; a focused button hidden by a
+narrowing of the window left the focus on nothing; the refusal of a
+folder or a text on the waiting individuals zone named a file never
+opened. Also: a third live analysis would have compiled and thrown in
+the band; the words of a band without Stop all, dead since
+`STOP_ALL_OFFERED` was true, removed. Set aside: "press Stop all beside
+the heading Popnei" was said to lean on position; it names the
+heading, which a screen reader reaches by name (WCAG 1.3.3 asks that
+instructions not rely on position alone). Put to the owner: a
+spectrum's MAF warning is not among the result's warnings, so the band
+never links to it; the spec records it as open. The errors reviewer
+settled a doubt: a crash that does not speak of the memory (a PCA of
+fewer than 2,264 individuals) leaves the PCA live and the waiting
+diversity starts at once; a crash that ends a live state holds the
+others; both as `popgen2-pca.md` says. Bundle: the first load of
+`popgen2.html` 331.72 KB, 0.50 KB more, all the band's code.
+`e2e/popgen2Band.spec.ts` was not untouched, as deliverable 3 said:
+8b2d7298 removed "again" in three of its strings.
+
+The fixes, first round, e0e90dc6..4772039b, test first: b2542a24 (held
+after a crash said as held), b11b3568 (the Stop keyed by what it stops;
+the band's narrow form decided in one place, `src/ui/band/narrow.ts`,
+and a button it leaves out not drawn, so the focus goes to "Popnei"),
+ee0d2389 (another analysis about to start wins over a Stop under way),
+ab710eb2, f8762ea9, 3bdae585, b2fa8578, 4772039b. Checks at 4772039b:
+Vitest 173 files, 5,433 tests; Chromium and WebKit, `popgen2BandLive`,
+`popgen2Band`, `popgen2Live`, `popgen2Populations`, 134.
+
 Left: the review of package 4 (`api`, `react`,
 `accessibility`, `ux`, `browser` at 320 px, `bundle`, and the four that
 always run); package 5, the documents, with what the fix lists left
