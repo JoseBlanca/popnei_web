@@ -2115,12 +2115,10 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
     const lines = ldDecayPointsCsv(r).split("\n");
     expect(lines[0]).toBe("population,distance_bp,mean_r2,fitted_r2");
     expect(lines).toHaveLength(1 + 100 + 1);
-    expect(lines[1]).toBe(
-      `pop_a,1000.5,0.2,${String(fittedR2(1000.5, 0.0003, 50))}`,
-    );
-    expect(lines[2]).toBe(
-      `pop_a,3000.5,,${String(fittedR2(3000.5, 0.0003, 50))}`,
-    );
+    // The curve of 50 individuals and ρ 0.0003 at the middles of the
+    // bins, as written, not worked out by the code under test.
+    expect(lines[1]).toBe("pop_a,1000.5,0.2,0.41207165120946215");
+    expect(lines[2]).toBe("pop_a,3000.5,,0.33268963491271336");
     expect(lines[51]).toBe('"b,c",1000.5,,');
     expect(lines[52]).toBe('"b,c",3000.5,0.2,');
     expect(lines.at(-1)).toBe("");

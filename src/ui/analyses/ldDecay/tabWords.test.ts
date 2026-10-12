@@ -21,9 +21,12 @@ import { deepFreeze } from "../../../core/testSupport.ts";
 import type { JobResult } from "../../../worker/protocol.ts";
 import { roundText, stopAllText } from "../liveWords.ts";
 import { ldDecayFailureEndsLive } from "./liveEnd.ts";
+import { downloadName } from "../../../core/fileNames.ts";
+import { ldDecayResult } from "../../band/testSupport.ts";
 import {
   ldBinValues,
   ldBinsTableName,
+  ldDecayPlotDownload,
   ldDecayTableName,
   ldDecayValues,
 } from "./words.ts";
@@ -395,5 +398,32 @@ describe("LT1 D4 the downloads of the LD decay on popgen2.html", () => {
         sdR2: null,
       }),
     ).toEqual(["pop_a", 1, 2000, 0, null, null]);
+    // The mean before its standard deviation, as the header has them.
+    expect(
+      ldBinValues({
+        population: "pop_a",
+        from: 1,
+        to: 2000,
+        pairs: 745,
+        meanR2: 0.3104664289575117,
+        sdR2: 0.28243883665741665,
+      }),
+    ).toEqual(["pop_a", 1, 2000, 745, 0.3104664289575117, 0.28243883665741665]);
+  });
+
+  test("the plot's download: its CSV, ld.ld_decay.points.csv, holds the points and the curve, not the bins (the review of the LD decay, 12 October 2026)", () => {
+    const result = ldDecayResult();
+    if (result.analysis !== "ldDecay") throw new Error("not an LD decay");
+    const download = ldDecayPlotDownload(result, "ld.nei");
+    expect(downloadName(download.stem, download.csvWhat, "csv")).toBe(
+      "ld.ld_decay.points.csv",
+    );
+    expect(downloadName(download.stem, download.imageWhat, "svg")).toBe(
+      "ld.ld_decay.svg",
+    );
+    expect(download.what).toBe("the plot of the LD decay");
+    expect(download.csv().split("\n")[0]).toBe(
+      "population,distance_bp,mean_r2,fitted_r2",
+    );
   });
 });

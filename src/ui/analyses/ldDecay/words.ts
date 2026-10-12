@@ -11,6 +11,7 @@
  */
 import type { LdBinRow, LdDecayRow } from "../../../core/analyses/ldDecay.ts";
 import {
+  ldDecayPointsCsv,
   MAX_MAX_ALLOWED_MAF,
   MIN_MAX_ALLOWED_MAF,
   MIN_MAX_DIST,
@@ -23,6 +24,8 @@ import type { CellValue } from "../../../core/csv.ts";
 import { counted, escaped, grouped } from "../../../core/project.ts";
 import { filtersApplied } from "../../../core/filtersApplied.ts";
 import type { Project } from "../../../core/project.ts";
+import type { LdDecayResult } from "../../../worker/protocol.ts";
+import type { PlotDownload } from "../../widgets/downloadItems.ts";
 import { numberText } from "../../widgets/committedNumber.ts";
 import type { NumberRefusal } from "../../widgets/committedNumber.ts";
 import { refusedWhy } from "../words.ts";
@@ -297,4 +300,22 @@ export function ldDecayValues(row: LdDecayRow): readonly CellValue[] {
 /** The values of a row of the table of the bins as stored. */
 export function ldBinValues(row: LdBinRow): readonly CellValue[] {
   return [row.population, row.from, row.to, row.pairs, row.meanR2, row.sdR2];
+}
+
+/** What the plot of the LD decay `result` downloads, of the variants file
+    `variantsName`: the image, `ld.ld_decay.svg` and `.png`, and the data
+    of the plot, `ld.ld_decay.points.csv`, the points and the curve of
+    each population, `ldDecayPointsCsv`. */
+export function ldDecayPlotDownload(
+  result: LdDecayResult,
+  variantsName: string,
+): PlotDownload {
+  return {
+    what: LD_PLOT_WHAT,
+    stem: variantsStem(variantsName),
+    imageWhat: LD_PLOT_IMAGE_WHAT,
+    csvWhat: LD_PLOT_CSV_WHAT,
+    csv: () => ldDecayPointsCsv(result),
+    waiting: null,
+  };
 }

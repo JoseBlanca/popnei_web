@@ -35,7 +35,6 @@ import type { LineData } from "../../../charts/line.ts";
 import {
   ldDecay,
   ldDecayPageOf,
-  ldDecayPointsCsv,
   ldBinRows,
   ldBinsCsv,
   ldDecayCsv,
@@ -43,7 +42,6 @@ import {
   ldDecayRows,
   ldPlotOmittedText,
 } from "../../../core/analyses/ldDecay.ts";
-import { variantsStem } from "../../../core/fileNames.ts";
 import { populationsOf } from "../../../core/project.ts";
 import type { AnalysisDef } from "../../../core/store.ts";
 import type {
@@ -71,15 +69,13 @@ import styles from "./LdDecayResults.module.css";
 import { LinePlot } from "./LinePlot.tsx";
 import { ldDecayPlotData } from "./plotData.ts";
 import {
+  ldDecayPlotDownload,
   LD_BINS_CSV_LABEL,
   LD_BIN_COLUMNS,
   LD_DECAY_COLUMNS,
   LD_DECAY_CSV_LABEL,
   LD_BINS_TABLE_WHAT,
   LD_DECAY_TABLE_WHAT,
-  LD_PLOT_CSV_WHAT,
-  LD_PLOT_IMAGE_WHAT,
-  LD_PLOT_WHAT,
   LD_TABS_LABEL,
   PLOT_FRAME_NAME,
   ldBinValues,
@@ -275,16 +271,7 @@ function DecayPlot({
   );
   const download = useMemo(
     (): PlotDownload | null =>
-      variantsName === null
-        ? null
-        : {
-            what: LD_PLOT_WHAT,
-            stem: variantsStem(variantsName),
-            imageWhat: LD_PLOT_IMAGE_WHAT,
-            csvWhat: LD_PLOT_CSV_WHAT,
-            csv: () => ldDecayPointsCsv(result),
-            waiting: null,
-          },
+      variantsName === null ? null : ldDecayPlotDownload(result, variantsName),
     [result, variantsName],
   );
   const omitted = ldPlotOmittedText(result);
