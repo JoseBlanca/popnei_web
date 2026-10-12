@@ -141,6 +141,10 @@ export function popgen2PopulationsKeptNeeds(
     return null;
   }
   const left = popgen2PopulationsKept(p, list);
+  // With no population left, some were emptied: the one population of a
+  // column that classifies nobody holds every individual kept, which the
+  // store's lock of none kept leaves at one at least; so the last test
+  // only guards the words, which name the populations emptied.
   if (left === null || left.pops.length > 0 || left.emptied.length === 0) {
     return null;
   }

@@ -2011,6 +2011,17 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
     expect(
       ldDecayOnPopgen2.keptNeeds?.(page2({ table: null }), kept),
     ).toBeNull();
+    // While a threshold waits for the one pass the list is not known,
+    // and nothing locks, though the lists to keep and to remove alone
+    // would leave only the unclassified (the review of the LD decay, 12
+    // October 2026).
+    expect(
+      ldDecayOnPopgen2.keptNeeds?.(page2({ table }), {
+        list: { kind: "needsStatistics" },
+        byLists: ["i099"],
+        counts: [],
+      }),
+    ).toBeNull();
   });
 
   test("the warnings: no individualsWithoutPopulation for an unclassified individual; fewIndividuals of the one population names Unclassified", () => {
