@@ -1,0 +1,59 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* As wide as the panel, and never wider, so that a plot drawn wide does
+   not hold the column at its width after the window narrows. */
+.bars {
+  display: grid;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+/* The heading of the section, at the level of the spectrum's. */
+.heading {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The plots side by side, as many as the width holds at 20rem at least
+   each, two in the column of the tab in a window of 1280 pixels, about
+   735 pixels wide, where three would leave a plot 229 pixels and its
+   label of the axis on two lines, and one to a row
+   at the width of a phone, so that the five do not make the tab five
+   plots long. */
+.plots {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+}
+
+/* One plot: its heading, its "Download…" and its element. */
+.plot {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+  min-inline-size: 0;
+}
+
+.plotHeading {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* The element of the plot, as wide as its column and as high as the
+   rows of its populations, --bars-height, which DiversityBars.tsx sets
+   from barsHeight. */
+.element {
+  position: relative;
+  inline-size: 100%;
+  min-inline-size: 0;
+  block-size: var(--bars-height, 136px);
+}

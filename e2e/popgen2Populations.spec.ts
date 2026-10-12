@@ -1769,3 +1769,179 @@ test.describe("PT2 D3 the downloads of the Populations tab", () => {
     });
   }
 });
+
+/** The section of the bar plots of the table, in the tab shown. */
+function barPlots(page: Page): Locator {
+  return shown(page).getByRole("region", {
+    name: "Bar plots of the table",
+    exact: true,
+  });
+}
+
+/** The headings of the five bar plots, in their order, the labels of
+    the columns of the table, at the draw of 40. */
+const BAR_HEADINGS = [
+  "Expected heterozygosity (unbiased)",
+  "Observed heterozygosity",
+  "Proportion of polymorphic variants",
+  "Alleles per variant, rarefied to 40 chromosomes",
+  "Alleles per variant",
+];
+
+/** The text alternative of each bar plot of panel.nei with
+    panel_pops.csv at the missing data of 0.1: popnei 0.2.2 under node,
+    12 October 2026, p0, p2 and p1, as the table writes them. */
+const BAR_NAMES = [
+  "Expected heterozygosity (unbiased) 3 bars, one per population: p0, 0.3519; p2, 0.3449; p1, 0.3504.",
+  "Observed heterozygosity 3 bars, one per population: p0, 0.3564; p2, 0.3512; p1, 0.3567.",
+  "Proportion of polymorphic variants 3 bars, one per population: p0, 0.9267; p2, 0.9108; p1, 0.9175.",
+  "Alleles per variant, rarefied to 40 chromosomes 3 bars, one per population: p0, 1.9627; p2, 1.9597; p1, 1.9588.",
+  "Alleles per variant 3 bars, one per population: p0, 1.9775; p2, 1.9867; p1, 1.9808.",
+];
+
+test.describe("PT7 R1.1 the bar plots of the table", () => {
+  for (const width of [null, 320] as const) {
+    test(`PT7 R1.1 five bar plots under the table, in their order, each of p0, p2 and p1 with its text alternative; the first's Download… above it, its CSV and its SVG read back${width === null ? ", two plots to a row" : `, at ${String(width)} px one to a row with no sideways scroll`}`, async ({
+      page,
+    }) => {
+      test.setTimeout(120_000);
+      if (width !== null) await page.setViewportSize({ width, height: 900 });
+      await openPage(page);
+      await pick(page, "panel.nei");
+      await pickIndividuals(page, "panel_pops.csv");
+      await runDiversity(page);
+
+      const section = barPlots(page);
+      expect(await isBelow(section, table(page, CAPTION))).toBe(true);
+      await expect(
+        section.getByText(
+          'One bar per population, in the order of the table. Each population has the colour of its line in the plot of the spectrum, so that it can be followed from plot to plot. A population with no value in the table has the words "no value" in place of its bar.',
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await expect(section.getByRole("heading", { level: 4 })).toHaveText(
+        BAR_HEADINGS,
+      );
+      const plots = section.locator("svg.chart-bars");
+      await expect(plots).toHaveCount(5);
+      for (const [index, name] of BAR_NAMES.entries()) {
+        await expect(plots.nth(index)).toHaveAccessibleName(name);
+        await expect(
+          plots.nth(index).locator("g.chart-axis-y g.tick text"),
+        ).toHaveText(["p0", "p2", "p1"]);
+        await expect(
+          plots.nth(index).locator("rect.chart-bars-bar"),
+        ).toHaveCount(3);
+      }
+      // The bars of p0, p2 and p1 in the colours of their places.
+      await expect(plots.first().locator("rect.chart-bars-bar")).toHaveClass([
+        /chart-colour-0/u,
+        /chart-colour-1/u,
+        /chart-colour-2/u,
+      ]);
+
+      const menu = menuButton(
+        page,
+        "the bar plot of expected heterozygosity (unbiased)",
+      );
+      expect(await isBelow(plots.first(), menu)).toBe(true);
+      await menu.focus();
+      const csv = await chooseByKeys(page, "Data as CSV");
+      expect(csv.suggestedFilename()).toBe(
+        "panel.diversity.expected_heterozygosity_unbiased.csv",
+      );
+      expect((await textOf(csv)).trimEnd().split("\n")).toEqual([
+        "Population,Expected heterozygosity (unbiased)",
+        "p0,0.35193160994408107",
+        "p2,0.344856554637815",
+        "p1,0.35038890489752544",
+      ]);
+      await menu.focus();
+      const svg = await chooseByKeys(page, "Image as SVG");
+      expect(svg.suggestedFilename()).toBe(
+        "panel.diversity.expected_heterozygosity_unbiased.svg",
+      );
+      expect(await textOf(svg)).toContain("<title id=");
+      expect(await textOf(svg)).toContain(
+        ">Expected heterozygosity (unbiased)</title>",
+      );
+
+      const tops = await Promise.all(
+        [0, 1, 2, 3, 4].map(
+          async (index) => (await plots.nth(index).boundingBox())?.y ?? -1,
+        ),
+      );
+      if (width === null) {
+        // Two plots to a row in the column of the tab, about 735 pixels
+        // wide: the first two side by side, the third under them.
+        expect(tops[1]).toBe(tops[0]);
+        expect(tops[2]).toBeGreaterThan(tops[1] ?? 0);
+        expect(tops[4]).toBeGreaterThan(tops[3] ?? 0);
+      } else {
+        for (let index = 1; index < 5; index += 1) {
+          expect(tops[index]).toBeGreaterThan(tops[index - 1] ?? 0);
+        }
+        const sideways = await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth -
+            document.documentElement.clientWidth,
+        );
+        expect(sideways).toBe(0);
+        for (let index = 0; index < 5; index += 1) {
+          const box = await plots.nth(index).boundingBox();
+          expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
+        }
+      }
+    });
+  }
+
+  test("PT7 R1.1 the minimum of individuals at 50, where p0's 48 give it no value: no value in p0's row of each plot, in place of its bar, and two bars", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await openPage(page);
+    await pick(page, "panel.nei");
+    await pickIndividuals(page, "panel_pops.csv");
+    await tab(page, "Populations").click();
+    const minimum = shown(page).getByRole("textbox", {
+      name: /^Individuals with a called genotype needed in each population, per variant/u,
+    });
+    await minimum.fill("50");
+    await minimum.press("Enter");
+    await runDiversity(page);
+    await expect(row(page, "p0").nth(1)).toHaveText("no value");
+
+    const plots = barPlots(page).locator("svg.chart-bars");
+    await expect(plots).toHaveCount(5);
+    for (let index = 0; index < 5; index += 1) {
+      const plot = plots.nth(index);
+      await expect(plot.locator("text.chart-bars-none")).toHaveText([
+        "no value",
+      ]);
+      await expect(plot.locator("rect.chart-bars-bar")).toHaveCount(2);
+      await expect(plot).toHaveAccessibleName(/: p0, no value; p2, /u);
+    }
+  });
+
+  test("PT7 R1.1 no individuals file: five plots of one bar each, of Unclassified", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await openPage(page);
+    await pick(page, "panel.nei");
+    await runDiversity(page);
+    const plots = barPlots(page).locator("svg.chart-bars");
+    await expect(plots).toHaveCount(5);
+    for (let index = 0; index < 5; index += 1) {
+      await expect(plots.nth(index).locator("rect.chart-bars-bar")).toHaveCount(
+        1,
+      );
+      await expect(
+        plots.nth(index).locator("g.chart-axis-y g.tick text"),
+      ).toHaveText(["Unclassified"]);
+    }
+    await expect(plots.first()).toHaveAccessibleName(
+      "Expected heterozygosity (unbiased) 1 bar, of Unclassified: 0.3755.",
+    );
+  });
+});

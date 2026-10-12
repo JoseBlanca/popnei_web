@@ -15,8 +15,10 @@
  * unclassified individuals kept that the table leaves out, the old
  * button of the download of the table gives way to the "Download…" below
  * it, "Table as CSV", as every table of that page has, and the line of
- * the versions comes after it, before that of the draw
- * (docs/specs/steps/popgen2-populations.md, "The result").
+ * the versions comes after it, before that of the draw, and under them,
+ * from 12 October 2026, the bar plots of five of its columns,
+ * `DiversityBars.tsx` (docs/specs/steps/popgen2-populations.md, "The
+ * result").
  */
 import {
   diversity,
@@ -34,6 +36,7 @@ import { Table } from "../../widgets/Table.tsx";
 import type { TableColumn } from "../../widgets/Table.tsx";
 import type { ResultsProps } from "../panels.ts";
 import { versionsText } from "../words.ts";
+import { DiversityBars } from "./DiversityBars.tsx";
 import styles from "./DiversityResults.module.css";
 import { SpectrumBlock } from "./SpectrumBlock.tsx";
 import {
@@ -151,6 +154,7 @@ export function DiversityResults({
         <>
           {versions}
           {rarefied}
+          <DiversityBars result={result} variantsName={variantsName} />
         </>
       )}
       <SpectrumBlock result={result} variantsName={variantsName} page={page} />

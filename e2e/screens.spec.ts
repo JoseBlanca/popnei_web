@@ -6142,6 +6142,8 @@ for (const theme of ["light", "dark"] as const) {
           await expect(panel.locator("svg.chart-line")).toHaveCount(1, {
             timeout: 20_000,
           });
+          // The five bar plots of the table.
+          await expect(panel.locator("svg.chart-bars")).toHaveCount(5);
           if (shot === "done") {
             await panel
               .getByRole("button", { name: "Stop recalculating", exact: true })

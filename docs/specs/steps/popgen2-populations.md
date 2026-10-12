@@ -372,8 +372,12 @@ of the panel"), with these differences:
 - **The plots of the table**, from 12 October 2026, the owner's first
   round of trying the tab: under the line of the draw, a section with
   the heading "Bar plots of the table" and the line "One bar per
-  population, in the order of the table, each population in the colour
-  of its line in the plot of the spectrum.", then five plots, one for
+  population, in the order of the table. Each population has the colour
+  of its line in the plot of the spectrum, so that it can be followed
+  from plot to plot. A population with no value in the table has the
+  words "no value" in place of its bar." (worded so after the first
+  reader, who asked why the colours and whether a missing bar was 0),
+  then five plots, one for
   each of these columns of the table, in this order: "Expected
   heterozygosity (unbiased)", "Observed heterozygosity", "Proportion of
   polymorphic variants", "Alleles per variant, rarefied to 40
@@ -405,8 +409,9 @@ of the panel"), with these differences:
     empty field for none, as the table's "Table as CSV" writes them.
 
   The plots stand side by side, as many to a row as the width holds at
-  20rem at least each, three at 1280 pixels, and one to a row at 320
-  pixels, so that the five do not make the tab five times longer. With
+  20rem at least each, two to a row in the column of the tab at 1280
+  pixels, about 735 pixels wide, and one to a row at 320 pixels, so
+  that the five do not make the tab five plots long. With
   the one population each plot has one bar. A plot's element is as
   high as `barsHeight` gives for the number of populations, 136 pixels
   for three.
@@ -677,8 +682,8 @@ page has them, the missing data of the variants at 0.1, which keeps all
   Unclassified; the "Data as CSV" of the first, read back,
   `Population,Expected heterozygosity (unbiased)` and
   `p0,0.35193160994408107`, and its SVG; its "Download…" above it; at
-  1280 px three plots in the first row, and at 320 px one to a row with
-  no sideways scroll.
+  1280 px two plots to a row, and at 320 px one to a row with no
+  sideways scroll.
 - **The plot of the spectrum**, from 12 October 2026: three lines, p0,
   p2 and p1 in the legend, at 1280 and at 320 px, where it fits the
   page with no sideways scroll; the caption's sentence of the variants
