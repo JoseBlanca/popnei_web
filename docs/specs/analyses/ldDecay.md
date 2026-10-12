@@ -80,7 +80,8 @@ The words of the genetics, from popnei's `js/popnei/src/ld.ts`:
   the population at its own distance, so the bins do not move it. It
   has one fitted number, **ρ per base pair**, `rhoPerBp`, 4Nr per base
   pair: four times the effective size times the recombination per base
-  pair, which the table of the panel names "4Nr per base pair"; its value at a
+  pair, which the table of the panel names "ρ per base pair, 4Nₑr"
+  ("4Nr per base pair" until 12 October 2026); its value at a
   distance of 0, `r2AtZero`, depends on n alone.
 - The **half distance**, `halfDist`, the distance at which the fitted
   curve is half its value at 0. It is read off the curve, so it can lie
@@ -1121,8 +1122,12 @@ and the one changed:
 
 - "Largest distance between the two variants of a pair, in base pairs,
   from 50", empty until typed. Under it: "How far to look for pairs.
-  Choose a distance beyond which you expect little LD in your species;
-  the half distance of the result shows whether it was far enough."
+  Choose a distance beyond which you expect little LD in your species.
+  The result gives each population's half distance, where its fitted
+  curve falls to half its r² at distance 0; a half distance close to the
+  largest distance means it was not far enough." (From 12 October 2026,
+  the review of the LD decay: it used "half distance" before any text
+  said what it is.)
   Beside the field, what `maxDistReason` gives: while no distance is
   typed, why it has to be, drawn as a line of help, in the plain style
   of the line under the field, since the user has done nothing wrong
@@ -1211,9 +1216,17 @@ populations.
   stays at the top of the frame while it does (C1).
 - **The table of the populations**, above the tabs, with the caption
   "The LD decay of each population, over the 500 variants of ld.nei the
-  filters kept, pairs up to 100,000 base pairs apart. The r² at
-  distance 0 is where the fitted curve starts, which depends on the
-  number of individuals of the population alone.", the 500 being
+  filters kept, pairs up to 100,000 base pairs apart. A population's
+  variants are those called in it whose major allele frequency in it is
+  at most 0.95. The half distance is where the fitted curve falls to
+  half its r² at distance 0. The r² at distance 0 is where the fitted
+  curve starts, which depends on the number of individuals of the
+  population alone. ρ per base pair, 4Nₑr, is four times the effective
+  size of the population times the recombination rate per base pair,
+  the one number the curve is fitted by." (the second, third and last
+  sentences from 12 October 2026, the review of the LD decay: 432
+  variants of 500 were not explained, nor the half distance and ρ), the
+  0.95 the maximum of the options, the 500 being
   `passStats.numVars`, before the maximum MAF of each population, which
   the column Variants gives. The second sentence is there because that
   column is the same number for every population of one size, 0.5785
@@ -1228,7 +1241,7 @@ populations.
 | Pairs | the sum of its `numPairs` |
 | Half distance (bp) | `halfDist`, the number as the legend writes it but without "bp", which the header carries, as the headers of the diversity's and the distances' tables carry what their numbers count: "7,548", "0.247"; "no pair" or "no curve" for NaN |
 | r² at distance 0, of the curve | `r2AtZero`, to four decimals |
-| 4Nr per base pair | `rhoPerBp`, the ρ per base pair, to three significant digits |
+| ρ per base pair, 4Nₑr | `rhoPerBp`, the ρ per base pair, to three significant digits ("4Nr per base pair" until 12 October 2026) |
 
 - **Downloads**: each table as CSV, `ld.ld_decay.csv` and
   `ld.ld_decay_bins.csv` for `ld.nei`, every digit.

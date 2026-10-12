@@ -362,7 +362,17 @@ const PopulationsTable = memo(function PopulationsTable({
       })),
     [result],
   );
-  const caption = captionText(result.passStats.numVars, variantsName, maxDist);
+  // The maximum the result was calculated with: the options are those of
+  // the key the result is shown under.
+  const maxAllowedMaf = useAppState(
+    (s) => ldDecayOptions(s.project).maxAllowedMaf,
+  );
+  const caption = captionText(
+    result.passStats.numVars,
+    variantsName,
+    maxDist,
+    maxAllowedMaf,
+  );
   return onPage2 ? (
     <Table
       caption={

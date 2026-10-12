@@ -818,7 +818,7 @@ test.describe("LT1 D5 the downloads of the LD decay", () => {
     expect(tableFile.suggestedFilename()).toBe("ld.ld_decay.csv");
     const lines = (await textOf(tableFile)).trimEnd().split("\n");
     expect(lines[0]).toBe(
-      'Population,Individuals,Variants,Pairs,Half distance (bp),"r² at distance 0, of the curve",4Nr per base pair',
+      'Population,Individuals,Variants,Pairs,Half distance (bp),"r² at distance 0, of the curve","ρ per base pair, 4Nₑr"',
     );
     expect(lines[1]).toBe(
       "pop_a,50,432,29367,7548.08187836982,0.46942148760330576,0.00029996668947275404",

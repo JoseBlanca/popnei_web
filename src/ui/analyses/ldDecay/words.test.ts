@@ -14,6 +14,7 @@ import { deepFreeze, sampleProject } from "../../../core/testSupport.ts";
 import { WAITS_FOR_STATISTICS_TEXT } from "../words.ts";
 import {
   LD_DECAY_COLUMNS,
+  MAX_DIST_LINE,
   LD_PRUNING_LINE,
   captionText,
   fitLine,
@@ -83,8 +84,10 @@ describe("PA8 D1 the ready state of the LD decay", () => {
 
 describe("PA8 D1 the tables of the LD decay", () => {
   test("the caption and the columns of the table of the populations are the spec's: PA10, the caption says what the r² at distance 0 depends on", () => {
-    expect(captionText(500, "ld.nei", 100_000)).toBe(
-      "The LD decay of each population, over the 500 variants of ld.nei the filters kept, pairs up to 100,000 base pairs apart. The r² at distance 0 is where the fitted curve starts, which depends on the number of individuals of the population alone.",
+    // The review of the LD decay, 12 October 2026: why a population has
+    // fewer variants, what the half distance and ρ are.
+    expect(captionText(500, "ld.nei", 100_000, 0.95)).toBe(
+      "The LD decay of each population, over the 500 variants of ld.nei the filters kept, pairs up to 100,000 base pairs apart. A population's variants are those called in it whose major allele frequency in it is at most 0.95. The half distance is where the fitted curve falls to half its r² at distance 0. The r² at distance 0 is where the fitted curve starts, which depends on the number of individuals of the population alone. ρ per base pair, 4Nₑr, is four times the effective size of the population times the recombination rate per base pair, the one number the curve is fitted by.",
     );
     expect(LD_DECAY_COLUMNS).toEqual([
       "Population",
@@ -93,8 +96,11 @@ describe("PA8 D1 the tables of the LD decay", () => {
       "Pairs",
       "Half distance (bp)",
       "r² at distance 0, of the curve",
-      "4Nr per base pair",
+      "ρ per base pair, 4Nₑr",
     ]);
+    expect(MAX_DIST_LINE).toBe(
+      "How far to look for pairs. Choose a distance beyond which you expect little LD in your species. The result gives each population's half distance, where its fitted curve falls to half its r² at distance 0; a half distance close to the largest distance means it was not far enough.",
+    );
   });
 
   test("the cells of a population: its half distance as the legend writes it without bp, r² at 0 to four decimals, ρ to three significant digits, and no pair or no curve", () => {

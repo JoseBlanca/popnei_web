@@ -472,7 +472,7 @@ test.describe("PA8 D2 the LD decay on the screen", () => {
     );
     await expect(
       panel(page).getByText(
-        "The LD decay of each population, over the 500 variants of ld.nei the filters kept, pairs up to 100,000 base pairs apart. The r² at distance 0 is where the fitted curve starts, which depends on the number of individuals of the population alone.",
+        "The LD decay of each population, over the 500 variants of ld.nei the filters kept, pairs up to 100,000 base pairs apart. A population's variants are those called in it whose major allele frequency in it is at most 0.95. The half distance is where the fitted curve falls to half its r² at distance 0. The r² at distance 0 is where the fitted curve starts, which depends on the number of individuals of the population alone.",
       ),
     ).toBeVisible();
     await expect(panel(page).getByText(/^Warning/)).toHaveCount(0);

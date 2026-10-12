@@ -43,7 +43,7 @@ export const MAX_DIST_LABEL = `Largest distance between the two variants of a pa
 
 /** The line under the field of the largest distance. */
 export const MAX_DIST_LINE =
-  "How far to look for pairs. Choose a distance beyond which you expect little LD in your species; the half distance of the result shows whether it was far enough.";
+  "How far to look for pairs. Choose a distance beyond which you expect little LD in your species. The result gives each population's half distance, where its fitted curve falls to half its r² at distance 0; a half distance close to the largest distance means it was not far enough.";
 
 /** The words that end the notice of a change of the largest distance,
     and name the header's Undo. */
@@ -109,18 +109,28 @@ export function fitLine(variantsName: string): string {
 
 /** The caption of the table of the populations: "The LD decay of each
     population, over the 500 variants of ld.nei the filters kept, pairs
-    up to 100,000 base pairs apart. The r² at distance 0 is where the
-    fitted curve starts, which depends on the number of individuals of
-    the population alone.", `numVars` being the variants of the pass,
-    before the maximum MAF of each population. The second sentence keeps
-    a user from reading that column, the same for every population of one
-    size, as a result. */
+    up to 100,000 base pairs apart.", `numVars` being the variants of the
+    pass, before the maximum major allele frequency of each population,
+    `maxAllowedMaf`; then why a population has fewer variants than those,
+    what the half distance is, that the r² at distance 0 depends on the
+    number of individuals alone, which keeps a user from reading that
+    column, the same for every population of one size, as a result, and
+    what ρ per base pair is (the review of the LD decay, 12 October
+    2026: the half distance and ρ were not defined, and 432 variants of
+    500 not explained). */
 export function captionText(
   numVars: number,
   variantsName: string,
   maxDist: number,
+  maxAllowedMaf: number,
 ): string {
-  return `The LD decay of each population, over the ${counted(numVars, "variant")} of ${escaped(variantsName)} the filters kept, pairs up to ${grouped(maxDist)} base pairs apart. The r² at distance 0 is where the fitted curve starts, which depends on the number of individuals of the population alone.`;
+  return [
+    `The LD decay of each population, over the ${counted(numVars, "variant")} of ${escaped(variantsName)} the filters kept, pairs up to ${grouped(maxDist)} base pairs apart.`,
+    `A population's variants are those called in it whose major allele frequency in it is at most ${numberText(maxAllowedMaf)}.`,
+    "The half distance is where the fitted curve falls to half its r² at distance 0.",
+    "The r² at distance 0 is where the fitted curve starts, which depends on the number of individuals of the population alone.",
+    "ρ per base pair, 4Nₑr, is four times the effective size of the population times the recombination rate per base pair, the one number the curve is fitted by.",
+  ].join(" ");
 }
 
 /** The headers of the columns of the table of the populations. */
@@ -131,7 +141,7 @@ export const LD_DECAY_COLUMNS: readonly string[] = Object.freeze([
   "Pairs",
   "Half distance (bp)",
   "r² at distance 0, of the curve",
-  "4Nr per base pair",
+  "ρ per base pair, 4Nₑr",
 ]);
 
 /** The name of the row of the two tabs, the plot and the table of its

@@ -283,7 +283,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
       .map((id) => document.getElementById(id)?.textContent);
     expect(described).toEqual([
       NO_DISTANCE,
-      "How far to look for pairs. Choose a distance beyond which you expect little LD in your species; the half distance of the result shows whether it was far enough.",
+      "How far to look for pairs. Choose a distance beyond which you expect little LD in your species. The result gives each population's half distance, where its fitted curve falls to half its r² at distance 0; a half distance close to the largest distance means it was not far enough.",
     ]);
     expect(
       document.getElementById(frequency.getAttribute("aria-describedby") ?? "")
@@ -761,7 +761,7 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
       ),
     ).toEqual(["pop_a · half at 7,548 bp", "pop_b · half at 7,548 bp"]);
     expect(container.textContent).toContain(
-      "The LD decay of each population, over the 500 variants of panel.nei the filters kept, pairs up to 100,000 base pairs apart. The r² at distance 0 is where the fitted curve starts, which depends on the number of individuals of the population alone.",
+      "The LD decay of each population, over the 500 variants of panel.nei the filters kept, pairs up to 100,000 base pairs apart. A population's variants are those called in it whose major allele frequency in it is at most 0.95. The half distance is where the fitted curve falls to half its r² at distance 0. The r² at distance 0 is where the fitted curve starts, which depends on the number of individuals of the population alone.",
     );
     expect(
       [...container.querySelectorAll("thead th")].map((th) => th.textContent),
@@ -772,7 +772,7 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
       "Pairs",
       "Half distance (bp)",
       "r² at distance 0, of the curve",
-      "4Nr per base pair",
+      "ρ per base pair, 4Nₑr",
     ]);
     expect(tableRows()).toEqual([
       ["pop_a", "50", "432", "500", "7,548", "0.4694", "0.000300"],
