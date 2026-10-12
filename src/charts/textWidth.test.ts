@@ -7,7 +7,7 @@
  */
 
 import { afterEach, describe, expect, test } from "vitest";
-import { measuredWidth, textWidth } from "./textWidth.ts";
+import { cutText, measuredWidth, textWidth } from "./textWidth.ts";
 import { measureWithFake, stopFakeMeasure } from "./testSupport.ts";
 
 afterEach(() => {
@@ -40,5 +40,17 @@ describe("second review of round 1: a text measured in the page's font and in th
   test("where nothing measures, the characters times the width given each", () => {
     expect(measuredWidth("WWa", 12)).toBeNull();
     expect(textWidth("WWa", 12, 9)).toBe(27);
+  });
+});
+
+describe("second review of round 1: the fewest characters a cut text keeps", () => {
+  const options = { fontSize: 12, perCharacter: 9, most: 20, least: 4 };
+
+  test("counted at 9 pixels, a room of exactly 5 characters, 45 pixels, holds the 4 the least keeps and the ellipsis, ab…ij", () => {
+    expect(cutText("abcdefghij", 45, options)).toBe("ab…ij");
+  });
+
+  test("a room of 44 pixels, under the least, still writes 3 characters and the ellipsis, ab…j", () => {
+    expect(cutText("abcdefghij", 44, options)).toBe("ab…j");
   });
 });
