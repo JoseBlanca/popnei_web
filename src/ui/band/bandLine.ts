@@ -285,9 +285,14 @@ export function lineOf(page: BandPage): BandLine {
   }
 
   // Those about to start that wait for the same as the first, so that
-  // the line says one thing true of each; over a Stop under way of
-  // another, so that the band keeps their Stop recalculating within the
-  // quiet second the Stop starts again (WCAG 2.2.1).
+  // the line says one thing true of each. With the PCA and the diversity
+  // they never wait for different things: a Run lifts the hold of a
+  // crash for its own analysis and starts it at once, and a change of
+  // the project lifts it for all; with a third live analysis, one may
+  // wait for the next change while another, run since the crash, waits
+  // for a change under way. Over a Stop under way of another, so that
+  // the band keeps their Stop recalculating within the quiet second the
+  // Stop starts again (WCAG 2.2.1).
   const stopped = state.stoppedAwaitingWorker;
   const about = live.filter(
     (id) => id !== stopped && aboutToStartOf(page.live[id]) !== null,

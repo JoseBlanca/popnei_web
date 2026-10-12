@@ -10,6 +10,7 @@ import { setVariantFilter } from "../../core/project.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import { liveAnalysisOf } from "../analyses/status.ts";
 import { LIVE_QUIET_MS } from "../autoRuns.ts";
+import type { AboutToStart } from "../autoRuns.ts";
 import { createDefects } from "../defects.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 import { startWriting } from "../runs.ts";
@@ -783,6 +784,46 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
       "Stop recalculating the diversity",
       null,
     ]);
+  });
+
+  test("two about to start for different reasons, the PCA held after a crash and the diversity in its quiet second, a state built by hand: the line names the first and what it waits for alone", async () => {
+    const testPage = await bothDone();
+    const built = (pca: AboutToStart, diversity: AboutToStart): Band["line"] =>
+      bandOf(
+        {
+          ...pageOf(testPage),
+          live: {
+            pca: {
+              kind: "live",
+              aboutToStart: pca,
+              running: false,
+              after: null,
+            },
+            diversity: {
+              kind: "live",
+              aboutToStart: diversity,
+              running: false,
+              after: null,
+            },
+          },
+        },
+        testPage.defects.getState(),
+      ).line;
+
+    const line = built("afterCrash", "changes");
+    expect(line).toMatchObject({
+      kind: "aboutToStart",
+      ids: ["pca"],
+      waitsFor: "afterCrash",
+      withStop: true,
+    });
+    expect(lineWords(line, 0)?.full).toBe(
+      "The PCA starts after the next change",
+    );
+    expect(built("changes", "changes")).toMatchObject({
+      ids: ["pca", "diversity"],
+      withStop: false,
+    });
   });
 
   test("Stopping the diversity while the store waits for the worker after its Stop", async () => {
