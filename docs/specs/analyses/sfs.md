@@ -614,9 +614,14 @@ same request, as on the old page. Four things differ, the plot since
     alleles in the draw, the sum of its bins 1 to n / 2, which the
     proportions are of: "Each proportion is over the population's
     variants with both alleles in the draw: p0, about 1,155; p2, about
-    1,152; p1, about 1,151."; and, when n is even, "The points at 0.5 hold one
-    count of the rarer allele, 20, where the others hold two, such as 1
-    and 39, so they are about half as high."
+    1,152; p1, about 1,151."; and, when n is even and above 2, "The
+    points at 0.5 hold one count of the rarer allele, 20, where the
+    others hold two, such as 1 and 39, so they are about half as high."
+    A draw of 2 has no such line: its one point is at 0.5, with no other
+    to be compared with (from 12 October 2026, the review of round 1).
+    A population whose variants with both alleles sum to less than 1,
+    which an expected number can, has "fewer than 1" in place of the
+    number, not "about 0" (the same review).
   - **Its text alternative**: the title "The spectrum of each
     population", and the description "3 lines, one per population, p0,
     p2 and p1, of 20 points each, from 0.5 to 0.975 of the commonest

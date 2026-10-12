@@ -244,7 +244,8 @@ export function linesCaption(
 /** The line under the plot of the variants of each population with a
     line that show both alleles in the draw, the sum of its bins 1 to
     n / 2, which its proportions are over, rounded: "Each proportion is
-    over …: p0, about 1,155; p2, about 1,152." */
+    over …: p0, about 1,155; p2, about 1,152."; "fewer than 1" for a sum
+    below 1, which an expected number can be, not "about 0". */
 export function variantsInDrawLine(
   pops: readonly {
     readonly population: string;
@@ -254,7 +255,7 @@ export function variantsInDrawLine(
   const each = pops
     .map(
       (pop) =>
-        `${escaped(pop.population)}, about ${grouped(Math.round(pop.bothAlleles))}`,
+        `${escaped(pop.population)}, ${pop.bothAlleles < 1 ? "fewer than 1" : `about ${grouped(Math.round(pop.bothAlleles))}`}`,
     )
     .join("; ");
   return `Each proportion is over the population's variants with both alleles in the draw: ${each}.`;
@@ -262,9 +263,10 @@ export function variantsInDrawLine(
 
 /** The line under the plot of the points at 0.5, which hold one count
     of the rarer allele where the others hold two; `null` for an odd
-    draw, whose last point holds two too. */
+    draw, whose last point holds two too, and for a draw of 2, whose one
+    point is at 0.5, with no other to be compared with. */
 export function halfPointsLine(numCalledAlleles: number): string | null {
-  if (numCalledAlleles % 2 !== 0) return null;
+  if (numCalledAlleles % 2 !== 0 || numCalledAlleles <= 2) return null;
   return `The points at 0.5 hold one count of the rarer allele, ${grouped(numCalledAlleles / 2)}, where the others hold two, such as 1 and ${grouped(numCalledAlleles - 1)}, so they are about half as high.`;
 }
 

@@ -185,6 +185,25 @@ describe("PT7 R1.2 the words of the plot of the spectrum as lines", () => {
     expect(halfPointsLine(41)).toBeNull();
   });
 
+  test("review of round 1: a draw of 2 has its one point at 0.5, with no other to be half of, and no such line", () => {
+    expect(halfPointsLine(2)).toBeNull();
+    expect(halfPointsLine(4)).toBe(
+      "The points at 0.5 hold one count of the rarer allele, 2, where the others hold two, such as 1 and 3, so they are about half as high.",
+    );
+  });
+
+  test("review of round 1: a population whose variants with both alleles sum to less than 1 has fewer than 1, not about 0", () => {
+    expect(
+      variantsInDrawLine([
+        { population: "p0", bothAlleles: 0.4 },
+        { population: "p2", bothAlleles: 0.5 },
+        { population: "p1", bothAlleles: 1 },
+      ]),
+    ).toBe(
+      "Each proportion is over the population's variants with both alleles in the draw: p0, fewer than 1; p2, fewer than 1; p1, about 1.",
+    );
+  });
+
   test("the description: the lines, their populations, their points and the largest proportion", () => {
     const line = (
       population: string,
