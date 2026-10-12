@@ -786,7 +786,9 @@ pruning is not applied here is never drawn.
 
 ### Its order
 
-The `<h2>` "LD decay"; the two options; the line of the populations it
+The `<h2>` "LD decay", 2 rem below the diversity's part, which ends
+with its Run or its result (from 12 October 2026, the review of the LD
+decay, where it stood 8 px under the diversity's Run); the two options; the line of the populations it
 runs on; Run, Stop or Stop recalculating, with the lock beside it and,
 after it, the time of the last run; the line in the place of the bar;
 and, once calculated: the warnings, with their count on their heading;

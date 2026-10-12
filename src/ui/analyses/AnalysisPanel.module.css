@@ -6,6 +6,15 @@
   justify-items: start;
 }
 
+/* A panel of popgen2.html after another in one tab, the LD decay after
+   the diversity: 2 rem more before its heading, which stood 8 px under
+   the diversity's Run, closer than a label to its field
+   (popgen2-populations.md, "The LD decay", "Its order"; the review of
+   the LD decay, 12 October 2026). */
+.pagePanel + .pagePanel {
+  margin-block-start: var(--space-8);
+}
+
 .heading {
   margin: 0;
   font-size: var(--text-lg);

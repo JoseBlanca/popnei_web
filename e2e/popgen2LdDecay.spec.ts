@@ -624,6 +624,30 @@ async function bandFit(
     );
 }
 
+test.describe("LT1 D5 the space before the LD decay", () => {
+  test("LT1 D5 the heading LD decay stands 32 px or more under the diversity's part, its Run when it has no result, at 1280 and 320 px (the review of the LD decay, 12 October 2026)", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await ready(page);
+    for (const width of [1280, 320]) {
+      await page.setViewportSize({ width, height: 800 });
+      const heading = ldDecay(page).getByRole("heading", {
+        level: 2,
+        name: "LD decay",
+      });
+      const [above, below] = await Promise.all([
+        diversity(page).boundingBox(),
+        heading.boundingBox(),
+      ]);
+      if (above === null || below === null) throw new Error("not drawn");
+      const gap = below.y - (above.y + above.height);
+      process.stdout.write(`the gap at ${String(width)} px: ${String(gap)}\n`);
+      expect(gap).toBeGreaterThanOrEqual(32);
+    }
+  });
+});
+
 test.describe("LT1 D5 the band in the Populations tab", () => {
   test("LT1 D5 the LD decay alone live, held running, the Populations tab shown: the band keeps its Stop, after the diversity's part; at 320 px Popnei, LD decay · 0:0… and Stop on one line; the band's Stop ends it (the review of the LD decay, 12 October 2026)", async ({
     page,

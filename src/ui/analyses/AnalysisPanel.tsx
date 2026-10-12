@@ -239,7 +239,11 @@ export function AnalysisPanel({
   return (
     <section
       aria-labelledby={headingId}
-      className={classOf(styles, "panel")}
+      className={
+        page === undefined
+          ? classOf(styles, "panel")
+          : `${classOf(styles, "panel")} ${classOf(styles, "pagePanel")}`
+      }
       {...{ [PANEL_ANALYSIS_ATTRIBUTE]: id }}
     >
       {/* It takes the focus when the button goes while it had it, and is
