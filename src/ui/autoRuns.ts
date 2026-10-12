@@ -7,10 +7,11 @@
  * (docs/plans/live-stats.md).
  *
  * They are given in groups, each the analyses a Stop of a group stops
- * together and its start again starts again; popgen2.html has three: the one
- * pass, which the Stop and the Start again of its box act on, and the PCA
- * and the diversity, each a group of its own that starts by itself only once
- * live (below). They start one at a time, in their order, since the one
+ * together and its start again starts again; popgen2.html has the one pass,
+ * which the Stop and the Start again of its box act on, and then one group
+ * for each analysis that can be live, `POPGEN2_LIVE` of src/core/apps.ts,
+ * the PCA, the diversity and the LD decay, each of its own, which starts by
+ * itself only once live (below). They start one at a time, in their order, since the one
  * calculation worker runs one request at a time and the store has no state
  * for a request that waits in the client's queue. An analysis starts once
  * every one before it is done or locked, a locked analysis starting nothing
@@ -37,7 +38,7 @@
  * change of the store tells, through `subscribe` and `getVersion`. Plain
  * TypeScript, so that a test in node drives it on the real store.
  *
- * A live analysis, the PCA or the diversity of popgen2.html, is a group of
+ * A live analysis, one of `POPGEN2_LIVE` of popgen2.html, is a group of
  * its own that starts by itself only once the user's Run made it live for
  * the load of the variants file open, and then again after each change of
  * what its key holds, a quiet second after the user stops changing things
@@ -53,8 +54,8 @@
  * names, by the rule of each analysis, while every other failure leaves it
  * live, for the next change of its key to try again.
  *
- * Several analyses can be live at once, each a group of its own, the PCA and
- * then the diversity on popgen2.html, each live from its own Run
+ * Several analyses can be live at once, each a group of its own, in the
+ * order of `POPGEN2_LIVE` on popgen2.html, each live from its own Run
  * (docs/specs/steps/popgen2-pca.md, "Several analyses calculated again by
  * themselves"; docs/designs/population-tab.md). One quiet second serves them
  * all: when it runs out, the first live analysis about to start starts, and
@@ -136,8 +137,8 @@ export type LiveState =
 /** The analyses a page starts again by itself once the user's Run made
     them live, and what their start reads. */
 export interface LiveDeps {
-  /** The analyses that can be live, the PCA and the diversity on
-      popgen2.html, each in one of the groups; they start by themselves
+  /** The analyses that can be live, `POPGEN2_LIVE` on popgen2.html,
+      each in one of the groups; they start by themselves
       only while live. */
   readonly analyses: readonly AnalysisId[];
   /** The changes under way, which hold the quiet second. */
