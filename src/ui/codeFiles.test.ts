@@ -69,17 +69,18 @@ describe("PT1 D3 the files of the code of a source", () => {
     ).toBe(false);
   });
 
-  test("each source a wrapper names is a file of the sources that it imports with import()", () => {
+  test("each source a wrapper names, to codeFilesReady or as the source of a tab loaded apart (tabLoader.tsx), is a file of the sources that it imports with import()", () => {
     const src = resolve(import.meta.dirname, "..", "..");
     for (const wrapper of [
       "src/ui/analyses/pca/PcaTabResults.tsx",
       "src/ui/analyses/diversity/PopulationsTab.tsx",
+      "src/ui/analyses/popDists/DistancesTab.tsx",
       "src/ui/variants/FileStats.tsx",
     ]) {
       const text = readFileSync(resolve(src, wrapper), { encoding: "utf8" });
-      const named = [...text.matchAll(/codeFilesReady\("([^"]+)"\)/gu)].map(
-        (match) => match[1],
-      );
+      const named = [
+        ...text.matchAll(/(?:codeFilesReady\(|source: )"([^"]+)"/gu),
+      ].map((match) => match[1]);
       expect(named).toHaveLength(1);
       const [source] = named;
       expect(source).toBeDefined();

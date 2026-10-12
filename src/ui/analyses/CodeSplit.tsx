@@ -1,9 +1,10 @@
 /**
  * What a tab of popgen2.html draws from code downloaded apart from the
  * page's, `src/ui/codeDownload.ts`: the result of the PCA tab
- * (docs/specs/steps/popgen2-pca.md, "The result", its code) and the
- * whole Populations tab (docs/specs/steps/popgen2-populations.md, "The
- * result", its code). Until the code is there, a line that says it loads; a download that
+ * (docs/specs/steps/popgen2-pca.md, "The result", its code), and the
+ * whole Populations and Distances tabs through `tabLoader.tsx`
+ * (docs/specs/steps/popgen2-populations.md and popgen2-distances.md,
+ * "The result", its code). Until the code is there, a line that says it loads; a download that
  * failed is caught here, not by the boundary of the tab, which would
  * keep the tab empty until a reload and give the error bar a network
  * failure as an error of the application's own: its words stand in the
