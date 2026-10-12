@@ -140,6 +140,39 @@ describe("LT1 D3 the words of the LD decay of the Populations tab", () => {
     ]);
   });
 
+  test("a population the thresholds of the individuals empty is named, left out (the review of the LD decay, 12 October 2026)", () => {
+    const kept: IndividualsKept = {
+      list: { kind: "known", individuals: INDIVIDUALS.slice(4) },
+      byLists: INDIVIDUALS,
+      counts: [],
+    };
+    expect(ldDecayTabReadyLines(projectOf(ROWS), kept)).toEqual([
+      "1 population: B, 4 individuals",
+      "2 unclassified individuals kept are left out, as the box Individuals says.",
+      "A has no individual left after the thresholds of the individuals, and is left out. Loosen the thresholds of the individuals in the Variants tab to keep it.",
+    ]);
+  });
+
+  test("held after a crash of another analysis, the panel offers Run beside Stop recalculating; about to start otherwise, it does not (the review of the LD decay, 12 October 2026)", () => {
+    const held = ldDecayPanelLive(
+      { kind: "live", aboutToStart: "afterCrash", running: false, after: null },
+      null,
+      null,
+    );
+    expect(held).toEqual({
+      kind: "live",
+      aboutToStartLine: LD_DECAY_AFTER_CRASH_LINE,
+      runBeside: true,
+    });
+    expect(
+      ldDecayPanelLive(
+        { kind: "live", aboutToStart: "changes", running: false, after: null },
+        null,
+        null,
+      ),
+    ).toMatchObject({ runBeside: false });
+  });
+
   test("the one population of no file, and of a column that classifies nobody, in the words of the LD decay", () => {
     expect(ldDecayTabReadyLines(projectOf(null), keptOf(null))).toEqual([
       "1 population, Unclassified: 10 individuals. No individual is assigned to a population, so the LD decay is of every individual kept as one population.",
