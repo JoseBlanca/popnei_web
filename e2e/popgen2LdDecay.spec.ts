@@ -26,7 +26,7 @@ import type AxeBuilder from "@axe-core/playwright";
 import type { Download, Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
-import { holdSummary, release } from "./holdWorker.ts";
+import { holdSummary, release, workersListening } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -467,6 +467,44 @@ test.describe("LT1 D5 the LD decay in the Populations tab", () => {
       "run ldDecay",
       "result ldDecay",
     ]);
+  });
+});
+
+test.describe("LT1 D5 the focus at the LD decay's Stop, under the diversity's part", () => {
+  test("LT1 D5 its Stop pressed by the keyboard while it runs: the focus stays on its button, now Run, and not on the diversity's; its Stop recalculating over its result: the focus goes to its heading, not the diversity's (the review of the LD decay, 12 October 2026)", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await holdSummary(page, { holdLdDecay: true });
+    await ready(page, true, true);
+    await button(diversity(page), "Run").click();
+    await expect(button(diversity(page), "Stop recalculating")).toBeVisible({
+      timeout: RESULT_TIMEOUT,
+    });
+    await typeDistance(page, "100000");
+    await button(ldDecay(page), "Run").click();
+    const stop = button(ldDecay(page), "Stop");
+    await expect(stop).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await stop.focus();
+    await page.keyboard.press("Enter");
+    await expect(button(ldDecay(page), "Run")).toBeFocused({
+      timeout: RESULT_TIMEOUT,
+    });
+
+    // Run again, its result let through, and Stop recalculating, which
+    // goes with the result shown.
+    await release(page, "ldDecay");
+    await page.keyboard.press("Enter");
+    await expect(
+      ldDecay(page).getByRole("table", { name: CAPTION }),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
+    const stopRecalculating = button(ldDecay(page), "Stop recalculating");
+    await stopRecalculating.focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      ldDecay(page).getByRole("heading", { level: 2, name: "LD decay" }),
+    ).toBeFocused();
+    await workersListening(page);
   });
 });
 
