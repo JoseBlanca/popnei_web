@@ -8,7 +8,9 @@
   overflow-wrap: anywhere;
   min-block-size: var(--target-min);
   padding-block: var(--space-1);
-  padding-inline: var(--space-3);
+  /* Narrower where a place sets the property, the band of popgen2.html
+     under 44 rem (band/Band.module.css). */
+  padding-inline: var(--button-padding-inline, var(--space-3));
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);

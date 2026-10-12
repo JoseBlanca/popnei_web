@@ -263,6 +263,94 @@ async function holdWithAKeyTyped(page: Page): Promise<void> {
   await page.clock.resume();
 }
 
+/** How the band's line lies in the window: whether its words are cut,
+    whether every part drawn is on one row of the line and within it,
+    whether the page scrolls sideways, the room of the line and the
+    width its parts take, the words and the buttons shown, with the
+    gaps between them, the words' padding taken back by their margins. */
+async function lineFit(page: Page): Promise<{
+  readonly buttons: readonly string[];
+  readonly wordsCut: boolean;
+  readonly oneLine: boolean;
+  readonly inLine: boolean;
+  readonly inWindow: boolean;
+  readonly noSidewaysScroll: boolean;
+  readonly room: number;
+  readonly used: number;
+} | null> {
+  return heading(page).evaluate((h1) => {
+    const line = h1.parentElement;
+    const words = h1.nextElementSibling;
+    if (line === null || !(words instanceof HTMLElement)) return null;
+    const shownButtons = [...line.querySelectorAll("button")].filter(
+      (button) => button.getClientRects().length > 0,
+    );
+    const lineBox = line.getBoundingClientRect();
+    const parts = [h1, words, ...shownButtons].map((element) =>
+      element.getBoundingClientRect(),
+    );
+    const gapValue = parseFloat(getComputedStyle(line).columnGap);
+    const gap = Number.isNaN(gapValue) ? 0 : gapValue;
+    const wordsPadding =
+      parseFloat(getComputedStyle(words).paddingInlineStart) +
+      parseFloat(getComputedStyle(words).paddingInlineEnd);
+    const top = Math.min(...parts.map((box) => box.top));
+    return {
+      buttons: shownButtons.map((button) => button.textContent),
+      wordsCut: words.scrollWidth > words.clientWidth,
+      oneLine: parts.every((box) => Math.abs(box.top - top) < 8),
+      inLine: parts.every((box) => box.right <= lineBox.right + 0.5),
+      inWindow: parts.every((box) => box.right <= window.innerWidth + 0.5),
+      noSidewaysScroll:
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+      room: Math.round(lineBox.width * 10) / 10,
+      used:
+        Math.round(
+          (parts.reduce((sum, box) => sum + box.width, 0) +
+            gap * (parts.length - 1) -
+            wordsPadding) *
+            10,
+        ) / 10,
+    };
+  });
+}
+
+/**
+ * Opens popgen2.html with each diversity held, panel.nei and
+ * panel_pops.csv, runs the PCA to its result and the diversity by its
+ * Run, held running, and shows the Variants tab: the PCA live and idle,
+ * the band's "Diversity running" with Stop and Stop all.
+ */
+async function diversityHeldRunning(page: Page): Promise<void> {
+  await holdSummary(page, { holdDiversity: true });
+  await page.goto("popgen2.html");
+  await expect(heading(page)).toBeVisible();
+  await pick(page, "Variants", "panel.nei");
+  await release(page, "allSoFar");
+  await release(page, "result");
+  await pick(page, "Individuals", "panel_pops.csv");
+  await tab(page, "PCA").click();
+  const distance = shown(page).getByRole("textbox", { name: DISTANCE });
+  await expect(distance).toBeVisible({ timeout: RESULT_TIMEOUT });
+  await distance.fill("50000");
+  await distance.press("Enter");
+  await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+  await button(page, "Run").click();
+  await expect(
+    page.getByText(/^The place of each of the 200 individuals/u),
+  ).toBeVisible({ timeout: RESULT_TIMEOUT });
+  await tab(page, "Populations").click();
+  await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+  await button(page, "Run").click();
+  await tab(page, "Variants").click();
+  await expect(
+    band(page).getByRole("button", {
+      name: "Stop all: the PCA and the diversity",
+    }),
+  ).toBeVisible();
+}
+
 /**
  * Opens popgen2.html with the one pass held and released to its end,
  * panel.nei and panel_pops.csv, and runs the PCA, or the PCoA with
@@ -667,5 +755,178 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     expect(await bandButtons(page)).toEqual([
       "Stop all: the PCA and the diversity",
     ]);
+  });
+  test("PT4 D3 at 320 px, the diversity held running beside the PCA live and idle: Popnei, Diversity · 0:0…, Stop and Stop all on one line, the words whole, no sideways scroll (the review of package 4, 12 October 2026)", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await diversityHeldRunning(page);
+    await expect
+      .poll(() => lineText(page))
+      .toMatch(/^Popnei Diversity · 0:\d\d Stop Stop all$/u);
+    // Measured until it holds: the plots under the band are drawn again
+    // at the new width a moment after it.
+    await expect
+      .poll(async () => lineFit(page))
+      .toMatchObject({
+        wordsCut: false,
+        oneLine: true,
+        inLine: true,
+        noSidewaysScroll: true,
+      });
+    const fit = await lineFit(page);
+    process.stdout.write(
+      `diversity running at 320 px: ${JSON.stringify(fit)}\n`,
+    );
+    expect(fit).toMatchObject({
+      buttons: ["Stop", "Stop all"],
+      wordsCut: false,
+      oneLine: true,
+      inLine: true,
+      noSidewaysScroll: true,
+    });
+    // Each button a target of 24 by 24 px at least (WCAG 2.5.8).
+    for (const name of [
+      "Stop the diversity",
+      "Stop all: the PCA and the diversity",
+    ]) {
+      const box = await band(page).getByRole("button", { name }).boundingBox();
+      expect(box?.width ?? 0).toBeGreaterThanOrEqual(24);
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(24);
+    }
+    await release(page, "diversity");
+    await workersListening(page);
+  });
+
+  test("PT4 D3 the widest lines of the band whole at 520 px and around the width under which it is narrow, 703 and 704 px, and at 720 px: the diversity about to start beside Stop recalculating and Stop all, then the PCA running then the diversity with Stop and Stop all (the review of package 4, 12 October 2026)", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.clock.install();
+    await bothLive(page);
+    await tab(page, "Populations").click();
+    const minimum = shown(page).getByRole("textbox", {
+      name: /^Individuals with a called genotype needed in each population, per variant/u,
+    });
+    await page.clock.pauseAt(Date.now() + 1000);
+    await minimum.fill("10");
+    await minimum.press("Enter");
+    await tab(page, "Variants").click();
+    await holdWithAKeyTyped(page);
+    for (const width of [520, 703, 704, 720]) {
+      await page.setViewportSize({ width, height: 800 });
+      await expect
+        .poll(() => lineText(page))
+        .toMatch(
+          width < 704
+            ? /^Popnei Diversity soon Stop all$/u
+            : /^Popnei The diversity starts in a moment Stop recalculating Stop all$/u,
+        );
+      // Measured until it holds: the plots under the band are drawn again
+      // at the new width a moment after it.
+      await expect
+        .poll(async () => lineFit(page))
+        .toMatchObject({
+          wordsCut: false,
+          oneLine: true,
+          inLine: true,
+          noSidewaysScroll: true,
+        });
+      const fit = await lineFit(page);
+      process.stdout.write(
+        `diversity soon at ${String(width)} px: ${JSON.stringify(fit)}\n`,
+      );
+    }
+    await page.keyboard.press("Enter");
+    await release(page, "holdPcaAgain");
+    await setMissing(page, "0.04");
+    await expect
+      .poll(() => lineText(page), { timeout: RESULT_TIMEOUT })
+      .toMatch(/^Popnei PCA( running)? · 0:\d\d.* Stop Stop all$/u);
+    for (const width of [520, 703, 704, 720]) {
+      await page.setViewportSize({ width, height: 800 });
+      await expect
+        .poll(() => lineText(page))
+        .toMatch(
+          width < 704
+            ? /^Popnei PCA · 0:\d\d Stop Stop all$/u
+            : /^Popnei PCA running · 0:\d\d · then the diversity Stop Stop all$/u,
+        );
+      // Measured until it holds: the plots under the band are drawn again
+      // at the new width a moment after it.
+      await expect
+        .poll(async () => lineFit(page))
+        .toMatchObject({
+          wordsCut: false,
+          oneLine: true,
+          inLine: true,
+          noSidewaysScroll: true,
+        });
+      const fit = await lineFit(page);
+      process.stdout.write(
+        `PCA then the diversity at ${String(width)} px: ${JSON.stringify(fit)}\n`,
+      );
+    }
+    await release(page, "pca");
+    await workersListening(page);
+  });
+
+  test("PT4 D3 at 320 px with the text twice its size, the diversity held running: the buttons on a second row, Stop all inside the window, the words whole, the page's content clear of the band (the review of package 4, 12 October 2026)", async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await diversityHeldRunning(page);
+    // Chromium sets the browser's size of text, as its setting does;
+    // WebKit has no such call, and the closest is the page's own text
+    // at 200%, which leaves the media queries at their width.
+    if (testInfo.project.name === "chromium") {
+      const session = await page.context().newCDPSession(page);
+      await session.send("Page.setFontSizes", {
+        fontSizes: { standard: 32, fixed: 26 },
+      });
+    } else {
+      await page.addStyleTag({ content: "html { font-size: 200%; }" });
+    }
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => getComputedStyle(document.documentElement).fontSize,
+        ),
+      )
+      .toBe("32px");
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+    });
+    const fit = await lineFit(page);
+    process.stdout.write(
+      `diversity running at 320 px, text 32 px: ${JSON.stringify(fit)}\n`,
+    );
+    expect(fit).toMatchObject({
+      buttons: ["Stop", "Stop all"],
+      wordsCut: false,
+      inWindow: true,
+    });
+    // The page as a whole in Chromium alone: WebKit's text at 200% of the
+    // page leaves the media queries of the rest of the page at the usual
+    // width, which then scrolls sideways under a band that does not.
+    if (testInfo.project.name === "chromium") {
+      expect(fit?.noSidewaysScroll).toBe(true);
+    }
+    await expect
+      .poll(async () => {
+        const bandBottom = (await band(page).boundingBox())?.y ?? 0;
+        const boxes = await page
+          .getByRole("region", { name: "Variants", exact: true })
+          .boundingBox();
+        return (
+          ((await band(page).boundingBox())?.height ?? 0) + bandBottom <=
+          (boxes?.y ?? 0)
+        );
+      })
+      .toBe(true);
+    await release(page, "diversity");
+    await workersListening(page);
   });
 });

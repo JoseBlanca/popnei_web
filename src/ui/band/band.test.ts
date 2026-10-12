@@ -682,7 +682,7 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
     release();
   });
 
-  test("the diversity about to start alone with the PCA live: its words with Stop recalculating, shown at 30 rem and wider only, and Stop all; the Populations tab shown, Stop all alone", async () => {
+  test("the diversity about to start alone with the PCA live: its words with Stop recalculating, shown at 44 rem and wider only, and Stop all; the Populations tab shown, Stop all alone", async () => {
     const testPage = await bothDone();
     testPage.setDiversity({ minNumIndividuals: 1 });
     await flush();

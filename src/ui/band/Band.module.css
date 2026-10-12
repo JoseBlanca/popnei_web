@@ -40,15 +40,22 @@
   padding-inline: var(--space-4);
 }
 
-/* The heading, its words and its control, on one line whatever it says,
-   at least as tall as a button of Button.module.css, a line of text, its
-   padding and its border of 1px on each side, so that the band's height
-   is the same with a button and without one. The words 1 rem after the
-   heading, and the control 1 rem after the words it acts on. */
+/* The heading, its words and its control, on one line at 100% text
+   whatever it says, at least as tall as a button of Button.module.css, a
+   line of text, its padding and its border of 1px on each side, so that
+   the band's height is the same with a button and without one. The words
+   1 rem after the heading, and the control 1 rem after the words it acts
+   on. When they do not fit, with the text at 200% or a clock past an
+   hour at 320 px, the buttons, and the words if they must, go to a row
+   under it, and the page's room under the band grows with it (Band.tsx,
+   keepRoom): at 200% text Stop all stood 109 px past the window at 320
+   px, the words shrunk to nothing (the review of work package 4, 12
+   October 2026). */
 .line {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-1) var(--space-4);
   min-block-size: calc(
     var(--text-base) * var(--leading-body) + 2 * var(--space-1) + 2px
   );
@@ -61,13 +68,16 @@
   font-size: var(--text-xl);
 }
 
-/* The words take the room they need, on one line, cut with "…" at their
-   end when there is too little; the control after them stays whole. The
+/* The words take the room they need, on one line, and are not shrunk
+   below it: with too little room beside the heading they go to a row of
+   their own, and are cut with "…" at their end only when they are wider
+   than the whole line, as the name of a long file makes them. The
    padding, taken back by the margins, holds the ring of the focus of the
    link, 2px wide and 2px away from it, which the hidden overflow would
    cut otherwise. */
 .words {
-  flex: 0 1 auto;
+  flex: none;
+  max-inline-size: 100%;
   min-inline-size: 0;
   padding: var(--space-1);
   margin: calc(-1 * var(--space-1));
@@ -82,14 +92,18 @@
   white-space: nowrap;
 }
 
-/* Narrow, under 30 rem (narrow.ts, which alone holds the width), the
-   heading smaller and the parts closer, so that the short form of the
-   words fits beside the whole "Stop recalculating": 73 px are left for
-   the words at 320 px (docs/specs/steps/popgen2-band.md, "Its place").
-   A Stop recalculating beside Stop all, for which the line has no room
-   beside the short form, is not drawn then: "Popnei", "Diversity soon"
-   and both buttons needed 290 px of the 288 at 320 px, in Chromium 153
-   and WebKit 26.6 (popgen2-band.md, "Several live analyses"). */
+/* Narrow, under 44 rem (narrow.ts, which alone holds the width), the
+   heading smaller, the parts closer and the buttons' padding a quarter of
+   a rem, so that the short form of the words fits beside its buttons:
+   "Popnei", "Diversity · 59:59", Stop and Stop all take 282 px of the 288
+   at 320 px, and 314 with the buttons' padding of 0.75 rem, in Chromium
+   153 and WebKit 26.6; each button stays at least 40 px wide and 24
+   tall, the target of WCAG 2.5.8. A Stop recalculating beside Stop
+   all is not drawn then (popgen2-band.md, "Several live analyses"). At
+   44 rem and wider every whole line fits, the widest, "The diversity
+   starts after the next change" with Stop recalculating and Stop all,
+   in 660 px of the 672 at 704 px (the review of work package 4, 12
+   October 2026). */
 .narrow .line {
   gap: var(--space-1);
   font-size: var(--text-sm);
@@ -97,6 +111,10 @@
 
 .narrow .heading {
   font-size: var(--text-lg);
+}
+
+.narrow .control {
+  --button-padding-inline: var(--space-1);
 }
 
 /* The line of an error, in the colour of danger and with "error" or

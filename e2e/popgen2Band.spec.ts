@@ -127,7 +127,7 @@ function heading(page: Page): Locator {
 
 /** The line of the band as the eye reads it: "Popnei", its words and
     its controls, without what is drawn for a screen reader alone, the
-    whole words clipped to a pixel under 30 rem. */
+    whole words clipped to a pixel under 44 rem. */
 async function lineText(page: Page): Promise<string> {
   return heading(page).evaluate(seenText);
 }
@@ -969,7 +969,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
         buttonInLine: true,
         buttonOneLine: true,
         // The control 1 rem after its words at 1280 px, a quarter of a rem
-        // under 30 rem.
+        // under 44 rem.
         gap: width === 320 ? 4 : 16,
       });
       await page.mouse.up();
