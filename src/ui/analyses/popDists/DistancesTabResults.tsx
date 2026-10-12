@@ -50,8 +50,8 @@ import {
   matrixCsv,
   pairsCsv,
   distancesCaption,
-  unclassifiedLeftOutOf,
 } from "./tabWords.ts";
+import { unclassifiedLeftOutOf } from "../unclassifiedWords.ts";
 import { heatmapTitle, numberCells, pairNames } from "./words.ts";
 
 /** The columns of the table (popDists.md, "What it shows"). */

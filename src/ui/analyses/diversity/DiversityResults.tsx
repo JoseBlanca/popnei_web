@@ -47,9 +47,11 @@ import {
   rarefiedText,
   rowCells,
   rowValues,
+} from "./resultWords.ts";
+import {
   unclassifiedCaption,
   unclassifiedLeftOutOf,
-} from "./resultWords.ts";
+} from "../unclassifiedWords.ts";
 
 /** The columns of the table, the rarefied ones naming the draw
     `numCalledAlleles` (the spec, "What it shows"). */
@@ -128,7 +130,7 @@ export function DiversityResults({
       <Table
         caption={
           page === "popgen2" && leftOut > 0
-            ? `${caption} ${unclassifiedCaption(leftOut)}`
+            ? `${caption} ${unclassifiedCaption(leftOut, "notInIt")}`
             : caption
         }
         columns={columnsOf(result.numCalledAlleles)}

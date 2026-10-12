@@ -27,7 +27,6 @@ import {
 import {
   counted,
   escaped,
-  namesOf,
   popgen2OnePopulationCause,
   popgen2PopulationsKept,
   popgen2PopulationsToRun,
@@ -41,6 +40,11 @@ import type { PassLock } from "../pca/passLock.ts";
 import { panelLive, stoppedLine, waitingLine } from "../liveLines.ts";
 import { DISTANCES_NAMES } from "../status.ts";
 import type { LiveAnalysisName, RunWithheld } from "../status.ts";
+import {
+  emptiedLine,
+  unclassifiedCaption,
+  unclassifiedLine,
+} from "../unclassifiedWords.ts";
 import { populationsText } from "../words.ts";
 import { captionText } from "./words.ts";
 
@@ -97,19 +101,6 @@ export function distancesTabReadyLines(
   ];
 }
 
-/** The line of the unclassified left out: "7 unclassified individuals
-    kept are left out, as the box Individuals says." */
-function unclassifiedLine(numLeftOut: number): string {
-  return `${unclassifiedCaption(numLeftOut).slice(0, -1)}, as the box Individuals says.`;
-}
-
-/** The populations the thresholds of the individuals leave empty, which
-    a run leaves out, and what to do. */
-function emptiedLine(emptied: readonly string[]): string {
-  const one = emptied.length === 1;
-  return `${namesOf(emptied)} ${one ? "has" : "have"} no individual left after the thresholds of the individuals, and ${one ? "is" : "are"} left out. Loosen the thresholds of the individuals in the Variants tab to keep ${one ? "it" : "them"}.`;
-}
-
 /** The caption of the table of the result `r` of the variants file
     `variantsName`: what it is, over how many variants, then the
     populations with the individuals each was calculated with, as
@@ -137,31 +128,9 @@ export function distancesCaption(
   const sentences = [
     captionText(r.passStats.numVars, variantsName),
     `${counted(r.pops.length, "population")}, with the number of individuals each was calculated over: ${pops.join("; ")}.`,
-    ...(numLeftOut > 0 ? [unclassifiedCaption(numLeftOut)] : []),
+    ...(numLeftOut > 0 ? [unclassifiedCaption(numLeftOut, "leftOut")] : []),
   ];
   return sentences.join(" ");
-}
-
-/** The sentence the caption of the table ends with when unclassified
-    individuals kept, `numLeftOut`, are left out: "7 unclassified
-    individuals kept are left out." */
-export function unclassifiedCaption(numLeftOut: number): string {
-  return numLeftOut === 1
-    ? "1 unclassified individual kept is left out."
-    : `${counted(numLeftOut, "unclassified individual")} kept are left out.`;
-}
-
-/** The number of the unclassified individuals of `p` kept, `kept`, that
-    the distances leave out; 0 with none, and with no individuals kept
-    known. */
-export function unclassifiedLeftOutOf(
-  p: Project,
-  kept: IndividualsKept | null,
-): number {
-  if (kept === null) return 0;
-  const individuals =
-    kept.list.kind === "known" ? kept.list.individuals : kept.byLists;
-  return popgen2PopulationsKept(p, individuals)?.unclassifiedLeftOut ?? 0;
 }
 
 /** The lock of Run that the page adds to the store's, in `p`, from the

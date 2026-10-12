@@ -20,9 +20,7 @@ import {
 } from "../../../core/analyses/onePopulation.ts";
 import type { IndividualsKept } from "../../../core/individualsKept.ts";
 import {
-  counted,
   escaped,
-  namesOf,
   popgen2OnePopulationCause,
   popgen2PopulationsKept,
 } from "../../../core/project.ts";
@@ -40,6 +38,7 @@ import {
 } from "../liveLines.ts";
 import { DIVERSITY_NAMES } from "../status.ts";
 import type { LiveAnalysisName, RunWithheld } from "../status.ts";
+import { emptiedLine, unclassifiedLine } from "../unclassifiedWords.ts";
 import { populationsText } from "../words.ts";
 import { minimumAndDrawLines } from "./words.ts";
 
@@ -78,23 +77,6 @@ function populationsOf(
     p,
     kept.list.kind === "known" ? kept.list.individuals : kept.byLists,
   );
-}
-
-/** The line of the unclassified left out: "7 unclassified individuals
-    kept are left out, as the box Individuals says." */
-export function unclassifiedLine(numLeftOut: number): string {
-  return numLeftOut === 1
-    ? "1 unclassified individual kept is left out, as the box Individuals says."
-    : `${counted(numLeftOut, "unclassified individual")} kept are left out, as the box Individuals says.`;
-}
-
-/** The populations the thresholds of the individuals leave empty, which
-    a run leaves out, and what to do: "p9 has no individual left after
-    the thresholds of the individuals, and is left out. Loosen the
-    thresholds of the individuals in the Variants tab to keep it." */
-export function emptiedLine(emptied: readonly string[]): string {
-  const one = emptied.length === 1;
-  return `${namesOf(emptied)} ${one ? "has" : "have"} no individual left after the thresholds of the individuals, and ${one ? "is" : "are"} left out. Loosen the thresholds of the individuals in the Variants tab to keep ${one ? "it" : "them"}.`;
 }
 
 /**

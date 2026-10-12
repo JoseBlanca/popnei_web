@@ -62,7 +62,7 @@ import type { PlotDownload } from "../../widgets/downloadItems.ts";
 import {
   unclassifiedCaption,
   unclassifiedLeftOutOf,
-} from "../diversity/resultWords.ts";
+} from "../unclassifiedWords.ts";
 import type { ResultsProps } from "../panels.ts";
 import { versionsText } from "../words.ts";
 import styles from "./LdDecayResults.module.css";
@@ -363,7 +363,9 @@ const PopulationsTable = memo(function PopulationsTable({
   return onPage2 ? (
     <Table
       caption={
-        leftOut > 0 ? `${caption} ${unclassifiedCaption(leftOut)}` : caption
+        leftOut > 0
+          ? `${caption} ${unclassifiedCaption(leftOut, "notInIt")}`
+          : caption
       }
       columns={POPULATION_COLUMNS}
       rows={rows}

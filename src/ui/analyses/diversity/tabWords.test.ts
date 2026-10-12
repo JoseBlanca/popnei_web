@@ -28,13 +28,11 @@ import {
   diversityTabReadyLines,
   diversityWaitingLine,
 } from "./tabWords.ts";
+import { DIVERSITY_TABLE_WHAT, csvName, rowValues } from "./resultWords.ts";
 import {
-  DIVERSITY_TABLE_WHAT,
-  csvName,
-  rowValues,
   unclassifiedCaption,
   unclassifiedLeftOutOf,
-} from "./resultWords.ts";
+} from "../unclassifiedWords.ts";
 import {
   POPULATIONS_TAB_LOADING,
   populationsTabFailed,
@@ -228,10 +226,10 @@ describe("PT1 D3 the words of the Populations tab", () => {
     expect(DIVERSITY_FAILURE_ENDED_LINE).toBe(
       "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.",
     );
-    expect(unclassifiedCaption(7)).toBe(
+    expect(unclassifiedCaption(7, "notInIt")).toBe(
       "7 unclassified individuals kept are not in it.",
     );
-    expect(unclassifiedCaption(1)).toBe(
+    expect(unclassifiedCaption(1, "notInIt")).toBe(
       "1 unclassified individual kept is not in it.",
     );
     expect(POPULATIONS_TAB_LOADING).toBe("Loading the Populations tab…");

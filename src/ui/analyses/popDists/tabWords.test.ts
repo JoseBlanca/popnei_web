@@ -31,9 +31,9 @@ import {
   heatmapValuesLine,
   matrixCsv,
   pairsCsv,
-  unclassifiedCaption,
   DISTANCES_TABLE_WHAT,
 } from "./tabWords.ts";
+import { unclassifiedCaption } from "../unclassifiedWords.ts";
 import type { LiveAnalysisName } from "../status.ts";
 
 /** An analysis that can be live, named `name` in the singular, as the
@@ -313,10 +313,10 @@ describe("DT1 D3 the words of the Distances tab", () => {
   });
 
   test("the caption of the unclassified, and what each download names", () => {
-    expect(unclassifiedCaption(7)).toBe(
+    expect(unclassifiedCaption(7, "leftOut")).toBe(
       "7 unclassified individuals kept are left out.",
     );
-    expect(unclassifiedCaption(1)).toBe(
+    expect(unclassifiedCaption(1, "leftOut")).toBe(
       "1 unclassified individual kept is left out.",
     );
     expect(DISTANCES_TABLE_WHAT).toBe("the table of the distances");

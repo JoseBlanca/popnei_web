@@ -17,14 +17,7 @@ import type { DiversityRow } from "../../../core/analyses/diversity.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
 import type { CellValue } from "../../../core/csv.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
-import type { IndividualsKept } from "../../../core/individualsKept.ts";
-import {
-  counted,
-  escaped,
-  grouped,
-  popgen2PopulationsKept,
-} from "../../../core/project.ts";
-import type { Project } from "../../../core/project.ts";
+import { counted, escaped, grouped } from "../../../core/project.ts";
 
 /** The caption of the table: "The diversity of each population, over the
     1,152 variants of panel.nei the filters kept." */
@@ -121,26 +114,4 @@ export function rarefiedText(numCalledAlleles: number): string {
     `panel.diversity.csv`. */
 export function csvName(variantsName: string): string {
   return `${variantsStem(variantsName)}.diversity.csv`;
-}
-
-/** The number of the unclassified individuals of `p` kept, `kept`, that
-    the table leaves out; 0 with none, for the one population, and with
-    no individuals kept known. */
-export function unclassifiedLeftOutOf(
-  p: Project,
-  kept: IndividualsKept | null,
-): number {
-  if (kept === null) return 0;
-  const individuals =
-    kept.list.kind === "known" ? kept.list.individuals : kept.byLists;
-  return popgen2PopulationsKept(p, individuals)?.unclassifiedLeftOut ?? 0;
-}
-
-/** The sentence that ends the caption of the table when unclassified
-    individuals are left out: "7 unclassified individuals kept are not
-    in it." */
-export function unclassifiedCaption(numLeftOut: number): string {
-  return numLeftOut === 1
-    ? "1 unclassified individual kept is not in it."
-    : `${counted(numLeftOut, "unclassified individual")} kept are not in it.`;
 }

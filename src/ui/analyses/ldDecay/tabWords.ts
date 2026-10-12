@@ -33,7 +33,7 @@ import {
 import { LD_DECAY_NAMES } from "../status.ts";
 import type { LiveAnalysisName, RunWithheld } from "../status.ts";
 import type { LastRun } from "./lastRun.ts";
-import { emptiedLine, unclassifiedLine } from "../diversity/tabWords.ts";
+import { emptiedLine, unclassifiedLine } from "../unclassifiedWords.ts";
 import { passLockText } from "../pca/passLock.ts";
 import type { PassLock } from "../pca/passLock.ts";
 import { clockText, populationsText } from "../words.ts";
