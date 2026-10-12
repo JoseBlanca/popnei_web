@@ -1111,5 +1111,12 @@ Vitest 178 files, 5,495 tests; Chromium and WebKit,
 `popgen2Populations` and `popgen2Downloads` 114, `plots` and `ldDecay`
 96; screens of the tab 76.
 
-Left: the owner's answer on the axis of the alleles per variant; the
-owner tries it again.
+Before the merge, at cdb6e371: the browser suite, every spec file but
+`measure` and `screens`, 48 files, in Chromium and WebKit, in four
+chunks: 426, 424, 462 and 428 passed, 1,740 of 1,740, none retried,
+at a load average of about 55 from other work.
+
+The owner accepted round 1 on 12 October 2026, the axis of the alleles
+per variant kept from 0, and ordered the merge into `main` and the push.
+The rarefaction curve waits for popnei issue 18 and is a piece of its
+own.
