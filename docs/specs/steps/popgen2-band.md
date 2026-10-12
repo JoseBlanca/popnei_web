@@ -423,8 +423,8 @@ later", "Distances: 2 warnings", "Distances: failed"; the names of the
 buttons "Stop the distances", "Stop recalculating the distances",
 "Stop all: the PCA and the distances". "Distances" and "Diversity" are
 words of nine letters, so the short forms fit at 320 px as the
-diversity's do; the flows check the widest, "Distances · 59:59" with
-Stop and Stop all.
+diversity's do; a flow of `e2e/popgen2Distances.spec.ts` checks
+"Popnei", "Distances · 0:0…", Stop and Stop all on one line at 320 px.
 
 ### An error of the application
 

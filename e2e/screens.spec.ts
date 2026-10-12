@@ -6394,6 +6394,292 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-populations-loading-tab${at}-${theme}`);
       });
 
+      /** Opens panel.nei and the individuals file `individuals`, shows
+          the Distances tab and waits for its Run, once the one pass has
+          read the file to the end; gives the tab. */
+      async function distancesReady(
+        page: Page,
+        individuals:
+          | string
+          | { readonly name: string; readonly text: string } = "panel_pops.csv",
+      ): Promise<Locator> {
+        await pickOnNewPage(page, "panel.nei");
+        await pickIndividualsOnNewPage(page, individuals);
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "Distances", exact: true })
+          .click();
+        const panel = page.getByRole("tabpanel");
+        await expect(
+          panel.getByRole("button", { name: "Run", exact: true }),
+        ).toBeEnabled({ timeout: 20_000 });
+        return panel;
+      }
+
+      /** Serves the calculation worker with the results of the distances
+          kept back, so that a run lasts for the picture; to call before
+          the page is opened again. */
+      async function holdDistancesResult(page: Page): Promise<void> {
+        await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
+          const response = await route.fetch();
+          const script = await response.text();
+          const front = `{ const realPost = self.postMessage.bind(self); self.postMessage = (m, t) => { if (m !== null && typeof m === "object" && m.kind === "result" && m.result !== null && typeof m.result === "object" && m.result.analysis === "popDists") return; realPost(m, t); }; }\n`;
+          await route.fulfill({ response, body: front + script });
+        });
+        await page.goto("popgen2.html");
+      }
+
+      test("the Distances tab ready: the line of the three populations of panel_pops.csv, Run", async ({
+        page,
+      }) => {
+        await distancesReady(page);
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-distances-ready${at}-${theme}`);
+      });
+
+      test("the Distances tab ready with 7 unclassified individuals left out", async ({
+        page,
+      }) => {
+        const [header, ...rows] = (
+          await readFile(join(FIXTURES, "panel_pops.csv"), "utf8")
+        )
+          .trimEnd()
+          .split("\n");
+        const made = rows
+          .slice(4)
+          .map((line, i) => (i < 3 ? `${line.split(",")[0] ?? ""},` : line));
+        const panel = await distancesReady(page, {
+          name: "panel_some.csv",
+          text: [header ?? "", ...made, ""].join("\n"),
+        });
+        await expect(
+          panel.getByText(/^7 unclassified individuals kept are left out/u),
+        ).toBeVisible();
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-distances-unclassified${at}-${theme}`);
+      });
+
+      test("the Distances tab locked by the minimum: 70 individuals, which only p2 has, Run disabled with its words", async ({
+        page,
+      }) => {
+        const panel = await distancesReady(page);
+        const minimum = panel.getByRole("textbox", {
+          name: /^Individuals with a called genotype needed in each population, per variant/u,
+        });
+        await minimum.fill("70");
+        await minimum.press("Enter");
+        await expect(
+          panel.getByRole("button", { name: "Run", exact: true }),
+        ).toHaveAccessibleDescription(/^Only p2 has 70 individuals or more/u);
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-distances-locked-minimum${at}-${theme}`);
+      });
+
+      test("the Distances tab locked while the one pass reads panel.nei: Run disabled with its words", async ({
+        page,
+      }) => {
+        await holdSummary(page);
+        await page.goto("popgen2.html");
+        await pickOnNewPage(page, "panel.nei");
+        await release(page, "allSoFar");
+        await pickIndividualsOnNewPage(page, "panel_pops.csv");
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "Distances", exact: true })
+          .click();
+        await expect(
+          page
+            .getByRole("tabpanel")
+            .getByRole("button", { name: "Run", exact: true }),
+        ).toHaveAccessibleDescription(
+          /^Run once panel\.nei is read to the end/u,
+          { timeout: 20_000 },
+        );
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-distances-locked-pass${at}-${theme}`);
+      });
+
+      test("the Distances tab running: the distances held, Stop and the bar, the minimum greyed", async ({
+        page,
+      }) => {
+        await holdDistancesResult(page);
+        const panel = await distancesReady(page);
+        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(
+          panel.getByRole("button", { name: "Stop", exact: true }),
+        ).toBeVisible();
+        await expect(panel.getByRole("progressbar")).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-distances-running${at}-${theme}`);
+      });
+
+      for (const shot of ["done", "done-dest", "stopped-done"] as const) {
+        test(`the Distances tab done: the heatmap ${shot === "done-dest" ? "of Jost's D" : "of Hudson's Fst"} and the table, each with its "Download…"${shot === "stopped-done" ? ", after Stop recalculating, with the line of a Stop" : ", live, Stop recalculating above them"}`, async ({
+          page,
+        }) => {
+          const panel = await distancesReady(page);
+          await panel.getByRole("button", { name: "Run", exact: true }).click();
+          await expect(panel.locator("svg.chart")).toHaveCount(1, {
+            timeout: 20_000,
+          });
+          if (shot === "done-dest") {
+            const group = panel.getByRole("radiogroup", {
+              name: "Distance in the heatmap",
+            });
+            await group
+              .locator("label")
+              .filter({ hasText: "Jost's D" })
+              .click();
+            await expect(
+              panel.getByRole("img", {
+                name: /^Jost's D between populations/u,
+              }),
+            ).toBeVisible();
+          }
+          if (shot === "stopped-done") {
+            await panel
+              .getByRole("button", { name: "Stop recalculating", exact: true })
+              .click();
+            await expect(
+              panel.getByText(/^Stopped: the distances/u),
+            ).toBeVisible();
+          }
+          await page.mouse.click(1, 1);
+          await save(page, `popgen2-distances-${shot}${at}-${theme}`);
+        });
+      }
+
+      test("the Distances tab done with panel_split.csv: the warning of a negative distance, four populations in the order p0b, p0a, p2, p1", async ({
+        page,
+      }) => {
+        const panel = await distancesReady(page, "panel_split.csv");
+        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(
+          panel.getByText(/p0a and p0b have a negative/u),
+        ).toBeVisible({ timeout: 20_000 });
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-distances-done-negative${at}-${theme}`);
+      });
+
+      test("the Distances tab waiting: its Run pressed while the PCA runs, Stop recalculating and the line that names the PCA", async ({
+        page,
+      }) => {
+        await holdSummary(page, { holdPca: true });
+        await page.goto("popgen2.html");
+        await pickOnNewPage(page, "panel.nei");
+        await release(page, "allSoFar");
+        await release(page, "result");
+        await pickIndividualsOnNewPage(page, "panel_pops.csv");
+        const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+        await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+        const panel = page.getByRole("tabpanel");
+        const field = panel.getByRole("textbox", {
+          name: /^Distance within which variants are compared/u,
+        });
+        await expect(field).toBeVisible({ timeout: 20_000 });
+        await field.fill("50000");
+        await field.press("Enter");
+        const run = panel.getByRole("button", { name: "Run", exact: true });
+        await expect(run).toBeEnabled({ timeout: 20_000 });
+        await run.click();
+        await expect(
+          panel.getByRole("button", { name: "Stop", exact: true }),
+        ).toBeVisible();
+        await tabs.getByRole("tab", { name: "Distances", exact: true }).click();
+        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(
+          panel.getByText(
+            "The distances start once the PCA, which is running, ends.",
+            { exact: true },
+          ),
+        ).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-distances-waiting${at}-${theme}`);
+      });
+
+      test("the Distances tab about to start: the minimum changed after a result, a key held in its box, Stop recalculating and the line of the quiet second", async ({
+        page,
+      }) => {
+        const panel = await distancesReady(page);
+        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(panel.locator("svg.chart")).toHaveCount(1, {
+          timeout: 20_000,
+        });
+        const minimum = panel.getByRole("textbox", {
+          name: /^Individuals with a called genotype needed in each population, per variant/u,
+        });
+        await minimum.fill("10");
+        await minimum.press("Enter");
+        // A key typed and not yet given holds the start.
+        await minimum.press("Backspace");
+        await minimum.press("0");
+        await expect(
+          panel.getByText(
+            "The distances start in a moment, later if the filters, their options or the populations change.",
+            { exact: true },
+          ),
+        ).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-distances-about-to-start${at}-${theme}`);
+      });
+
+      for (const shot of ["stopped", "failed"] as const) {
+        test(`the Distances tab ${shot === "stopped" ? "after its Stop while they ran: Run and the line of a Stop" : "after a crash of the worker: the words of the failure, Run and the line of a failure that ended the live state"}`, async ({
+          page,
+        }) => {
+          await holdSummary(page, { holdPopDists: true });
+          await page.goto("popgen2.html");
+          await pickOnNewPage(page, "panel.nei");
+          await release(page, "allSoFar");
+          await release(page, "result");
+          await pickIndividualsOnNewPage(page, "panel_pops.csv");
+          await page
+            .getByRole("tablist", { name: "Files and analyses" })
+            .getByRole("tab", { name: "Distances", exact: true })
+            .click();
+          const panel = page.getByRole("tabpanel");
+          const run = panel.getByRole("button", { name: "Run", exact: true });
+          await expect(run).toBeEnabled({ timeout: 20_000 });
+          await run.click();
+          const stop = panel.getByRole("button", { name: "Stop", exact: true });
+          await expect(stop).toBeVisible();
+          if (shot === "stopped") {
+            await stop.click();
+            await expect(
+              panel.getByText(/^Stopped: the distances/u),
+            ).toBeVisible();
+          } else {
+            await release(page, "crash");
+            await expect(
+              panel.getByText(/^The distances no longer start by themselves/u),
+            ).toBeVisible({ timeout: 20_000 });
+          }
+          await page.mouse.move(0, 0);
+          await save(page, `popgen2-distances-${shot}${at}-${theme}`);
+        });
+      }
+
+      test("the Distances tab while its code downloads: Loading the Distances tab…", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await pickIndividualsOnNewPage(page, "panel_pops.csv");
+        await page.route(/\/DistancesTabView-[^/]*\.js(\?.*)?$/u, () => {
+          // Never answered.
+        });
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "Distances", exact: true })
+          .click();
+        await expect(
+          page
+            .getByRole("tabpanel")
+            .getByText("Loading the Distances tab…", { exact: true }),
+        ).toBeVisible({ timeout: 20_000 });
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-distances-loading-tab${at}-${theme}`);
+      });
+
       /** Opens panel.nei, shows the PCA tab, types the distance, presses
           Run and waits for the result: the PCA is live. */
       async function pcaLive(page: Page): Promise<Locator> {

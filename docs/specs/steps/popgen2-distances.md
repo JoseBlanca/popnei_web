@@ -493,8 +493,8 @@ line "Not built yet", and the flows of `popgen2Live.spec.ts`,
 **The screens**, `--project=screens`, at 1280 and 320 px, light and
 dark: `popgen2-distances-ready`, `-locked-pass`, `-locked-minimum`,
 `-running`, `-waiting`, `-about-to-start`, `-done`, `-done-dest`,
-`-done-negative`, `-stopped`, `-failed`, `-unclassified`,
-`-loading-tab`.
+`-done-negative`, `-stopped-done`, `-stopped`, `-failed`,
+`-unclassified`, `-loading-tab`.
 
 ## Choices made by the session
 
