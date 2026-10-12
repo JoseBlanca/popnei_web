@@ -27,11 +27,21 @@ line, which does not say "Stopped", since the user pressed no Stop
 when it stands for a file or a column the user opened ("The populations
 it runs on"); `autoRuns.run` answers "kept" when the store starts
 nothing for the diversity ("Accessibility" and "How it is checked");
-until the band offers Stop all, the words of the locks name the
-Stop of each tab in its place ("While the diversity runs"); and the
+until the band offered Stop all, which it does from work package 4,
+built on 11 October 2026, the words of the locks named the Stop of
+each tab in its place ("While the diversity runs"); and the
 line of the draw is a line of its own, under that of the versions
 ("The result"); and the code of the whole tab, not only of its result,
 is downloaded when the tab is first shown ("The result", its code).
+
+Built on the branch `population-tab` on 11 and 12 October 2026, work
+packages 1 to 4 of `docs/plans/population-tab.md`, and not yet tried
+by the owner. The rounds of review of those packages changed, beside
+the corrections above, the line after a Stop, which names Run only
+where the tab shows it; the lock of the populations, which names the
+diversity alone, since the PCA reads no populations; and the start by
+itself said in the status region, which names the populations beside
+the filters; each where this spec says so, with its date.
 
 The tab is the diversity panel of the old page, `popgen.html`, which is
 built and which the owner tried and accepted on 1 October 2026: its
@@ -293,12 +303,12 @@ lock of the filters end with "…, or press Stop all beside the heading
 Popnei to stop the PCA too; then press Run in each tab to calculate them
 again." in place of "; then press Run there …"
 (`popgen2-pca.md`, "Several analyses calculated again by themselves",
-"The lock"). Until the band offers Stop all, which work package 4 of
-`docs/plans/population-tab.md` builds, they name the Stop of each tab
-in its place: "Stop the diversity in the Populations tab and the PCA in
-the PCA tab to change the filters; then press Run in each tab to
-calculate them again." (corrected on 11 October 2026 after the review
-of work package 1).
+"The lock"). The band offers Stop all from work package 4 of
+`docs/plans/population-tab.md`, built on 11 October 2026, so these are
+the words now. Before it, from the review of work package 1 the same
+day, they named the Stop of each tab in its place: "Stop the diversity
+in the Populations tab and the PCA in the PCA tab to change the
+filters; then press Run in each tab to calculate them again."
 
 The words of the lock of the populations name, beside the diversity,
 only the live analyses that read the populations, none today: the PCA
@@ -445,7 +455,7 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 | the button while live and not running | "Stop recalculating" |
 | the filters, the options of the diversity, while it runs, as tooltip and description | "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again." |
 | the column, the zone, Remove and the lists of the reader, while it runs | "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again." |
-| the filters, while another analysis is live | "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again."; until the band offers Stop all, "Stop the diversity in the Populations tab and the PCA in the PCA tab to change the filters; then press Run in each tab to calculate them again." The words of the populations name only another live analysis that reads the populations, none today. |
+| the filters, while another analysis is live | "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again." (before the band offered Stop all, on 11 October 2026, "Stop the diversity in the Populations tab and the PCA in the PCA tab to change the filters; then press Run in each tab to calculate them again.") The words of the populations name only another live analysis that reads the populations, none today. |
 | the caption of the table | "The diversity of each population, over the 1,200 variants of panel.nei the filters kept."; with unclassified left out, "… 7 unclassified individuals kept are not in it." |
 | the status region, a start by itself | "Calculating the diversity again. To change the filters or the populations, stop it in the Populations tab." ("To change the filters, …" until 11 October 2026); when it is the first start of a round of several, the words of `popgen2-pca.md`, "Several analyses calculated again by themselves" |
 | the status region, the start of a Run that waited | "Calculating the diversity of panel.nei." |
