@@ -294,7 +294,7 @@ PCA name any live analysis, in the words of its tab, "PCA", "PCoA",
 | a live analysis runs and others wait after it | "PCA running · 1:20 · then the diversity"; with two waiting, "… · then the diversity and the LD decay" | Stop, of the one running, and Stop all |
 | a live analysis runs and none waits | "Diversity running · 0:12" | Stop; and Stop all while another analysis is live |
 | two or more are about to start | "The PCA and the diversity start in a moment"; while the dialog of the download holds them, "The PCA and the diversity start again when the download is written or closed" | Stop all |
-| one is about to start | "The diversity starts in a moment", as the PCA's row; held after a crash, "The diversity starts after the next change" | Stop recalculating, that analysis's; and Stop all while another analysis is live |
+| one is about to start | "The diversity starts in a moment", as the PCA's row; held after a crash, "The diversity starts after the next change" | Stop recalculating, that analysis's; and Stop all while another analysis is live, then alone at 320 px (below) |
 | a Stop of the diversity under way | "Stopping the diversity…" | none |
 | results with warnings, or failed, in tabs not shown | the first in the order of the tabs: "Diversity: 2 warnings, in the Populations tab"; "Diversity: could not be calculated, in the Populations tab" | none |
 
@@ -328,6 +328,20 @@ At 320 px the short forms drop the analyses waiting, "PCA · 1:20", the
 whole words given to a screen reader, and the line holds "Popnei", the
 short form, Stop and Stop all; the flows check that it fits on one
 line, as "PCoA soon" with the whole "Stop recalculating" does.
+
+Under 30 rem, where the band shows its short forms, an analysis about
+to start beside Stop all loses its Stop recalculating in the band, and
+the line holds "Popnei", the short form and Stop all alone; its tab
+keeps its own Stop recalculating, and Stop all ends it with the
+others. The owner chose this on 12 October 2026: with the PCA live and
+the diversity about to start alone, another tab shown, "Popnei",
+"Diversity soon", the whole "Stop recalculating" and "Stop all" needed
+290 px of the line's 288 at 320 px wide, in Chromium 153 and WebKit 26.6
+on the owner's Mac, so "Diversity soon" was cut and Stop all stood 2 px
+past the line's end. The button the band does not show is out of the
+order of the Tab key and is not read by a screen reader. The Stop of an
+analysis that runs stays beside Stop all, since "PCoA · 0:0…" with Stop
+and Stop all fits. At 30 rem and wider nothing changes.
 
 ### An error of the application
 
@@ -678,7 +692,8 @@ Stop all and no Stop; the Populations tab shown with the diversity
 about to start alone, no button; the diversity running alone with the
 PCA live and idle, as after a change of the populations, its words with
 Stop and Stop all; the diversity about to start alone with the PCA
-live, its words with Stop recalculating and Stop all; both live and
+live, its words with Stop recalculating and Stop all, the Stop
+recalculating marked as shown at 30 rem and wider only; both live and
 nothing running, waiting nor about to start, no button; the link of
 the diversity's warnings
 while the PCA has none, and the PCA's when both have them; "Stopping
@@ -785,6 +800,11 @@ pass held by `e2e/holdWorker.ts`:
   the diversity follows, both tabs show the line of a Stop, and the
   status region says the words of Stop all once; at 320 px, "Popnei",
   "PCoA · 1:20", Stop and Stop all on one line, no sideways scroll;
+- from 12 October 2026, at 320 px, the PCA live and the diversity about
+  to start alone, the Variants tab shown: "Popnei", "Diversity soon" and
+  Stop all alone on one line, the words not cut, no sideways scroll; the
+  band's Stop recalculating not in the accessibility tree, and the Tab
+  key going from the heading "Popnei" to Stop all;
 - axe, the checker of accessibility, with the band in each state, in
   light and in dark.
 
@@ -793,7 +813,8 @@ dark: `popgen2-band-empty`, "Popnei" alone, `popgen2-band-reading`,
 `popgen2-band-pca-running`, `popgen2-band-stopping`,
 `popgen2-band-about-to-start`, `popgen2-band-pca-tab-about-to-start`
 (the PCA tab shown, the words and no Stop recalculating in the band),
-`popgen2-band-then-diversity` and `popgen2-band-analyses-soon`, from
+`popgen2-band-then-diversity`, `popgen2-band-analyses-soon` and
+`popgen2-band-diversity-soon`, from
 11 October 2026, `popgen2-band-writing` (behind the
 dialog), `popgen2-band-warning`, `popgen2-band-error` and
 `popgen2-band-error-details`, and `popgen2-band-error-running`, both
