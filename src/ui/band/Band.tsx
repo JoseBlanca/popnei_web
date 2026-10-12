@@ -419,7 +419,11 @@ function Line({
       <>
         <span className={classOf(styles, "words")}>
           {words !== null && (
+            // The link to another analysis's tab is another link, as the
+            // Stop of another analysis is another button, so that Enter
+            // never follows a link the focused one turned into.
             <Link
+              key={line.tab}
               label={words.full}
               {...(narrow && { shortLabel: words.short })}
               onPress={() => {
