@@ -669,6 +669,7 @@ describe("AP6 D3 the download waits while a PCA runs", () => {
       name: "the PCA",
       tab: PAGE_TAB_LABELS.pca,
       readsPopulations: false,
+      plural: false,
     });
     expect(placeOf(store)).toStrictEqual({
       kind: "disabled",
@@ -716,6 +717,7 @@ describe("AP6 D3 the download waits while a PCA runs", () => {
       name: "the PCoA",
       tab: PAGE_TAB_LABELS.pca,
       readsPopulations: false,
+      plural: false,
     });
     expect(placeOf(store)).toStrictEqual({
       kind: "disabled",
@@ -840,6 +842,7 @@ describe("PT1 D7 the lock of the filters and the download's wait, for any live a
       name: "the diversity",
       tab: PAGE_TAB_LABELS.populations,
       readsPopulations: true,
+      plural: false,
     });
     store.cancelRun("diversity");
     expect(runningAnalysisOf(store.getState())).toBeNull();
