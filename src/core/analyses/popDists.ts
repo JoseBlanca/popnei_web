@@ -190,6 +190,12 @@ const READ = new WeakMap<JsonObject, PopDistsOptions>();
 const AGAIN_BY_THEMSELVES =
   "The distances are then calculated again by themselves.";
 
+/** The end of a refusal of popgen2.html after what to change: "…, and
+    the distances are then calculated again by themselves.", in the
+    place of the old page's "to run it again" (the review of the
+    Distances tab, 12 October 2026). */
+const THEN_AGAIN = "and the distances are then calculated again by themselves";
+
 /** Where the variants file is opened again on popgen2.html. */
 const IN_BOX_VARIANTS = " in the box Variants";
 
@@ -217,15 +223,20 @@ export function refusalText(
       where: IN_BOX_VARIANTS,
     });
     if (fileWords !== null) return fileWords;
-    return `${refusalWords(message, p, {
+    // Any other refusal ends with what happens after the change, once and
+    // in the plural; the rows of their own end with their own words.
+    const words = refusalWords(message, p, {
       change: `Change the settings, or open the variants file again${IN_BOX_VARIANTS}`,
       calculate: "calculate the distances between populations",
       nothingLeft:
         "there is no variant to calculate the distances between populations over",
-      again: "to run it again",
+      again: THEN_AGAIN,
       emptyPass: (name) =>
         `The thresholds of the Variants tab kept none of the variants of ${name}, so there is no variant to calculate the distances between populations over. Loosen them.`,
-    })} ${AGAIN_BY_THEMSELVES}`;
+    });
+    return words.endsWith(`${THEN_AGAIN}.`)
+      ? words
+      : `${words} ${AGAIN_BY_THEMSELVES}`;
   }
   return refusalWords(message, p, {
     change: CHANGE_SETTINGS,

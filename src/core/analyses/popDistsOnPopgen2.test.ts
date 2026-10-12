@@ -431,8 +431,10 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
     ).toBe(
       "The filters kept none of the variants of panel.nei, so there is no variant to calculate the distances between populations over. Loosen the filters in the Variants step.",
     );
-    expect(refusalText("something else went wrong.", p, "popgen2")).toMatch(
-      /in the box Variants.* The distances are then calculated again by themselves\.$/u,
+    // In the plural, and said once (the review of the Distances tab, 12
+    // October 2026).
+    expect(refusalText("something else went wrong.", p, "popgen2")).toBe(
+      "popnei could not calculate the distances between populations: something else went wrong. Change the settings, or open the variants file again in the box Variants, and the distances are then calculated again by themselves.",
     );
   });
 

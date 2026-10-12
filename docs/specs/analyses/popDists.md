@@ -999,7 +999,13 @@ that send the user to "the Variants step", "the Individuals step" and
   panel.nei, so there is no variant to calculate the distances between
   populations over. Loosen them."; each but those that ask to open the
   file again ends "The distances are then calculated again by
-  themselves.", since they stay live after a refusal. The statistics of
+  themselves.", since they stay live after a refusal; a refusal of
+  popnei's own words, which the old page ends "…, to run it again.",
+  ends "Change the settings, or open the variants file again in the box
+  Variants, and the distances are then calculated again by
+  themselves.", in the plural and once (since 12 October 2026, the
+  review of the Distances tab: until then "…, to run it again. The
+  distances are then calculated again by themselves."). The statistics of
   each individual that failed are the diversity's words of this page,
   with "the distances between populations". The failures that are not
   popnei's refusals are in the words of `popgen2FailureText`, as the
