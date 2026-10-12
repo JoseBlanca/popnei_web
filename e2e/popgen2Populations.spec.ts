@@ -2008,3 +2008,41 @@ test.describe("PT7 R1.1 the bar plots of the table", () => {
     );
   });
 });
+
+/** A name of 46 characters, as long as names of the user's files get. */
+const LONG_NAME = "Accessions_from_Galapagos_and_Ecuador_mainland";
+
+/** panel_pops.csv with the population p1 named `name`. */
+function renamedP1(name: string): Made {
+  return {
+    name: "panel_pops_renamed.csv",
+    text: `${panelPopsRows()
+      .map((line) => line.replace(/,p1$/u, `,${name}`))
+      .join("\n")}\n`,
+  };
+}
+
+test.describe("review of round 1: long names of populations", () => {
+  test("a population named with 46 characters at 320 px: no sideways scroll, and the plot of the spectrum 288 px wide", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 320, height: 900 });
+    await openPage(page);
+    await pick(page, "panel.nei");
+    await pickIndividuals(page, renamedP1(LONG_NAME));
+    await runDiversity(page);
+    const plot = shown(page).locator("svg.chart-line");
+    await expect(plot).toHaveCount(1);
+    await expect(
+      shown(page).getByText(new RegExp(`${LONG_NAME}, about`, "u")),
+    ).toBeVisible();
+    const sideways = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    );
+    expect(sideways).toBe(0);
+    expect((await plot.boundingBox())?.width).toBe(288);
+  });
+});

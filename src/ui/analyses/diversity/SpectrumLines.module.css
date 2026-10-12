@@ -11,10 +11,14 @@
   overflow-wrap: anywhere;
 }
 
+/* overflow-wrap: anywhere, as .line has, so that a long name of a
+   population in the line of the variants in the draw breaks and does not
+   widen the grid, the menu and the plot past a page of 320 px. */
 .muted {
   margin: 0;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
+  overflow-wrap: anywhere;
 }
 
 /* The line of the menu "Download…" above the plot. */
