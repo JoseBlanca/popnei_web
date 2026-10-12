@@ -20,6 +20,12 @@ import {
   diversityStoppedText,
 } from "../analyses/diversity/liveWords.ts";
 import {
+  LD_DECAY_HELD_AFTER_CRASH,
+  LD_DECAY_STARTED_BY_ITSELF,
+  ldDecayEndAnnouncement,
+  ldDecayStoppedText,
+} from "../analyses/ldDecay/liveWords.ts";
+import {
   roundText,
   runWaitedText,
   stopAllText,
@@ -85,6 +91,14 @@ const LIVE_SAID: Readonly<Record<Popgen2LiveId, LiveSaid>> = Object.freeze({
     heldAfterCrash: () => DIVERSITY_HELD_AFTER_CRASH,
     stopped: (_s: AppState<JobResult, Blob>, runOffered: boolean) =>
       diversityStoppedText(runOffered),
+  }),
+  ldDecay: Object.freeze({
+    runKind: "ldDecayRun",
+    end: ldDecayEndAnnouncement,
+    startedAlone: () => LD_DECAY_STARTED_BY_ITSELF,
+    heldAfterCrash: () => LD_DECAY_HELD_AFTER_CRASH,
+    stopped: (_s: AppState<JobResult, Blob>, runOffered: boolean) =>
+      ldDecayStoppedText(runOffered),
   }),
 });
 

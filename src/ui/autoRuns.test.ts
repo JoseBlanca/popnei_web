@@ -1813,11 +1813,12 @@ describe("PT1 D2 several analyses calculated again by themselves", () => {
   });
 
   test("the page's groups are the one pass, the PCA and the diversity, and its live analyses the PCA and then the diversity", () => {
-    expect(POPGEN2_LIVE).toEqual(["pca", "diversity"]);
+    expect(POPGEN2_LIVE).toEqual(["pca", "diversity", "ldDecay"]);
     expect(POPGEN2_AUTO_GROUPS).toEqual([
       ["variantsSummary"],
       ["pca"],
       ["diversity"],
+      ["ldDecay"],
     ]);
   });
 

@@ -6,6 +6,7 @@
  * none, its result once done, and the notice that stopped it.
  */
 import { diversityOnPopgen2 } from "../../core/analyses/diversity.ts";
+import { ldDecayOnPopgen2 } from "../../core/analyses/ldDecay.ts";
 import { pcaMethodOf, pcaOnPopgen2 } from "../../core/analyses/pca.ts";
 import { POPGEN2_LIVE, isPopgen2Live } from "../../core/apps.ts";
 import type { Popgen2LiveId } from "../../core/apps.ts";
@@ -154,6 +155,15 @@ const DIVERSITY_NAMES: LiveAnalysisName = Object.freeze({
   readsPopulations: true,
 });
 
+/** The LD decay of the Populations tab, which reads the populations
+    (from 12 October 2026). */
+const LD_DECAY_NAMES: LiveAnalysisName = Object.freeze({
+  id: ldDecayOnPopgen2.id,
+  name: "the LD decay",
+  tab: "Populations",
+  readsPopulations: true,
+});
+
 /** How the words of the page name each analysis that can be live in
     `s`. Keyed by `POPGEN2_LIVE` of src/core/apps.ts, so that an analysis
     added to it without its words does not compile. */
@@ -162,6 +172,7 @@ const LIVE_NAMES: Readonly<
 > = Object.freeze({
   pca: (s) => PCA_NAMES[pcaMethodOf(s.project, "popgen2")],
   diversity: () => DIVERSITY_NAMES,
+  ldDecay: () => LD_DECAY_NAMES,
 });
 
 /** The live analysis `id` of popgen2.html as the words of the page name

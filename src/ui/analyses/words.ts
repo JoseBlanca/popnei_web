@@ -592,9 +592,17 @@ function lockedText(
 
 /** The analyses `named`, each with its tab, as a Stop of each names
     them: "the PCA in the PCA tab and the diversity in the Populations
-    tab". */
+    tab"; those of one tab named with it once, in the order of their
+    first, "the diversity and the LD decay in the Populations tab"
+    (from 12 October 2026). */
 export function eachInItsTab(named: readonly LiveAnalysisName[]): string {
-  return bothOf(named.map((one) => `${one.name} in the ${one.tab} tab`));
+  const tabs = [...new Set(named.map((one) => one.tab))];
+  return bothOf(
+    tabs.map(
+      (tab) =>
+        `${bothOf(named.filter((one) => one.tab === tab).map((one) => one.name))} in the ${tab} tab`,
+    ),
+  );
 }
 
 /** Stop all and where it is, in the words of a lock or of a wait. */

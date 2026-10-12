@@ -11,6 +11,11 @@ import {
   diversityOptions,
 } from "../../core/analyses/diversity.ts";
 import type { DiversityOptions } from "../../core/analyses/diversity.ts";
+import {
+  ldDecayOnPopgen2,
+  ldDecayOptions,
+} from "../../core/analyses/ldDecay.ts";
+import type { LdDecayOptions } from "../../core/analyses/ldDecay.ts";
 import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
 import type { PcaOptions } from "../../core/analyses/pca.ts";
 import type { PageTab } from "../../core/popgen2Tabs.ts";
@@ -152,6 +157,11 @@ export interface TestPage {
   /** Changes the options of the diversity, through the gate, as the
       Populations tab does. */
   readonly setDiversity: (options: Partial<DiversityOptions>) => void;
+  /** The last request of the LD decay the fake worker was given. */
+  readonly lastLdDecay: () => Request;
+  /** Changes the options of the LD decay, through the gate, as the
+      Populations tab does. */
+  readonly setLdDecay: (options: Partial<LdDecayOptions>) => void;
 }
 
 /** Makes the test page, whose one pass ends with `summary`, the
@@ -229,6 +239,17 @@ export function page(
   // The two individuals as one population, with a minimum and a draw
   // they meet, so that the diversity's Run is enabled.
   setDiversity({ minNumIndividuals: 2, numCalledAlleles: 4 });
+  const setLdDecay = (options: Partial<LdDecayOptions>): void => {
+    gated.apply("the options of the LD decay changed", (p: Project) =>
+      setAnalysisOptions(p, ldDecayOnPopgen2, {
+        ...ldDecayOptions(p),
+        ...options,
+      }),
+    );
+  };
+  // A largest distance, which has no default, so that the LD decay's
+  // Run is enabled.
+  setLdDecay({ maxDist: 100_000 });
   const lastOf = (analysis: string): Request => {
     const last = requests.filter((r) => r.job.analysis === analysis).at(-1);
     if (last === undefined) throw new Error(`no ${analysis} was sent`);
@@ -261,6 +282,8 @@ export function page(
     setPca,
     lastDiversity: () => lastOf("diversity"),
     setDiversity,
+    lastLdDecay: () => lastOf("ldDecay"),
+    setLdDecay,
   };
   return testPage;
 }
@@ -294,18 +317,54 @@ export function diversityResult(): JobResult {
   };
 }
 
+/** A result of the LD decay of `s000` and `s001` as one population,
+    Unclassified, at a largest distance of 100,000 bp: two individuals,
+    whose every pair has an r² of 1, give pairs and no curve, as popnei
+    gives them. */
+export function ldDecayResult(): JobResult {
+  const numBins = 50;
+  const width = 100_000 / numBins;
+  const pairs = Array.from({ length: numBins }, (_, b) => (b === 0 ? 3 : 0));
+  return {
+    analysis: "ldDecay",
+    pops: ["Unclassified"],
+    numIndividuals: Uint32Array.from([2]),
+    numVars: Float64Array.from([548]),
+    smallestDist: Float64Array.from(
+      { length: numBins },
+      (_, b) => b * width + 1,
+    ),
+    largestDist: Float64Array.from(
+      { length: numBins },
+      (_, b) => (b + 1) * width,
+    ),
+    numPairs: Float64Array.from(pairs),
+    meanR2: Float64Array.from(pairs.map((n) => (n > 0 ? 1 : NaN))),
+    sdR2: Float64Array.from(pairs.map((n) => (n > 0 ? 0 : NaN))),
+    rhoPerBp: Float64Array.from([NaN]),
+    r2AtZero: Float64Array.from([NaN]),
+    halfDist: Float64Array.from([NaN]),
+    passStats: { numVars: 548, filtering: {} },
+  };
+}
+
 /** Ends the last request of `analysis` of `testPage` with its result. */
 export async function endLast(
   testPage: TestPage,
   analysis: Popgen2LiveId,
 ): Promise<void> {
-  const last =
-    analysis === "pca" ? testPage.lastPca() : testPage.lastDiversity();
-  last.end({
-    kind: "done",
-    key: last.key,
-    result: analysis === "pca" ? pcaResult("pca", 548) : diversityResult(),
-  });
+  const ends: Readonly<
+    Record<
+      Popgen2LiveId,
+      { readonly last: () => Request; readonly result: () => JobResult }
+    >
+  > = {
+    pca: { last: testPage.lastPca, result: () => pcaResult("pca", 548) },
+    diversity: { last: testPage.lastDiversity, result: diversityResult },
+    ldDecay: { last: testPage.lastLdDecay, result: ldDecayResult },
+  };
+  const last = ends[analysis].last();
+  last.end({ kind: "done", key: last.key, result: ends[analysis].result() });
   await flush();
 }
 

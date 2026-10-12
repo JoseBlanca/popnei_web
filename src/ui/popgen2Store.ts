@@ -42,6 +42,7 @@ import type {
 } from "../core/store.ts";
 import type { Job, JobResult } from "../worker/protocol.ts";
 import { diversityFailureEndsLive } from "./analyses/diversity/liveEnd.ts";
+import { ldDecayFailureEndsLive } from "./analyses/ldDecay/liveEnd.ts";
 import { failureEndsLive } from "./analyses/pca/liveEnd.ts";
 
 /** The first group of the analyses the page starts by itself, which the
@@ -70,7 +71,9 @@ export const POPGEN2_AUTO_GROUPS: readonly (readonly AnalysisId[])[] =
     analyses/pca/liveEnd.ts, a crash of the memory or a failure only a
     reload mends; the diversity's, `diversityFailureEndsLive` of
     analyses/diversity/liveEnd.ts, every crash and the failures only a
-    reload mends. Keyed by `POPGEN2_LIVE`, so that an analysis added to
+    reload mends; the LD decay's, `ldDecayFailureEndsLive` of
+    analyses/ldDecay/liveEnd.ts, the diversity's and popnei's refusal for
+    memory. Keyed by `POPGEN2_LIVE`, so that an analysis added to
     it without a rule does not compile. */
 const ENDS_LIVE: Readonly<
   Record<
@@ -80,6 +83,7 @@ const ENDS_LIVE: Readonly<
 > = Object.freeze({
   pca: failureEndsLive,
   diversity: diversityFailureEndsLive,
+  ldDecay: ldDecayFailureEndsLive,
 });
 
 /** Whether the failure of the live analysis `id` in `s` ends its live

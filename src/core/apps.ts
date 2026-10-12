@@ -10,7 +10,7 @@
 import { diversity, diversityOnPopgen2 } from "./analyses/diversity.ts";
 import { filterCounts, variantsOfFile } from "./analyses/filterCounts.ts";
 import { individualChecks } from "./analyses/individualChecks.ts";
-import { ldDecay } from "./analyses/ldDecay.ts";
+import { ldDecay, ldDecayOnPopgen2 } from "./analyses/ldDecay.ts";
 import { pca, pcaOnPopgen2 } from "./analyses/pca.ts";
 import { popDists } from "./analyses/popDists.ts";
 import { variantChecks } from "./analyses/variantChecks.ts";
@@ -72,23 +72,34 @@ export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
     tab (docs/specs/analyses/pca.md, "On popgen2.html"); then the
     diversity of the Populations tab, the definition of that page, whose
     unclassified individuals are left out or one population
-    (docs/specs/analyses/diversity.md, "On popgen2.html"). It is a list
+    (docs/specs/analyses/diversity.md, "On popgen2.html"); then, from 12
+    October 2026, the LD decay of the same tab, the definition of that
+    page (docs/specs/analyses/ldDecay.md, "On popgen2.html"). It is a list
     apart from `POPGEN_ANALYSES`, so that the old page neither shows the
     summary nor changes (docs/plans/open-variants.md, "Its own list of
     analyses"). */
 export const POPGEN2_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
-  Object.freeze([variantsSummary, pcaOnPopgen2, diversityOnPopgen2]);
+  Object.freeze([
+    variantsSummary,
+    pcaOnPopgen2,
+    diversityOnPopgen2,
+    ldDecayOnPopgen2,
+  ]);
 
 /** The analyses of popgen2.html that can be live, calculated again by
     themselves once the user's Run made each live, in the order they
-    start after one change, that of the tabs: the PCA and then the
-    diversity (docs/specs/steps/popgen2-pca.md, "The PCA calculated again
+    start after one change, that of the tabs: the PCA, the diversity
+    and, from 12 October 2026, the LD decay (docs/specs/steps/popgen2-pca.md, "The PCA calculated again
     by itself" and "Several analyses calculated again by themselves").
     The one list of them: the store of the page and the words of its
     locks read it, here, where popgen.html already loads it. The ids of
-    `pcaOnPopgen2` and `diversityOnPopgen2`, as literals, so that a table
+    `pcaOnPopgen2`, `diversityOnPopgen2` and `ldDecayOnPopgen2`, as literals, so that a table
     keyed by them must name each. */
-export const POPGEN2_LIVE = Object.freeze(["pca", "diversity"] as const);
+export const POPGEN2_LIVE = Object.freeze([
+  "pca",
+  "diversity",
+  "ldDecay",
+] as const);
 
 /** The id of an analysis of popgen2.html that can be live, one of
     `POPGEN2_LIVE`. */

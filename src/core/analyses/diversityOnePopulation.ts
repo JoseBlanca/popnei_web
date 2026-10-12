@@ -34,6 +34,7 @@ import { defect } from "./words.ts";
 export function popgen2OnePopulationLine(
   p: Project,
   numIndividuals: number,
+  words: OnePopulationWords = DIVERSITY_ONE_POPULATION,
 ): string {
   const cause = popgen2OnePopulationCause(p);
   if (cause === null) {
@@ -41,21 +42,42 @@ export function popgen2OnePopulationLine(
       "the line of the one population was asked of populations of a column.",
     );
   }
-  const line = `1 population, ${UNCLASSIFIED_POPULATION}: ${counted(numIndividuals, "individual")}. No individual is assigned to a population, so the diversity is of every individual kept as one population.`;
+  const line = `1 population, ${UNCLASSIFIED_POPULATION}: ${counted(numIndividuals, "individual")}. No individual is assigned to a population, so ${words.name} is of every individual kept as one population.`;
   const why = onePopulationWhy(p, cause);
   // How to get populations is said once: by the sentence of the cause
   // when there is one, by the end of this one otherwise.
-  const mixed = `${MIXED_POPULATIONS}${why === null ? GET_EACH : "."}`;
+  const mixed = `If the individuals belong to several populations, ${words.mixed}${why === null ? GET_EACH : "."}`;
   return [line, why, standsForOpened(cause) ? mixed : null]
     .filter((sentence) => sentence !== null)
     .join(" ");
 }
 
-/** What the one population does to the numbers when its individuals
-    belong to several populations: the Wahlund effect, F pooled above F
-    within each (docs/functionality.md: nothing misleads without
-    warning). */
-const MIXED_POPULATIONS = `If the individuals belong to several populations, the values of ${UNCLASSIFIED_POPULATION} are those of all the individuals taken as one population, and F comes out higher than within each population`;
+/** What an analysis says in the line of the one population: its name,
+    and what the one population does to its numbers when its individuals
+    belong to several populations (docs/functionality.md: nothing
+    misleads without warning). */
+export interface OnePopulationWords {
+  /** The analysis in the middle of a sentence: "the diversity". */
+  readonly name: string;
+  /** What the mixture does to its numbers, after "If the individuals
+      belong to several populations, ". */
+  readonly mixed: string;
+}
+
+/** The diversity's: the Wahlund effect, F pooled above F within each. */
+const DIVERSITY_ONE_POPULATION: OnePopulationWords = Object.freeze({
+  name: "the diversity",
+  mixed: `the values of ${UNCLASSIFIED_POPULATION} are those of all the individuals taken as one population, and F comes out higher than within each population`,
+});
+
+/** The LD decay's (docs/specs/steps/popgen2-populations.md, "The LD
+    decay"): individuals of populations whose allele frequencies differ
+    are in LD at any distance when taken together, so the curve of the
+    mixture lies higher than those of the populations. */
+export const LD_DECAY_ONE_POPULATION: OnePopulationWords = Object.freeze({
+  name: "the LD decay",
+  mixed: `the r² of ${UNCLASSIFIED_POPULATION} is that of all the individuals taken as one population, and comes out higher than within each population at every distance`,
+});
 
 /** The end of `MIXED_POPULATIONS` when no sentence before it says how
     to get populations. */

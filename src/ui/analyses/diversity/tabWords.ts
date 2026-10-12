@@ -76,7 +76,7 @@ function populationsOf(
 
 /** The line of the unclassified left out: "7 unclassified individuals
     kept are left out, as the box Individuals says." */
-function unclassifiedLine(numLeftOut: number): string {
+export function unclassifiedLine(numLeftOut: number): string {
   return numLeftOut === 1
     ? "1 unclassified individual kept is left out, as the box Individuals says."
     : `${counted(numLeftOut, "unclassified individual")} kept are left out, as the box Individuals says.`;
@@ -86,7 +86,7 @@ function unclassifiedLine(numLeftOut: number): string {
     a run leaves out, and what to do: "p9 has no individual left after
     the thresholds of the individuals, and is left out. Loosen the
     thresholds of the individuals in the Variants tab to keep it." */
-function emptiedLine(emptied: readonly string[]): string {
+export function emptiedLine(emptied: readonly string[]): string {
   const one = emptied.length === 1;
   return `${namesOf(emptied)} ${one ? "has" : "have"} no individual left after the thresholds of the individuals, and ${one ? "is" : "are"} left out. Loosen the thresholds of the individuals in the Variants tab to keep ${one ? "it" : "them"}.`;
 }

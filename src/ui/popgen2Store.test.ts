@@ -52,6 +52,7 @@ describe("the store of popgen2.html", () => {
       ["variantsSummary"],
       ["pca"],
       ["diversity"],
+      ["ldDecay"],
     ]);
   });
 
@@ -107,6 +108,7 @@ describe("the store of popgen2.html", () => {
         ["variantsSummary", "running"],
         ["pca", "locked"],
         ["diversity", "ready"],
+        ["ldDecay", "locked"],
       ],
     );
   });
@@ -449,6 +451,7 @@ describe("DL4 D3 the store of popgen2.html writes, and works out the individuals
       ["variantsSummary", "ready"],
       ["pca", "locked"],
       ["diversity", "ready"],
+      ["ldDecay", "locked"],
     ]);
   });
 

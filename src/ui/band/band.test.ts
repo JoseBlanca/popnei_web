@@ -235,6 +235,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       "Stopping the statistics of panel.nei…",
       "Stopping the PCA…",
       "Stopping the diversity…",
+      "Stopping the LD decay…",
     ]);
   });
 
@@ -822,6 +823,7 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
               running: false,
               after: null,
             },
+            ldDecay: { kind: "off" },
           },
         },
         testPage.defects.getState(),
@@ -1072,5 +1074,108 @@ describe("PT7 R1.3 the band counts the warning of the spectrum with the diversit
   test("no MAF threshold: no warning of the spectrum, Popnei alone", async () => {
     const band = await bandWithMaf(0, null);
     expect(band.line).toEqual({ kind: "nothing" });
+  });
+});
+
+/** The page with the one pass done, and the PCA, the diversity and the
+    LD decay run by their Run, one after the other, and done: the three
+    live and idle. */
+async function threeDone(): Promise<TestPage> {
+  const testPage = await bothDone();
+  expect(testPage.auto.run("ldDecay")).toBe("started");
+  await flush();
+  await endLast(testPage, "ldDecay");
+  return testPage;
+}
+
+describe("LT1 D2 the band and the automatic runs with the LD decay", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("the three live, a threshold moved: the PCA, the diversity and the LD decay start one at a time, in that order, each after the end of the one before", async () => {
+    const testPage = await threeDone();
+    const before = testPage.requests.length;
+    moveThreshold(testPage, 0.05);
+    await flush();
+    expect(words(testPage.band())).toBe(
+      "The PCA, the diversity and the LD decay start in a moment",
+    );
+    expect(buttons(testPage.band())).toEqual([
+      null,
+      "Stop all: the PCA, the diversity and the LD decay",
+    ]);
+    await quietSecond();
+    const sent = (): readonly string[] =>
+      testPage.requests.slice(before).map((r) => r.job.analysis);
+    expect(sent()).toEqual(["pca"]);
+    expect(testPage.auto.liveState("ldDecay")).toEqual({
+      kind: "live",
+      aboutToStart: "behind",
+      running: false,
+      after: "pca",
+    });
+    await endLast(testPage, "pca");
+    expect(sent()).toEqual(["pca", "diversity"]);
+    expect(words(testPage.band(), 12)).toBe(
+      "Diversity running · 0:12 · then the LD decay",
+    );
+    expect(testPage.auto.liveState("ldDecay")).toMatchObject({
+      aboutToStart: "behind",
+      after: "diversity",
+    });
+    await endLast(testPage, "diversity");
+    expect(sent()).toEqual(["pca", "diversity", "ldDecay"]);
+    expect(words(testPage.band(), 12)).toBe("LD decay running · 0:12");
+    expect(short(testPage.band(), 12)).toBe("LD decay · 0:12");
+    expect(buttons(testPage.band())).toEqual([
+      "Stop the LD decay",
+      "Stop all: the PCA, the diversity and the LD decay",
+    ]);
+    testPage.tab = "populations";
+    expect(buttons(testPage.band())).toEqual([
+      null,
+      "Stop all: the PCA, the diversity and the LD decay",
+    ]);
+    await endLast(testPage, "ldDecay");
+    expect(sent()).toEqual(["pca", "diversity", "ldDecay"]);
+  });
+
+  test("the LD decay about to start alone: its words and its Stop recalculating; Stopping names it", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    expect(testPage.auto.run("ldDecay")).toBe("started");
+    await flush();
+    await endLast(testPage, "ldDecay");
+    testPage.setLdDecay({ maxDist: 50_000 });
+    await flush();
+    expect(words(testPage.band())).toBe("The LD decay starts in a moment");
+    expect(short(testPage.band())).toBe("LD decay soon");
+    expect(buttons(testPage.band())).toEqual([
+      "Stop recalculating the LD decay",
+      null,
+    ]);
+  });
+
+  test("the link of the LD decay's warnings while the diversity has none, to the heading of its warnings in the Populations tab", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    testPage.auto.run("ldDecay");
+    await flush();
+    await endLast(testPage, "ldDecay");
+    const line = testPage.band().line;
+    expect(line.kind).toBe("result");
+    if (line.kind !== "result") return;
+    expect(line.named.id).toBe("ldDecay");
+    expect(line.tab).toBe("populations");
+    expect(line.at).toBe("warnings");
+    expect(words(testPage.band())).toMatch(
+      /^LD decay: \d+ warnings?, in the Populations tab$/u,
+    );
+    testPage.tab = "populations";
+    expect(testPage.band().line).toEqual({ kind: "nothing" });
   });
 });
