@@ -276,10 +276,17 @@
   fill: var(--chart-text-on-dark);
 }
 
-/* The texts of the legend of the heatmap start right of its bar, and the
-   name of the value above it. */
+/* The texts of the legend of the heatmap start right of its bar; the
+   name of the value, above it, ends where the numbers end and reaches
+   left over the room above the grid, so that it takes no width from the
+   grid (docs/specs/charts/heatmap.md, "The legend", 12 October 2026).
+   The plot writes the same as an attribute, for a reader with no CSS. */
 .chart-heatmap .chart-legend-text {
   text-anchor: start;
+}
+
+.chart-heatmap .chart-legend-title {
+  text-anchor: end;
 }
 
 /* The lines of the line plot (docs/specs/charts/line.md, "The SVG it
