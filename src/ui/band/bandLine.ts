@@ -198,12 +198,12 @@ export type LinkTarget = "warnings" | "spectrumWarning" | "heading";
 export function liveStatesOf(
   live: Pick<AutoRuns, "liveState">,
 ): Readonly<Record<Popgen2LiveId, LiveState>> {
-  return {
-    pca: live.liveState("pca"),
-    diversity: live.liveState("diversity"),
-    popDists: live.liveState("popDists"),
-    ldDecay: live.liveState("ldDecay"),
-  };
+  // One entry for each id of POPGEN2_LIVE, so that an analysis added to
+  // it is read with no change here; the assertion because
+  // Object.fromEntries types its keys as any string.
+  return Object.fromEntries(
+    POPGEN2_LIVE.map((id) => [id, live.liveState(id)]),
+  ) as Readonly<Record<Popgen2LiveId, LiveState>>;
 }
 
 /** The live analyses Stop all ends, two or more in their order, or

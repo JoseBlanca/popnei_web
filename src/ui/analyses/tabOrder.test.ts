@@ -7,6 +7,7 @@
 import { describe, expect, test } from "vitest";
 
 import { POPGEN2_LIVE } from "../../core/apps.ts";
+import { liveStatesOf } from "../band/bandLine.ts";
 import { createPopgen2Store } from "../popgen2Store.ts";
 import { roundText, stopAllText } from "./liveWords.ts";
 import { liveAnalysisOf, liveBeside } from "./status.ts";
@@ -112,5 +113,21 @@ describe("the order of the tabs of the live analyses", () => {
     expect(filtersLockedText(pca, beside)).toBe(
       "Stop the PCA in the PCA tab to change the filters, or press Stop all beside the heading Popnei to stop the diversity, the LD decay and the distances too; then press Run in each tab to calculate them again.",
     );
+  });
+});
+
+describe("the live states the band reads", () => {
+  test("liveStatesOf gives the state of each analysis of POPGEN2_LIVE, and of no other, as autoRuns tells it", () => {
+    const asked: string[] = [];
+    const states = liveStatesOf({
+      liveState: (id) => {
+        asked.push(id);
+        return id === "ldDecay" ? { kind: "stopped" } : { kind: "off" };
+      },
+    });
+    expect(asked).toEqual([...POPGEN2_LIVE]);
+    expect(Object.keys(states)).toEqual([...POPGEN2_LIVE]);
+    expect(states.ldDecay).toEqual({ kind: "stopped" });
+    expect(states.popDists).toEqual({ kind: "off" });
   });
 });
