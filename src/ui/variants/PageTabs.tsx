@@ -15,7 +15,9 @@
  * of its own, which keeps the tab's heading, "PCA" or "PCoA" by the
  * method chosen, after a defect; the Populations tab holds the panel of
  * the diversity, `PopulationsTab`, in one of its own, which keeps the
- * heading "Diversity".
+ * heading "Diversity"; the Distances tab the panel of the distances
+ * between populations, `DistancesTab`, in one of its own, which keeps
+ * the heading "Distances between populations".
  *
  * Its own component, so that the page draws it inside a boundary of
  * errors: a defect thrown by `analysisTabs` costs the row alone, and the
@@ -30,6 +32,8 @@ import type {
 import { pcaMethodOf } from "../../core/analyses/pca.ts";
 import { PopulationsTab } from "../analyses/diversity/PopulationsTab.tsx";
 import { DIVERSITY_TAB_TITLE } from "../analyses/diversity/tabLoadWords.ts";
+import { DistancesTab } from "../analyses/popDists/DistancesTab.tsx";
+import { DISTANCES_TAB_TITLE } from "../analyses/popDists/tabLoadWords.ts";
 import { PcaTab } from "../analyses/pca/PcaTab.tsx";
 import { pcaTabTitle } from "../analyses/pca/tabWords.ts";
 import { classOf } from "../classOf.ts";
@@ -41,7 +45,6 @@ import type { TabItem } from "../widgets/Tabs.tsx";
 import {
   greyedText,
   ANALYSES_TABS_LABEL,
-  DISTANCES_NOT_BUILT,
   PAGE_TAB_LABELS,
 } from "./analysisTabsWords.ts";
 import { IndividualsTab } from "./IndividualsTab.tsx";
@@ -161,7 +164,15 @@ export function PageTabs({
         analysisTab(
           "distances",
           tabReasons.distances,
-          <p className={classOf(styles, "boxLine")}>{DISTANCES_NOT_BUILT}</p>,
+          <ErrorBoundary
+            heading={DISTANCES_TAB_TITLE}
+            level={2}
+            resetOn={fileId ?? "none"}
+          >
+            <DistancesTab
+              shown={tab === "distances" && tabReasons.distances === null}
+            />
+          </ErrorBoundary>,
         ),
       ]}
     />

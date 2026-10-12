@@ -9,7 +9,6 @@ import type { TabGreyed } from "../../core/popgen2Tabs.ts";
 import {
   greyedText,
   ANALYSES_TABS_LABEL,
-  DISTANCES_NOT_BUILT,
   PAGE_TAB_LABELS,
 } from "./analysisTabsWords.ts";
 
@@ -35,12 +34,6 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
       "Distances",
     ]);
     expect(ANALYSES_TABS_LABEL).toBe("Files and analyses");
-  });
-
-  test("the line of the tab not built yet", () => {
-    expect(DISTANCES_NOT_BUILT).toBe(
-      "Not built yet: the distances between the populations, Hudson's Fst or Jost's D, come in a later version of the page.",
-    );
   });
 
   test("the PCA with no variants file, one being opened, and one whose opening failed", () => {

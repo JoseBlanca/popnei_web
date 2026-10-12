@@ -135,6 +135,7 @@ export function Table(props: TableProps): React.JSX.Element {
             props.download.fileName,
             columns.map((column) => column.label),
             props.rows,
+            props.download.csv,
           ),
         ]}
         waiting={props.download.waiting}

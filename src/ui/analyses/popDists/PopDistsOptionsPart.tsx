@@ -31,8 +31,19 @@ import {
   measureAnnouncement,
 } from "./words.ts";
 
+/** What the options are drawn with. */
+export interface PopDistsOptionsPartProps {
+  /** The reason the field of the minimum waits, its tooltip and its
+      description, while the distances of popgen2.html run, so that no
+      change leaves them behind; the measure, which calculates nothing,
+      never waits. `null` when absent, as on popgen.html. */
+  readonly waiting?: string | null;
+}
+
 /** The options of the distances between populations. */
-export function PopDistsOptionsPart(): React.JSX.Element {
+export function PopDistsOptionsPart({
+  waiting = null,
+}: PopDistsOptionsPartProps): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
   // The same object while the options of the project are the same.
@@ -52,6 +63,7 @@ export function PopDistsOptionsPart(): React.JSX.Element {
         step={1}
         description={MINIMUM_LINE}
         refusedText={minimumRefusedText}
+        waiting={waiting}
         onRefused={(text) => {
           announcer.announce(text);
         }}

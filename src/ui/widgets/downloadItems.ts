@@ -41,6 +41,12 @@ export interface TableDownload {
   readonly fileName: string;
   /** The reason the menu waits, or null. */
   readonly waiting: string | null;
+  /** The CSV the screen writes in place of the values of the cells, at
+      the choice, for a table one of whose cells joins two values: the
+      pair of the distances between populations, "p0 and p2", written as
+      two fields (docs/specs/steps/popgen2-distances.md, "The result").
+      Absent for every other table. */
+  readonly csv?: () => string;
 }
 
 /** What a plot takes to be downloaded. */
@@ -100,12 +106,17 @@ export function tableItem(
   fileName: string,
   header: readonly string[],
   rows: readonly RowValues[],
+  csv?: () => string,
 ): DownloadItem {
   return {
     label: "Table as CSV",
     save: () => {
       const values = rows.map((row) => row.values);
-      downloadText(fileName, tableCsv(header, values), CSV_TYPE);
+      downloadText(
+        fileName,
+        csv === undefined ? tableCsv(header, values) : csv(),
+        CSV_TYPE,
+      );
       return Promise.resolve(fileName);
     },
   };

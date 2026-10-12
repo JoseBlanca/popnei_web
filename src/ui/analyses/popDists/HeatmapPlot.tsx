@@ -17,12 +17,20 @@
  * table does, and while it does, and only then, a line over it says so
  * and the Tab key reaches the frame, a region named by the title of the
  * heatmap, so that the arrow keys scroll it (WCAG 1.4.10 and 2.1.1).
+ *
+ * On popgen2.html it is given a download, and draws its "Download…"
+ * above it, with the images of the heatmap from its handle and its data
+ * as the CSV the screen writes (docs/specs/steps/popgen2-distances.md,
+ * "The result").
  */
 import { useMemo, useRef } from "react";
 
 import { createHeatmap, heatmapMargin } from "../../../charts/heatmap.ts";
 import type { HeatmapData } from "../../../charts/heatmap.ts";
 import { classOf } from "../../classOf.ts";
+import { plotItems } from "../../widgets/downloadItems.ts";
+import type { PlotDownload } from "../../widgets/downloadItems.ts";
+import { DownloadMenu } from "../../widgets/DownloadMenu.tsx";
 import { useSidewaysFrame } from "../../widgets/sidewaysFrame.ts";
 import { usePlot } from "../../widgets/usePlot.ts";
 import styles from "./PopDistsResults.module.css";
@@ -44,6 +52,10 @@ export interface HeatmapPlotProps {
   /** What the heatmap draws, the same object until the result or the
       measure changes, so that it is not drawn again on every render. */
   readonly data: HeatmapData;
+  /** Its download, whose menu "Download…" stands on a line of its own
+      above the heatmap, as on popgen2.html; none, as on popgen.html, when
+      absent. */
+  readonly download?: PlotDownload;
 }
 
 /** The lengths the CSS of the panel reads, by their names there. */
@@ -51,9 +63,18 @@ type HeatmapLengths = React.CSSProperties &
   Record<"--heatmap-least-width" | "--heatmap-beyond-width", string>;
 
 /** The frame of the heatmap, and the heatmap in it. */
-export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
+export function HeatmapPlot({
+  data,
+  download,
+}: HeatmapPlotProps): React.JSX.Element {
   const frameRef = useRef<HTMLDivElement>(null);
-  const { ref: containerRef } = usePlot(createHeatmap, data);
+  const { ref: containerRef, handle } = usePlot(createHeatmap, data);
+  // The items read the handle at the choice, so they are made again only
+  // when the download changes.
+  const items = useMemo(
+    () => (download === undefined ? null : plotItems(download, handle)),
+    [download, handle],
+  );
   // Whether the heatmap is wider than its frame, which the browser
   // measures and React does not, and what the frame is then.
   const frame = useSidewaysFrame(frameRef);
@@ -74,6 +95,15 @@ export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
 
   return (
     <div className={classOf(styles, "heatmapFrame")}>
+      {download !== undefined && items !== null && (
+        <div>
+          <DownloadMenu
+            what={download.what}
+            items={items}
+            waiting={download.waiting}
+          />
+        </div>
+      )}
       {scrolls && (
         <p className={classOf(styles, "scrollLine")}>{HEATMAP_SCROLL_TEXT}</p>
       )}
