@@ -96,14 +96,16 @@ export type ChangesUnderWay = Pick<
 >;
 
 /** What the start by itself of a live analysis about to start waits
-    for: "behind", another calculation that runs, whether the quiet
+    for: "afterCrash", a crash of the worker ended another live state and
+    holds this start until the next change of the project or a Run of
+    this analysis, whether another calculation runs or not, which wins
+    over the three others, since the end of that calculation does not
+    start it; "behind", another calculation that runs, whether the quiet
     second has run out or not, which wins over the two others;
     "download", the dialog of the download of the filtered variants
     open, or the write it started running; "changes", the quiet second
     after the last change, or a change under way of a control, nothing
-    running; "afterCrash", a crash of the worker ended another live
-    state and holds this start until the next change of the project or
-    a Run of this analysis, nothing running. */
+    running. */
 export type AboutToStart = "changes" | "download" | "behind" | "afterCrash";
 
 /** The live state of an analysis that starts again by itself, for the
@@ -269,7 +271,8 @@ export interface AutoRuns {
   isLive(id: AnalysisId): boolean;
   /** What `id` waits for while it is about to start by itself, live,
       ready under a key it was not started under, and the one pass done:
-      "behind" while another calculation runs; during the quiet second and
+      "afterCrash" while a crash holds it, whatever runs; "behind" while
+      another calculation runs; during the quiet second and
       for as long as a change under way, or a write, holds it, "download"
       while the dialog of the download is open or its write runs,
       "changes" otherwise. `null` while it is not about to start. */
@@ -624,16 +627,18 @@ export function createAutoRuns(deps: {
     readonly after: AnalysisId | null;
   } | null {
     if (live === null || !isAboutToStart(id)) return null;
+    // Held after a crash, it does not start when the calculation that
+    // runs ends, so it is not said to wait behind it.
+    const held = heldAfterCrash && !runSinceCrash.has(id);
     const running = runningId();
-    if (running !== null) {
+    if (running !== null && !held) {
       return { waits: "behind", after: liveIds.has(running) ? running : null };
     }
-    const waits =
-      heldAfterCrash && !runSinceCrash.has(id)
-        ? "afterCrash"
-        : live.changes.heldBy("download") || writeRunning()
-          ? "download"
-          : "changes";
+    const waits = held
+      ? "afterCrash"
+      : live.changes.heldBy("download") || writeRunning()
+        ? "download"
+        : "changes";
     const before = liveOrder
       .slice(0, liveOrder.indexOf(id))
       .find((other) => isAboutToStart(other));

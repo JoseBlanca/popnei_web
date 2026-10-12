@@ -744,6 +744,27 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
     ]);
   });
 
+  test("after a crash holds the PCA, a Run of the diversity: the diversity running, with no then the PCA, which does not start when it ends (the review of package 4, 12 October 2026)", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    testPage.auto.run("diversity");
+    await flush();
+    testPage.auto.run("pca");
+    testPage.lastDiversity().end({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "a crash of the test" },
+    });
+    await flush();
+    expect(testPage.auto.run("diversity")).toBe("started");
+    await flush();
+
+    expect(words(testPage.band(), 12)).toBe("Diversity running · 0:12");
+    expect(buttons(testPage.band())).toEqual([
+      "Stop the diversity",
+      "Stop all: the PCA and the diversity",
+    ]);
+  });
+
   test("Stopping the diversity while the store waits for the worker after its Stop", async () => {
     const testPage = page(SUMMARY);
     await testPage.endPass();

@@ -2214,6 +2214,14 @@ describe("PT1 D2 several analyses calculated again by themselves", () => {
     expect(page.auto.aboutToStart(DIV)).toBe("afterCrash");
     expect(page.auto.run("pca")).toBe("started");
     expect(page.pcaRequests()).toHaveLength(3);
+    // Held, not behind the PCA: it does not start when the PCA ends.
+    expect(page.auto.aboutToStart(DIV)).toBe("afterCrash");
+    expect(page.auto.liveState(DIV)).toEqual({
+      kind: "live",
+      aboutToStart: "afterCrash",
+      running: false,
+      after: null,
+    });
     await page.endPca();
     await wait(10_000);
     expect(diversityRequests(page)).toHaveLength(1);
