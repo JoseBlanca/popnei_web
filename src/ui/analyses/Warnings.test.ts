@@ -13,7 +13,7 @@ import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Warning } from "../../core/store.ts";
-import { Warnings } from "./Warnings.tsx";
+import { SPECTRUM_WARNING_ATTRIBUTE, Warnings } from "./Warnings.tsx";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -82,5 +82,52 @@ describe("PA2 D5 the warnings of one code, one per population", () => {
     ]);
     expect(consoleError).not.toHaveBeenCalled();
     expect(container.querySelector("h3")?.textContent).toBe("1 warning");
+  });
+});
+
+describe("second review of round 1: a warning said elsewhere in the result", () => {
+  test("two warnings and the spectrum's: the heading counts 3, the last item says the spectrum's warning with its link, and pressing the link gives the focus to the warning beside the list", () => {
+    act(() => {
+      root.render(
+        createElement(
+          StrictMode,
+          null,
+          createElement(
+            "div",
+            null,
+            createElement(Warnings, {
+              warnings: [below("p0"), below("p2")],
+              elsewhere: {
+                text: "The spectrum has a warning.",
+                link: "Go to the warning of the spectrum",
+                target: SPECTRUM_WARNING_ATTRIBUTE,
+              },
+            }),
+            createElement(
+              "p",
+              { tabIndex: -1, [SPECTRUM_WARNING_ATTRIBUTE]: "" },
+              "The warning of the spectrum.",
+            ),
+          ),
+        ),
+      );
+    });
+    expect(container.querySelector("h3")?.textContent).toBe("3 warnings");
+    expect(items()).toStrictEqual([
+      "Warning: The curve of p0 falls to half within 1 bp.",
+      "Warning: The curve of p2 falls to half within 1 bp.",
+      "Warning: The spectrum has a warning. Go to the warning of the spectrum",
+    ]);
+    const link = container.querySelector(
+      "li:last-child [role='link'], li:last-child a",
+    );
+    if (!(link instanceof HTMLElement)) throw new Error("No link.");
+    expect(link.textContent).toBe("Go to the warning of the spectrum");
+    act(() => {
+      link.click();
+    });
+    expect(document.activeElement).toBe(
+      container.querySelector(`[${SPECTRUM_WARNING_ATTRIBUTE}]`),
+    );
   });
 });
