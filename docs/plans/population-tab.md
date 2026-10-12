@@ -893,6 +893,31 @@ ab710eb2, f8762ea9, 3bdae585, b2fa8578, 4772039b. Checks at 4772039b:
 Vitest 173 files, 5,433 tests; Chromium and WebKit, `popgen2BandLive`,
 `popgen2Band`, `popgen2Live`, `popgen2Populations`, 134.
 
+The fixes, second round, ae6a9453..f0d6f6ec, test first: tests of
+the band after Stop all and of the diversity held after a crash; axe on
+the diversity about to start at 320 and 1280 px, with the clock
+running (axe does not finish under a paused clock); a folder, a text or
+several files on the waiting individuals zone get their usual words;
+the spec lists every short form and the spectrum's warning as an open
+point; five new screens of the band. The layout, measured for every
+line at every width from 320 to 1280 px in steps of 10 px, the same in
+Chromium and WebKit: no breakpoint and padding put every line on one
+line (the four lines under the download needed 753 to 831 px of 736).
+The session decided: the band says "The diversity starts after the
+download" (the tabs keep "… again when the download is written or
+closed"); the band is narrow under 44 em (704 px) in place of 30 em,
+where the widest whole line takes 660 px of 672; there its buttons
+have 4 px of side padding in place of 12, so "Diversity · 59:59" with
+Stop and Stop all takes 282 px of 288 at 320 px; and the line wraps,
+its buttons on a second row, when it still cannot fit (a run over an
+hour at 320 px, 294 px; 200% text, three rows inside the window).
+Checks at f0d6f6ec: typecheck, lint, format clean; Vitest 174 files,
+5,439 tests; Chromium and WebKit, `popgen2BandLive`, `popgen2Band`,
+`popgen2Live`, `popgen2Populations`, `popgen2Input`, 214; the screens
+of the band, 76. The 200% text flow failed once in 86 runs on a
+sideways scroll while the plots redrew, fixed in f0d6f6ec by waiting
+for the page to settle. In WebKit 200% text is emulated on the page.
+
 Left: the review of package 4 (`api`, `react`,
 `accessibility`, `ux`, `browser` at 320 px, `bundle`, and the four that
 always run); package 5, the documents, with what the fix lists left

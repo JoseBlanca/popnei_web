@@ -360,6 +360,18 @@ as it would on `:hover` or `:checked`:
   the error comes. In print a fixed element is drawn on every page, so
   `@media print` makes it static (the review of work package 5 of
   `docs/plans/no-undo.md`, 10 October 2026).
+- **A line fixed at the top wraps rather than cuts.** A flex row that
+  does not wrap, inside a fixed element, pushed the band's Stop all up
+  to 109 px past a 320 px window at 200% text, where no scroll reaches
+  it, and shrank its words to nothing; between 480 and 640 px at 100%
+  text it cut its own sentence beside two whole buttons. So the band's
+  line wraps, its words never shrink below their width, and the width
+  under which it takes its short forms was measured for every line at
+  every width from 320 to 1280 px in Chromium and WebKit, 44 em (the
+  review of work package 4 of `docs/plans/population-tab.md`, 12
+  October 2026). A line of words beside buttons is measured with its
+  longest words, a clock over an hour among them, before its breakpoint
+  is chosen.
 
 ## Contrast and colour
 
