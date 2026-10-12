@@ -188,3 +188,27 @@ Vitest 180 files, 5,550 tests; Chromium and WebKit, `popgen2LdDecay`
 24, `popgen2BandLive` 26, `popgen2Band` 40, `ldDecay` 24,
 `popgen2Populations` 92, `popgen2Live` 30, `plots` and `ldDecay` 96;
 screens 136; no flow failed on any run.
+
+### Phase 2, the measurement, 13 October 2026
+
+3dca6bfe, `e2e/measure.spec.ts`, "LD2 the LD decay on popgen2.html", run
+with no other agent on the machine (load average over one minute 4.8 to
+7.0). The file: 15,000 variants, one every 100 bp (1.5 Mb), of 1,000
+diploid individuals; each case once on a new page; the peak the sum of
+the engine's processes, sampled every 100 ms; the time from Run to the
+table shown.
+
+| case | Chromium 153 | WebKit 26.6 |
+|---|---|---|
+| 100 kb, one population | 8.6 s; 0.19 → 0.79 GB | 10.7 s; 0.36 → 1.02 GB |
+| 1 Mb, one population | 45.3 s; 0.19 → 0.91 GB | 52.1 s; 0.35 → 1.12 GB |
+| 100 kb, two populations of 500 | 8.2 s; 0.22 → 0.63 GB | 10.5 s; 0.40 → 0.88 GB |
+| 1 Mb, two populations | 46.1 s; 0.22 → 0.83 GB | 49.4 s; 0.43 → 1.09 GB |
+| the three live, after the missing data moved to 0.04, the LD decay at 100 kb | PCA 2.1 s, diversity 2.8 s, LD decay 10.3 s; 0.32 → 0.77 GB | PCA 2.1 s, diversity 2.8 s, LD decay 11.8 s; 0.47 → 1.27 GB |
+
+No tab closed and popnei refused nothing. The tab's time of the last run
+is about 1 s short of the time from Run to the table and shows whole
+seconds rounded down. So decision (a) costs a user under a minute of
+greyed filters per change up to 1 Mb on 1,000 individuals, with the PCA
+and the diversity answering within 3 s; the minutes of section 11 begin
+above 2 Mb.
