@@ -98,15 +98,27 @@ function countWorkers([channelName, listening, counts]: readonly [
   };
 }
 
-/** The lines in front of the worker's script; `holdWrite`, whether a
-    write is held after its first report of progress; `holdPca`, whether
-    the result of a PCA is held; `holdDiversity`, that of a diversity. */
-const front = (
-  holdWrite: boolean,
-  holdPca: boolean,
-  holdDiversity: boolean,
-  holdPopDists: boolean,
-): string => `{
+/** What the worker's script holds, as `holdSummary` takes it, each
+    given: `holdWrite`, whether a write is held after its first report of
+    progress; `holdPca`, whether the result of a PCA is held;
+    `holdDiversity`, that of a diversity; `holdPopDists`, that of the
+    distances. One object, so that a branch that adds a hold adds one
+    field and touches no other's place. */
+interface Holds {
+  readonly holdWrite: boolean;
+  readonly holdPca: boolean;
+  readonly holdDiversity: boolean;
+  readonly holdPopDists: boolean;
+}
+
+/** The lines in front of the worker's script, holding what `holds`
+    says. */
+const front = ({
+  holdWrite,
+  holdPca,
+  holdDiversity,
+  holdPopDists,
+}: Holds): string => `{
   const realNow = performance.now.bind(performance);
   performance.now = () => realNow() * 1e6;
   const realPost = self.postMessage.bind(self);
@@ -234,7 +246,7 @@ export async function holdSummary(
     const script = await response.text();
     await route.fulfill({
       response,
-      body: front(holdWrite, holdPca, holdDiversity, holdPopDists) + script,
+      body: front({ holdWrite, holdPca, holdDiversity, holdPopDists }) + script,
     });
   });
 }

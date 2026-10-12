@@ -92,7 +92,10 @@ export const POPGEN2_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
     start after one change, that of the tabs: the PCA and then the
     diversity (docs/specs/steps/popgen2-pca.md, "The PCA calculated again
     by itself" and "Several analyses calculated again by themselves"),
-    and, from 12 October 2026, the distances between populations, last.
+    and, from 12 October 2026, the distances between populations of the
+    Distances tab, last. The LD decay, of the Populations tab, built on
+    another branch at the same time, goes before the distances, after
+    the diversity, when the two are merged, and not at the end.
     The one list of them: the store of the page and the words of its
     locks read it, here, where popgen.html already loads it. The ids of
     `pcaOnPopgen2`, `diversityOnPopgen2` and `popDistsOnPopgen2`, as
