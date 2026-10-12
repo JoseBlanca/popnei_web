@@ -13,7 +13,7 @@ import type { Locator, Page, Route } from "@playwright/test";
 
 import { writeBigVcf } from "./bigVcf.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
-import { holdSummary, release } from "./holdWorker.ts";
+import { holdSummary, release, workersListening } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const SCREENS = join(import.meta.dirname, "..", "screens");
@@ -6879,6 +6879,174 @@ for (const theme of ["light", "dark"] as const) {
               "The diversity starts in a moment",
             );
           }
+          await page.mouse.move(0, 0);
+          await save(page, `popgen2-band-${shot}${at}-${theme}`, {
+            fullPage: false,
+          });
+        });
+      }
+
+      /** Opens panel.nei with the one pass released to its end and each
+          diversity held, runs the PCA to its result, then the diversity,
+          held running, and shows the Variants tab: the band's
+          "Diversity running" with Stop and Stop all. */
+      async function bandDiversityRunning(page: Page): Promise<void> {
+        await holdSummary(page, { holdDiversity: true });
+        await page.reload();
+        await pickOnNewPage(page, "panel.nei");
+        await release(page, "allSoFar");
+        await release(page, "result");
+        const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+        const panel = page.getByRole("tabpanel");
+        await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+        const field = panel.getByRole("textbox", {
+          name: /^Distance within which variants are compared/u,
+        });
+        await expect(field).toBeVisible({ timeout: 20_000 });
+        await field.fill("50000");
+        await field.press("Enter");
+        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(
+          panel.getByText(/^The place of each of the 200 individuals/u),
+        ).toBeVisible({ timeout: 30_000 });
+        await tabs
+          .getByRole("tab", { name: "Populations", exact: true })
+          .click();
+        const run = panel.getByRole("button", { name: "Run", exact: true });
+        await expect(run).toBeEnabled({ timeout: 20_000 });
+        await run.click();
+        await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
+        await expect(band(page)).toContainText(/Diversity( running)? · 0:/u);
+        await expect(
+          band(page).getByRole("button", {
+            name: "Stop all: the PCA and the diversity",
+          }),
+        ).toBeVisible();
+      }
+
+      test("PT4 the band with the diversity held running beside the PCA live and idle, the Variants tab shown: Stop and Stop all", async ({
+        page,
+      }) => {
+        await bandDiversityRunning(page);
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-band-diversity-running${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test("PT4 the band after its Stop of the diversity: Stopping the diversity", async ({
+        page,
+      }) => {
+        await bandDiversityRunning(page);
+        // The worker made after the Stop is held before its script
+        // arrives, so that the line stays for the picture.
+        let freeWorker = (): void => undefined;
+        const held = new Promise<void>((resolve) => {
+          freeWorker = resolve;
+        });
+        await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
+          await held;
+          await route.fallback();
+        });
+        await band(page)
+          .getByRole("button", { name: "Stop the diversity" })
+          .click();
+        await expect(band(page)).toContainText("Stopping");
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-band-diversity-stopping${at}-${theme}`, {
+          fullPage: false,
+        });
+        freeWorker();
+        await page.unrouteAll({ behavior: "ignoreErrors" });
+      });
+
+      test("PT4 the band's link to the warnings of the diversity, the Variants tab shown", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await pickIndividualsOnNewPage(page, "panel_pops.csv");
+        const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+        const panel = page.getByRole("tabpanel");
+        await tabs
+          .getByRole("tab", { name: "Populations", exact: true })
+          .click();
+        // p0 holds 48 individuals: under a minimum of 60 it is a
+        // population of too few, a warning of the result.
+        const minimum = panel.getByRole("textbox", {
+          name: /^Individuals with a called genotype needed in each population, per variant/u,
+        });
+        await expect(minimum).toBeVisible({ timeout: 20_000 });
+        await minimum.fill("60");
+        await minimum.press("Enter");
+        const run = panel.getByRole("button", { name: "Run", exact: true });
+        await expect(run).toBeEnabled({ timeout: 20_000 });
+        await run.click();
+        await expect(
+          panel.getByRole("table", {
+            name: /^The diversity of each population/u,
+          }),
+        ).toBeVisible({ timeout: 30_000 });
+        await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
+        await expect(
+          band(page).getByRole("link", { name: /^Diversity: \d+ warnings?/u }),
+        ).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-band-diversity-warning${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      for (const shot of ["diversity-failed", "held-after-crash"] as const) {
+        test(`PT4 the band ${shot === "diversity-failed" ? "after a crash of the diversity: the link to its error" : "with the PCA held after a crash of the diversity it waited for: Stop recalculating"}, the Variants tab shown`, async ({
+          page,
+        }) => {
+          await holdSummary(page, { holdDiversity: true });
+          await page.reload();
+          await pickOnNewPage(page, "panel.nei");
+          await release(page, "allSoFar");
+          await release(page, "result");
+          const tabs = page.getByRole("tablist", {
+            name: "Files and analyses",
+          });
+          const panel = page.getByRole("tabpanel");
+          await tabs
+            .getByRole("tab", { name: "Populations", exact: true })
+            .click();
+          const run = panel.getByRole("button", { name: "Run", exact: true });
+          await expect(run).toBeEnabled({ timeout: 20_000 });
+          await run.click();
+          await expect(
+            panel.getByRole("button", { name: "Stop", exact: true }),
+          ).toBeVisible();
+          if (shot === "held-after-crash") {
+            await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+            const field = panel.getByRole("textbox", {
+              name: /^Distance within which variants are compared/u,
+            });
+            await expect(field).toBeVisible({ timeout: 20_000 });
+            await field.fill("50000");
+            await field.press("Enter");
+            await panel
+              .getByRole("button", { name: "Run", exact: true })
+              .click();
+            await expect(
+              panel.getByText(
+                "The PCA starts once the diversity, which is running, ends.",
+                { exact: true },
+              ),
+            ).toBeVisible();
+          }
+          await tabs
+            .getByRole("tab", { name: "Variants", exact: true })
+            .click();
+          await workersListening(page);
+          await release(page, "crash");
+          await expect(band(page)).toContainText(
+            shot === "diversity-failed"
+              ? "Diversity: could not be calculated, in the Populations tab"
+              : "The PCA starts after the next change",
+            { timeout: 30_000 },
+          );
           await page.mouse.move(0, 0);
           await save(page, `popgen2-band-${shot}${at}-${theme}`, {
             fullPage: false,

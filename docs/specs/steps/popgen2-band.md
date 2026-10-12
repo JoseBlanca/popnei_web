@@ -841,7 +841,15 @@ dark: `popgen2-band-empty`, "Popnei" alone, `popgen2-band-reading`,
 11 October 2026, `popgen2-band-writing` (behind the
 dialog), `popgen2-band-warning`, `popgen2-band-error` and
 `popgen2-band-error-details`, and `popgen2-band-error-running`, both
-lines.
+lines; from 12 October 2026 (the review of work package 4),
+`popgen2-band-diversity-running` ("Diversity running" with Stop and
+Stop all, the PCA live and idle), `popgen2-band-diversity-stopping`,
+`popgen2-band-diversity-warning` (the link "Diversity: 2 warnings, in
+the Populations tab"), `popgen2-band-diversity-failed` (the link
+"Diversity: could not be calculated, in the Populations tab") and
+`popgen2-band-held-after-crash` (the PCA held after a crash of the
+diversity it waited for, with its Stop recalculating), each with
+another tab shown.
 
 **By hand**, by the owner: the band in Safari and Firefox, which
 Playwright cannot start on the owner's Mac, with a control reached by
