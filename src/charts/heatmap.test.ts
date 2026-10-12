@@ -431,7 +431,36 @@ describe("PA4 D2 the heatmap under jsdom, its cells, values and names", () => {
     const bands = element.querySelectorAll("rect.chart-legend-band");
     expect(bands).toHaveLength(1);
     expect(bands[0]?.getAttribute("fill")).toBe(viridisColour(0));
-    expect(legendTexts(element)).toEqual(["Hudson's Fst", "0.0000"]);
+    // −0.01 has the colour of 0: the legend says so.
+    expect(legendTexts(element)).toEqual([
+      "Hudson's Fst",
+      "0.0000",
+      "or below",
+    ]);
+    // All 0 and none below: 0.0000 alone.
+    const flat = sizedElement(640, 640);
+    createHeatmap(flat, heatmapOf(["a", "b"], [0]));
+    expect(legendTexts(flat)).toEqual(["Hudson's Fst", "0.0000"]);
+  });
+
+  test("a matrix with a negative value: the low end of the legend reads 0.0000 and, under it, or below, which the right margin counts; a matrix with none reads 0.0000 alone (the review of the Distances tab, 12 October 2026)", () => {
+    const element = sizedElement(640, 640);
+    const data = heatmapOf(["p0a", "p0b", "p1"], [FST_P0A_P0B, 0.1028, 0.102]);
+    createHeatmap(element, data);
+    expect(legendTexts(element)).toEqual([
+      "Hudson's Fst",
+      "0.1028",
+      "0.0000",
+      "or below",
+    ]);
+    // 16 + 12 + 4 + "or below" at 7.2.
+    expect(heatmapMargin(data).right).toBeCloseTo(16 + 12 + 4 + 8 * 7.2, 9);
+    const below = [...element.querySelectorAll("g.chart-legend text")].at(-1);
+    const zero = [...element.querySelectorAll("g.chart-legend text")].at(-2);
+    expect(below?.getAttribute("x")).toBe(zero?.getAttribute("x"));
+    expect(below?.getAttribute("y")).toBe(zero?.getAttribute("y"));
+    expect(below?.getAttribute("dy")).toBe("1.2em");
+    expect(heatmapMargin(panel()).right).toBeCloseTo(75.2, 9);
   });
 
   test("the legend of the panel: the name of the value, 32 bands from dark purple at the bottom to yellow at the top, 240 pixels high, and the largest value and 0 at its ends", () => {
@@ -803,9 +832,10 @@ describe("PA4 D2 the heatmap under jsdom, the cell under the pointer", () => {
       heatmapOf(["p0a", "p0b", "p1"], [FST_P0A_P0B, 0.1028, 0.102]),
     );
     // Names of 3 characters: the left margin is 8 + 3 × 9, 35, and the
-    // one below 8 + 0.71 × 27 + 8, so the grid of 529.8 pixels a side
-    // starts 581.83 − 529.8 pixels down the frame.
-    const side = 640 - 35 - 75.2;
+    // one below 8 + 0.71 × 27 + 8, so the grid of 515.4 pixels a side
+    // starts 581.83 − 515.4 pixels down the frame.
+    // The legend of a negative value: "or below", 8 characters.
+    const side = 640 - 35 - (16 + 12 + 4 + 8 * 7.2);
     const band = (side + 1) / 3;
     const top = 640 - 24 - (8 + 0.71 * 27 + 8) - side;
     moveTo(element, 1.5 * band - 0.5, top + 0.5 * band - 0.5);

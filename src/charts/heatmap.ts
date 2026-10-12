@@ -222,6 +222,22 @@ function largestOf(data: HeatmapData): number | null {
   return largest > 0 ? largest : null;
 }
 
+/** True when a value off the diagonal is below 0, which has the colour
+    of 0. */
+function hasNegative(data: HeatmapData): boolean {
+  const numNames = data.names.length;
+  for (let row = 0; row < numNames; row++) {
+    for (let column = 0; column < numNames; column++) {
+      if (row !== column && valueAt(data, row, column) < 0) return true;
+    }
+  }
+  return false;
+}
+
+/** The words under the 0 of the legend when a value is below 0, which
+    has its colour. */
+const OR_BELOW = "or below";
+
 /** True when a value off the diagonal is finite. */
 function hasFinite(data: HeatmapData): boolean {
   const numNames = data.names.length;
@@ -237,14 +253,17 @@ function hasFinite(data: HeatmapData): boolean {
 
 /**
  * The texts of the legend beside its bar: the largest value and 0; "0.0000"
- * alone when no value is above 0; "no value" when no value is finite.
+ * alone when no value is above 0; "no value" when no value is finite;
+ * and "or below" under the 0 when a value is below 0, which has its
+ * colour (since 12 October 2026, the review of the Distances tab).
  */
 function legendValues(data: HeatmapData): string[] {
   if (!hasFinite(data)) return [NO_VALUE];
   const largest = largestOf(data);
+  const below = hasNegative(data) ? [OR_BELOW] : [];
   return largest === null
-    ? [heatmapNumber(0)]
-    : [heatmapNumber(largest), heatmapNumber(0)];
+    ? [heatmapNumber(0), ...below]
+    : [heatmapNumber(largest), heatmapNumber(0), ...below];
 }
 
 /**
@@ -576,6 +595,19 @@ function drawCells(frame: Frame, data: HeatmapData, scales: GridScales): void {
     .text((text) => text.text);
 }
 
+/** "or below", under the 0 of the legend at `x` and `y`, `dy` lower. */
+function orBelow(x: number, y: number, dy: string): LegendText {
+  return {
+    key: "below",
+    className: "chart-legend-text chart-legend-value",
+    anchor: "start",
+    x,
+    y,
+    dy,
+    text: OR_BELOW,
+  };
+}
+
 /**
  * Draws the legend from the top left of the SVG, right of the grid of
  * side `side` whose top is `top` pixels down the frame: the name of the
@@ -583,7 +615,8 @@ function drawCells(frame: Frame, data: HeatmapData, scales: GridScales): void {
  * viridis from the top of the grid, as
  * high as the grid, at most 240 pixels, the largest value at its top and
  * 0 at its bottom, one band of step 0 when no value is above 0, none when
- * no value is finite; and the texts at its ends, or "no value".
+ * no value is finite; and the texts at its ends, or "no value", with "or
+ * below" under the 0 when a value is below 0.
  */
 function drawLegend(
   frame: Frame,
@@ -597,6 +630,7 @@ function drawLegend(
   const textLeft = barLeft + BAR_WIDTH + BAR_TEXT_GAP;
   const finite = hasFinite(data);
   const largest = largestOf(data);
+  const negative = hasNegative(data);
   let bands: BarBand[] = [];
   const texts: LegendText[] = [
     {
@@ -630,6 +664,9 @@ function drawLegend(
       dy: "0.35em",
       text: heatmapNumber(0),
     });
+    if (negative) {
+      texts.push(orBelow(textLeft, barTop + barHeight / 2, "1.55em"));
+    }
   } else {
     bands = Array.from({ length: BAR_BANDS }, (_band, band) => ({
       band,
@@ -657,6 +694,7 @@ function drawLegend(
         text: heatmapNumber(0),
       },
     );
+    if (negative) texts.push(orBelow(textLeft, barTop + barHeight, "1.2em"));
   }
   const bandHeight = bands.length === 0 ? 0 : barHeight / bands.length;
   frame.legend

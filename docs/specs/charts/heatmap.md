@@ -192,7 +192,12 @@ of `popgen2.html`). Until then the right margin counted it too, and
 "Hudson's Fst", 12 characters where its numbers have 6, took 43 pixels
 more than its numbers: on a page of 320 pixels the cells of three
 populations were 55.7 pixels, under `CELL_TEXT_MIN`, and held no value,
-while those of "Jost's D" held them.
+while those of "Jost's D" held them. When a value is below 0, which
+has the colour of 0, the legend writes "or below" under its 0, so that
+the bar reads "0.0000 or below" at its foot, and the right margin
+counts it, 8 characters (since 12 October 2026, the review of the
+Distances tab: until then a negative distance was painted the lowest
+colour of a bar marked "0.0000", with nothing to say it was below).
 
 ### The cell under the pointer
 
@@ -361,7 +366,8 @@ shorter as the width falls.
 - **No value above 0**: every finite cell the colour of 0, the bar one
   band; `viridisStep` is not called.
 - **A negative value**: the colour of 0, and its number with the minus
-  sign in the cell and the tooltip.
+  sign in the cell and the tooltip; "or below" under the 0 of the
+  legend.
 - **An `update` to the other measure, or another order**: the paths are
   joined by their steps and the texts by their row and column, in the
   same SVG; the tooltip is hidden.
