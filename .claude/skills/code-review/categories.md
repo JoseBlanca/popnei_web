@@ -103,9 +103,12 @@ does not go through the key.
   opened, which loads no result: do they give what section 3 says? On
   `popgen2.html`, which has no notice and no Undo: does a change stop at
   once what it leaves behind and remove its result, can any change the
-  lock of a running PCA misses stop it without a word, and can the PCA
-  that starts again by itself read a project older than the last change,
-  or start while a control still holds a change under way?
+  lock of a running live analysis misses (the filters for the PCA, the
+  filters and the populations for the diversity) stop it without a
+  word, can an analysis that starts again by itself read a project
+  older than the last change, or start while a control still holds a
+  change under way, and is an analysis held after a crash ever said to
+  start when the one running ends?
 
 Evidence: two projects that differ in one input and give the same key,
 as a Vitest test or a call in node; or a sequence of actions in the

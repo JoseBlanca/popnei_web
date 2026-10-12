@@ -279,7 +279,7 @@ export function createClient(make: {
   `popgen.html`. `popgen2.html` has no notice and no Undo, so its store,
   made with `stopLeftBehind` and `dropLeftBehind`, cancels such a
   request at the change itself and keeps no result of it, and the page
-  locks what a running PCA reads so that no change of the user's stops
+  locks what a running live analysis reads, the PCA or the diversity, so that no change of the user's stops
   it unseen (`docs/specs/core/store.md`, "On popgen2.html: no notice, no
   Undo, and no result kept for values left behind"). A request left
   behind still sends its outcome; the store drops popnei's and the

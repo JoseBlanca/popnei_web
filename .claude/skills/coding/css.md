@@ -365,12 +365,12 @@ as it would on `:hover` or `:checked`:
   to 109 px past a 320 px window at 200% text, where no scroll reaches
   it, and shrank its words to nothing; between 480 and 640 px at 100%
   text it cut its own sentence beside two whole buttons. So the band's
-  line wraps, its words never shrink below their width, and the width
-  under which it takes its short forms was measured for every line at
-  every width from 320 to 1280 px in Chromium and WebKit, 45 em, 1 em
-  over the widest line so that a scrollbar that takes room leaves it
-  whole (the
-  review of work package 4 of `docs/plans/population-tab.md`, 12
+  line wraps, nothing of its words but the file's name shrinks, and
+  the width under which it takes its short forms was measured for
+  every line at every width from 320 to 1280 px in Chromium and WebKit:
+  the widest whole line, 660 px, fits from 700 px, and the band is
+  narrow under 45 em, 720 px, 1 em more than that, so that a scrollbar
+  of 15 px that takes room leaves it whole (the review of work package 4 of `docs/plans/population-tab.md`, 12
   October 2026). A line of words beside buttons is measured with its
   longest words, a clock over an hour among them, before its breakpoint
   is chosen.
