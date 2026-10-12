@@ -27,6 +27,15 @@ the PCA while the PCA tab is shown; the one pass named as its box
 names it; an error band that scrolls with the page, brought into view
 when it comes, with the focus given to the heading when the jump
 leaves it out of the window, and held while a dialog is open.
+Its part for several live analyses was built on the branch
+`population-tab` on 11 and 12 October 2026 (work package 4 of
+`docs/plans/population-tab.md`), and not yet tried by the owner. Its
+reviews changed it: Stop all alone beside an analysis about to start
+on a narrow window (the owner's choice of 12 October 2026); a Stop
+keyed by the analysis it stops, so that the focus never passes to
+another's; the narrow form decided in one place, under 45 em; the line
+that wraps, its words never cut but the file's name; another analysis
+about to start shown over a Stop under way.
 
 Revised on 11 October 2026 for `docs/designs/population-tab.md`,
 approved by the owner that day with the recommendations of its two open
@@ -508,8 +517,8 @@ It reads:
 - the clock of a run, `useRunSeconds` of `src/ui/runSeconds.ts`, as the
   PCA tab reads it;
 - from `src/ui/autoRuns.ts`: the live state of each live analysis,
-  `liveState(id)`, with its `after` (`BandPage.pcaLive` becomes one
-  entry per live analysis, from 11 October 2026); until then the PCA's alone, `liveState("pca")`,
+  `liveState(id)`, one entry of `BandPage.live` per live analysis since
+  12 October 2026 (until then `BandPage.pcaLive`, the PCA's alone),
   whether it is live, about to start and what its start waits for, or
   stopped by the user, read with its `subscribe` alone, which tells
   every change of it, those a change of the store makes among them (the

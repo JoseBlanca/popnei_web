@@ -3047,7 +3047,7 @@ for the smallest part of it.
   the same button renamed "Stop the diversity" had stopped, at the
   next Enter, an analysis the user had not chosen (the review of work
   package 4 of `docs/plans/population-tab.md`, 12 October 2026, in
-  Chromium and WebKit). Under 44 em, 704 px at the browser's usual size
+  Chromium and WebKit). Under 45 em, 720 px at the browser's usual size
   of text, the band is narrow: its words take their short forms, its
   heading is smaller, its buttons have 4 px of side padding in place of
   12, and beside Stop all it leaves out the "Stop recalculating" of an
@@ -3611,7 +3611,7 @@ src/ui/
                     live state of each analysis of POPGEN2_LIVE, Stop
                     all and a Stop keyed by what it stops, and from 12
                     October 2026 its narrow form decided in one place,
-                    the window under 44 em (narrow.ts)
+                    the window under 45 em (narrow.ts)
   pageTab.ts        from 10 October 2026, the tab shown on popgen2.html,
                     a small store of the screen that the page and the
                     band both read and change
@@ -3727,7 +3727,7 @@ src/ui/
                     WideShort.tsx, from 10 October 2026, words whole and
                     in a short form under 30 rem, which the band's line
                     and its link draw, and from 12 October 2026 when the
-                    band is narrow, under 44 em (band/narrow.ts);
+                    band is narrow, under 45 em (band/narrow.ts);
                     FileZone.tsx, the zone of a file, from 11 October
                     2026 with a state that waits, its button greyed with
                     the reason, a file dropped, pasted or picked then

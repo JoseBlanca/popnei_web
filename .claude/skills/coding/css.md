@@ -367,7 +367,9 @@ as it would on `:hover` or `:checked`:
   text it cut its own sentence beside two whole buttons. So the band's
   line wraps, its words never shrink below their width, and the width
   under which it takes its short forms was measured for every line at
-  every width from 320 to 1280 px in Chromium and WebKit, 44 em (the
+  every width from 320 to 1280 px in Chromium and WebKit, 45 em, 1 em
+  over the widest line so that a scrollbar that takes room leaves it
+  whole (the
   review of work package 4 of `docs/plans/population-tab.md`, 12
   October 2026). A line of words beside buttons is measured with its
   longest words, a clock over an hour among them, before its breakpoint

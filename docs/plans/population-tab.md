@@ -918,6 +918,45 @@ of the band, 76. The 200% text flow failed once in 86 runs on a
 sideways scroll while the plots redrew, fixed in f0d6f6ec by waiting
 for the page to settle. In WebKit 200% text is emulated on the page.
 
+The second review, of the fixes (`react`, `accessibility`,
+`browser`), 12 October 2026: the accessibility reviewer found nothing;
+five findings held, fixed in 3aeedd80 to 5f887a96, test first: a long
+file name had its percentage cut and the band three rows tall (113 px
+in place of 51) at every wide width, so the page moved 62 px when a
+file opened and when its pass ended, both made by the wrap of
+ef5e6889 (now only the name is cut, on the heading's row); at 200%
+text, scrolled down, a start or end of an analysis moved what the user
+read by 102 to 120 px (now 0); a scrollbar that takes room would have
+wrapped the widest line at 704 to 718 px (the band is now narrow under
+45 em, 720 px); a Stop recalculating that became the Stop of the same
+analysis sent the focus to "Popnei" (it now keeps it); the band's link
+keyed by its analysis, a guard with no test, since no sequence reaches
+it. Left as it is: "Diversity later" with Stop recalculating, the
+diversity alone live and waiting for the download or after a crash,
+needs 288.4 px of 288 at 320 px and takes a second row, its words
+whole. Checks at 5f887a96: typecheck, lint, format clean; Vitest 174
+files, 5,440 tests; Chromium and WebKit, `popgen2BandLive`,
+`popgen2Band`, `popgen2Live`, `popgen2Populations`, `popgen2Input`,
+220; the band's screens, 76. Seen outside the scope, for package 6:
+at 200% text and 320 px "Open another variants file…" is 124 px wide,
+a word per line (Chromium); the missing-genotypes slider's focus ring
+is cut at 320 px in both browsers; at 568 by 320 px with 200% text the
+band takes 161 px of 320.
+
+### Work package 5, 12 October 2026
+
+5.1, by the session: `.claude/skills/coding/react.md` (several live
+analyses, `POPGEN2_LIVE`, the analysis held after a crash, a Stop keyed
+by what it does, a narrow control not drawn), `testing.md` (axe does
+not finish under a paused page clock), `css.md` (a line fixed at the
+top wraps rather than cuts) in f2aada4b, eb1fc847 and the commit of
+this entry. 5.2, by a subagent: d4c379ce to f5db3e65 and bd808e18,
+`docs/architecture.md` (sections 3, 4, 5, 7, 9, 11), `functionality.md`
+(revised after a first-reader: what holds first, the six cases in which
+a live analysis does not start), `technology.md`, the status line of
+each spec; the samples of NU4 D6 were 320 to 340 ms apart (250 ms of
+wait and 70 to 90 ms per sample), not "every 250 ms".
+
 Left: the review of package 4 (`api`, `react`,
 `accessibility`, `ux`, `browser` at 320 px, `bundle`, and the four that
 always run); package 5, the documents, with what the fix lists left
