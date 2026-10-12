@@ -561,6 +561,7 @@ const lineDefinition: Plot2dDefinition<LineData> = {
   check: checkLine,
   margin: lineMargin,
   draw: drawLine,
+  yLabelRoomMeasured: true,
 };
 
 /**

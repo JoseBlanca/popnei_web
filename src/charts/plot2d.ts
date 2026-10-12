@@ -170,6 +170,13 @@ export interface Plot2dDefinition<Data extends PlotText> {
    * its names when the size leaves the names no room.
    */
   readonly margin: (data: Data, size: ExportSize) => Margin;
+  /**
+   * Whether the base widens the left margin so that the label of the y
+   * axis keeps 6 pixels from the numbers of its axis, measured; the line
+   * plot asks it, whose label up the spectrum's plot met its numbers.
+   * The margins are the definition's when absent.
+   */
+  readonly yLabelRoomMeasured?: boolean;
   /** Draws the whole plot; called any number of times with the same arguments. */
   readonly draw: (frame: Frame, data: Data) => void;
   /**
@@ -708,7 +715,7 @@ export function createPlot2d<Data extends PlotText>(
     // width be measured: a label that would stand nearer to them than
     // its gap widens the left margin, and the plot is drawn once more
     // (from 12 October 2026, the review of round 1).
-    if (extraLeft === 0) {
+    if (definition.yLabelRoomMeasured === true && extraLeft === 0) {
       const needs = yLabelNeeds(yLines.length);
       if (needs !== null && needs > margin.left) {
         drawAt(size, needs - margin.left);

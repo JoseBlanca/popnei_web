@@ -262,7 +262,8 @@ and turned along the vertical one, in the margins:
   drawn on one line, with the definition's margins;
 - from 12 October 2026, the review of round 1 of the Populations tab,
   **the label of the vertical axis keeps 6 pixels from the numbers of
-  its axis**. Once the axes are drawn, the base measures the widest
+  its axis** in a plot whose definition asks it,
+  `yLabelRoomMeasured`, the line plot. Once the axes are drawn, the base measures the widest
   number of the vertical axis (`textWidth.ts`, as the names of
   `bars.md` are measured), and when the label's last line, 16 pixels
   from the left of the SVG and 16 more for a second line, with its
@@ -271,8 +272,9 @@ and turned along the vertical one, in the margins:
   margin of 60 pixels of the line plot held the label on one line, and
   on two the numbers of the spectrum's axis overlapped its second line
   by 1 pixel at 1,280 pixels, in Chromium and WebKit.
-  Where nothing measures, under jsdom, the margins are the
-  definition's, as before.
+  Where nothing measures, under jsdom, and in the plots that do not ask
+  it, the scatter, whose flows place the pointer by its margins, and the
+  histogram, the margins are the definition's, as before.
 
 The grid, `chart-grid`, stays empty until a plot asks for one.
 
@@ -507,6 +509,9 @@ export interface Plot2dDefinition<Data extends PlotText> {
   /** The margins for `data` in an element of `size`, above 0 by 0. */
   readonly margin: (data: Data, size: ExportSize) => Margin;
   readonly draw: (frame: Frame, data: Data) => void;
+  /** From 12 October 2026, the label of the y axis kept 6 pixels from
+      the numbers of its axis, measured ("The axes"); the line plot's. */
+  readonly yLabelRoomMeasured?: boolean;
   /** The base makes the overlay and calls these, in the pixels of the frame. */
   readonly pointer?: {
     readonly move: (x: number, y: number) => void;
