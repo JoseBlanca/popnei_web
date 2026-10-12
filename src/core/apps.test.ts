@@ -15,7 +15,7 @@ import {
 import { diversityOnPopgen2 } from "./analyses/diversity.ts";
 import { ldDecay } from "./analyses/ldDecay.ts";
 import { pca, pcaOnPopgen2 } from "./analyses/pca.ts";
-import { popDists } from "./analyses/popDists.ts";
+import { popDists, popDistsOnPopgen2 } from "./analyses/popDists.ts";
 import { variantsSummary } from "./analyses/variantsSummary.ts";
 import { resultBytes } from "./cache.ts";
 import { keyFromWire } from "./keys.ts";
@@ -116,8 +116,12 @@ describe("IP8 D3 the analyses of apps.ts", () => {
 });
 
 describe("the analyses of popgen2.html that can be live", () => {
-  test("they are the PCA and then the diversity of the page, in the order of the tabs, each an analysis of the page", () => {
-    expect(POPGEN2_LIVE).toEqual([pcaOnPopgen2.id, diversityOnPopgen2.id]);
+  test("they are the PCA, the diversity and the distances of the page, in the order of the tabs, each an analysis of the page", () => {
+    expect(POPGEN2_LIVE).toEqual([
+      pcaOnPopgen2.id,
+      diversityOnPopgen2.id,
+      popDistsOnPopgen2.id,
+    ]);
     for (const id of POPGEN2_LIVE) {
       expect(POPGEN2_ANALYSES.map((def) => def.id)).toContain(id);
     }
@@ -506,6 +510,7 @@ describe("AP2 D2 the PCA of popgen2.html in apps.ts", () => {
       variantsSummary,
       pcaOnPopgen2,
       diversityOnPopgen2,
+      popDistsOnPopgen2,
     ]);
     expect(POPGEN2_ANALYSES[1]).toBe(pcaOnPopgen2);
     expect(POPGEN_ANALYSES).toContain(pca);
@@ -523,6 +528,7 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
       "variantsSummary",
       "pca",
       "diversity",
+      "popDists",
     ]);
     expect(POPGEN_ANALYSES.map((def) => def.id)).not.toContain(
       "variantsSummary",
@@ -578,6 +584,7 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
       ["variantsSummary", "done"],
       ["pca", "locked"],
       ["diversity", "ready"],
+      ["popDists", "locked"],
     ]);
     const read = state.project.variants?.read;
     expect(read?.kind === "read" ? read.numVars : null).toBe(1200);

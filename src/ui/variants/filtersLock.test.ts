@@ -155,7 +155,8 @@ describe("PT3 D1 the lock of the populations names only the live analyses that r
       ),
     };
   }
-  const bothLive = { isLive: () => true };
+  // The PCA and the diversity live, the distances not.
+  const bothLive = { isLive: (id: string) => id !== "popDists" };
 
   test("with the PCA live beside the running diversity, the populations' words name the diversity alone, the filters' both", () => {
     const s = diversityRunning();

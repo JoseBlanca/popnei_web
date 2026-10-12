@@ -235,6 +235,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       "Stopping the statistics of panel.nei…",
       "Stopping the PCA…",
       "Stopping the diversity…",
+      "Stopping the distances…",
     ]);
   });
 
@@ -822,6 +823,7 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
               running: false,
               after: null,
             },
+            popDists: { kind: "off" },
           },
         },
         testPage.defects.getState(),

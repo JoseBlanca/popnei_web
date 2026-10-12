@@ -47,11 +47,12 @@ import { summaryStatus } from "./variants/words.ts";
 // that records the jobs and never ends them.
 
 describe("the store of popgen2.html", () => {
-  test("one-pass the page starts by itself the summary alone, whose one pass gives the statistics too, and then the PCA and the diversity once live, each a group of its own", () => {
+  test("one-pass the page starts by itself the summary alone, whose one pass gives the statistics too, and then the PCA, the diversity and the distances once live, each a group of its own", () => {
     expect(POPGEN2_AUTO_GROUPS).toEqual([
       ["variantsSummary"],
       ["pca"],
       ["diversity"],
+      ["popDists"],
     ]);
   });
 
@@ -107,6 +108,7 @@ describe("the store of popgen2.html", () => {
         ["variantsSummary", "running"],
         ["pca", "locked"],
         ["diversity", "ready"],
+        ["popDists", "locked"],
       ],
     );
   });
@@ -449,6 +451,7 @@ describe("DL4 D3 the store of popgen2.html writes, and works out the individuals
       ["variantsSummary", "ready"],
       ["pca", "locked"],
       ["diversity", "ready"],
+      ["popDists", "locked"],
     ]);
   });
 

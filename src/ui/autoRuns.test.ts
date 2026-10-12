@@ -1812,12 +1812,13 @@ describe("PT1 D2 several analyses calculated again by themselves", () => {
     vi.useRealTimers();
   });
 
-  test("the page's groups are the one pass, the PCA and the diversity, and its live analyses the PCA and then the diversity", () => {
-    expect(POPGEN2_LIVE).toEqual(["pca", "diversity"]);
+  test("the page's groups are the one pass, the PCA, the diversity and the distances, and its live analyses the PCA, then the diversity, then the distances", () => {
+    expect(POPGEN2_LIVE).toEqual(["pca", "diversity", "popDists"]);
     expect(POPGEN2_AUTO_GROUPS).toEqual([
       ["variantsSummary"],
       ["pca"],
       ["diversity"],
+      ["popDists"],
     ]);
   });
 

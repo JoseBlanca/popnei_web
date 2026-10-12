@@ -25,6 +25,12 @@ import {
   stopAllText,
 } from "../analyses/liveWords.ts";
 import {
+  DISTANCES_HELD_AFTER_CRASH,
+  DISTANCES_STARTED_BY_ITSELF,
+  distancesEndAnnouncement,
+  distancesStoppedText,
+} from "../analyses/popDists/liveWords.ts";
+import {
   pcaEndAnnouncement,
   pcaHeldAfterCrashText,
   pcaStartedByItselfText,
@@ -85,6 +91,14 @@ const LIVE_SAID: Readonly<Record<Popgen2LiveId, LiveSaid>> = Object.freeze({
     heldAfterCrash: () => DIVERSITY_HELD_AFTER_CRASH,
     stopped: (_s: AppState<JobResult, Blob>, runOffered: boolean) =>
       diversityStoppedText(runOffered),
+  }),
+  popDists: Object.freeze({
+    runKind: "popDistsRun",
+    end: distancesEndAnnouncement,
+    startedAlone: () => DISTANCES_STARTED_BY_ITSELF,
+    heldAfterCrash: () => DISTANCES_HELD_AFTER_CRASH,
+    stopped: (_s: AppState<JobResult, Blob>, runOffered: boolean) =>
+      distancesStoppedText(runOffered),
   }),
 });
 

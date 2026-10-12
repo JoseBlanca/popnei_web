@@ -585,9 +585,26 @@ function lockedText(
   beside: readonly LiveAnalysisName[],
 ): string {
   if (beside.length === 0) {
-    return `Stop ${running.name} in the ${running.tab} tab to change ${what}; then press Run there to calculate it again.`;
+    return `Stop ${running.name} in the ${running.tab} tab to change ${what}; then press Run there to calculate ${itOf(running)} again.`;
   }
   return `Stop ${running.name} in the ${running.tab} tab to change ${what}, or press ${STOP_ALL_PLACE} to stop ${bothOf(beside.map((one) => one.name))} too; then press Run in each tab to calculate them again.`;
+}
+
+/** The pronoun of the analysis `named`: "it", or "them" for one named
+    in the plural, "the distances". */
+export function itOf(named: LiveAnalysisName): "it" | "them" {
+  return named.plural === true ? "them" : "it";
+}
+
+/** The analysis `named` and a verb of the third person after it, in its
+    number, `singular` or `plural`: "the diversity runs", "the distances
+    run". */
+export function withVerb(
+  named: LiveAnalysisName,
+  singular: string,
+  plural: string,
+): string {
+  return `${named.name} ${named.plural === true ? plural : singular}`;
 }
 
 /** The analyses `named`, each with its tab, as a Stop of each names

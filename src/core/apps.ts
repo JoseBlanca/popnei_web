@@ -12,7 +12,7 @@ import { filterCounts, variantsOfFile } from "./analyses/filterCounts.ts";
 import { individualChecks } from "./analyses/individualChecks.ts";
 import { ldDecay } from "./analyses/ldDecay.ts";
 import { pca, pcaOnPopgen2 } from "./analyses/pca.ts";
-import { popDists } from "./analyses/popDists.ts";
+import { popDists, popDistsOnPopgen2 } from "./analyses/popDists.ts";
 import { variantChecks } from "./analyses/variantChecks.ts";
 import { variantsSummary } from "./analyses/variantsSummary.ts";
 import { defect } from "./analyses/words.ts";
@@ -72,23 +72,36 @@ export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
     tab (docs/specs/analyses/pca.md, "On popgen2.html"); then the
     diversity of the Populations tab, the definition of that page, whose
     unclassified individuals are left out or one population
-    (docs/specs/analyses/diversity.md, "On popgen2.html"). It is a list
+    (docs/specs/analyses/diversity.md, "On popgen2.html"); last, the
+    distances between populations of the Distances tab, the definition
+    of that page (docs/specs/analyses/popDists.md, "On popgen2.html").
+    It is a list
     apart from `POPGEN_ANALYSES`, so that the old page neither shows the
     summary nor changes (docs/plans/open-variants.md, "Its own list of
     analyses"). */
 export const POPGEN2_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
-  Object.freeze([variantsSummary, pcaOnPopgen2, diversityOnPopgen2]);
+  Object.freeze([
+    variantsSummary,
+    pcaOnPopgen2,
+    diversityOnPopgen2,
+    popDistsOnPopgen2,
+  ]);
 
 /** The analyses of popgen2.html that can be live, calculated again by
     themselves once the user's Run made each live, in the order they
     start after one change, that of the tabs: the PCA and then the
     diversity (docs/specs/steps/popgen2-pca.md, "The PCA calculated again
-    by itself" and "Several analyses calculated again by themselves").
+    by itself" and "Several analyses calculated again by themselves"),
+    and, from 12 October 2026, the distances between populations, last.
     The one list of them: the store of the page and the words of its
     locks read it, here, where popgen.html already loads it. The ids of
-    `pcaOnPopgen2` and `diversityOnPopgen2`, as literals, so that a table
-    keyed by them must name each. */
-export const POPGEN2_LIVE = Object.freeze(["pca", "diversity"] as const);
+    `pcaOnPopgen2`, `diversityOnPopgen2` and `popDistsOnPopgen2`, as
+    literals, so that a table keyed by them must name each. */
+export const POPGEN2_LIVE = Object.freeze([
+  "pca",
+  "diversity",
+  "popDists",
+] as const);
 
 /** The id of an analysis of popgen2.html that can be live, one of
     `POPGEN2_LIVE`. */

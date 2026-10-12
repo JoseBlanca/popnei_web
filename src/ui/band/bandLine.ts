@@ -60,7 +60,11 @@ const PCA = pcaOnPopgen2.id;
     and its result are: the tab the band's link shows, and the one whose
     Stop the band drops while it is shown. */
 export const LIVE_TABS: Readonly<Record<Popgen2LiveId, AnalysisTabId>> =
-  Object.freeze({ pca: "pca", diversity: "populations" });
+  Object.freeze({
+    pca: "pca",
+    diversity: "populations",
+    popDists: "distances",
+  });
 
 /** What the band reads of the page, beside the log of the errors. */
 export interface BandPage {
@@ -178,6 +182,7 @@ export function liveStatesOf(
   return {
     pca: live.liveState("pca"),
     diversity: live.liveState("diversity"),
+    popDists: live.liveState("popDists"),
   };
 }
 

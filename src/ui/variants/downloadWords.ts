@@ -22,7 +22,7 @@ import type {
 } from "../../worker/protocol.ts";
 import type { WriteFormat } from "../../core/keys.ts";
 import type { LiveAnalysisName } from "../analyses/status.ts";
-import { STOP_ALL_PLACE, clockText } from "../analyses/words.ts";
+import { STOP_ALL_PLACE, clockText, itOf } from "../analyses/words.ts";
 import { failedText } from "./words.ts";
 
 /** The words of the button, whose three dots say that it opens a
@@ -52,7 +52,7 @@ export function analysisWaitsText(
   waiting: readonly LiveAnalysisName[],
 ): string {
   if (waiting.length === 0) {
-    return `Waits for ${running.name} to end; or stop it in the ${running.tab} tab.`;
+    return `Waits for ${running.name} to end; or stop ${itOf(running)} in the ${running.tab} tab.`;
   }
   const waits = `Waits for ${running.name}, and ${bothOf(waiting.map((one) => one.name))} after it, to end`;
   return `${waits}; or press ${STOP_ALL_PLACE}.`;

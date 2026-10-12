@@ -227,7 +227,9 @@ function aboutToStartWords(
   const [only] = named;
   const one = named.length === 1 && only !== undefined;
   const subject = capitalized(joined(named.map((each) => each.name)));
-  const verb = one ? "starts" : "start";
+  // One analysis named in the plural, "the distances", takes the verb
+  // of several.
+  const verb = one && only.plural !== true ? "starts" : "start";
   const who = one ? titleOf(only) : "Analyses";
   switch (waitsFor) {
     case "download":

@@ -7,6 +7,7 @@
  */
 import { diversityOnPopgen2 } from "../../core/analyses/diversity.ts";
 import { pcaMethodOf, pcaOnPopgen2 } from "../../core/analyses/pca.ts";
+import { popDistsOnPopgen2 } from "../../core/analyses/popDists.ts";
 import { POPGEN2_LIVE, isPopgen2Live } from "../../core/apps.ts";
 import type { Popgen2LiveId } from "../../core/apps.ts";
 import type { AnalysisId } from "../../core/project.ts";
@@ -123,6 +124,11 @@ export interface LiveAnalysisName {
       populations, the individuals file and how it is read wait while it
       runs (`populationsLockOf` of src/ui/variants/filtersLock.ts). */
   readonly readsPopulations: boolean;
+  /** Present for an analysis named in the plural, "the distances", which
+      the sentences that name it give a verb and a pronoun in the plural,
+      "the distances run", "stop them"; absent for one named in the
+      singular. */
+  readonly plural?: true;
 }
 
 /** The PCA by its method, the same object for the same method,
@@ -154,6 +160,16 @@ const DIVERSITY_NAMES: LiveAnalysisName = Object.freeze({
   readsPopulations: true,
 });
 
+/** The distances between populations of the Distances tab, which read
+    the populations and are named in the plural. */
+const DISTANCES_NAMES: LiveAnalysisName = Object.freeze({
+  id: popDistsOnPopgen2.id,
+  name: "the distances",
+  tab: "Distances",
+  readsPopulations: true,
+  plural: true,
+});
+
 /** How the words of the page name each analysis that can be live in
     `s`. Keyed by `POPGEN2_LIVE` of src/core/apps.ts, so that an analysis
     added to it without its words does not compile. */
@@ -162,6 +178,7 @@ const LIVE_NAMES: Readonly<
 > = Object.freeze({
   pca: (s) => PCA_NAMES[pcaMethodOf(s.project, "popgen2")],
   diversity: () => DIVERSITY_NAMES,
+  popDists: () => DISTANCES_NAMES,
 });
 
 /** The live analysis `id` of popgen2.html as the words of the page name
