@@ -5,7 +5,8 @@
  * `AnalysisPanel`, given the panel of this tab, and the lock of its Run
  * by the one pass, which the store does not know (`passLock`, as in the
  * other tabs): distances sent during the pass would wait in the queue of
- * the calculation worker behind it with a bar that does not move.
+ * the calculation worker behind it with a bar that does not move, as
+ * `LivePart.tsx` draws every live analysis but the PCA.
  *
  * Its Run makes the distances live, `autoRuns.run`, and its Stop and its
  * Stop recalculating end the live state, `autoRuns.pause` (the spec,
@@ -19,17 +20,11 @@
  * `import()`, so that the bundler makes it and the result a file of their
  * own, downloaded when the tab is first shown.
  */
-import { useSyncExternalStore } from "react";
-
 import { popDistsOnPopgen2 } from "../../../core/analyses/popDists.ts";
-import { useAutoRuns } from "../../autoRunsContext.ts";
-import { useAnnouncer } from "../../shell/announcer.tsx";
-import { useAppState, useStore } from "../../store.tsx";
-import { summaryStatus } from "../../variants/words.ts";
-import { AnalysisPanel } from "../AnalysisPanel.tsx";
-import { runLive } from "../liveRun.ts";
-import { passLock } from "../pca/passLock.ts";
-import { statusOf, waitsAfterName } from "../status.ts";
+import type { LiveState } from "../../autoRuns.ts";
+import type { PanelLive } from "../AnalysisPanel.tsx";
+import { LivePart } from "../LivePart.tsx";
+import type { LiveAnalysisName, RunWithheld } from "../status.ts";
 import { DISTANCES_TAB_PANEL } from "./distancesTabPanel.ts";
 import {
   distancesPanelLive,
@@ -37,49 +32,28 @@ import {
   distancesWaitingLine,
 } from "./tabWords.ts";
 
-/** The id of the distances among the analyses started by themselves. */
-const DISTANCES = popDistsOnPopgen2.id;
+/** The live state of the distances as their panel draws it, their line
+    of a Stop naming the Run of after the next change while their result
+    is shown. */
+function panelLive(
+  state: LiveState,
+  before: LiveAnalysisName | null,
+  withheld: RunWithheld,
+): PanelLive {
+  return distancesPanelLive(state, before, withheld === "result");
+}
 
 /** The Distances tab: the heading of the distances, their options, the
     lines of the populations, Run or Stop with its lock, the run under
     way, its errors, and its result. */
 export function DistancesTabView(): React.JSX.Element {
-  // Drawn again at each change of what autoRuns knows, which tells a
-  // pass stopped from one about to start, and which the store does not.
-  const autoRuns = useAutoRuns();
-  const store = useStore();
-  const announcer = useAnnouncer();
-  const lock = useAppState((s) =>
-    distancesTabLock(
-      s.project,
-      passLock(summaryStatus(s), (key) => autoRuns.startedUnder(key)),
-    ),
-  );
-  const state = useSyncExternalStore(autoRuns.subscribe, () =>
-    autoRuns.liveState(DISTANCES),
-  );
-  const before = useAppState((s) => waitsAfterName(s, state));
-  const resultShown = useAppState(
-    (s) => statusOf(s, DISTANCES).kind === "done",
-  );
   return (
-    <AnalysisPanel
-      id={DISTANCES}
+    <LivePart
+      id={popDistsOnPopgen2.id}
       ui={DISTANCES_TAB_PANEL}
-      page={{
-        lock,
-        live: distancesPanelLive(state, before, resultShown),
-        onRun: () => {
-          runLive(
-            { autoRuns, announcer, getState: () => store.getState() },
-            DISTANCES,
-            (waitsFor) => distancesWaitingLine("behind", waitsFor),
-          );
-        },
-        onStop: () => {
-          autoRuns.pause(DISTANCES);
-        },
-      }}
+      tabLock={distancesTabLock}
+      panelLive={panelLive}
+      waitingLine={distancesWaitingLine}
     />
   );
 }

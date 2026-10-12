@@ -8,7 +8,8 @@
  * its Run by the one pass, which the store does not know (`passLock`, as
  * in the PCA tab): a diversity sent during the pass would wait in the
  * queue of the calculation worker behind it with a bar that does not
- * move.
+ * move. Both parts are drawn by `LivePart.tsx`, which every live
+ * analysis but the PCA shares.
  *
  * Its Run makes the diversity live, `autoRuns.run`, and its Stop and its
  * Stop recalculating end the live state, `autoRuns.pause` (the spec,
@@ -28,18 +29,9 @@
  * own, downloaded when the tab is first shown, with its export under its
  * name.
  */
-import { useSyncExternalStore } from "react";
-
 import { diversityOnPopgen2 } from "../../../core/analyses/diversity.ts";
 import { ldDecayOnPopgen2 } from "../../../core/analyses/ldDecay.ts";
-import { useAutoRuns } from "../../autoRunsContext.ts";
-import { useAnnouncer } from "../../shell/announcer.tsx";
-import { useAppState, useStore } from "../../store.tsx";
-import { summaryStatus } from "../../variants/words.ts";
-import { AnalysisPanel } from "../AnalysisPanel.tsx";
-import { runLive } from "../liveRun.ts";
-import { passLock } from "../pca/passLock.ts";
-import { runWithheldOf, statusOf, waitsAfterName } from "../status.ts";
+import { LivePart } from "../LivePart.tsx";
 import { LD_DECAY_TAB_PANEL } from "../ldDecay/ldDecayTabPanel.tsx";
 import { useLastRun } from "../ldDecay/lastRun.ts";
 import {
@@ -55,102 +47,29 @@ import {
   diversityWaitingLine,
 } from "./tabWords.ts";
 
-/** The id of the diversity among the analyses started by themselves. */
-const DIVERSITY = diversityOnPopgen2.id;
-
-/** The id of the LD decay among the analyses started by themselves. */
-const LD_DECAY = ldDecayOnPopgen2.id;
-
 /** The Populations tab: the diversity, its heading, its options, the
     line of the populations, Run or Stop with its lock, the run under
-    way, its errors, and its result; and then the LD decay. */
+    way, its errors, and its result; and then the LD decay, with the
+    time of its last run beside its button. */
 export function PopulationsTabView(): React.JSX.Element {
+  const lastRun = useLastRun();
   return (
     <>
-      <DiversityPart />
-      <LdDecayPart />
+      <LivePart
+        id={diversityOnPopgen2.id}
+        ui={POPULATIONS_TAB_PANEL}
+        tabLock={diversityTabLock}
+        panelLive={diversityPanelLive}
+        waitingLine={diversityWaitingLine}
+      />
+      <LivePart
+        id={ldDecayOnPopgen2.id}
+        ui={LD_DECAY_TAB_PANEL}
+        tabLock={ldDecayTabLock}
+        panelLive={ldDecayPanelLive}
+        waitingLine={ldDecayWaitingLine}
+        aside={lastRun === null ? null : lastRunText(lastRun)}
+      />
     </>
-  );
-}
-
-/** The part of the diversity. */
-function DiversityPart(): React.JSX.Element {
-  // Drawn again at each change of what autoRuns knows, which tells a
-  // pass stopped from one about to start, and which the store does not.
-  const autoRuns = useAutoRuns();
-  const store = useStore();
-  const announcer = useAnnouncer();
-  const lock = useAppState((s) =>
-    diversityTabLock(
-      s.project,
-      passLock(summaryStatus(s), (key) => autoRuns.startedUnder(key)),
-    ),
-  );
-  const state = useSyncExternalStore(autoRuns.subscribe, () =>
-    autoRuns.liveState(DIVERSITY),
-  );
-  const before = useAppState((s) => waitsAfterName(s, state));
-  const withheld = useAppState((s) => runWithheldOf(statusOf(s, DIVERSITY)));
-  return (
-    <AnalysisPanel
-      id={DIVERSITY}
-      ui={POPULATIONS_TAB_PANEL}
-      page={{
-        lock,
-        live: diversityPanelLive(state, before, withheld),
-        onRun: () => {
-          runLive(
-            { autoRuns, announcer, getState: () => store.getState() },
-            DIVERSITY,
-            (waitsFor) => diversityWaitingLine("behind", waitsFor),
-          );
-        },
-        onStop: () => {
-          autoRuns.pause(DIVERSITY);
-        },
-      }}
-    />
-  );
-}
-
-/** The part of the LD decay, after the diversity's: as the diversity's,
-    with its own words, and the time of its last run beside its
-    button. */
-function LdDecayPart(): React.JSX.Element {
-  const autoRuns = useAutoRuns();
-  const store = useStore();
-  const announcer = useAnnouncer();
-  const lastRun = useLastRun();
-  const lock = useAppState((s) =>
-    ldDecayTabLock(
-      s.project,
-      passLock(summaryStatus(s), (key) => autoRuns.startedUnder(key)),
-    ),
-  );
-  const state = useSyncExternalStore(autoRuns.subscribe, () =>
-    autoRuns.liveState(LD_DECAY),
-  );
-  const before = useAppState((s) => waitsAfterName(s, state));
-  const withheld = useAppState((s) => runWithheldOf(statusOf(s, LD_DECAY)));
-  return (
-    <AnalysisPanel
-      id={LD_DECAY}
-      ui={LD_DECAY_TAB_PANEL}
-      page={{
-        lock,
-        live: ldDecayPanelLive(state, before, withheld),
-        onRun: () => {
-          runLive(
-            { autoRuns, announcer, getState: () => store.getState() },
-            LD_DECAY,
-            (waitsFor) => ldDecayWaitingLine("behind", waitsFor),
-          );
-        },
-        onStop: () => {
-          autoRuns.pause(LD_DECAY);
-        },
-        aside: lastRun === null ? null : lastRunText(lastRun),
-      }}
-    />
   );
 }
