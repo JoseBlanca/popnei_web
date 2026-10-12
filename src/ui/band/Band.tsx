@@ -357,7 +357,13 @@ function Line({ line, page, onLink }: LineProps): React.JSX.Element | null {
   const control = (
     <>
       {stop !== null && (
-        <span className={classOf(styles, "control")}>
+        <span
+          className={
+            stop.wideOnly
+              ? `${classOf(styles, "control")} ${classOf(styles, "wideOnly")}`
+              : classOf(styles, "control")
+          }
+        >
           <Button
             label={stop.label}
             ariaLabel={stop.name}

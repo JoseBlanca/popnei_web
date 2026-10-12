@@ -6810,7 +6810,7 @@ for (const theme of ["light", "dark"] as const) {
       });
 
       for (const shot of ["analyses-soon", "diversity-soon"] as const) {
-        test(`PT4 D4 the band with ${shot === "analyses-soon" ? "the PCA and the diversity about to start, Stop all" : "the diversity about to start alone beside the PCA live, Stop recalculating and Stop all"}, the Variants tab shown`, async ({
+        test(`PT4 D4 the band with ${shot === "analyses-soon" ? "the PCA and the diversity about to start, Stop all" : "the diversity about to start alone beside the PCA live, Stop recalculating and Stop all, Stop all alone at 320 px"}, the Variants tab shown`, async ({
           page,
         }) => {
           await page.clock.install();

@@ -51,6 +51,12 @@ export interface BandStop {
       that can be live, by its id, running, its tab's Stop, or about to
       start, its tab's Stop recalculating; both end its live state. */
   readonly stops: "pass" | Popgen2LiveId;
+  /** Whether the band shows it only at 30 rem wide and more: a Stop
+      recalculating beside Stop all, which under 30 rem the line has no
+      room for beside the short form, as the owner chose on 12 October
+      2026; its tab keeps its own, and Stop all ends it with the
+      others. */
+  readonly wideOnly: boolean;
 }
 
 /** The Stop all that follows the words of a line, beside its Stop. */
@@ -110,6 +116,8 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
  * start, "Stop recalculating", named "Stop recalculating the PCA". "PCoA"
  * under the PCoA. None for an analysis while its tab, which shows its
  * own, is shown, nor for several about to start, which Stop all ends.
+ * A Stop recalculating beside Stop all is shown at 30 rem and wider
+ * only, `wideOnly`.
  */
 export function stopOf(line: BandLine): BandStop | null {
   switch (line.kind) {
@@ -123,6 +131,7 @@ export function stopOf(line: BandLine): BandStop | null {
         label: "Stop",
         name: `Stop the statistics of ${escaped(line.name)}`,
         stops: "pass",
+        wideOnly: false,
       };
     case "running":
       if (!line.withStop) return null;
@@ -130,6 +139,7 @@ export function stopOf(line: BandLine): BandStop | null {
         label: "Stop",
         name: `Stop ${line.named.name}`,
         stops: liveId(line.named),
+        wideOnly: false,
       };
     case "aboutToStart": {
       const [only] = line.named;
@@ -138,6 +148,7 @@ export function stopOf(line: BandLine): BandStop | null {
         label: STOP_RECALCULATING,
         name: `Stop recalculating ${only.name}`,
         stops: liveId(only),
+        wideOnly: line.stopAll !== null,
       };
     }
   }

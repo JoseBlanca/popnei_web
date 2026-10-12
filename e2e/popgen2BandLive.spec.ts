@@ -9,7 +9,10 @@
  * Stop all once; the band read at every change of a round, never
  * "Popnei" alone between the PCA's end and the diversity's start; at 320
  * pixels, "Popnei", "PCoA · 0:0…", Stop and Stop all on one line with no
- * sideways scroll; and axe in each new state, light and dark.
+ * sideways scroll, and, the diversity about to start alone, "Popnei",
+ * "Diversity soon" and Stop all alone, the band's Stop recalculating
+ * neither read nor reached by Tab; and axe in each new state, light and
+ * dark.
  *
  * panel.nei holds 1,200 variants of 200 diploid individuals, and
  * panel_pops.csv puts them in three populations, p0, p2 and p1.
@@ -443,28 +446,24 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     await workersListening(page);
   });
 
-  test("PT4 D3 at 320 px, the diversity about to start alone beside the PCA live: Popnei, Diversity soon, Stop recalculating and Stop all on one line, the words whole, no sideways scroll", async ({
+  test("PT4 D3 at 320 px, the diversity about to start alone beside the PCA live: Popnei, Diversity soon and Stop all alone on one line, the words whole, no sideways scroll; the band's Stop recalculating neither read by a screen reader nor reached by Tab", async ({
     page,
   }) => {
-    // A stop of docs/plans/population-tab.md, "Stop and Stop all that do
-    // not fit at 320 px", put to the owner: on 11 October 2026 the line
-    // needed 290 px of its 288 in Chromium 153 and WebKit 26.6, the words
-    // cut to "Div…" and Stop all 2 px past the line's end, though the
-    // page did not scroll sideways. Expected to fail until the owner
-    // chooses the change; it then passes and must lose this mark.
-    test.fail();
     test.setTimeout(120_000);
     await page.setViewportSize({ width: 320, height: 800 });
+    // A clock of the test, so that the quiet second stands still while
+    // the line is read and the Tab key pressed.
+    await page.clock.install();
     await bothLive(page);
     await tab(page, "Populations").click();
     const minimum = shown(page).getByRole("textbox", {
       name: /^Individuals with a called genotype needed in each population, per variant/u,
     });
+    await page.clock.pauseAt(Date.now() + 1000);
     await minimum.fill("10");
     await minimum.press("Enter");
     await tab(page, "Variants").click();
 
-    // Read within the quiet second, as soon as the line says it.
     let fit: unknown = null;
     await expect
       .poll(async () => {
@@ -475,14 +474,16 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
           if (!words.textContent.includes("Diversity soon")) {
             return null;
           }
+          // The buttons drawn; one not drawn has an empty box.
+          const shownButtons = [...line.querySelectorAll("button")].filter(
+            (button) => button.getClientRects().length > 0,
+          );
           const lineBox = line.getBoundingClientRect();
-          const parts = [h1, words, ...line.querySelectorAll("button")].map(
-            (element) => element.getBoundingClientRect(),
+          const parts = [h1, words, ...shownButtons].map((element) =>
+            element.getBoundingClientRect(),
           );
           return {
-            buttons: [...line.querySelectorAll("button")].map(
-              (button) => button.textContent,
-            ),
+            buttons: shownButtons.map((button) => button.textContent),
             wordsCut: words.scrollWidth > words.clientWidth,
             oneLine: parts.every(
               (box) =>
@@ -502,11 +503,26 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
       .toBe(true);
     process.stdout.write(`diversity soon at 320 px: ${JSON.stringify(fit)}\n`);
     expect(fit).toMatchObject({
-      buttons: ["Stop recalculating", "Stop all"],
+      buttons: ["Stop all"],
       wordsCut: false,
       oneLine: true,
       inLine: true,
       noSidewaysScroll: true,
     });
+
+    // Not in the accessibility tree, and out of the order of the Tab
+    // key: from the heading Popnei, Tab goes to Stop all.
+    expect(await bandButtons(page)).toEqual([
+      "Stop all: the PCA and the diversity",
+    ]);
+    await expect(band(page)).toContainText("Diversity soon");
+    await heading(page).focus();
+    await page.keyboard.press("Tab");
+    await expect(
+      band(page).getByRole("button", {
+        name: "Stop all: the PCA and the diversity",
+      }),
+    ).toBeFocused();
+    await expect(band(page)).toContainText("Diversity soon");
   });
 });

@@ -27,7 +27,9 @@ import type { Announcer } from "../shell/status.ts";
 import { PANEL_HEADING_ATTRIBUTE } from "../analyses/AnalysisPanel.tsx";
 import { WARNINGS_HEADING_ATTRIBUTE } from "../analyses/Warnings.tsx";
 import { DIALOG_MARK } from "../widgets/dialogMark.ts";
+import { classOf } from "../classOf.ts";
 import { Band } from "./Band.tsx";
+import styles from "./Band.module.css";
 import { endLast, flush, page, pcaDone, pcaResult } from "./testSupport.ts";
 import type { TestPage } from "./testSupport.ts";
 
@@ -69,6 +71,21 @@ afterEach(() => {
   document.getElementById(PCA_TAB_CONTENT_ID)?.remove();
   document.getElementById(tabContentId("populations"))?.remove();
 });
+
+/** Whether the band's button named `name` for a screen reader is drawn
+    for a window 30 rem wide and more only, by the class of the band's
+    element that holds it. */
+function wideOnly(name: string): boolean {
+  const control = classOf(styles, "control");
+  let holder = button(name).parentElement;
+  while (holder !== null && !holder.classList.contains(control)) {
+    holder = holder.parentElement;
+  }
+  if (holder === null) {
+    throw new Error(`popnei_web defect: the button ${name} has no holder.`);
+  }
+  return holder.classList.contains(classOf(styles, "wideOnly"));
+}
 
 /** Draws the band over `testPage`, with a tab shown of its own and an
     announcer, and gives them; with the store `store` in place of the
@@ -370,6 +387,8 @@ describe("NU5 D2 the band drawn", () => {
       await flush();
     });
     expect(container.textContent).toContain("The PCA starts in a moment");
+    // Alone, it fits beside the short form under 30 rem too.
+    expect(wideOnly("Stop recalculating the PCA")).toBe(false);
 
     await press(button("Stop recalculating the PCA"));
 
@@ -783,7 +802,7 @@ describe("PT4 D2 the band drawn with the PCA and the diversity", () => {
     expect(buttonNames()).toEqual(["Stop all: the PCA and the diversity"]);
   });
 
-  test("the diversity about to start alone beside the PCA live: its Stop recalculating calls autoRuns.pause with the diversity, and Stop all is beside it", async () => {
+  test("the diversity about to start alone beside the PCA live: its Stop recalculating, drawn for 30 rem and wider only, calls autoRuns.pause with the diversity, and Stop all is beside it", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
       const testPage = page(SUMMARY);
@@ -807,6 +826,10 @@ describe("PT4 D2 the band drawn with the PCA and the diversity", () => {
         "Stop recalculating the diversity",
         "Stop all: the PCA and the diversity",
       ]);
+      // Under 30 rem the line holds Stop all alone: its Stop
+      // recalculating is drawn for 30 rem and wider only.
+      expect(wideOnly("Stop recalculating the diversity")).toBe(true);
+      expect(wideOnly("Stop all: the PCA and the diversity")).toBe(false);
 
       await press(button("Stop recalculating the diversity"));
 

@@ -86,6 +86,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       label: "Stop",
       name: "Stop the statistics of panel.nei",
       stops: "pass",
+      wideOnly: false,
     });
 
     await flush();
@@ -139,6 +140,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       label: "Stop",
       name: "Stop the PCA",
       stops: "pca",
+      wideOnly: false,
     });
 
     // The same words while the PCA tab is shown, without the Stop, which
@@ -263,6 +265,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       label: "Stop recalculating",
       name: "Stop recalculating the PCA",
       stops: "pca",
+      wideOnly: false,
     });
 
     // The same words while the PCA tab is shown, without Stop
@@ -556,6 +559,7 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
       label: "Stop",
       name: "Stop the PCA",
       stops: "pca",
+      wideOnly: false,
     });
     expect(stopAllOf(band.line)).toEqual({
       label: "Stop all",
@@ -625,6 +629,7 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
       label: "Stop",
       name: "Stop the diversity",
       stops: "diversity",
+      wideOnly: false,
     });
     expect(stopAllOf(testPage.band().line)).toBeNull();
 
@@ -644,6 +649,8 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
       "Stop the diversity",
       "Stop all: the PCA and the diversity",
     ]);
+    // The Stop of an analysis that runs fits beside Stop all at 320 px.
+    expect(stopOf(testPage.band().line)?.wideOnly).toBe(false);
   });
 
   test("both about to start in the quiet second: the words of both and Stop all alone; while the dialog of the download holds them, its words", async () => {
@@ -673,7 +680,7 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
     release();
   });
 
-  test("the diversity about to start alone with the PCA live: its words with Stop recalculating and Stop all; the Populations tab shown, Stop all alone", async () => {
+  test("the diversity about to start alone with the PCA live: its words with Stop recalculating, shown at 30 rem and wider only, and Stop all; the Populations tab shown, Stop all alone", async () => {
     const testPage = await bothDone();
     testPage.setDiversity({ minNumIndividuals: 1 });
     await flush();
@@ -684,6 +691,7 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
       label: "Stop recalculating",
       name: "Stop recalculating the diversity",
       stops: "diversity",
+      wideOnly: true,
     });
     expect(stopAllOf(testPage.band().line)?.name).toBe(
       "Stop all: the PCA and the diversity",

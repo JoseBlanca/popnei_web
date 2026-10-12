@@ -95,6 +95,15 @@
   .heading {
     font-size: var(--text-lg);
   }
+
+  /* A Stop recalculating beside Stop all, for which the line has no
+     room beside the short form: "Popnei", "Diversity soon" and both
+     buttons needed 290 px of the 288 at 320 px, in Chromium 153 and
+     WebKit 26.6 (popgen2-band.md, "Several live analyses"). Not drawn,
+     so it is out of the Tab order and of what a screen reader reads. */
+  .wideOnly {
+    display: none;
+  }
 }
 
 /* The line of an error, in the colour of danger and with "error" or
