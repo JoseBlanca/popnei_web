@@ -44,7 +44,9 @@
  * (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by itself";
  * docs/designs/no-undo.md, choices 1 to 3). The second runs from the latest
  * of the last change of the project and the end of the last change under way
- * that the gate of the page counts; the analysis starts when it runs out,
+ * that the gate of the page counts, a change of the project being one that
+ * changes the key of an analysis that can be live or the reason it is
+ * locked, and no other (since 12 October 2026); the analysis starts when it runs out,
  * under the key the store gives then, while nothing runs, no write of the
  * filtered variants runs and no change is under way. It starts once for each
  * key the project gives: a key the store leaves behind is forgotten, so a
@@ -550,6 +552,26 @@ export function createAutoRuns(deps: {
   let quietTimer: ReturnType<typeof setTimeout> | null = null;
   let lastProject = store.getState().project;
 
+  /** What the analyses that can be live are calculated from, as the
+      store gives it: for each, its key, or the reason it is locked. A
+      new project is a change for the live analyses only when it changes
+      this, so that a change of what no key holds, the measure of the
+      heatmap of the distances or the colour of the points of the PCA,
+      neither puts a start off nor lifts the hold after a crash
+      (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by
+      itself"). */
+  function inputsNow(): string {
+    return liveOrder
+      .map((id) => {
+        const status = statusOf(id);
+        return status.kind === "locked"
+          ? `locked: ${status.reason}`
+          : status.key;
+      })
+      .join("\n");
+  }
+  let lastInputs = live === null ? "" : inputsNow();
+
   function tellLive(event: LiveEvent): void {
     for (const listener of [...liveListeners]) listener(event);
   }
@@ -745,12 +767,18 @@ export function createAutoRuns(deps: {
           quietAgain();
         }
       }
+      // A change of the store that is no change of the project, the end
+      // of the one pass among them, gives keys too, and is no change.
+      const inputs = inputsNow();
       if (state.project !== lastProject) {
         lastProject = state.project;
-        heldAfterCrash = false;
-        runSinceCrash.clear();
-        quietAgain();
+        if (inputs !== lastInputs) {
+          heldAfterCrash = false;
+          runSinceCrash.clear();
+          quietAgain();
+        }
       }
+      lastInputs = inputs;
       tellLiveChanges();
       const held = crashed
         ? liveOrder.filter((id) => aboutToStart(id) === "afterCrash")

@@ -302,11 +302,17 @@ MAF, the LD switch, its r² and its distance. Nothing else starts it:
 not "Colour the points by", the axes, 3D or 2D, the turn of the 3D
 view, the individuals file, its column of the populations, nor a turn
 to another tab, since the key holds none of them
-(`docs/specs/analyses/pca.md`, "On popgen2.html", the key). A change of
-the project that is not of the key, the end of a read of the
-individuals file among them, still starts the quiet second again, so a
-PCA about to start then starts up to a second later, for the same
-values: nothing stale is shown. The live
+(`docs/specs/analyses/pca.md`, "On popgen2.html", the key). Until 12
+October 2026 a change of the project that was not of the key, the end
+of a read of the individuals file among them, still started the quiet
+second again. Since then (the review of the Distances tab), a change of
+the project is a change for the live analyses only when it changes,
+for one of the analyses that can be live, the PCA, the diversity or
+the distances, live or not, its key or the reason it is locked: so
+"Colour the points by", the axes, 3D or 2D, and the measure of the
+heatmap of the Distances tab, which no key holds, neither put off a
+start about to come nor lift the hold after a crash (below, "Several
+analyses calculated again by themselves"). The live
 state ends at a Stop of the PCA, in this tab or in the band, during a
 run or during the quiet second, as the owner chose on 10 October 2026
 (open point 1 of the design); at the opening of another variants file,
@@ -841,7 +847,12 @@ lists the live ones in that order, the one list the page reads. In
   WebKit. A failure that ends the live state starts the quiet second
   again, `quietAgain`, for the others about to start; a crash of the
   worker holds them instead until the next change of the project, which
-  starts the second.
+  starts the second. A change of the project, here and for the quiet
+  second, is one that changes the key of an analysis that can be live,
+  or the reason it is locked, as the store gives them; another change
+  of the project, the measure of the heatmap or the colour of the
+  points, is none (since 12 October 2026, the review of the Distances
+  tab: until then any new project was one).
 - The interface changes so:
 
 ```ts

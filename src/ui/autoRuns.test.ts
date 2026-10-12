@@ -8,6 +8,10 @@ import {
   diversityOptions,
 } from "../core/analyses/diversity.ts";
 import { pcaOnPopgen2, pcaOptions } from "../core/analyses/pca.ts";
+import {
+  popDistsOnPopgen2,
+  popDistsOptions,
+} from "../core/analyses/popDists.ts";
 import { POPGEN2_LIVE, countsOf, firstProject } from "../core/apps.ts";
 import { keyFromWire } from "../core/keys.ts";
 import {
@@ -2406,5 +2410,76 @@ describe("run's answers: a Run that waits after a Stop of the same key", () => {
     await page.endPca();
     expect(diversityRequests(page)).toHaveLength(3);
     expect(runningNow(page)).toEqual([DIV]);
+  });
+});
+
+/** The measure of the heatmap of the distances set to `measure`, and the
+    colour, the axes and the view of the PCA changed, as their options
+    parts do: changes of the project that no key holds. */
+function changeWhatNoKeyHolds(page: LivePage, measure: "fst" | "dest"): void {
+  page.store.apply("the measure of the heatmap changed", (p) =>
+    setAnalysisOptions(p, popDistsOnPopgen2, {
+      ...popDistsOptions(p),
+      measure,
+    }),
+  );
+  page.store.apply("the view of the PCA changed", (p) => {
+    const o = pcaOptions(p, "popgen2");
+    return setAnalysisOptions(p, pcaOnPopgen2, {
+      ...o,
+      colourBy: o.colourBy === null ? "pop" : null,
+      axes: [o.axes[0], o.axes[2], o.axes[1]],
+      view: o.view === "3d" ? "2d" : "3d",
+    });
+  });
+}
+
+describe("a change for the live analyses is one of a key or of a lock (the review of the Distances tab, 12 October 2026)", () => {
+  const DIV = diversityOnPopgen2.id;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("during the quiet second, a change of the measure of the heatmap or of the view of the PCA does not put the start off", async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    await wait(600);
+    const before = page.pca();
+    changeWhatNoKeyHolds(page, "dest");
+    expect(keyOf(page.pca())).toBe(keyOf(before));
+    await wait(399);
+    expect(page.pcaRequests()).toHaveLength(1);
+    await wait(1);
+    expect(page.pcaRequests()).toHaveLength(2);
+  });
+
+  test("after a crash holds the diversity, a change of the measure of the heatmap or of the view of the PCA leaves the hold, and a change of a threshold lifts it", async () => {
+    const individuals = Array.from(
+      { length: 2264 },
+      (_, i) => `s${String(i).padStart(4, "0")}`,
+    );
+    const page = await bothLiveDone(individuals);
+    page.setMissing(0.05);
+    await wait(1000);
+    await page.endPca({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    expect(page.auto.aboutToStart(DIV)).toBe("afterCrash");
+    changeWhatNoKeyHolds(page, "dest");
+    expect(page.auto.aboutToStart(DIV)).toBe("afterCrash");
+    await wait(10_000);
+    expect(diversityRequests(page)).toHaveLength(1);
+    changeWhatNoKeyHolds(page, "fst");
+    await wait(10_000);
+    expect(diversityRequests(page)).toHaveLength(1);
+    page.setMissing(0.04);
+    expect(page.auto.aboutToStart(DIV)).toBe("changes");
+    await wait(1000);
+    expect(diversityRequests(page)).toHaveLength(2);
   });
 });
