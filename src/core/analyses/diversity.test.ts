@@ -620,6 +620,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
         "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
         project({ variantsName: "empty.vcf" }),
         "popgen",
+        false,
       ),
     ).toBe(
       "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step.",
@@ -632,6 +633,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
         "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
         vcfProject("empty.vcf", false),
         "popgen",
+        false,
       ),
     ).toBe(
       "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step.",
@@ -644,6 +646,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
         "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
         vcfProject("failed.vcf", true),
         "popgen",
+        false,
       ),
     ).toBe(
       'failed.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is no variant to calculate the diversity over. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again.',
@@ -656,6 +659,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
         "the pass gave no variant: its source gave 1200 and the steps kept none of them",
         project(),
         "popgen",
+        false,
       ),
     ).toMatch(/^The filters kept none/u);
     expect(
@@ -663,10 +667,11 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
         "the pass gave no variant and its source holds none",
         project(),
         "popgen",
+        false,
       ),
     ).toMatch(/^panel\.nei has no variants/u);
     expect(
-      refusalText("the pass gave no variantx", project(), "popgen"),
+      refusalText("the pass gave no variantx", project(), "popgen", false),
     ).toMatch(/^popnei could not calculate the diversity/u);
   });
 
@@ -676,6 +681,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
         "the pass gave no variant: its source gave 1200 and the steps kept none of them, the `missing_data` filter was given 1200 and kept 1152, the `maf` filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives",
         project(),
         "popgen",
+        false,
       ),
     ).toBe(
       "The filters kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step.",
@@ -688,6 +694,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
         "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies",
         project({ variantsName: "tetraploid.vcf.gz" }),
         "popgen",
+        false,
       ),
     ).toBe(
       "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
@@ -700,6 +707,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
         "line 4 of the VCF, the column of a: `z` is not an allele number, which is a run of digits",
         project({ variantsName: "panel.vcf.gz" }),
         "popgen",
+        false,
       ),
     ).toBe(
       "popnei could not read panel.vcf.gz: line 4 of the VCF, the column of a: `z` is not an allele number, which is a run of digits. Correct the file, or fetch it again, and load it in the Variants step.",
@@ -708,7 +716,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
 
   test("refusalText of another message gives popnei's message without its full stop", () => {
     expect(
-      refusalText("the memory of the tab ran out.", project(), "popgen"),
+      refusalText("the memory of the tab ran out.", project(), "popgen", false),
     ).toBe(
       "popnei could not calculate the diversity: the memory of the tab ran out. Change the settings, or load the variants file again, to run it again.",
     );
@@ -720,6 +728,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
         "`minNumIndividuals` is 0, and `calcDiversity` needs one at least.",
         project(),
         "popgen",
+        false,
       ),
     ).toBe(
       "popnei could not calculate the diversity: minNumIndividuals is 0, and calcDiversity needs one at least. Change the settings, or load the variants file again, to run it again.",
@@ -1238,7 +1247,12 @@ describe("WS5 D3 the rest of the module, after its review", () => {
     const message =
       "the VCF was written by bgzip and does not end with the empty member of 28 bytes that marks the end of a bgzipped file, so the file is cut short and the variants after the cut are not in it; the file has to be fetched or copied again. bcftools says of the same file `no BGZF EOF marker; file may be truncated`";
     expect(
-      refusalText(message, project({ variantsName: "panel.vcf.gz" }), "popgen"),
+      refusalText(
+        message,
+        project({ variantsName: "panel.vcf.gz" }),
+        "popgen",
+        false,
+      ),
     ).toBe(
       `popnei could not read panel.vcf.gz: ${message}. Correct the file, or fetch it again, and load it in the Variants step.`,
     );
@@ -1255,9 +1269,9 @@ describe("WS5 D3 the rest of the module, after its review", () => {
 
   test("refusalText throws a defect on a project with no variants file", () => {
     const p = deepFreeze<Project>({ ...project(), variants: null });
-    expect(() => refusalText("the pass gave no variant", p, "popgen")).toThrow(
-      /^popnei_web defect: /,
-    );
+    expect(() =>
+      refusalText("the pass gave no variant", p, "popgen", false),
+    ).toThrow(/^popnei_web defect: /);
   });
 });
 
@@ -1664,6 +1678,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
         "`pops` names no population, and a result holds one value for each population: leave `pops` out for one population of every individual",
         project(),
         "popgen",
+        false,
       ),
     ).toBe(
       "The thresholds of the filters of individuals leave none of the individuals of panel.nei that have a population in pop, so no population is left. Loosen the thresholds in the Variants step.",
@@ -3588,7 +3603,12 @@ describe("PT1 D1 the definition of popgen2.html", () => {
   test("the refusals that name a place, in the words of popgen2.html; the old page's unchanged", () => {
     const p = project();
     expect(
-      refusalText("`pops` names no population once filtered", p, "popgen2"),
+      refusalText(
+        "`pops` names no population once filtered",
+        p,
+        "popgen2",
+        true,
+      ),
     ).toBe(
       "The thresholds of the individuals leave none of the individuals of panel.nei that have a population in pop, so no population is left. Loosen the thresholds of the individuals in the Variants tab. The diversity is then calculated again by itself.",
     );
@@ -3597,24 +3617,54 @@ describe("PT1 D1 the definition of popgen2.html", () => {
         "the pass gave no variant: its source gave 1200 and the steps kept none of them",
         p,
         "popgen2",
+        true,
       ),
     ).toBe(
       "The thresholds of the Variants tab kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen them. The diversity is then calculated again by itself.",
     );
-    expect(refusalText("something else went wrong.", p, "popgen2")).toBe(
+    expect(refusalText("something else went wrong.", p, "popgen2", true)).toBe(
       "popnei could not calculate the diversity: something else went wrong. Change the settings, or open the variants file again in the box Variants, to run it again. The diversity is then calculated again by itself.",
+    );
+    // No longer live, after Stop recalculating: nothing starts it by
+    // itself after the change (the review of the LD decay, 12 October
+    // 2026).
+    expect(
+      refusalText(
+        "`pops` names no population once filtered",
+        p,
+        "popgen2",
+        false,
+      ),
+    ).toBe(
+      "The thresholds of the individuals leave none of the individuals of panel.nei that have a population in pop, so no population is left. Loosen the thresholds of the individuals in the Variants tab.",
+    );
+    expect(
+      refusalText(
+        "the pass gave no variant: its source gave 1200 and the steps kept none of them",
+        p,
+        "popgen2",
+        false,
+      ),
+    ).toBe(
+      "The thresholds of the Variants tab kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen them.",
     );
     expect(
       refusalText(
         "the pass gave no variant and its source holds none",
         p,
         "popgen2",
+        true,
       ),
     ).toBe(
       "panel.nei has no variants. Open another variants file in the box Variants.",
     );
     expect(
-      refusalText("`pops` names no population once filtered", p, "popgen"),
+      refusalText(
+        "`pops` names no population once filtered",
+        p,
+        "popgen",
+        false,
+      ),
     ).toBe(
       "The thresholds of the filters of individuals leave none of the individuals of panel.nei that have a population in pop, so no population is left. Loosen the thresholds in the Variants step.",
     );

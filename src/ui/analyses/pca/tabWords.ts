@@ -125,7 +125,8 @@ export function pcaTabErrorText(
     status.error,
     p,
     pcaTabName(method),
-    failedWordsOf(PCA_TAB_ERRORS, status, kept),
+    // The PCA's refusals do not read whether it is live.
+    failedWordsOf(PCA_TAB_ERRORS, status, kept, true),
   );
 }
 

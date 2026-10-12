@@ -561,7 +561,7 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 | the heading of the spectrum | "Site frequency spectrum" |
 | the line of the populations | the old panel's, with "the Variants tab"; "7 unclassified individuals kept are left out, as the box Individuals says."; "1 population, Unclassified: 200 individuals. No individual is assigned to a population, so the diversity is of every individual kept as one population." |
 | the locks | the table of "Run and Stop" |
-| the line in the place of the bar | the table of "Run and Stop"; after a crash of the worker ended the PCA's live state, until the next change or a Run, "The diversity starts after the next change of the filters, of its options or of the populations, or when Run is pressed.", with Run beside Stop recalculating (`popgen2-pca.md`, "A failure that ends a live state", corrected on 11 October 2026); after a Stop, "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.", or with the result shown "… After the next change, Run calculates it and starts it again after each change."; after a failure that ended the live state, "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change." |
+| the line in the place of the bar | the table of "Run and Stop"; after a crash of the worker ended the PCA's live state, until the next change or a Run, "The diversity starts after the next change of the filters, of its options or of the populations, or when Run is pressed.", with Run beside Stop recalculating (`popgen2-pca.md`, "A failure that ends a live state", corrected on 11 October 2026); after a Stop, "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.", or with the result shown, or popnei's refusal (from 12 October 2026, the review of the LD decay), "… After the next change, Run calculates it and starts it again after each change."; after a failure that ended the live state, "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.", or, after a variants file the browser can no longer read, which offers no Run, "… since its calculation failed. Once the variants file is opened again in the box Variants, Run calculates it and starts it again after each change." (12 October 2026, the review of the LD decay); the end of a refusal's words, "The diversity is then calculated again by itself.", only while it is live |
 | the button while live and not running | "Stop recalculating" |
 | the filters, the options of the diversity, while it runs, as tooltip and description | "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again." |
 | the column, the zone, Remove and the lists of the reader, while it runs | "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again." |
@@ -876,8 +876,9 @@ counts the new run, and this line says what the last one took.
 After a Stop or a Stop recalculating, until Run or another variants
 file, the line in the place of the bar: "Stopped: the LD decay no
 longer starts by itself after a change. Run calculates it and starts it
-again after each change."; with the result shown, which offers no Run
-until a change takes it away, "Stopped: the LD decay no longer starts
+again after each change."; with the result shown, or popnei's refusal
+of these settings (from 12 October 2026, the review of the LD decay),
+which offer no Run until a change takes them away, "Stopped: the LD decay no longer starts
 by itself after a change. After the next change, Run calculates it and
 starts it again after each change." After a failure that ended the live
 state: "The LD decay no longer starts by itself after a change, since

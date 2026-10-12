@@ -1123,6 +1123,8 @@ describe("PA2 D5 refusalText", () => {
       refusalText(
         "this machine has not the memory for the pairs counted at every distance, 250000000 values of 16 bytes",
         project(),
+        "popgen",
+        false,
       ),
     ).toBe(
       "The LD decay needed more memory than the browser tab could give. Type a smaller largest distance, keep fewer individuals with the filters of individuals, or calculate it with popnei in Python, outside the browser.",
@@ -1134,6 +1136,8 @@ describe("PA2 D5 refusalText", () => {
       refusalText(
         "the pass gave no variant: its source gave 500 and the steps kept none of them, the filter by missing data kept 0",
         project(),
+        "popgen",
+        false,
       ),
     ).toBe(
       "The filters kept none of the variants of ld.nei, so there is no variant to calculate the LD decay over. Loosen the filters in the Variants step.",
@@ -1145,11 +1149,13 @@ describe("PA2 D5 refusalText", () => {
       refusalText(
         "the pass gave no variant and its source holds none",
         project(),
+        "popgen",
+        false,
       ),
     ).toBe(
       "ld.nei has no variants, so there is no variant to calculate the LD decay over. Load another variants file in the Variants step.",
     );
-    expect(refusalText("`numBins` is 0.", project())).toBe(
+    expect(refusalText("`numBins` is 0.", project(), "popgen", false)).toBe(
       "popnei could not calculate the LD decay: numBins is 0. Change the settings, or load the variants file again, to calculate it again.",
     );
   });
@@ -1988,7 +1994,7 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
       "this machine has not the memory for the pairs counted at every distance, 250000000 values of 16 bytes";
     expect(isMemoryRefusal(memory)).toBe(true);
     expect(isMemoryRefusal("`numBins` is 0.")).toBe(false);
-    expect(refusalText(memory, page2(), "popgen2")).toBe(
+    expect(refusalText(memory, page2(), "popgen2", true)).toBe(
       "The LD decay needed more memory than the browser tab could give. Type a smaller largest distance, keep fewer individuals with the thresholds of the individuals in the Variants tab, or calculate it with popnei in Python, outside the browser.",
     );
     expect(crashText(page2(), "popgen2")).toBe(
@@ -1999,14 +2005,20 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
         "the pass gave no variant: its source gave 500 and the steps kept none of them, the filter by missing data kept 0",
         page2(),
         "popgen2",
+        true,
       ),
     ).toBe(
       "The thresholds of the Variants tab kept none of the variants of ld.nei, so there is no variant to calculate the LD decay over. Loosen them. The LD decay is then calculated again by itself.",
     );
-    expect(refusalText("`numBins` is 0.", page2(), "popgen2")).toBe(
+    expect(refusalText("`numBins` is 0.", page2(), "popgen2", true)).toBe(
       "popnei could not calculate the LD decay: numBins is 0. Change the settings, or open the variants file again in the box Variants, to calculate it again. The LD decay is then calculated again by itself.",
     );
-    expect(refusalText(memory, page2())).toBe(
+    // No longer live, after Stop recalculating (the review of the LD
+    // decay, 12 October 2026).
+    expect(refusalText("`numBins` is 0.", page2(), "popgen2", false)).toBe(
+      "popnei could not calculate the LD decay: numBins is 0. Change the settings, or open the variants file again in the box Variants, to calculate it again.",
+    );
+    expect(refusalText(memory, page2(), "popgen", false)).toBe(
       "The LD decay needed more memory than the browser tab could give. Type a smaller largest distance, keep fewer individuals with the filters of individuals, or calculate it with popnei in Python, outside the browser.",
     );
   });

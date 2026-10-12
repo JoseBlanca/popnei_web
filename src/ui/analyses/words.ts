@@ -312,8 +312,11 @@ export interface FailedWords {
  * which `failedWordsOf` gives them.
  */
 export interface PanelErrorWords {
-  /** The words of popnei's refusal `message`, for the project `p`. */
-  readonly refusalText: (message: string, p: Project) => string;
+  /** The words of popnei's refusal `message`, for the project `p`; on
+      popgen2.html, with what follows the change they ask for while the
+      analysis is live, `live`, which a panel of popgen.html, never
+      live, does not read. */
+  readonly refusalText: (message: string, p: Project, live: boolean) => string;
   /** The words of the failure of the statistics of each individual that
       a Run waited for, the store's error with `ofStatistics`, for an
       analysis that reads the filters of individuals, "was not run" when
@@ -347,7 +350,8 @@ export interface PanelErrorWords {
 /**
  * The words of the errors of the panel `panel` for `failedText`, in the
  * error state `status`, with the individuals kept `kept` of the state of
- * the store: its refusal, its worker's words given the individuals kept,
+ * the store and whether the analysis is live, `live`: its refusal, given
+ * `live`, its worker's words given the individuals kept,
  * its page's words of a failure, and, when the error is the failure of
  * the statistics of each individual, `ofStatistics`, its words of them,
  * told whether its Run waited for them. The panel draws them and
@@ -359,11 +363,13 @@ export function failedWordsOf(
   panel: PanelErrorWords,
   status: { readonly ofStatistics: boolean; readonly waited: boolean },
   kept: IndividualsKept | null,
+  live: boolean,
 ): FailedWords {
   const { refusalText, workerFailedText, failureText, statisticsFailedText } =
     panel;
   const words: FailedWords = {
-    refusalText,
+    refusalText: (message: string, p: Project): string =>
+      refusalText(message, p, live),
     ...(workerFailedText !== null && {
       workerFailedText: (p: Project): string => workerFailedText(p, kept),
     }),

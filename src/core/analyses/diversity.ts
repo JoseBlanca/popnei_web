@@ -278,9 +278,11 @@ export function diversityCsv(r: DiversityResult): string {
     locks the diversity when the lists leave no population. */
 const NO_POPULATION = "`pops` names no population";
 
-/** The end of a refusal on popgen2.html that leaves the diversity live,
+/** The end of a refusal on popgen2.html while the diversity is live,
     once the user has changed what the words ask: it starts again by
-    itself after the change, which nothing else says. */
+    itself after the change, which nothing else says. Not said once
+    Stop recalculating ended the live state, when nothing starts it by
+    itself (the review of the LD decay, 12 October 2026). */
 const AGAIN_BY_ITSELF = "The diversity is then calculated again by itself.";
 
 /**
@@ -293,15 +295,19 @@ const AGAIN_BY_ITSELF = "The diversity is then calculated again by itself.";
  * read with only the passed variants, none that passed; the filters kept
  * none; a genotype of another ploidy than the one the VCF was read with;
  * a line of the VCF it cannot read, or a gzipped file damaged or cut
- * short; any other. Throws a defect on a project with no variants file,
- * and on a refusal of no population for a project with no column of the
- * populations.
+ * short; any other. On popgen2.html, while the diversity is live,
+ * `live`, the words of a refusal that names what to change end with
+ * `AGAIN_BY_ITSELF`; `live` is not read on popgen.html. Throws a defect
+ * on a project with no variants file, and on a refusal of no population
+ * for a project with no column of the populations.
  */
 export function refusalText(
   message: string,
   p: Project,
   page: DiversityPage,
+  live: boolean,
 ): string {
+  const again = live ? ` ${AGAIN_BY_ITSELF}` : "";
   if (p.variants === null) {
     throw defect("refusalText was given a project with no variants file.");
   }
@@ -315,7 +321,7 @@ export function refusalText(
     }
     return page === "popgen"
       ? `The thresholds of the filters of individuals leave none of the individuals of ${fileName} that have a population in ${shown(column)}, so no population is left. Loosen the thresholds in the Variants step.`
-      : `The thresholds of the individuals leave none of the individuals of ${fileName} that have a population in ${shown(column)}, so no population is left. Loosen the thresholds of the individuals in the Variants tab. ${AGAIN_BY_ITSELF}`;
+      : `The thresholds of the individuals leave none of the individuals of ${fileName} that have a population in ${shown(column)}, so no population is left. Loosen the thresholds of the individuals in the Variants tab.${again}`;
   }
   if (page === "popgen2") {
     const fileWords = fileRefusalText(message, p, {
@@ -330,7 +336,7 @@ export function refusalText(
       again: "to run it again",
       emptyPass: (name) =>
         `The thresholds of the Variants tab kept none of the variants of ${name}, so there is no variant to calculate the diversity over. Loosen them.`,
-    })} ${AGAIN_BY_ITSELF}`;
+    })}${again}`;
   }
   return refusalWords(message, p, {
     change: CHANGE_SETTINGS,

@@ -1943,7 +1943,9 @@ change nothing of the request, the key or the numbers.
   a column of more than 20 values); a refusal of popnei that does not
   ask to open the variants file again ends "The diversity is then
   calculated again by itself.", since the diversity stays live after
-  it (since 11 October 2026); `privateAllelesNeedTwoPopulations` has three words on this
+  it (since 11 October 2026), while it is live: after Stop
+  recalculating nothing starts it by itself, and the sentence goes
+  (the review of the LD decay, 12 October 2026); `privateAllelesNeedTwoPopulations` has three words on this
   page: of the one population with no individuals file, "With every
   individual in one population, no allele can be private, found in this
   population and in no other, so the table has no private alleles. Open

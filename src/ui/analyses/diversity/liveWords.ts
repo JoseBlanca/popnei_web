@@ -27,8 +27,8 @@ import type { PanelErrorWords } from "../words.ts";
     of the definition of this page, and the failures that are not
     popnei's refusals in the words of the page. */
 export const DIVERSITY_TAB_ERRORS: PanelErrorWords = Object.freeze({
-  refusalText: (message: string, p: Project): string =>
-    refusalText(message, p, "popgen2"),
+  refusalText: (message: string, p: Project, live: boolean): string =>
+    refusalText(message, p, "popgen2", live),
   statisticsFailedText: (
     error: AnalysisError,
     p: Project,
@@ -89,7 +89,9 @@ export function diversityEndAnnouncement(
         now.error,
         after.project,
         "the diversity",
-        failedWordsOf(DIVERSITY_TAB_ERRORS, now, after.individualsKept),
+        // Live: a run on this page is one, and a refusal that would end
+        // it, for memory, does not read it.
+        failedWordsOf(DIVERSITY_TAB_ERRORS, now, after.individualsKept, true),
       )}`;
     case "locked":
     case "ready":

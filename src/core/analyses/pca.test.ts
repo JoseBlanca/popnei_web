@@ -2021,7 +2021,7 @@ describe("IP6 D4 ldOrderText, the words of an LD filter over a file not sorted",
     expect(ldOrderText(LD_CAME_BACK, vcf, STEP_LD_FILTER)).toBe(
       "The LD pruning of the Variants step needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: a variant of chromosome 1, at position 10, comes after a variant of another chromosome, though variants of chromosome 1 came before that one. Sort the file, with bcftools sort for a VCF, and load it again, or turn off the LD pruning in the Variants step.",
     );
-    expect(diversityRefusalText(LD_NOT_SORTED, vcf, "popgen")).toBe(
+    expect(diversityRefusalText(LD_NOT_SORTED, vcf, "popgen", false)).toBe(
       "The LD pruning of the Variants step needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and load it again, or turn off the LD pruning in the Variants step.",
     );
   });

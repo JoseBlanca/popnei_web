@@ -267,35 +267,33 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
   });
 
   test("each live state as the panel draws it: the line of a Stop, of a failure that ended it, none with nothing to wait for, and the line of what it waits for", () => {
-    expect(diversityPanelLive({ kind: "off" }, null, false)).toEqual({
+    expect(diversityPanelLive({ kind: "off" }, null, null)).toEqual({
       kind: "off",
     });
-    expect(diversityPanelLive({ kind: "stopped" }, null, false)).toEqual({
+    expect(diversityPanelLive({ kind: "stopped" }, null, null)).toEqual({
       kind: "stopped",
       line: diversityStoppedLine(false),
     });
-    expect(diversityPanelLive({ kind: "stopped" }, null, true)).toEqual({
+    expect(diversityPanelLive({ kind: "stopped" }, null, "result")).toEqual({
       kind: "stopped",
       line: diversityStoppedLine(true),
     });
-    expect(diversityPanelLive({ kind: "endedByFailure" }, null, false)).toEqual(
-      {
-        kind: "stopped",
-        line: DIVERSITY_FAILURE_ENDED_LINE,
-      },
-    );
+    expect(diversityPanelLive({ kind: "endedByFailure" }, null, null)).toEqual({
+      kind: "stopped",
+      line: DIVERSITY_FAILURE_ENDED_LINE,
+    });
     expect(
       diversityPanelLive(
         { kind: "live", aboutToStart: null, running: false, after: null },
         null,
-        false,
+        null,
       ),
     ).toEqual({ kind: "live", aboutToStartLine: null, runBeside: false });
     expect(
       diversityPanelLive(
         { kind: "live", aboutToStart: "behind", running: false, after: "pca" },
         "the PCA",
-        false,
+        null,
       ),
     ).toEqual({
       kind: "live",
@@ -312,7 +310,7 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
           after: "pca",
         },
         "the PCA",
-        false,
+        null,
       ),
     ).toEqual({
       kind: "live",
@@ -330,12 +328,25 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
           after: null,
         },
         null,
-        false,
+        null,
       ),
     ).toEqual({
       kind: "live",
       aboutToStartLine: DIVERSITY_AFTER_CRASH_LINE,
       runBeside: true,
+    });
+  });
+
+  test("the lines of a Stop and of a failure that ended it name no Run the tab does not offer: after Stop recalculating over popnei's refusal, and after the variants file could no longer be read (the review of the LD decay, 12 October 2026)", () => {
+    expect(diversityPanelLive({ kind: "stopped" }, null, "refused")).toEqual({
+      kind: "stopped",
+      line: "Stopped: the diversity no longer starts by itself after a change. After the next change, Run calculates it and starts it again after each change.",
+    });
+    expect(
+      diversityPanelLive({ kind: "endedByFailure" }, null, "unreadable"),
+    ).toEqual({
+      kind: "stopped",
+      line: "The diversity no longer starts by itself after a change, since its calculation failed. Once the variants file is opened again in the box Variants, Run calculates it and starts it again after each change.",
     });
   });
 });

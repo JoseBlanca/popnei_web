@@ -28,6 +28,7 @@ import { passLockText } from "../pca/passLock.ts";
 import type { PassLock } from "../pca/passLock.ts";
 import type { AboutToStart, LiveState } from "../../autoRuns.ts";
 import type { PanelLive } from "../AnalysisPanel.tsx";
+import type { RunWithheld } from "../status.ts";
 import { populationsText } from "../words.ts";
 import { minimumAndDrawLines } from "./words.ts";
 
@@ -37,13 +38,13 @@ export const DIVERSITY_TAB_NAME = "the diversity";
 /** The line after a Stop, until Run or another variants file, in the
     place of the bar: "Stopped: the diversity no longer starts by itself
     after a change. Run calculates it and starts it again after each
-    change."; with the result shown, `resultShown`, which offers no Run
-    until a change takes it away, "… After the next change, Run
-    calculates it and starts it again after each change." */
-export function diversityStoppedLine(resultShown: boolean): string {
+    change."; with no Run until a change, `noRunYet`, the result shown or
+    popnei's refusal, "… After the next change, Run calculates it and
+    starts it again after each change." */
+export function diversityStoppedLine(noRunYet: boolean): string {
   const stopped =
     "Stopped: the diversity no longer starts by itself after a change.";
-  return resultShown
+  return noRunYet
     ? `${stopped} After the next change, Run calculates it and starts it again after each change.`
     : `${stopped} Run calculates it and starts it again after each change.`;
 }
@@ -54,11 +55,36 @@ export function diversityStoppedLine(resultShown: boolean): string {
 export const DIVERSITY_AFTER_CRASH_LINE =
   "The diversity starts after the next change of the filters, of its options or of the populations, or when Run is pressed.";
 
+/** The start of the line after a failure that ended the live state. */
+const FAILURE_ENDED =
+  "The diversity no longer starts by itself after a change, since its calculation failed.";
+
+/** The end of a line that names the Run the tab offers. */
+const RUN_STARTS_IT =
+  "Run calculates it and starts it again after each change.";
+
 /** The line after a failure that ended the live state, under the
     failure's words, until Run or another variants file, in the place of
-    the bar; the user pressed no Stop. */
-export const DIVERSITY_FAILURE_ENDED_LINE =
-  "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.";
+    the bar, while the tab offers Run; the user pressed no Stop. */
+export const DIVERSITY_FAILURE_ENDED_LINE = `${FAILURE_ENDED} ${RUN_STARTS_IT}`;
+
+/** The line after a failure that ended the live state, as
+    `DIVERSITY_FAILURE_ENDED_LINE`, when the tab offers no Run, `withheld`:
+    after the variants file could no longer be read, its opening again;
+    with a result shown or popnei's refusal, the next change (the review
+    of the LD decay, 12 October 2026: the line named a Run that was not
+    there). */
+function failureEndedLine(withheld: RunWithheld): string {
+  switch (withheld) {
+    case null:
+      return DIVERSITY_FAILURE_ENDED_LINE;
+    case "unreadable":
+      return `${FAILURE_ENDED} Once the variants file is opened again in the box Variants, ${RUN_STARTS_IT}`;
+    case "result":
+    case "refused":
+      return `${FAILURE_ENDED} After the next change, ${RUN_STARTS_IT}`;
+  }
+}
 
 /** The populations of `p` a run will take with the individuals kept
     `kept`: with their list when it is known, and before the thresholds,
@@ -199,21 +225,25 @@ export function diversityWaitingLine(
 
 /** The live state `state` of the diversity as its panel draws it, with
     `before`, the live analysis its line of waiting names, "the PCA",
-    or `null`, and whether its result is shown, `resultShown`: the line
-    of a Stop, of a failure that ended it, or of what it waits for while
-    it is about to start. */
+    or `null`, and why its state offers no Run, `withheld`,
+    `runWithheldOf` of its status: the line of a Stop, of a failure that
+    ended it, or of what it waits for while it is about to start; the
+    first two name a Run only while the state offers it. */
 export function diversityPanelLive(
   state: LiveState,
   before: string | null,
-  resultShown: boolean,
+  withheld: RunWithheld,
 ): PanelLive {
   switch (state.kind) {
     case "off":
       return { kind: "off" };
     case "stopped":
-      return { kind: "stopped", line: diversityStoppedLine(resultShown) };
+      return {
+        kind: "stopped",
+        line: diversityStoppedLine(withheld !== null),
+      };
     case "endedByFailure":
-      return { kind: "stopped", line: DIVERSITY_FAILURE_ENDED_LINE };
+      return { kind: "stopped", line: failureEndedLine(withheld) };
     case "live":
       return {
         kind: "live",

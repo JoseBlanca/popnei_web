@@ -335,18 +335,38 @@ describe("AP6 D1 failedWordsOf, the words a panel gives the errors of its analys
   };
 
   test("a panel with words of its own for none: its refusal alone, the rest left to failedText", () => {
-    expect(
-      failedWordsOf(
-        {
-          refusalText,
-          statisticsFailedText: null,
-          workerFailedText: null,
-          failureText: null,
-        },
-        { ofStatistics: false, waited: false },
-        kept,
-      ),
-    ).toEqual({ refusalText });
+    const words = failedWordsOf(
+      {
+        refusalText,
+        statisticsFailedText: null,
+        workerFailedText: null,
+        failureText: null,
+      },
+      { ofStatistics: false, waited: false },
+      kept,
+      true,
+    );
+    expect(Object.keys(words)).toEqual(["refusalText"]);
+    expect(words.refusalText("no variant", project)).toBe(
+      "refused: no variant",
+    );
+  });
+
+  test("its refusal is told whether the analysis is live (the review of the LD decay, 12 October 2026)", () => {
+    const told: boolean[] = [];
+    const panel = {
+      refusalText: (message: string, _p: unknown, live: boolean): string => {
+        told.push(live);
+        return message;
+      },
+      statisticsFailedText: null,
+      workerFailedText: null,
+      failureText: null,
+    };
+    const status = { ofStatistics: false, waited: false };
+    failedWordsOf(panel, status, kept, true).refusalText("a", project);
+    failedWordsOf(panel, status, kept, false).refusalText("b", project);
+    expect(told).toEqual([true, false]);
   });
 
   test("a panel with its own words of a worker that stopped and of the page's failures: the worker's given the individuals kept", () => {
@@ -360,6 +380,7 @@ describe("AP6 D1 failedWordsOf, the words a panel gives the errors of its analys
       },
       { ofStatistics: false, waited: false },
       kept,
+      true,
     );
     expect(words.workerFailedText?.(project)).toBe("out of memory, kept");
     expect(words.failureText).toBe(popgen2FailureText);
@@ -380,6 +401,7 @@ describe("AP6 D1 failedWordsOf, the words a panel gives the errors of its analys
       },
       { ofStatistics: true, waited: true },
       kept,
+      true,
     );
     expect(
       words.statisticsFailedText?.(error, project, () => "the frame's words"),
@@ -398,6 +420,7 @@ describe("AP6 D1 failedWordsOf, the words a panel gives the errors of its analys
         },
         { ofStatistics: true, waited: false },
         kept,
+        true,
       ),
     ).toThrow(/^popnei_web defect: /u);
   });

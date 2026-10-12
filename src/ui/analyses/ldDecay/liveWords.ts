@@ -28,8 +28,8 @@ const LD_DECAY = "ldDecay";
     crash, which name the memory, and the other failures in the words of
     the page. */
 export const LD_DECAY_TAB_ERRORS: PanelErrorWords = Object.freeze({
-  refusalText: (message: string, p: Project): string =>
-    refusalText(message, p, "popgen2"),
+  refusalText: (message: string, p: Project, live: boolean): string =>
+    refusalText(message, p, "popgen2", live),
   statisticsFailedText: (
     error: AnalysisError,
     p: Project,
@@ -97,7 +97,9 @@ export function ldDecayEndAnnouncement(
         now.error,
         after.project,
         "the LD decay",
-        failedWordsOf(LD_DECAY_TAB_ERRORS, now, after.individualsKept),
+        // Live: a run on this page is one, and a refusal that would end
+        // it, for memory, does not read it.
+        failedWordsOf(LD_DECAY_TAB_ERRORS, now, after.individualsKept, true),
       )}`;
     case "locked":
     case "ready":

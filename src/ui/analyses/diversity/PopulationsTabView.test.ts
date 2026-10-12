@@ -839,6 +839,27 @@ describe("LT1 D4 the part of the LD decay in the Populations tab", () => {
     );
   });
 
+  test("refused for filters that keep no variant, live: its words end with its start by itself; after Stop recalculating, not, and the line of a Stop names the Run of after the next change (the review of the LD decay, 12 October 2026)", async () => {
+    const page = await readyTab();
+    await typeMaxDist(page, 100_000);
+    await press(ldButton("Run"));
+    await refuseLdDecay(
+      page,
+      "the pass gave no variant: its source gave 1200 and the steps kept none of them, the filter by missing data kept 0",
+    );
+    expect(page.autoRuns.isLive("ldDecay")).toBe(true);
+    expect(ldPart().textContent).toContain(
+      "Loosen them. The LD decay is then calculated again by itself.",
+    );
+    await press(ldButton("Stop recalculating"));
+    expect(page.autoRuns.isLive("ldDecay")).toBe(false);
+    expect(ldPart().textContent).not.toContain("again by itself");
+    expect(ldButton("Run")).toBeNull();
+    expect(ldPart().textContent).toContain(
+      "Stopped: the LD decay no longer starts by itself after a change. After the next change, Run calculates it and starts it again after each change.",
+    );
+  });
+
   test("its heading after the diversity's; Run locked until a distance is typed; Run and Stop recalculating through autoRuns of the LD decay alone; the time of the last run after a result, kept after a Stop", async () => {
     const page = await readyTab();
     const headings = [...container.querySelectorAll("h2")].map(

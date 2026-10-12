@@ -90,16 +90,14 @@ function DiversityPart(): React.JSX.Element {
     autoRuns.liveState(DIVERSITY),
   );
   const before = useAppState((s) => waitsAfterName(s, state));
-  const resultShown = useAppState(
-    (s) => statusOf(s, DIVERSITY).kind === "done",
-  );
+  const withheld = useAppState((s) => runWithheldOf(statusOf(s, DIVERSITY)));
   return (
     <AnalysisPanel
       id={DIVERSITY}
       ui={POPULATIONS_TAB_PANEL}
       page={{
         lock,
-        live: diversityPanelLive(state, before, resultShown),
+        live: diversityPanelLive(state, before, withheld),
         onRun: () => {
           runLive(
             { autoRuns, announcer, getState: () => store.getState() },

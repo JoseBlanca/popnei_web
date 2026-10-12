@@ -112,8 +112,10 @@ const PLACES: Readonly<Record<LdDecayPage, PlaceWords>> = Object.freeze({
   }),
 });
 
-/** The end of a refusal on popgen2.html that leaves the LD decay live:
-    it starts again by itself after the change the words ask for. */
+/** The end of a refusal on popgen2.html while the LD decay is live: it
+    starts again by itself after the change the words ask for. Not said
+    once Stop recalculating ended the live state (the review of the LD
+    decay, 12 October 2026). */
 const AGAIN_BY_ITSELF = "The LD decay is then calculated again by itself.";
 
 /** Where the variants file is opened again on popgen2.html. */
@@ -766,13 +768,16 @@ export function ldDecayDescription(r: LdDecayResult, maxDist: number): string {
  * The words of a refusal of popnei, for the error state of the panel of
  * the project `p`: popnei refused for memory, and then the rows every
  * analysis shares, of `refusalWords`, with the words of the LD decay
- * (ldDecay.md, "Its words"). Throws a defect on a project with no
- * variants file.
+ * (ldDecay.md, "Its words"). On popgen2.html, while the LD decay is
+ * live, `live`, the words of a refusal that leaves it live end with
+ * `AGAIN_BY_ITSELF`; `live` is not read on popgen.html. Throws a defect
+ * on a project with no variants file.
  */
 export function refusalText(
   message: string,
   p: Project,
-  page: LdDecayPage = "popgen",
+  page: LdDecayPage,
+  live: boolean,
 ): string {
   if (p.variants === null) {
     throw defect("refusalText was given a project with no variants file.");
@@ -793,7 +798,7 @@ export function refusalText(
       again: "to calculate it again",
       emptyPass: (name) =>
         `The thresholds of the Variants tab kept none of the variants of ${name}, so there is no variant to calculate the LD decay over. Loosen them.`,
-    })} ${AGAIN_BY_ITSELF}`;
+    })}${live ? ` ${AGAIN_BY_ITSELF}` : ""}`;
   }
   return refusalWords(message, p, {
     change: CHANGE_SETTINGS,

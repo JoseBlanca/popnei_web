@@ -768,6 +768,36 @@ test.describe("LT1 D5 the LD decay refused by popnei", () => {
   });
 });
 
+test.describe("LT1 D5 the LD decay refused, then Stop recalculating", () => {
+  test("LT1 D5 refused for filters that keep no variant, live: its words end with its start by itself; Stop recalculating: not, no Run, and the line of a Stop names the Run of after the next change (the review of the LD decay, 12 October 2026)", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await refuseLdDecay(
+      page,
+      "the pass gave no variant: its source gave 500 and the steps kept none of them, the filter by missing data kept 0",
+    );
+    await ready(page);
+    await typeDistance(page, "100000");
+    await button(ldDecay(page), "Run").click();
+    const part = ldDecay(page);
+    await expect(
+      part.getByText(
+        /Loosen them\. The LD decay is then calculated again by itself\.$/u,
+      ),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await button(part, "Stop recalculating").click();
+    await expect(
+      part.getByText(
+        "Stopped: the LD decay no longer starts by itself after a change. After the next change, Run calculates it and starts it again after each change.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(part.getByText(/again by itself/u)).toHaveCount(0);
+    await expect(button(part, "Run")).toHaveCount(0);
+  });
+});
+
 test.describe("LT1 D5 the downloads of the LD decay", () => {
   test("LT1 D5 the table of the populations, the plot and the table of the bins saved by the keyboard and read back; each Download… of a table below it, the plot's above it", async ({
     page,

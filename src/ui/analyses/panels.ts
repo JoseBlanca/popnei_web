@@ -171,7 +171,7 @@ const DIVERSITY: AnalysisUi = Object.freeze({
     );
   },
   refusalText: (message: string, p: Project): string =>
-    refusalText(message, p, "popgen"),
+    refusalText(message, p, "popgen", false),
   statisticsFailedText: (
     error: AnalysisError,
     p: Project,
@@ -292,7 +292,8 @@ const LD_DECAY: AnalysisUi = Object.freeze({
   plural: false,
   // The individuals a run will take, as the principal components'.
   readyLines: pcaReadyLines,
-  refusalText: ldDecayRefusalText,
+  refusalText: (message: string, p: Project): string =>
+    ldDecayRefusalText(message, p, "popgen", false),
   statisticsFailedText: (
     error: AnalysisError,
     p: Project,

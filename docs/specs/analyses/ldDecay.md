@@ -1006,7 +1006,8 @@ filters of individuals", which that page does not have.
     them."; the others by `refusalWords` with "Change the settings, or
     open the variants file again in the box Variants"; each ended by
     "The LD decay is then calculated again by itself.", since such a
-    refusal leaves it live;
+    refusal leaves it live, while it is live: after Stop recalculating
+    the sentence goes (the review of the LD decay, 12 October 2026);
   - the other failures, in the words of `popgen2FailureText`, as the
     PCA tab and the diversity have them.
 - **The key** is the old one with the populations of this page. It

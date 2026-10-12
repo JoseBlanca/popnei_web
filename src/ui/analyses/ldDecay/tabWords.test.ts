@@ -211,6 +211,13 @@ describe("LT1 D3 the words of the LD decay of the Populations tab", () => {
     });
   });
 
+  test("the line of a Stop over popnei's refusal names no Run (the review of the LD decay, 12 October 2026)", () => {
+    expect(ldDecayPanelLive({ kind: "stopped" }, null, "refused")).toEqual({
+      kind: "stopped",
+      line: "Stopped: the LD decay no longer starts by itself after a change. After the next change, Run calculates it and starts it again after each change.",
+    });
+  });
+
   test("the line of a failure that ended it names no Run the tab does not offer: popnei's refusal for memory, and a file that can no longer be read (the review of the LD decay, 12 October 2026)", () => {
     expect(
       ldDecayPanelLive({ kind: "endedByFailure" }, null, "refused"),

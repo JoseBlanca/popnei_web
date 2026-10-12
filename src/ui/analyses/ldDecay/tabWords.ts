@@ -35,13 +35,12 @@ export const LD_DECAY_TAB_NAME = "the LD decay";
 export const LD_DECAY_TAB_TITLE = "LD decay";
 
 /** The line after a Stop, until Run or another variants file, in the
-    place of the bar; with the result shown, `resultShown`, which offers
-    no Run until a change takes it away, the Run of after the next
-    change. */
-export function ldDecayStoppedLine(resultShown: boolean): string {
+    place of the bar; with no Run until a change, `noRunYet`, the result
+    shown or popnei's refusal, the Run of after the next change. */
+export function ldDecayStoppedLine(noRunYet: boolean): string {
   const stopped =
     "Stopped: the LD decay no longer starts by itself after a change.";
-  return resultShown
+  return noRunYet
     ? `${stopped} After the next change, Run calculates it and starts it again after each change.`
     : `${stopped} Run calculates it and starts it again after each change.`;
 }
@@ -181,7 +180,7 @@ export function ldDecayPanelLive(
     case "stopped":
       return {
         kind: "stopped",
-        line: ldDecayStoppedLine(withheld === "result"),
+        line: ldDecayStoppedLine(withheld !== null),
       };
     case "endedByFailure":
       return { kind: "stopped", line: ldDecayFailureEndedLine(withheld) };

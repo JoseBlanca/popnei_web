@@ -260,7 +260,7 @@ export function AnalysisPanel({
       )}
       {ui.Options !== null && <ui.Options />}
       {linesFirst && <Ready ui={ui} />}
-      <Above ui={ui} status={status} />
+      <Above ui={ui} status={status} live={page?.live.kind === "live"} />
       {stopButton === null && aside === null ? (
         runButton
       ) : (
@@ -355,8 +355,17 @@ interface PartProps {
 }
 
 /** What comes before the button: why the result went, or why it could
-    not be calculated. */
-function Above({ ui, status }: PartProps): React.JSX.Element | null {
+    not be calculated, popnei's refusal in the words of the analysis
+    `live` or not. */
+function Above({
+  ui,
+  status,
+  live,
+}: PartProps & {
+  /** Whether the analysis is live on popgen2.html, which the words of
+      popnei's refusal read. */
+  readonly live: boolean;
+}): React.JSX.Element | null {
   const kept = useAppState((s) => s.individualsKept);
   switch (status.kind) {
     case "removed":
@@ -366,7 +375,7 @@ function Above({ ui, status }: PartProps): React.JSX.Element | null {
         <Failed
           error={status.error}
           name={ui.name}
-          {...failedWordsOf(ui, status, kept)}
+          {...failedWordsOf(ui, status, kept, live)}
         />
       );
     case "locked":
