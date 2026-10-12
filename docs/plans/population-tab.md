@@ -1001,4 +1001,47 @@ the cache, not measured.
 
 6.3: the report to the owner, in chat.
 
-Left: package 7, the owner's try.
+### Work package 7, round 1, 12 October 2026
+
+The owner tried the page and asked, on 12 October 2026:
+
+- **R1.1 Bar plots of the table.** One plot per statistic, so that the
+  populations are compared at a glance, below the table, which stays:
+  the mean unbiased expected heterozygosity, the mean observed
+  heterozygosity, the proportion of polymorphic variants, the alleles
+  per variant in the draw and the alleles per variant as called, in
+  that order; one bar per population, in the table's order; the value
+  axis from 0; a population with no value shown as such, with words, not
+  as a bar of 0; each plot with its own "Download…", as every plot of
+  the page (the owner's principle of 9 October 2026). A new module of
+  `src/charts`, a bar plot, after `.claude/skills/coding/charts.md`.
+- **R1.2 The spectrum as lines.** One plot in place of the histogram of
+  each population: one line per population, x the frequency of the
+  commonest allele, 1 - j/g for a count j of the rarer allele in the
+  draw of g chromosomes, from 0.5 to just under 1; y the proportion of
+  the population's variants in the draw, each bin over the sum of that
+  population's bins, since a population counts a variant only where it
+  called enough genotypes and enough alleles, so populations count
+  different numbers of variants (explained to the owner, who asked); the
+  bin j = 0, variants with no rarer allele in the draw, left out, and the
+  caption says so. The spectrum's table stays. A legend names the
+  populations, and the bar plots and the lines give a population the same
+  colour.
+- **R1.3 The band links to the spectrum's warning**, the owner's answer
+  to the open point of the band spec (e47b61b9): counted with the
+  result's warnings, the link taking the focus to that warning.
+- **The rarefaction curve** of the alleles per variant, one line per
+  population against the chromosomes drawn, from a minimum the user
+  sets, 20 by default, waits for popnei: issue
+  https://github.com/JoseBlanca/popnei/issues/18, opened on the owner's
+  order of 12 October 2026, asks for every point from one pass.
+
+These change what the tab shows, not what it calculates;
+`docs/functionality.md` changes with them, as the owner was told. Spec
+first: `popgen2-populations.md`, `sfs.md` and `diversity.md` "On
+popgen2.html", `popgen2-band.md`, `popgen2-download.md` for the new
+downloads. The review after: `spec`, `tests`, `stale`, `errors`, `api`,
+`react`, `accessibility`, `ux`, `browser`, `bundle` (a chart module in
+the tab's code).
+
+Left: round 1 built and reviewed; the owner tries it again.
