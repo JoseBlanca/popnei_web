@@ -432,6 +432,11 @@ function popgen2KeptNeeds(p: Project, kept: IndividualsKept): string | null {
     return noPopulation;
   }
   const list = kept.list.kind === "known" ? kept.list.individuals : null;
+  // The store asks this only of an analysis `popgen2Needs` does not
+  // lock, and it locks on the one population first, so through the store
+  // this guard changes nothing, as the mutation that drops it showed in
+  // the review of the Distances tab (12 October 2026); it keeps a direct
+  // call from naming the one population as left by the thresholds.
   if (list === null || popgen2OnePopulationCause(p) !== null) {
     return null;
   }

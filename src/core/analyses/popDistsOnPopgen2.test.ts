@@ -424,6 +424,18 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
     ).toBe(
       "The filters kept none of the variants of panel.nei, so there is no variant to calculate the distances between populations over. Loosen the filters in the Variants step.",
     );
+    // A refusal of the variants file itself, in the words of the box
+    // Variants, with no sentence of what follows (the review of the
+    // Distances tab, 12 October 2026).
+    expect(
+      refusalText(
+        "the pass gave no variant and its source holds none",
+        p,
+        "popgen2",
+      ),
+    ).toBe(
+      "panel.nei has no variants. Open another variants file in the box Variants.",
+    );
     // In the plural, and said once (the review of the Distances tab, 12
     // October 2026).
     expect(refusalText("something else went wrong.", p, "popgen2")).toBe(
