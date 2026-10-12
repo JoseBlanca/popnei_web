@@ -20,9 +20,6 @@ export function tabContentId(tab: AnalysisTabId): string {
   return `${tab}-tab-content`;
 }
 
-/** The id of the element that holds what the PCA tab shows. */
-export const PCA_TAB_CONTENT_ID = tabContentId("pca");
-
 /** The tab shown, read and changed by the two roots of the page. */
 export interface PageTabStore {
   /** The tab shown now. A property made once, as `subscribe` is, for

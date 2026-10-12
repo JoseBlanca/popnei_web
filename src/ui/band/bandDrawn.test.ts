@@ -19,7 +19,7 @@ import type { JobResult } from "../../worker/protocol.ts";
 import { defectsRootOptions } from "../defects.ts";
 import { createPageTab } from "../pageTab.ts";
 import type { PageTabStore } from "../pageTab.ts";
-import { PCA_TAB_CONTENT_ID, tabContentId } from "../pageTab.ts";
+import { tabContentId } from "../pageTab.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 import type { PageStore } from "../store.tsx";
 import { createAnnouncer } from "../shell/status.ts";
@@ -83,7 +83,7 @@ afterEach(() => {
     root.unmount();
   });
   container.remove();
-  document.getElementById(PCA_TAB_CONTENT_ID)?.remove();
+  document.getElementById(tabContentId("pca"))?.remove();
   document.getElementById(tabContentId("populations"))?.remove();
 });
 
@@ -233,7 +233,7 @@ describe("NU5 D2 the band drawn", () => {
     const { pageTab } = await drawBand(testPage);
     // What the PCA tab of the application's root holds.
     const content = document.createElement("div");
-    content.id = PCA_TAB_CONTENT_ID;
+    content.id = tabContentId("pca");
     const warnings = document.createElement("h3");
     warnings.tabIndex = -1;
     warnings.setAttribute(WARNINGS_HEADING_ATTRIBUTE, "");
@@ -313,7 +313,7 @@ describe("NU5 D2 the band drawn", () => {
       await flush();
       const { pageTab } = await drawBand(testPage);
       const content = document.createElement("div");
-      content.id = PCA_TAB_CONTENT_ID;
+      content.id = tabContentId("pca");
       const tabHeading = document.createElement("h2");
       tabHeading.tabIndex = -1;
       tabHeading.setAttribute(PANEL_HEADING_ATTRIBUTE, "");
