@@ -51,3 +51,10 @@ export const MAX_HEATMAP_NAMES = 200;
  * (docs/specs/charts/line.md, "The TypeScript interface").
  */
 export const MAX_LINE_SERIES = 49;
+
+/**
+ * The most bars a bar plot draws, one row of 28 pixels each: the
+ * Populations tab gives it at most 20 populations, so more is a defect
+ * of the caller (docs/specs/charts/bars.md, "The TypeScript interface").
+ */
+export const MAX_BARS = 200;

@@ -355,3 +355,23 @@
 .chart.chart-line .chart-legend-text {
   text-anchor: start;
 }
+
+/* The bars of the bar plot (docs/specs/charts/bars.md), filled by the
+   classes chart-colour-‹i› of their group. A bar of one of the three
+   light colours, orange, sky blue and yellow, below 3:1 on the light
+   background, has the outline the marks of those colours have; the
+   others none. */
+.chart-bars-bar {
+  stroke: none;
+}
+
+.chart-bars-outlined {
+  stroke: var(--chart-axis);
+  stroke-width: 1px;
+}
+
+/* The words in the row of a name with no value, in place of its bar. */
+.chart-bars-none {
+  fill: var(--color-text);
+  font-size: 12px;
+}
