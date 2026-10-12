@@ -34,7 +34,8 @@
  *
  * Asked to, it holds the diversity as the PCA, for the Populations tab
  * of popgen2.html: its result kept back until a release of "diversity",
- * which lets it through and holds no diversity after it.
+ * which lets it through and holds no diversity after it; and the LD
+ * decay the same, released by "ldDecay".
  *
  * A release sent before the worker's script has made its channel would
  * be lost, as right after a file is picked, while the page makes the
@@ -64,6 +65,7 @@ export type Release =
   | "write"
   | "pca"
   | "diversity"
+  | "ldDecay"
   | "holdPcaAgain";
 
 /** What a worker says on the channel once it listens. */
@@ -102,12 +104,17 @@ const front = (
   holdWrite: boolean,
   holdPca: boolean,
   holdDiversity: boolean,
+  holdLdDecay: boolean,
 ): string => `{
   const realNow = performance.now.bind(performance);
   performance.now = () => realNow() * 1e6;
   const realPost = self.postMessage.bind(self);
   const held = { soFar: [], result: [] };
-  const holding = { soFar: true, result: true, write: ${JSON.stringify(holdWrite)}, pca: ${JSON.stringify(holdPca)}, diversity: ${JSON.stringify(holdDiversity)} };
+  const holding = { soFar: true, result: true, write: ${JSON.stringify(holdWrite)}, pca: ${JSON.stringify(holdPca)}, diversity: ${JSON.stringify(holdDiversity)}, ldDecay: ${JSON.stringify(holdLdDecay)} };
+  const heldLdDecay = [];
+  const ofLdDecay = (m) =>
+    m !== null && typeof m === "object" && m.kind === "result" &&
+    m.result !== null && typeof m.result === "object" && m.result.analysis === "ldDecay";
   const heldPca = [];
   const heldDiversity = [];
   const writes = new Set();
@@ -147,6 +154,11 @@ const front = (
       for (const [m, t] of heldDiversity.splice(0)) realPost(m, t);
       return;
     }
+    if (release === "ldDecay") {
+      holding.ldDecay = false;
+      for (const [m, t] of heldLdDecay.splice(0)) realPost(m, t);
+      return;
+    }
     if (release === "write") {
       holding.write = false;
       for (const [m, t] of heldWrite.splice(0)) realPost(m, t);
@@ -182,6 +194,10 @@ const front = (
       heldDiversity.push([m, t]);
       return;
     }
+    if (holding.ldDecay && ofLdDecay(m)) {
+      heldLdDecay.push([m, t]);
+      return;
+    }
     if (ofSummary(m) && (m.kind === "soFar" || m.kind === "result") && holding[m.kind]) {
       held[m.kind].push([m, t]);
       return;
@@ -202,10 +218,12 @@ export async function holdSummary(
     holdWrite = false,
     holdPca = false,
     holdDiversity = false,
+    holdLdDecay = false,
   }: {
     readonly holdWrite?: boolean;
     readonly holdPca?: boolean;
     readonly holdDiversity?: boolean;
+    readonly holdLdDecay?: boolean;
   } = {},
 ): Promise<void> {
   await page.addInitScript(countWorkers, [CHANNEL, LISTENING, COUNTS] as const);
@@ -214,7 +232,7 @@ export async function holdSummary(
     const script = await response.text();
     await route.fulfill({
       response,
-      body: front(holdWrite, holdPca, holdDiversity) + script,
+      body: front(holdWrite, holdPca, holdDiversity, holdLdDecay) + script,
     });
   });
 }
