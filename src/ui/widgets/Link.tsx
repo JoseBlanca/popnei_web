@@ -38,9 +38,9 @@ export type LinkProps = LinkTarget & {
   /** The words of the link, which say where it goes and are its name for
       a screen reader. */
   readonly label: string;
-  /** Its words in a window under 30 rem wide, "PCA: 2 warnings" for
-      "PCA: 2 warnings, in the PCA tab", so that it fits a line, its
-      whole words still its name; its words when absent. */
+  /** Its words shown in their short form, "PCA: 2 warnings" for "PCA: 2
+      warnings, in the PCA tab", so that it fits a narrow line, its whole
+      words still its name; its words when absent. */
   readonly shortLabel?: string;
 };
 

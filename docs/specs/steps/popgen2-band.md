@@ -561,7 +561,14 @@ the PCA tab to calculate it again.", once; the band's own line is not
 read, since the focus is not on it, so the Stop is not said twice. The
 same when a control goes by itself while it has the focus: the link
 when the line now says something else, the Stop of the one pass when
-the pass ends, the Stop of a PCA when its run ends. After "Close"
+the pass ends, the Stop of a PCA when its run ends. A Stop of
+another analysis, or of another kind, is another control, so that the
+focus never passes by itself from the Stop of one analysis to that of
+the next, which Enter would then stop unasked: when the PCA ends with
+its Stop focused and the diversity starts, the focus goes to "Popnei";
+and so does the focus of a Stop recalculating the band leaves out once
+the window is narrowed under 30 rem (the review of work package 4, 12
+October 2026). After "Close"
 the focus goes to the heading "Popnei", as the error bar's Close does.
 After the link, the focus is on the heading of the warnings or of the
 tab, as above; when the PCA tab has no such heading, as when an error
@@ -693,7 +700,8 @@ about to start alone, no button; the diversity running alone with the
 PCA live and idle, as after a change of the populations, its words with
 Stop and Stop all; the diversity about to start alone with the PCA
 live, its words with Stop recalculating and Stop all, the Stop
-recalculating marked as shown at 30 rem and wider only; both live and
+recalculating not drawn under 30 rem, and the focus it had then
+on the heading; both live and
 nothing running, waiting nor about to start, no button; the link of
 the diversity's warnings
 while the PCA has none, and the PCA's when both have them; "Stopping

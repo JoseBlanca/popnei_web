@@ -51,11 +51,11 @@ export interface BandStop {
       that can be live, by its id, running, its tab's Stop, or about to
       start, its tab's Stop recalculating; both end its live state. */
   readonly stops: "pass" | Popgen2LiveId;
-  /** Whether the band shows it only at 30 rem wide and more: a Stop
-      recalculating beside Stop all, which under 30 rem the line has no
-      room for beside the short form, as the owner chose on 12 October
-      2026; its tab keeps its own, and Stop all ends it with the
-      others. */
+  /** Whether the band draws it only at 30 rem wide and more, and not
+      at all while narrow (narrow.ts): a Stop recalculating beside Stop
+      all, which under 30 rem the line has no room for beside the short
+      form, as the owner chose on 12 October 2026; its tab keeps its
+      own, and Stop all ends it with the others. */
   readonly wideOnly: boolean;
 }
 

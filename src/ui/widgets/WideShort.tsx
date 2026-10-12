@@ -1,29 +1,28 @@
 /**
- * Words shown whole, and in a window under 30 rem wide in their short
- * form in their place, the whole words then still read by a screen
- * reader, as the line of the band of popgen2.html and its link show
- * them (docs/specs/steps/popgen2-band.md, "Its place"). Drawn inside the
- * element that holds the words, a link or a span.
+ * Words shown in their short form, the whole words read by a screen
+ * reader in their place, as the line of the band of popgen2.html and its
+ * link show them in a window under 30 rem wide
+ * (docs/specs/steps/popgen2-band.md, "Its place"); the band decides when
+ * (band/narrow.ts). Drawn inside the element that holds the words, a link
+ * or a span.
  */
-import { classOf } from "../classOf.ts";
-import styles from "./WideShort.module.css";
+import { VISUALLY_HIDDEN } from "./visuallyHidden.ts";
 
 /** The words, whole and short. */
 export interface WideShortProps {
-  /** The whole words: "Statistics of panel.vcf.gz · 45%". */
+  /** The whole words, read by a screen reader: "Statistics of
+      panel.vcf.gz · 45%". */
   readonly full: string;
-  /** The short form under 30 rem: "Statistics · 45%". */
+  /** The short form shown: "Statistics · 45%". */
   readonly short: string;
 }
 
-/** The whole words, and under 30 rem their short form. */
+/** The short form shown, and the whole words for a screen reader. */
 export function WideShort({ full, short }: WideShortProps): React.JSX.Element {
   return (
     <>
-      <span className={classOf(styles, "wide")}>{full}</span>
-      <span className={classOf(styles, "short")} aria-hidden="true">
-        {short}
-      </span>
+      <span className={VISUALLY_HIDDEN}>{full}</span>
+      <span aria-hidden="true">{short}</span>
     </>
   );
 }

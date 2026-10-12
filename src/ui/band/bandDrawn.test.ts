@@ -27,9 +27,7 @@ import type { Announcer } from "../shell/status.ts";
 import { PANEL_HEADING_ATTRIBUTE } from "../analyses/AnalysisPanel.tsx";
 import { WARNINGS_HEADING_ATTRIBUTE } from "../analyses/Warnings.tsx";
 import { DIALOG_MARK } from "../widgets/dialogMark.ts";
-import { classOf } from "../classOf.ts";
 import { Band } from "./Band.tsx";
-import styles from "./Band.module.css";
 import { endLast, flush, page, pcaDone, pcaResult } from "./testSupport.ts";
 import type { TestPage } from "./testSupport.ts";
 
@@ -57,6 +55,23 @@ beforeEach(() => {
       // Nothing is laid out in jsdom.
     }
   };
+  // jsdom has no matchMedia, through which the band reads whether the
+  // window is under 30 rem wide.
+  narrowNow = false;
+  narrowListeners.clear();
+  window.matchMedia = (query: string): MediaQueryList =>
+    ({
+      media: query,
+      get matches() {
+        return narrowNow;
+      },
+      addEventListener: (_type: string, listener: () => void) => {
+        narrowListeners.add(listener);
+      },
+      removeEventListener: (_type: string, listener: () => void) => {
+        narrowListeners.delete(listener);
+      },
+    }) as unknown as MediaQueryList;
   container = document.createElement("div");
   container.id = "defects";
   document.body.append(container);
@@ -72,19 +87,20 @@ afterEach(() => {
   document.getElementById(tabContentId("populations"))?.remove();
 });
 
-/** Whether the band's button named `name` for a screen reader is drawn
-    for a window 30 rem wide and more only, by the class of the band's
-    element that holds it. */
-function wideOnly(name: string): boolean {
-  const control = classOf(styles, "control");
-  let holder = button(name).parentElement;
-  while (holder !== null && !holder.classList.contains(control)) {
-    holder = holder.parentElement;
-  }
-  if (holder === null) {
-    throw new Error(`popnei_web defect: the button ${name} has no holder.`);
-  }
-  return holder.classList.contains(classOf(styles, "wideOnly"));
+/** Whether the window of the test is under 30 rem wide, which the
+    band reads through `window.matchMedia`; wide first. */
+let narrowNow = false;
+/** The listeners of the band to a change of that width. */
+const narrowListeners = new Set<() => void>();
+
+/** Narrows the window of the test under 30 rem, or widens it, `narrow`,
+    and tells the band, as a browser tells it of a resize. */
+async function setNarrow(narrow: boolean): Promise<void> {
+  narrowNow = narrow;
+  await act(async () => {
+    for (const listener of [...narrowListeners]) listener();
+    await Promise.resolve();
+  });
 }
 
 /** Draws the band over `testPage`, with a tab shown of its own and an
@@ -388,7 +404,9 @@ describe("NU5 D2 the band drawn", () => {
     });
     expect(container.textContent).toContain("The PCA starts in a moment");
     // Alone, it fits beside the short form under 30 rem too.
-    expect(wideOnly("Stop recalculating the PCA")).toBe(false);
+    await setNarrow(true);
+    expect(container.textContent).toContain("PCA soon");
+    expect(buttonNames()).toEqual(["Stop recalculating the PCA"]);
 
     await press(button("Stop recalculating the PCA"));
 
@@ -827,9 +845,13 @@ describe("PT4 D2 the band drawn with the PCA and the diversity", () => {
         "Stop all: the PCA and the diversity",
       ]);
       // Under 30 rem the line holds Stop all alone: its Stop
-      // recalculating is drawn for 30 rem and wider only.
-      expect(wideOnly("Stop recalculating the diversity")).toBe(true);
-      expect(wideOnly("Stop all: the PCA and the diversity")).toBe(false);
+      // recalculating is not drawn, and the focus it had goes to the
+      // heading (the review of package 4, 12 October 2026).
+      button("Stop recalculating the diversity").focus();
+      await setNarrow(true);
+      expect(buttonNames()).toEqual(["Stop all: the PCA and the diversity"]);
+      expect(document.activeElement).toBe(heading());
+      await setNarrow(false);
 
       await press(button("Stop recalculating the diversity"));
 

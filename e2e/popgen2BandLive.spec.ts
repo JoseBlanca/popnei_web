@@ -525,4 +525,93 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     ).toBeFocused();
     await expect(band(page)).toContainText("Diversity soon");
   });
+
+  for (const width of [1280, 320]) {
+    test(`PT4 D3 at ${String(width)} px, the band's Stop of the PCA focused when the PCA ends and the diversity starts: the focus goes to Popnei, never to a Stop of the diversity (the review of package 4, 12 October 2026)`, async ({
+      page,
+    }) => {
+      test.setTimeout(120_000);
+      await page.setViewportSize({ width, height: 800 });
+      await bothLive(page);
+      await release(page, "holdPcaAgain");
+      await setMissing(page, "0.05");
+      await expect
+        .poll(() => lineText(page), { timeout: RESULT_TIMEOUT })
+        .toMatch(/^Popnei PCA(?: running)? · 0:0\d.* Stop Stop all$/u);
+      await band(page).getByRole("button", { name: "Stop the PCA" }).focus();
+      // The name of the element with the focus at each change of the
+      // page and at each frame, so that a state shown for less than a
+      // frame is seen too.
+      await page.evaluate(() => {
+        const names: string[] = [];
+        Reflect.set(window, "popneiFocused", names);
+        const record = (): void => {
+          const active = document.activeElement;
+          const name =
+            active === null
+              ? "none"
+              : (active.getAttribute("aria-label") ??
+                `${active.tagName} ${active.textContent}`);
+          if (names.at(-1) !== name) names.push(name);
+        };
+        new MutationObserver(record).observe(document, {
+          subtree: true,
+          childList: true,
+          characterData: true,
+          attributes: true,
+        });
+        const frame = (): void => {
+          record();
+          requestAnimationFrame(frame);
+        };
+        frame();
+      });
+
+      await release(page, "pca");
+      await expect(heading(page)).toBeFocused({ timeout: RESULT_TIMEOUT });
+      await expect
+        .poll(() => lineText(page), { timeout: RESULT_TIMEOUT })
+        .toBe("Popnei");
+      const focused = await page.evaluate(
+        () => Reflect.get(window, "popneiFocused") as string[],
+      );
+      process.stdout.write(
+        `focus at ${String(width)} px: ${focused.join(" | ")}\n`,
+      );
+      expect(focused.filter((name) => name.includes("diversity"))).toEqual([]);
+      await expect(heading(page)).toBeFocused();
+      await workersListening(page);
+    });
+  }
+
+  test("PT4 D3 the band's Stop recalculating of the diversity focused at 1280 px, the window narrowed to 320 px, where the band does not show it: the focus goes to Popnei (the review of package 4, 12 October 2026)", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.clock.install();
+    await bothLive(page);
+    await tab(page, "Populations").click();
+    const minimum = shown(page).getByRole("textbox", {
+      name: /^Individuals with a called genotype needed in each population, per variant/u,
+    });
+    await page.clock.pauseAt(Date.now() + 1000);
+    await minimum.fill("10");
+    await minimum.press("Enter");
+    await tab(page, "Variants").click();
+    const recalculating = band(page).getByRole("button", {
+      name: "Stop recalculating the diversity",
+    });
+    await expect(recalculating).toBeVisible();
+    await heading(page).focus();
+    await page.keyboard.press("Tab");
+    await expect(recalculating).toBeFocused();
+
+    await page.setViewportSize({ width: 320, height: 800 });
+
+    await expect(heading(page)).toBeFocused();
+    await expect(band(page)).toContainText("Diversity soon");
+    expect(await bandButtons(page)).toEqual([
+      "Stop all: the PCA and the diversity",
+    ]);
+  });
 });

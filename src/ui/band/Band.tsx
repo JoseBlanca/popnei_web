@@ -77,6 +77,7 @@ import { Link } from "../widgets/Link.tsx";
 import { WideShort } from "../widgets/WideShort.tsx";
 import { isDialogOnPage, whenNoDialog } from "../widgets/dialogMark.ts";
 import { errorOf, lineOf, liveStatesOf } from "./bandLine.ts";
+import { useBandNarrow } from "./narrow.ts";
 import type { BandLine } from "./bandLine.ts";
 import styles from "./Band.module.css";
 import {
@@ -153,6 +154,9 @@ export function Band({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const keepFocus = useFocusKept(headerRef, headingRef);
   useLayoutEffect(keepFocus);
+  // Under 30 rem: the short forms, and no Stop recalculating beside Stop
+  // all, which then leaves the page and gives its focus to the heading.
+  const narrow = useBandNarrow();
   useLayoutEffect(() => {
     const header = headerRef.current;
     if (header === null) return;
@@ -205,7 +209,7 @@ export function Band({
     <header
       ref={headerRef}
       aria-label={BAND_NAME}
-      className={classOf(styles, scrolls ? "bandScrolls" : "band")}
+      className={`${classOf(styles, scrolls ? "bandScrolls" : "band")}${narrow ? ` ${classOf(styles, "narrow")}` : ""}`}
     >
       <div className={classOf(styles, "column")}>
         <div className={classOf(styles, "line")}>
@@ -224,6 +228,7 @@ export function Band({
             <ErrorBoundary heading={null} resetOn={fileId ?? ""}>
               <Activity
                 page={page}
+                narrow={narrow}
                 keepFocus={keepFocus}
                 onLink={(tab, warnings) => {
                   showTab(page.pageTab, tab, warnings, headingRef.current);
@@ -293,6 +298,8 @@ export function Band({
 /** What the line after "Popnei" works out its words from. */
 interface ActivityProps {
   readonly page: BandWith;
+  /** Whether the window is under 30 rem wide (narrow.ts). */
+  readonly narrow: boolean;
   /** Gives the focus to the heading when a control of the band that had
       it has gone by itself; called after each drawing of the line. */
   readonly keepFocus: () => void;
@@ -305,6 +312,7 @@ interface ActivityProps {
     the PCA, the tab shown and the time a Stop was first seen waiting. */
 function Activity({
   page,
+  narrow,
   keepFocus,
   onLink,
 }: ActivityProps): React.JSX.Element | null {
@@ -336,33 +344,43 @@ function Activity({
     stoppingSince: stopping?.since ?? null,
     stoppedMethod,
   });
-  return <Line line={line} page={page} onLink={onLink} />;
+  return <Line line={line} page={page} narrow={narrow} onLink={onLink} />;
 }
 
 /** What the line after "Popnei" is drawn with. */
 interface LineProps {
   readonly line: BandLine;
   readonly page: BandWith;
+  /** Whether the window is under 30 rem wide (narrow.ts). */
+  readonly narrow: boolean;
   /** The link to the tab `tab` was followed: to the warnings of its
       result, or, `false`, to its error. */
   readonly onLink: (tab: AnalysisTabId, warnings: boolean) => void;
 }
 
 /** The line after "Popnei": its words or its link, and its Stop. */
-function Line({ line, page, onLink }: LineProps): React.JSX.Element | null {
-  const stop = stopOf(line);
+function Line({
+  line,
+  page,
+  narrow,
+  onLink,
+}: LineProps): React.JSX.Element | null {
+  const shownStop = stopOf(line);
+  // Under 30 rem a Stop recalculating beside Stop all is not drawn.
+  const stop = shownStop?.wideOnly === true && narrow ? null : shownStop;
   const stopAll = stopAllOf(line);
   // Stop, then Stop all, each beside the words, so that the one that
   // stops one analysis comes first, as in the tab.
   const control = (
     <>
       {stop !== null && (
+        // A Stop of another analysis, or of another kind, is another
+        // button: a Stop with the focus that would turn into the Stop of
+        // the analysis after it leaves the page instead, and the focus
+        // goes to the heading (popgen2-band.md, "Keys and focus").
         <span
-          className={
-            stop.wideOnly
-              ? `${classOf(styles, "control")} ${classOf(styles, "wideOnly")}`
-              : classOf(styles, "control")
-          }
+          key={`${stop.stops}:${stop.label}`}
+          className={classOf(styles, "control")}
         >
           <Button
             label={stop.label}
@@ -397,7 +415,7 @@ function Line({ line, page, onLink }: LineProps): React.JSX.Element | null {
           {words !== null && (
             <Link
               label={words.full}
-              shortLabel={words.short}
+              {...(narrow && { shortLabel: words.short })}
               onPress={() => {
                 onLink(line.tab, line.warnings !== null);
               }}
@@ -412,38 +430,53 @@ function Line({ line, page, onLink }: LineProps): React.JSX.Element | null {
     <>
       {line.kind === "running" ? (
         // A new request is a new clock.
-        <Clocked key={line.runId} line={line} runId={line.runId} />
+        <Clocked
+          key={line.runId}
+          line={line}
+          runId={line.runId}
+          narrow={narrow}
+        />
       ) : (
-        <Words words={lineWords(line, 0)} />
+        <Words words={lineWords(line, 0)} narrow={narrow} />
       )}
       {control}
     </>
   );
 }
 
-/** The words of an analysis running, with its clock. */
+/** The words of an analysis running, with its clock, short while
+    `narrow`. */
 function Clocked({
   line,
   runId,
+  narrow,
 }: {
   readonly line: BandLine;
   readonly runId: number;
+  readonly narrow: boolean;
 }): React.JSX.Element {
   const seconds = useRunSeconds(runId);
-  return <Words words={lineWords(line, seconds)} />;
+  return <Words words={lineWords(line, seconds)} narrow={narrow} />;
 }
 
-/** The words of a line, whole, and under 30 rem in their short form,
-    the whole words then still read by a screen reader. */
+/** The words of a line, whole, and while `narrow`, under 30 rem, in
+    their short form, the whole words then still read by a screen
+    reader. */
 function Words({
   words,
+  narrow,
 }: {
   readonly words: LineWords | null;
+  readonly narrow: boolean;
 }): React.JSX.Element | null {
   if (words === null) return null;
   return (
     <span className={classOf(styles, "words")}>
-      <WideShort full={words.full} short={words.short} />
+      {narrow ? (
+        <WideShort full={words.full} short={words.short} />
+      ) : (
+        words.full
+      )}
     </span>
   );
 }
