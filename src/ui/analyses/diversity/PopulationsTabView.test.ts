@@ -50,7 +50,8 @@ import {
   popgen2EndsLive,
 } from "../../popgen2Store.ts";
 import type { Popgen2PageStore } from "../../popgen2Store.ts";
-import { startAnalysis } from "../../runs.ts";
+import { startAnalysis, startedAt } from "../../runs.ts";
+import { LastRunProvider, createLastRunClock } from "../ldDecay/lastRun.ts";
 import { AnnouncerProvider } from "../../shell/announcer.tsx";
 import { createAnnouncer } from "../../shell/status.ts";
 import { StoreProvider } from "../../store.tsx";
@@ -209,6 +210,14 @@ async function drawTab(): Promise<Page> {
     keepsPassed: false,
   });
   await settle();
+  // The clock of the LD decay, made before the tab is drawn, as the
+  // entry of the page makes it.
+  const clock = createLastRunClock(
+    raw,
+    "ldDecay",
+    () => performance.now(),
+    startedAt,
+  );
   const announcer = createAnnouncer();
   const said: string[] = [];
   const announce = announcer.announce.bind(announcer);
@@ -236,7 +245,11 @@ async function drawTab(): Promise<Page> {
                 createElement(
                   AutoRunsProvider,
                   { value: autoRuns },
-                  createElement(PopulationsTabView),
+                  createElement(
+                    LastRunProvider,
+                    { value: clock },
+                    createElement(PopulationsTabView),
+                  ),
                 ),
               ),
             ),

@@ -33,13 +33,18 @@ import type { DrawBar } from "./pageStart.tsx";
 import { Band } from "./band/Band.tsx";
 import type { BandWith } from "./band/Band.tsx";
 import { POPGEN2_LIVE } from "../core/apps.ts";
+import { ldDecayOnPopgen2 } from "../core/analyses/ldDecay.ts";
+import {
+  LastRunProvider,
+  createLastRunClock,
+} from "./analyses/ldDecay/lastRun.ts";
 import {
   POPGEN2_AUTO_GROUPS,
   createPopgen2Store,
   popgen2EndsLive,
 } from "./popgen2Store.ts";
 import { choosePopulationColumns } from "./populationColumn.ts";
-import { startAnalysis } from "./runs.ts";
+import { startAnalysis, startedAt } from "./runs.ts";
 import { AnnouncerProvider } from "./shell/announcer.tsx";
 import { refuseUndoKeys } from "./shell/shortcuts.ts";
 import { createAnnouncer } from "./shell/status.ts";
@@ -76,6 +81,14 @@ function startApplication(defects: Defects, drawBar: DrawBar<BandWith>): void {
   const gate = createRunGate();
   const gated = gatedStore(store, gate);
   const autoRuns = startByThemselves(store, gated, gate);
+  // The time of the last run of the LD decay, which its part of the
+  // Populations tab says, timed from the first run of the page on.
+  const ldDecayClock = createLastRunClock(
+    store,
+    ldDecayOnPopgen2.id,
+    () => performance.now(),
+    startedAt,
+  );
   // The tab shown, which the row of tabs and the band both read and
   // change.
   const pageTab = createPageTab();
@@ -109,13 +122,15 @@ function startApplication(defects: Defects, drawBar: DrawBar<BandWith>): void {
               {/* Every screen reads the analyses the page starts by
                   itself from it. */}
               <AutoRunsProvider value={autoRuns}>
-                <VariantsPage
-                  pageTab={pageTab}
-                  onCountButton={(node) => {
-                    countButton = node;
-                  }}
-                  onStatsShown={statsShown}
-                />
+                <LastRunProvider value={ldDecayClock}>
+                  <VariantsPage
+                    pageTab={pageTab}
+                    onCountButton={(node) => {
+                      countButton = node;
+                    }}
+                    onStatsShown={statsShown}
+                  />
+                </LastRunProvider>
               </AutoRunsProvider>
             </FilesProvider>
           </AnnouncerProvider>

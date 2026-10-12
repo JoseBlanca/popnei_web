@@ -864,7 +864,14 @@ from the first run of the open variants file that ended with a result
 or with an error, until another variants file is opened; in minutes
 and seconds as the clock of the bar writes them, "1:02:05" past an hour,
 and "The last run took less than a second." under one. It is the time
-from the request sent to its answer, of the last run that ended so; a
+from the moment the page asks the calculation worker for the run, when
+the tab shows it running, to its answer, of the last run that ended so,
+and it includes a wait for the worker: after another LD decay or a large
+PCA, the start of a new worker and its opening of the variants file,
+which the run pays too (12 October 2026, the review of the LD decay; how
+long that opening takes on a dense file is measured in phase 2 of the
+plan). The page makes its clock when it starts, before any run, so a
+run under way is timed from its start whenever the tab is first drawn; a
 run stopped, or left behind by a change, which ends with neither, does
 not change it. It stands beside Run, Stop and Stop recalculating alike,
 and alone where the state offers no button, the result shown after a

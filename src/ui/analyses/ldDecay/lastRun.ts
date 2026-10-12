@@ -3,17 +3,23 @@
  * decay, whose tab says it beside its button so that the user knows what
  * a change will cost them, as the owner decided on 12 October 2026
  * (docs/specs/steps/popgen2-populations.md, "The LD decay", "Run, Stop
- * and the time of the last run"): the time from the moment the store
- * first shows a run of it under way to the moment it shows that run done
- * or in error, the last such run of the variants file open. A run
- * stopped, or left behind by a change, which ends with neither, changes
- * nothing; another variants file forgets it.
+ * and the time of the last run"): from the start of a run, the moment
+ * the page asked the calculation worker for it, which `runs.ts` notes
+ * and the store shows as the run under way, to the moment the store
+ * shows it done or in error, the last such run of the variants file
+ * open. A wait for the worker is in it: after another LD decay or a
+ * large PCA, the start of a new worker and its opening of the variants
+ * file, which every run after those pays. A run stopped, or left behind
+ * by a change, which ends with neither, changes nothing; another
+ * variants file forgets it.
  *
- * One clock for each store and analysis, made by the first component
- * that asks for it, `lastRunClockOf`, and kept for as long as the page
- * lives: the tab's view, mounted before the first Run of the LD decay,
- * which only that view offers, and kept while another tab is shown.
+ * One clock for the page, made by its entry beside the analyses it
+ * starts by itself, before any run, and given to the tab through
+ * `LastRunProvider`, so that no drawing of a component makes it or
+ * subscribes it to the store.
  */
+import { createContext, useContext, useSyncExternalStore } from "react";
+
 import type { AnalysisId } from "../../../core/project.ts";
 import type { AppState } from "../../../core/store.ts";
 
@@ -40,17 +46,34 @@ export interface LastRunClock {
 const SECOND_MS = 1000;
 
 /** Makes the clock of the analysis `id` over `store`, reading the time
-    with `now`, in milliseconds, `performance.now` on the page. */
+    with `now`, in milliseconds, `performance.now` on the page, and the
+    start of a run with `startOf`, `startedAt` of runs.ts on the page,
+    in the same milliseconds, `null` when it has none, when the time the
+    clock first sees the run is taken. A run under way when it is made
+    is timed from its start. */
 export function createLastRunClock(
   store: ClockStore,
   id: AnalysisId,
   now: () => number,
+  startOf: (runId: number) => number | null,
 ): LastRunClock {
   const listeners = new Set<() => void>();
   let seconds: number | null = null;
   let fileId: string | null = store.getState().project.variants?.fileId ?? null;
-  // The run under way that the clock saw start, and when.
+  // The run under way that the clock saw start, and when it started.
   let running: { readonly runId: number; readonly start: number } | null = null;
+  const runningOf = (
+    status:
+      AppState<unknown, unknown>["analyses"][number]["status"] | undefined,
+  ): void => {
+    if (status?.kind === "running" && running?.runId !== status.runId) {
+      running = {
+        runId: status.runId,
+        start: startOf(status.runId) ?? now(),
+      };
+    }
+  };
+  runningOf(store.getState().analyses.find((a) => a.id === id)?.status);
 
   const set = (next: number | null): void => {
     if (next === seconds) return;
@@ -68,9 +91,7 @@ export function createLastRunClock(
     }
     const status = s.analyses.find((a) => a.id === id)?.status;
     if (status?.kind === "running") {
-      if (running?.runId !== status.runId) {
-        running = { runId: status.runId, start: now() };
-      }
+      runningOf(status);
       return;
     }
     const ended = running;
@@ -94,20 +115,21 @@ export function createLastRunClock(
   };
 }
 
-/** The clocks made, by store and analysis. */
-const CLOCKS = new WeakMap<ClockStore, Map<AnalysisId, LastRunClock>>();
+const LastRunContext = createContext<LastRunClock | null>(null);
 
-/** The clock of the analysis `id` over `store`, made at the first call
-    and the same object after it, on the clock of `performance.now`. */
-export function lastRunClockOf(
-  store: ClockStore,
-  id: AnalysisId,
-): LastRunClock {
-  const ofStore = CLOCKS.get(store) ?? new Map<AnalysisId, LastRunClock>();
-  CLOCKS.set(store, ofStore);
-  const known = ofStore.get(id);
-  if (known !== undefined) return known;
-  const made = createLastRunClock(store, id, () => performance.now());
-  ofStore.set(id, made);
-  return made;
+/** Gives the clock of the LD decay of the page to the screens under
+    it. */
+export const LastRunProvider = LastRunContext.Provider;
+
+/** The seconds the last run of the LD decay took, from the clock of the
+    `LastRunProvider` above, drawn again when they change; `null` before
+    one. Throws a defect outside a `LastRunProvider`. */
+export function useLastRunSeconds(): number | null {
+  const clock = useContext(LastRunContext);
+  if (clock === null) {
+    throw new Error(
+      "popnei_web defect: useLastRunSeconds outside a LastRunProvider",
+    );
+  }
+  return useSyncExternalStore(clock.subscribe, clock.seconds);
 }
