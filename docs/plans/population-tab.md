@@ -1074,4 +1074,28 @@ larger with plot code it never draws (the page is to be deleted).
 warning for the band. For the owner: the alleles per variant on an
 axis from 0 show 1.97 and 1.98 as equal.
 
-Left: the fixes, in two parts; the owner tries it again.
+The fixes, 12 October 2026, test first: c3ddd134 to 1c641056 (items 1
+to 19, 21, 23: a population's group by its place in the individuals
+file, as the PCA's, in `src/ui/analyses/populationGroups.ts`; the
+spectrum's plot behind an error boundary of its own; "proportion" for
+the one number; "Proportion of the variants with both alleles that have
+this frequency" up the axis; the warnings list naming the spectrum's
+warning, so the count the link lands on is the band's; the tests the
+mutations showed missing, every one of them killed after), af500539 to
+23e3058d (items 20, 22, 24 to 26: each bar's name with its
+population's mark; names cut in the middle and numbered when two still
+read alike; text widths measured in the browser, `src/charts/
+textWidth.ts`, taken a tenth wider for WebKit's PNG; the line plot's up
+label kept clear of its numbers, measured only for the line plot after
+the measure moved the scatter's margin and broke 7 pointer flows; a
+long name breaks in the line under the spectrum). A screen of ten
+populations added. Checks at 23e3058d: typecheck, lint, format clean;
+Vitest 177 files, 5,487 tests; Chromium and WebKit,
+`popgen2Populations` and `popgen2Downloads` 110, `popgen2Pca` 52,
+`plots` and `ldDecay` 94; screens of the tab 76. The machine was at a
+load average of 60 to 137 from other work: 31 timeouts of
+`DownloadMenu.test.ts` in one full run passed alone and in the next.
+
+Left: a second review of the fixes (`browser`, `tests`); the owner's
+answer on the axis of the alleles per variant; the owner tries it
+again.
