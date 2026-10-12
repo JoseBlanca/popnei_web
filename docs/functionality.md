@@ -207,19 +207,25 @@ not yet tried by the owner (`docs/specs/steps/popgen2-download.md`).
 The button, "Download filtered variants…", is greyed out, with its
 reason beside it, until the file has been read to the end once. It opens
 a dialog with the choice of the format, and while the file is written
-the dialog shows a bar and Stop, and no filter can change. While a PCA
-runs the button waits too, greyed, with "Waits for the PCA to end; or
-stop it in the PCA tab." beside it ("the PCoA" for a PCoA), from 9
-October 2026. From 10 October 2026, once the PCA has been run for the
-file, a change of a filter starts it again a second later, and the
-button then waits for it, 128 s in WebKit and 215 s in Chromium for
-a VCF of 300 variants of 9,381 individuals on an Apple M5 Pro (the
-measurement NU4 D6 of docs/plans/no-undo.md), as the owner chose that day rather than a download that
-stops the PCA; a user who wants the file first presses Stop, or "Stop
-recalculating" in the PCA tab, which keeps the PCA from starting again
-until Run. A press of the button during that second is served before
-the PCA: the PCA does not start while the dialog is open or the file is written,
-and starts a second after the dialog closes. While the file is written
+the dialog shows a bar and Stop, and no filter can change. While an
+analysis runs, the PCA or the diversity, the button waits too, greyed,
+with the reason beside it: "Waits for the PCA to end; or stop it in the
+PCA tab." ("the PCoA" for a PCoA), "Waits for the diversity to end; or
+stop it in the Populations tab.", and, while another analysis waits to
+start after the one running, "Waits for the PCA, and the diversity
+after it, to end; or press Stop all beside the heading Popnei.", since
+a Stop of the one running would let the other start a second later and
+grey the button again. Once an analysis has been run for the file, a
+change of a filter starts it again a second later (section 5), and the
+button waits for it, for a PCA 128 s in WebKit and 215 s in Chromium
+on a VCF of 300 variants of 9,381 individuals on an Apple M5 Pro (the
+measurement NU4 D6 of docs/plans/no-undo.md), as the owner chose on 10
+October 2026 rather than a download that stops the calculation. A user
+who wants the file first presses Stop all in the band, or, with one
+analysis set to be calculated again, its Stop or its "Stop
+recalculating", which keep it from starting again until Run. A press of the button during that second is served before
+the analyses: none starts while the dialog is open or the file is
+written, and they start a second after the dialog closes. While the file is written
 the band at the top of the page says so (section 5). When the
 write ends the browser's download starts by itself, and the button
 gives way to a text that says the file, its size, how many variants of
