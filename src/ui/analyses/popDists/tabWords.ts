@@ -37,7 +37,8 @@ import type { AboutToStart, LiveState } from "../../autoRuns.ts";
 import type { PanelLive } from "../AnalysisPanel.tsx";
 import { passLockText } from "../pca/passLock.ts";
 import type { PassLock } from "../pca/passLock.ts";
-import { populationsText } from "../words.ts";
+import type { LiveAnalysisName } from "../status.ts";
+import { populationsText, runningUntilEnd } from "../words.ts";
 
 /** The analysis in the middle of a sentence of the tab's lock. */
 export const DISTANCES_TAB_NAME = "the distances";
@@ -172,7 +173,7 @@ export function distancesStoppedLine(resultShown: boolean): string {
  */
 export function distancesWaitingLine(
   waits: AboutToStart,
-  before: string | null,
+  before: LiveAnalysisName | null,
 ): string {
   const inAMoment =
     "The distances start in a moment, later if the filters, their options or the populations change.";
@@ -180,11 +181,11 @@ export function distancesWaitingLine(
     case "behind":
       return before === null
         ? inAMoment
-        : `The distances start once ${before}, which is running, ends.`;
+        : `The distances start once ${runningUntilEnd(before)}.`;
     case "changes":
       return before === null
         ? inAMoment
-        : `The distances start after ${before}, once the filters, the options and the populations stop changing.`;
+        : `The distances start after ${before.name}, once the filters, the options and the populations stop changing.`;
     case "download":
       return "The distances start again when the download is written or closed.";
     case "afterCrash":
@@ -197,7 +198,7 @@ export function distancesWaitingLine(
     whether their result is shown, `resultShown`. */
 export function distancesPanelLive(
   state: LiveState,
-  before: string | null,
+  before: LiveAnalysisName | null,
   resultShown: boolean,
 ): PanelLive {
   switch (state.kind) {

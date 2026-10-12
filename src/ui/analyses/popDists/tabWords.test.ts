@@ -32,6 +32,13 @@ import {
   unclassifiedCaption,
   DISTANCES_TABLE_WHAT,
 } from "./tabWords.ts";
+import type { LiveAnalysisName } from "../status.ts";
+
+/** An analysis that can be live, named `name` in the singular, as the
+    lines of waiting are given it. */
+function named(name: string): LiveAnalysisName {
+  return { id: "pca", name, tab: "PCA", readsPopulations: false };
+}
 
 /** A project of popgen2.html, frozen deeply: `panel.nei` with the
     individuals of `names`, each with its population in `pops` in
@@ -210,10 +217,10 @@ describe("DT1 D3 the words of the Distances tab", () => {
     expect(distancesWaitingLine("changes", null)).toBe(
       "The distances start in a moment, later if the filters, their options or the populations change.",
     );
-    expect(distancesWaitingLine("changes", "the diversity")).toBe(
+    expect(distancesWaitingLine("changes", named("the diversity"))).toBe(
       "The distances start after the diversity, once the filters, the options and the populations stop changing.",
     );
-    expect(distancesWaitingLine("behind", "the PCA")).toBe(
+    expect(distancesWaitingLine("behind", named("the PCA"))).toBe(
       "The distances start once the PCA, which is running, ends.",
     );
     expect(distancesWaitingLine("behind", null)).toBe(

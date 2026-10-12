@@ -11,6 +11,7 @@ import type { JobResult } from "../../worker/protocol.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import type { Announcer } from "../shell/status.ts";
 import { waitsAfterName } from "./status.ts";
+import type { LiveAnalysisName } from "./status.ts";
 
 /** What a Run of a live analysis needs. */
 export interface LiveRunDeps {
@@ -35,7 +36,7 @@ export interface LiveRunDeps {
 export function runLive(
   deps: LiveRunDeps,
   id: AnalysisId,
-  waitingLine: (before: string | null) => string,
+  waitingLine: (before: LiveAnalysisName | null) => string,
 ): void {
   const answer = deps.autoRuns.run(id);
   if (answer !== "waiting") return;

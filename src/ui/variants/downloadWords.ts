@@ -54,7 +54,7 @@ export function analysisWaitsText(
   if (waiting.length === 0) {
     return `Waits for ${running.name} to end; or stop ${itOf(running)} in the ${running.tab} tab.`;
   }
-  const waits = `Waits for ${running.name}, and ${bothOf(waiting.map((one) => one.name))} after it, to end`;
+  const waits = `Waits for ${running.name}, and ${bothOf(waiting.map((one) => one.name))} after ${itOf(running)}, to end`;
   return `${waits}; or press ${STOP_ALL_PLACE}.`;
 }
 

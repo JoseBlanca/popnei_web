@@ -30,11 +30,13 @@ import type {
 import type { JobResult, PcaMethod } from "../../../worker/protocol.ts";
 import type { AboutToStart } from "../../autoRuns.ts";
 import { statusOf } from "../status.ts";
+import type { LiveAnalysisName } from "../status.ts";
 import {
   WAITS_FOR_STATISTICS_TEXT,
   failedText,
   failedWordsOf,
   popgen2FailureText,
+  runningUntilEnd,
 } from "../words.ts";
 import type { PanelErrorWords } from "../words.ts";
 import { passLockText } from "./passLock.ts";
@@ -195,7 +197,7 @@ export function pcaTabResultFailed(
 export function aboutToStartLine(
   method: PcaMethod,
   waits: AboutToStart,
-  before: string | null = null,
+  before: LiveAnalysisName | null = null,
 ): string {
   const name = methodName(method);
   switch (waits) {
@@ -205,7 +207,7 @@ export function aboutToStartLine(
       return `The ${name} starts after the next change of the filters or of its options, or when Run is pressed.`;
     case "behind":
       if (before !== null) {
-        return `The ${name} starts once ${before}, which is running, ends.`;
+        return `The ${name} starts once ${runningUntilEnd(before)}.`;
       }
       return `The ${name} starts in a moment, later if the filters or its options change.`;
     // No live analysis comes before the PCA in the order of the tabs, so

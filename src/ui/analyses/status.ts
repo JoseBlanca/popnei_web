@@ -250,13 +250,15 @@ function namedOf(
 
 /** The analysis the line of waiting of the live state `state` names
     in `s`, as the words of the page name it, "the PCA", "the
-    diversity": the one `after` holds, that runs or is about to start
-    before it; `null` for none. */
+    distances", with its number, so that the line gives it its verb: the
+    one `after` holds, that runs or is about to start before it; `null`
+    for none. The same object for the same analysis and method, so that
+    a selector may return it. */
 export function waitsAfterName(
   s: AppState<JobResult, unknown>,
   state: LiveState,
-): string | null {
+): LiveAnalysisName | null {
   return state.kind === "live" && state.after !== null
-    ? liveAnalysisOf(s, state.after).name
+    ? liveAnalysisOf(s, state.after)
     : null;
 }

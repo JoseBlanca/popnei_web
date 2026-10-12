@@ -53,7 +53,7 @@ function pressed(
       getState: () => s,
     },
     id,
-    (waitsFor) => `waits for ${waitsFor ?? "nothing"}`,
+    (waitsFor) => `waits for ${waitsFor?.name ?? "nothing"}`,
   );
   return { said, ran };
 }

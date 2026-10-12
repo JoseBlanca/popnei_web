@@ -647,8 +647,12 @@ a verb and a pronoun in the plural: "The distances start in a moment",
 "Stop the distances in the Distances tab to change the filters; then
 press Run there to calculate them again.", "Waits for the distances to
 end; or stop them in the Distances tab.", "…while the distances run."
-`LiveAnalysisName` of `src/ui/analyses/status.ts` says which analyses
-are named in the plural.
+So do the sentences of another analysis that name them, since the
+review of the Distances tab on 12 October 2026: "The PCA starts once
+the distances, which are running, end.", "Waits for the distances, and
+the PCA after them, to end; or press Stop all beside the heading
+Popnei." `LiveAnalysisName` of `src/ui/analyses/status.ts` says which
+analyses are named in the plural.
 
 **The order.** The calculation worker runs one calculation at a time.
 When several live analyses are about to start after one change, a

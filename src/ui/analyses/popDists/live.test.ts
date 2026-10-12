@@ -16,7 +16,9 @@ import { lineWords, stopAllOf, stopOf } from "../../band/bandWords.ts";
 import { createPopgen2Store, popgen2EndsLive } from "../../popgen2Store.ts";
 import { analysisWaitsText } from "../../variants/downloadWords.ts";
 import { notOpenedWhileRunningText } from "../../variants/individualsWords.ts";
-import { liveAnalysisOf } from "../status.ts";
+import { aboutToStartLine } from "../pca/tabWords.ts";
+import { diversityWaitingLine } from "../diversity/tabWords.ts";
+import { liveAnalysisOf, waitsAfterName } from "../status.ts";
 import type { LiveAnalysisName } from "../status.ts";
 import { roundText, stopAllText } from "../liveWords.ts";
 import { filtersLockedText, populationsLockedText } from "../words.ts";
@@ -25,6 +27,7 @@ import {
   DISTANCES_STARTED_BY_ITSELF,
   distancesStoppedText,
 } from "./liveWords.ts";
+import { distancesWaitingLine } from "./tabWords.ts";
 
 /** The store of popgen2.html, with a worker that is never sent
     anything. */
@@ -89,6 +92,32 @@ describe("DT1 D2 the distances, a live analysis of popgen2.html", () => {
     // The diversity's words are unchanged.
     expect(filtersLockedText(names().diversity, [])).toBe(
       "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again.",
+    );
+  });
+
+  test("the lines of the waiting of the others and the download's wait name them in the plural (the review of the Distances tab, 12 October 2026)", () => {
+    const { distances, diversity, pca } = names();
+    const behindDistances = {
+      kind: "live",
+      aboutToStart: "behind",
+      running: false,
+      after: "popDists",
+    } as const;
+    expect(waitsAfterName(page().getState(), behindDistances)).toBe(distances);
+    expect(aboutToStartLine("pca", "behind", distances)).toBe(
+      "The PCA starts once the distances, which are running, end.",
+    );
+    expect(diversityWaitingLine("behind", distances)).toBe(
+      "The diversity starts once the distances, which are running, end.",
+    );
+    expect(distancesWaitingLine("behind", diversity)).toBe(
+      "The distances start once the diversity, which is running, ends.",
+    );
+    expect(analysisWaitsText(distances, [pca])).toBe(
+      "Waits for the distances, and the PCA after them, to end; or press Stop all beside the heading Popnei.",
+    );
+    expect(analysisWaitsText(pca, [distances])).toBe(
+      "Waits for the PCA, and the distances after it, to end; or press Stop all beside the heading Popnei.",
     );
   });
 

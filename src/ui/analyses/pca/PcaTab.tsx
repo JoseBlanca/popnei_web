@@ -36,6 +36,7 @@ import { AnalysisPanel } from "../AnalysisPanel.tsx";
 import type { PanelLive } from "../AnalysisPanel.tsx";
 import { runLive } from "../liveRun.ts";
 import { statusOf, waitsAfterName } from "../status.ts";
+import type { LiveAnalysisName } from "../status.ts";
 import { passLock } from "./passLock.ts";
 import { pcaTabPanel } from "./pcaTabPanel.ts";
 import { prefetchPcaResults } from "./PcaTabResults.tsx";
@@ -64,7 +65,7 @@ export interface PcaTabProps {
 function panelLive(
   state: LiveState,
   method: PcaMethod,
-  before: string | null,
+  before: LiveAnalysisName | null,
   resultShown: boolean,
 ): PanelLive {
   switch (state.kind) {

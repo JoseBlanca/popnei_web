@@ -607,6 +607,15 @@ export function withVerb(
   return `${named.name} ${named.plural === true ? plural : singular}`;
 }
 
+/** The analysis `named`, which runs, until it ends, in its number, as
+    the lines of waiting name the one they wait for: "the PCA, which is
+    running, ends", "the distances, which are running, end". */
+export function runningUntilEnd(named: LiveAnalysisName): string {
+  return named.plural === true
+    ? `${named.name}, which are running, end`
+    : `${named.name}, which is running, ends`;
+}
+
 /** The analyses `named`, each with its tab, as a Stop of each names
     them: "the PCA in the PCA tab and the diversity in the Populations
     tab". */

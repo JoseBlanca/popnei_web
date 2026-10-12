@@ -44,6 +44,13 @@ import {
   pcaResultTitle,
   pcaTabLoadFailed3d,
 } from "./words.ts";
+import type { LiveAnalysisName } from "../status.ts";
+
+/** An analysis that can be live, named `name` in the singular, as the
+    lines of waiting are given it. */
+function named(name: string): LiveAnalysisName {
+  return { id: "pca", name, tab: "PCA", readsPopulations: false };
+}
 
 /** The store of popgen2.html with `panel.nei` of `numIndividuals`
     open and read, the PCA of `method` with the distance of its LD
@@ -345,10 +352,10 @@ describe("AP6 D2 the status region at the end of a run of the PCA, over the stor
 
 describe("PT2 D1 the line of the PCA tab while the PCA waits for the diversity", () => {
   test("waiting for the diversity that runs, by the method", () => {
-    expect(aboutToStartLine("pca", "behind", "the diversity")).toBe(
+    expect(aboutToStartLine("pca", "behind", named("the diversity"))).toBe(
       "The PCA starts once the diversity, which is running, ends.",
     );
-    expect(aboutToStartLine("pcoa", "behind", "the diversity")).toBe(
+    expect(aboutToStartLine("pcoa", "behind", named("the diversity"))).toBe(
       "The PCoA starts once the diversity, which is running, ends.",
     );
   });
