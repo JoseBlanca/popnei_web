@@ -41,8 +41,15 @@ paste, and Remove, and the Individuals tab greys the three lists of how
 a text file is read, each with the reason (below, "While the diversity
 runs"); while the PCA runs they stay open, as before. A change of the
 individuals file or of the column now takes the diversity's result off
-the screen, and starts it again while it is live ("The states"). Approved by the owner on 11 October 2026; not
-yet built; its plan is `docs/plans/population-tab.md`.
+the screen, and starts it again while it is live ("The states"). Approved by the owner on 11 October 2026; its
+plan is `docs/plans/population-tab.md`. Built on the branch
+`population-tab` on 11 and 12 October 2026, work package 3 of that
+plan, and not yet tried by the owner. The rounds of review changed what
+the box says of a file dropped, pasted or picked on the greyed zone,
+which names that file and says it was not opened, and of a folder, a
+text or several files there, which get the words they get when the zone
+does not wait; and the lock's words, which name the diversity alone;
+each where this spec says so, with its date.
 
 The two tabs were called "Variants file" and "Individuals file" until 9
 October 2026, when the row of five tabs of `popgen2-pca.md` renamed them
