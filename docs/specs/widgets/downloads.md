@@ -296,6 +296,11 @@ export interface TableDownload {
   readonly what: string;       // "the table of panel_pops.csv"
   readonly fileName: string;   // downloadName(…, "csv")
   readonly waiting: string | null;
+  // The screen's own CSV, written in place of the values of the cells,
+  // for a table one of whose cells joins two values, the pair of the
+  // distances between populations (since 12 October 2026); absent for
+  // every other table.
+  readonly csv?: () => string;
 }
 /** What a row of a table given a download holds beside what it shows. */
 export interface RowValues {

@@ -72,7 +72,9 @@ export type TableProps = TableLook &
       }
     | {
         /** Its rows, each with its values as stored, which the CSV holds
-            in place of what is shown. */
+            in place of what is shown, unless the download gives a CSV of
+            its own, `TableDownload.csv`, as the table of the distances
+            between populations does. */
         readonly rows: readonly (TableRow & RowValues)[];
         /** The download of the table, which draws the menu "Download…"
             below it. */

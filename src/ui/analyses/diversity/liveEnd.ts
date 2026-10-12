@@ -12,13 +12,18 @@
  * that could not be read, leave it live: the next change of its key
  * tries again. Pure, so that a test in node checks it; the page gives it
  * to `createAutoRuns` through `popgen2EndsLive` of popgen2Store.ts.
+ *
+ * Since 12 October 2026 it is the rule of the distances between
+ * populations too, whose words cannot tell a crash for memory from
+ * another either (docs/specs/steps/popgen2-distances.md, "The states"):
+ * `ENDS_LIVE` of popgen2Store.ts gives it to both.
  */
 import type { AnalysisId } from "../../../core/project.ts";
 import type { AppState } from "../../../core/store.ts";
 
-/** Whether the status of the analysis `id` in `s`, a failure, ends the
-    diversity's live state; false for any status that is not an error,
-    and for popnei's refusal. */
+/** Whether the status of the analysis `id` in `s`, a failure, ends its
+    live state, the diversity's or the distances'; false for any status
+    that is not an error, and for popnei's refusal. */
 export function diversityFailureEndsLive(
   s: AppState<unknown, unknown>,
   id: AnalysisId,
