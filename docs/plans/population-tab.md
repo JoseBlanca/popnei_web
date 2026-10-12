@@ -987,6 +987,18 @@ of the column list and of Remove only.
 `popgen2.html`: 331.93 KB (sum of Vite's gzip sizes, the HTML
 included), against 321.62 KB before the piece.
 
+The `browser` review of the whole branch (main...58de88cb): no
+findings; every API, CSS feature and syntax the branch adds is within
+the floor, range media queries exactly at it (Safari 16.4); the
+keyboard opens the file picker from the zone's own input in both
+engines; no request leaves the site's origin. Seen, not fixed here: a
+link dragged onto the page, which carries no "Files", is let through by
+the window's listener and the browser may load it in place of the page,
+as before this piece; under `vite preview` (no-cache) each file of a
+tab's code is requested twice, once by the fetch and once by the
+import, and on GitHub Pages (max-age=600) the second should come from
+the cache, not measured.
+
 6.3: the report to the owner, in chat.
 
 Left: package 7, the owner's try.
