@@ -1183,6 +1183,36 @@ describe("LT1 D2 the band and the automatic runs with the LD decay", () => {
     ]);
   });
 
+  test("popnei's refusal for memory ends the LD decay's live state on the page's store; another refusal leaves it live (the review of the LD decay, 12 October 2026)", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    expect(testPage.auto.run("ldDecay")).toBe("started");
+    await flush();
+    testPage.lastLdDecay().end({
+      kind: "failed",
+      error: { kind: "popnei", message: "`numBins` is 0." },
+    });
+    await flush();
+    expect(testPage.auto.isLive("ldDecay")).toBe(true);
+
+    testPage.setLdDecay({ maxDist: 50_000 });
+    await flush();
+    await quietSecond();
+    testPage.lastLdDecay().end({
+      kind: "failed",
+      error: {
+        kind: "popnei",
+        message:
+          "this machine has not the memory for the pairs counted at every distance, 250000000 values of 16 bytes",
+      },
+    });
+    await flush();
+    expect(testPage.auto.isLive("ldDecay")).toBe(false);
+    expect(testPage.auto.liveState("ldDecay")).toEqual({
+      kind: "endedByFailure",
+    });
+  });
+
   test("the link of the LD decay's warnings while the diversity has none, to the heading of its warnings in the Populations tab", async () => {
     const testPage = page(SUMMARY);
     await testPage.endPass();
