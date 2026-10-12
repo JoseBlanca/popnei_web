@@ -22,6 +22,12 @@ import type { JobResult } from "../../../worker/protocol.ts";
 import { roundText, stopAllText } from "../liveWords.ts";
 import { ldDecayFailureEndsLive } from "./liveEnd.ts";
 import {
+  ldBinValues,
+  ldBinsTableName,
+  ldDecayTableName,
+  ldDecayValues,
+} from "./words.ts";
+import {
   LD_DECAY_HELD_AFTER_CRASH,
   LD_DECAY_STARTED_BY_ITSELF,
   ldDecayStoppedText,
@@ -279,5 +285,41 @@ describe("LT1 D3 the words of the LD decay of the Populations tab", () => {
     ).toBe(
       "Stopped: the PCA, the diversity and the LD decay no longer start by themselves. Press Run for the diversity and the LD decay in the Populations tab to calculate them again.",
     );
+  });
+});
+
+describe("LT1 D4 the downloads of the LD decay on popgen2.html", () => {
+  test("the names of the files and the values of the rows as stored", () => {
+    expect(ldDecayTableName("ld.nei")).toBe("ld.ld_decay.csv");
+    expect(ldBinsTableName("ld.vcf.gz")).toBe("ld.ld_decay_bins.csv");
+    expect(
+      ldDecayValues({
+        population: "pop_a",
+        individuals: 50,
+        variants: 432,
+        pairs: 29367,
+        halfDist: 7548.08187836982,
+        r2AtZero: 0.46942148760330576,
+        rhoPerBp: null,
+      }),
+    ).toEqual([
+      "pop_a",
+      50,
+      432,
+      29367,
+      7548.08187836982,
+      0.46942148760330576,
+      null,
+    ]);
+    expect(
+      ldBinValues({
+        population: "pop_a",
+        from: 1,
+        to: 2000,
+        pairs: 0,
+        meanR2: null,
+        sdR2: null,
+      }),
+    ).toEqual(["pop_a", 1, 2000, 0, null, null]);
   });
 });

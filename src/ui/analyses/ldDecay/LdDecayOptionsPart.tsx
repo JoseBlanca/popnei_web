@@ -19,10 +19,19 @@
  * distance committed while it holds, an arrow key among them. Under the fields, while the LD pruning of the Variants
  * step is on, the line that says it is not applied here, also over a plot
  * shown, which the pruning turned on does not remove.
+ *
+ * In the Populations tab of popgen2.html, given the definition of that
+ * page, the reason beside the distance counts the populations of that
+ * page, and the two fields wait while the LD decay runs, each with the
+ * reason as its tooltip and its description, `waiting`
+ * (docs/specs/steps/popgen2-populations.md, "The LD decay", "While it
+ * runs"); on popgen.html they never wait.
  */
 import { useId } from "react";
 
 import {
+  ldDecay,
+  ldDecayPageOf,
   MAX_DIST_TAKEN,
   MAX_MAX_ALLOWED_MAF,
   MIN_MAX_ALLOWED_MAF,
@@ -30,6 +39,8 @@ import {
   ldDecayOptions,
   maxDistReason,
 } from "../../../core/analyses/ldDecay.ts";
+import type { AnalysisDef } from "../../../core/store.ts";
+import type { Job, JobResult } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { distanceRefusedText } from "../../steps/variants/words.ts";
@@ -53,8 +64,23 @@ import {
 const FREQUENCY_STEP = 0.01;
 const FREQUENCY_DECIMALS = 2;
 
+/** What the options are drawn with. */
+export interface LdDecayOptionsPartProps {
+  /** The definition of the LD decay the store of the page runs,
+      `ldDecay` or `ldDecayOnPopgen2`, whose page the reason beside the
+      distance follows; the old page's when absent. */
+  readonly analysis?: AnalysisDef<Job, JobResult>;
+  /** The reason every option waits, or `null` while none does; `null`
+      when absent, as on popgen.html. */
+  readonly waiting?: string | null;
+}
+
 /** The options of the LD decay. */
-export function LdDecayOptionsPart(): React.JSX.Element {
+export function LdDecayOptionsPart({
+  analysis = ldDecay,
+  waiting = null,
+}: LdDecayOptionsPartProps): React.JSX.Element {
+  const page = ldDecayPageOf(analysis);
   const store = useStore();
   const announcer = useAnnouncer();
   // Each option alone, a number or `null`: `ldDecayOptions` makes a new
@@ -63,7 +89,7 @@ export function LdDecayOptionsPart(): React.JSX.Element {
   const maxAllowedMaf = useAppState(
     (s) => ldDecayOptions(s.project).maxAllowedMaf,
   );
-  const distanceReason = useAppState((s) => maxDistReason(s.project));
+  const distanceReason = useAppState((s) => maxDistReason(s.project, page));
   const pruning = useAppState((s) => pruningLine(s.project));
   const reasonId = useId();
 
@@ -88,14 +114,15 @@ export function LdDecayOptionsPart(): React.JSX.Element {
           step={1}
           {...(distanceReason !== null && { describedBy: reasonId })}
           description={MAX_DIST_LINE}
+          waiting={waiting}
           refusedText={distanceRefusedText}
           onRefused={announce}
           onChange={(typed) => {
             // Said when the commit turns the lock on, or changes its
             // reason, and not again while the same reason holds.
-            const before = maxDistReason(store.getState().project);
+            const before = maxDistReason(store.getState().project, page);
             apply(maxDistCommand(typed));
-            const reason = maxDistReason(store.getState().project);
+            const reason = maxDistReason(store.getState().project, page);
             if (reason !== null && reason !== before) announce(reason);
           }}
         />
@@ -116,6 +143,7 @@ export function LdDecayOptionsPart(): React.JSX.Element {
         step={FREQUENCY_STEP}
         decimals={FREQUENCY_DECIMALS}
         description={MAX_MAF_LINE}
+        waiting={waiting}
         refusedText={frequencyRefusedText}
         onRefused={announce}
         onChange={(typed) => {

@@ -1,8 +1,9 @@
 /**
- * The Populations tab of popgen2.html once its code is there, up to the
- * LD decay that will come after it (docs/specs/steps/
- * popgen2-populations.md): the diversity of
- * each population and its spectrum, in the frame every analysis panel
+ * The Populations tab of popgen2.html once its code is there
+ * (docs/specs/steps/popgen2-populations.md): the diversity of
+ * each population and its spectrum, and after them, from 12 October
+ * 2026, the LD decay of each population under its own heading
+ * ("The LD decay"), each in the frame every analysis panel
  * shares, `AnalysisPanel`, given the panel of this tab, and the lock of
  * its Run by the one pass, which the store does not know (`passLock`, as
  * in the PCA tab): a diversity sent during the pass would wait in the
@@ -17,7 +18,10 @@
  * `autoRuns` says it waits after; a Run that waits for another
  * calculation says that line once in the status region, since no bar
  * comes. After a Stop or a failure that ended the live state, the line
- * that says why nothing starts by itself stands there.
+ * that says why nothing starts by itself stands there. The LD decay's
+ * part does the same with its own words, and says beside its button how
+ * long its last run took, `lastRunClockOf`, so that the user knows what
+ * a change will cost them.
  *
  * A module of its own, which `PopulationsTab.tsx` alone imports with
  * `import()`, so that the bundler makes it and the result a file of their
@@ -27,6 +31,7 @@
 import { useSyncExternalStore } from "react";
 
 import { diversityOnPopgen2 } from "../../../core/analyses/diversity.ts";
+import { ldDecayOnPopgen2 } from "../../../core/analyses/ldDecay.ts";
 import { useAutoRuns } from "../../autoRunsContext.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
@@ -35,6 +40,14 @@ import { AnalysisPanel } from "../AnalysisPanel.tsx";
 import { runLive } from "../liveRun.ts";
 import { passLock } from "../pca/passLock.ts";
 import { statusOf, waitsAfterName } from "../status.ts";
+import { LD_DECAY_TAB_PANEL } from "../ldDecay/ldDecayTabPanel.tsx";
+import { lastRunClockOf } from "../ldDecay/lastRun.ts";
+import {
+  lastRunText,
+  ldDecayPanelLive,
+  ldDecayTabLock,
+  ldDecayWaitingLine,
+} from "../ldDecay/tabWords.ts";
 import { POPULATIONS_TAB_PANEL } from "./populationsTabPanel.ts";
 import {
   diversityPanelLive,
@@ -45,10 +58,23 @@ import {
 /** The id of the diversity among the analyses started by themselves. */
 const DIVERSITY = diversityOnPopgen2.id;
 
-/** The Populations tab: the heading of the diversity, its options, the
+/** The id of the LD decay among the analyses started by themselves. */
+const LD_DECAY = ldDecayOnPopgen2.id;
+
+/** The Populations tab: the diversity, its heading, its options, the
     line of the populations, Run or Stop with its lock, the run under
-    way, its errors, and its result. */
+    way, its errors, and its result; and then the LD decay. */
 export function PopulationsTabView(): React.JSX.Element {
+  return (
+    <>
+      <DiversityPart />
+      <LdDecayPart />
+    </>
+  );
+}
+
+/** The part of the diversity. */
+function DiversityPart(): React.JSX.Element {
   // Drawn again at each change of what autoRuns knows, which tells a
   // pass stopped from one about to start, and which the store does not.
   const autoRuns = useAutoRuns();
@@ -84,6 +110,51 @@ export function PopulationsTabView(): React.JSX.Element {
         onStop: () => {
           autoRuns.pause(DIVERSITY);
         },
+      }}
+    />
+  );
+}
+
+/** The part of the LD decay, after the diversity's: as the diversity's,
+    with its own words, and the time of its last run beside its
+    button. */
+function LdDecayPart(): React.JSX.Element {
+  const autoRuns = useAutoRuns();
+  const store = useStore();
+  const announcer = useAnnouncer();
+  // Made at the first drawing of the tab, before the first Run of the LD
+  // decay, which only this part offers.
+  const clock = lastRunClockOf(store, LD_DECAY);
+  const lastRun = useSyncExternalStore(clock.subscribe, clock.seconds);
+  const lock = useAppState((s) =>
+    ldDecayTabLock(
+      s.project,
+      passLock(summaryStatus(s), (key) => autoRuns.startedUnder(key)),
+    ),
+  );
+  const state = useSyncExternalStore(autoRuns.subscribe, () =>
+    autoRuns.liveState(LD_DECAY),
+  );
+  const before = useAppState((s) => waitsAfterName(s, state));
+  const resultShown = useAppState((s) => statusOf(s, LD_DECAY).kind === "done");
+  return (
+    <AnalysisPanel
+      id={LD_DECAY}
+      ui={LD_DECAY_TAB_PANEL}
+      page={{
+        lock,
+        live: ldDecayPanelLive(state, before, resultShown),
+        onRun: () => {
+          runLive(
+            { autoRuns, announcer, getState: () => store.getState() },
+            LD_DECAY,
+            (waitsFor) => ldDecayWaitingLine("behind", waitsFor),
+          );
+        },
+        onStop: () => {
+          autoRuns.pause(LD_DECAY);
+        },
+        aside: lastRun === null ? null : lastRunText(lastRun),
       }}
     />
   );

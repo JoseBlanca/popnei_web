@@ -20,12 +20,20 @@
  * gives the CSS of the panel what the legend asks, `lineLegendRoom`, as
  * three lengths: the width under which the legend goes above the plot,
  * the height it then adds, and the width its longest row then needs.
+ *
+ * Given a download, on popgen2.html, its menu "Download…" stands on a
+ * line of its own above the frame, with the images of the plot and its
+ * data (docs/specs/steps/popgen2-populations.md, "The LD decay", "The
+ * result").
  */
 import { useMemo, useRef } from "react";
 
 import { createLine, lineLegendRoom } from "../../../charts/line.ts";
 import type { LineData } from "../../../charts/line.ts";
 import { classOf } from "../../classOf.ts";
+import { plotItems } from "../../widgets/downloadItems.ts";
+import type { PlotDownload } from "../../widgets/downloadItems.ts";
+import { DownloadMenu } from "../../widgets/DownloadMenu.tsx";
 import { useSidewaysFrame } from "../../widgets/sidewaysFrame.ts";
 import { usePlot } from "../../widgets/usePlot.ts";
 import styles from "./LdDecayResults.module.css";
@@ -37,6 +45,9 @@ export interface LinePlotProps {
       largest distance changes, so that it is not drawn again on every
       render. */
   readonly data: LineData;
+  /** Its download, whose menu stands above it; none when absent, as on
+      popgen.html. */
+  readonly download?: PlotDownload;
 }
 
 /** The lengths the CSS of the panel reads, by their names there. */
@@ -49,9 +60,13 @@ type LegendLengths = React.CSSProperties &
   >;
 
 /** The frame of the line plot, and the plot in it. */
-export function LinePlot({ data }: LinePlotProps): React.JSX.Element {
+export function LinePlot({ data, download }: LinePlotProps): React.JSX.Element {
   const frameRef = useRef<HTMLDivElement>(null);
-  const { ref: containerRef } = usePlot(createLine, data);
+  const { ref: containerRef, handle } = usePlot(createLine, data);
+  const items = useMemo(
+    () => (download === undefined ? null : plotItems(download, handle)),
+    [download, handle],
+  );
   const legend = useMemo((): LegendLengths => {
     const room = lineLegendRoom(data);
     return {
@@ -66,6 +81,15 @@ export function LinePlot({ data }: LinePlotProps): React.JSX.Element {
 
   return (
     <div className={classOf(styles, "plotFrame")}>
+      {download !== undefined && items !== null && (
+        <div className={classOf(styles, "menuLine")}>
+          <DownloadMenu
+            what={download.what}
+            items={items}
+            waiting={download.waiting}
+          />
+        </div>
+      )}
       {frame.scrolls && (
         <p className={classOf(styles, "scrollLine")}>{PLOT_SCROLL_TEXT}</p>
       )}

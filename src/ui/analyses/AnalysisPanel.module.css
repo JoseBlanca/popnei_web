@@ -25,6 +25,16 @@
   align-items: flex-start;
 }
 
+/* The time of the last run, after the button on its line, in the muted
+   text of the line of the versions (popgen2-populations.md, "The LD
+   decay"); under it when the column is too narrow. */
+.aside {
+  margin: 0;
+  align-self: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
 .running {
   display: grid;
   gap: var(--space-2);

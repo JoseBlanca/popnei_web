@@ -18,7 +18,8 @@ import {
   threeSignificant,
 } from "../../../core/analyses/ldDecay.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
-import { variantsStem } from "../../../core/fileNames.ts";
+import { downloadName, variantsStem } from "../../../core/fileNames.ts";
+import type { CellValue } from "../../../core/csv.ts";
 import { counted, escaped, grouped } from "../../../core/project.ts";
 import { filtersApplied } from "../../../core/filtersApplied.ts";
 import type { Project } from "../../../core/project.ts";
@@ -231,4 +232,55 @@ export function ldDecayCsvName(variantsName: string): string {
     for `ld.nei`. */
 export function ldBinsCsvName(variantsName: string): string {
   return `${variantsStem(variantsName)}.ld_decay_bins.csv`;
+}
+
+/** What the menu of the table of the populations downloads, on
+    popgen2.html, after "Download ". */
+export const LD_DECAY_TABLE_WHAT =
+  "the table of the populations of the LD decay";
+
+/** What the menu of the plot downloads, after "Download ". */
+export const LD_PLOT_WHAT = "the plot of the LD decay";
+
+/** What the menu of the table of the bins downloads, after "Download ". */
+export const LD_BINS_TABLE_WHAT = "the table of the bins of the LD decay";
+
+/** What the images of the plot are, in the names of their files:
+    `ld.ld_decay.svg`. */
+export const LD_PLOT_IMAGE_WHAT = "ld_decay";
+
+/** What its data are, in the name of their file:
+    `ld.ld_decay.points.csv`. */
+export const LD_PLOT_CSV_WHAT = "ld_decay.points";
+
+/** The name of the CSV of the table of the populations on popgen2.html,
+    `ld.ld_decay.csv`, as the old page's. */
+export function ldDecayTableName(variantsName: string): string {
+  return downloadName(variantsStem(variantsName), "ld_decay", "csv");
+}
+
+/** The name of the CSV of the table of the bins on popgen2.html,
+    `ld.ld_decay_bins.csv`. */
+export function ldBinsTableName(variantsName: string): string {
+  return downloadName(variantsStem(variantsName), "ld_decay_bins", "csv");
+}
+
+/** The values of a row of the table of the populations as stored, one
+    per column, which its "Table as CSV" writes, every digit; `null` for
+    no value. */
+export function ldDecayValues(row: LdDecayRow): readonly CellValue[] {
+  return [
+    row.population,
+    row.individuals,
+    row.variants,
+    row.pairs,
+    row.halfDist,
+    row.r2AtZero,
+    row.rhoPerBp,
+  ];
+}
+
+/** The values of a row of the table of the bins as stored. */
+export function ldBinValues(row: LdBinRow): readonly CellValue[] {
+  return [row.population, row.from, row.to, row.pairs, row.meanR2, row.sdR2];
 }

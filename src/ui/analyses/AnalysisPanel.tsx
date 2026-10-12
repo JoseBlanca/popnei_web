@@ -86,6 +86,12 @@ export interface PagePanel {
   readonly onRun: () => void;
   /** The user's Stop: stops its run and ends its live state. */
   readonly onStop: () => void;
+  /** A line after the button, on its line, that describes none of it:
+      the time the last run took, which the LD decay's panel gives
+      (docs/specs/steps/popgen2-populations.md, "The LD decay"); `null`,
+      or absent, for none. Drawn also where the state offers no
+      button. */
+  readonly aside?: string | null;
 }
 
 /** The live state of an analysis as its panel draws it
@@ -116,6 +122,12 @@ export type PanelLive =
       readonly aboutToStartLine: string | null;
       readonly runBeside: boolean;
     };
+
+/** The attribute of the section of a panel, whose value is the id of its
+    analysis, by which the band's link finds the panel of its analysis in
+    a tab that holds two, as the Populations tab of popgen2.html holds the
+    diversity and the LD decay. */
+export const PANEL_ANALYSIS_ATTRIBUTE = "data-panel-analysis";
 
 /** The attribute of the heading of a panel, by which the band's link to
     an error of the PCA on popgen2.html finds the PCA tab's. */
@@ -173,6 +185,7 @@ export function AnalysisPanel({
     page,
   );
   const stoppedBy = stoppedNotice(status, notice, id);
+  const aside = page?.aside ?? null;
   // On popgen2.html the line of the individuals stands before the button,
   // also while it is locked.
   const linesFirst =
@@ -224,7 +237,11 @@ export function AnalysisPanel({
     );
 
   return (
-    <section aria-labelledby={headingId} className={classOf(styles, "panel")}>
+    <section
+      aria-labelledby={headingId}
+      className={classOf(styles, "panel")}
+      {...{ [PANEL_ANALYSIS_ATTRIBUTE]: id }}
+    >
       {/* It takes the focus when the button goes while it had it, and is
           not in the order of the Tab key. */}
       <h2
@@ -244,12 +261,15 @@ export function AnalysisPanel({
       {ui.Options !== null && <ui.Options />}
       {linesFirst && <Ready ui={ui} />}
       <Above ui={ui} status={status} />
-      {stopButton === null ? (
+      {stopButton === null && aside === null ? (
         runButton
       ) : (
         <div className={classOf(styles, "buttons")}>
           {runButton}
           {stopButton}
+          {aside !== null && (
+            <p className={classOf(styles, "aside")}>{aside}</p>
+          )}
         </div>
       )}
       {/* The line of the quiet second or of a Stop, in the place of the

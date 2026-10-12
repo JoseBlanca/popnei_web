@@ -20,6 +20,11 @@ import {
 } from "../../../core/analyses/diversity.ts";
 import { pcaOnPopgen2, pcaOptions } from "../../../core/analyses/pca.ts";
 import {
+  ldDecayOnPopgen2,
+  ldDecayOptions,
+} from "../../../core/analyses/ldDecay.ts";
+import { ldDecayResult } from "../../band/testSupport.ts";
+import {
   loadIndividuals,
   setAnalysisOptions,
   setGrouping,
@@ -59,6 +64,9 @@ import { PopulationsTabView } from "./PopulationsTabView.tsx";
 // what is checked here is the button, its locks and its lines.
 vi.mock("./PopulationsTabResultView.tsx", () => ({
   PopulationsTabResultView: () => "the result",
+}));
+vi.mock("../ldDecay/LdDecayResults.tsx", () => ({
+  LdDecayResults: () => "the plot of the LD decay",
 }));
 
 declare global {
@@ -275,12 +283,20 @@ async function readyTab(): Promise<Page> {
   return page;
 }
 
-/** The button of the tab named `name`, or `null`. */
+/** The part of the diversity, before the LD decay's in the same tab;
+    the container while the tab is not drawn. */
+function diversityPart(): Element {
+  return (
+    container.querySelector('[data-panel-analysis="diversity"]') ?? container
+  );
+}
+
+/** The button of the diversity's part named `name`, or `null`. */
 function button(
   name: "Run" | "Stop" | "Stop recalculating",
 ): HTMLButtonElement | null {
   return (
-    [...container.querySelectorAll("button")].find(
+    [...diversityPart().querySelectorAll("button")].find(
       (b) => b.textContent === name,
     ) ?? null
   );
@@ -406,7 +422,7 @@ describe("PT1 D3 the Populations tab", () => {
     run?.focus();
     await press(run);
     await page.endDiversity();
-    expect(container.textContent).toContain("the result");
+    expect(diversityPart().textContent).toContain("the result");
     const stop = button("Stop recalculating");
     expect(stop).toBe(run);
     expect(document.activeElement).toBe(stop);
@@ -544,7 +560,7 @@ describe("the Populations tab's Stop and its options while an analysis runs", ()
 
   /** The fields of the diversity's options, its three number fields. */
   function optionInputs(): readonly HTMLInputElement[] {
-    return [...container.querySelectorAll("input")];
+    return [...diversityPart().querySelectorAll("input")];
   }
 
   test("Stop and Stop recalculating call pause of the diversity alone, never Stop all", async () => {
@@ -688,7 +704,7 @@ describe("PT2 D2 the Populations tab while the diversity is live and does not ru
     );
     expect(button("Stop recalculating")).not.toBeNull();
     expect(lines()).toContain(IN_A_MOMENT);
-    expect(container.textContent).not.toContain("the result");
+    expect(diversityPart().textContent).not.toContain("the result");
     await quietSecond();
     expect(page.diversityRequests()).toHaveLength(2);
     expect(lines()).not.toContain(IN_A_MOMENT);
@@ -757,5 +773,67 @@ describe("PT2 D2 the Populations tab while the diversity is live and does not ru
     expect(page.diversityRequests()).toHaveLength(1);
     await endPca(page);
     expect(page.diversityRequests()).toHaveLength(2);
+  });
+});
+
+describe("LT1 D4 the part of the LD decay in the Populations tab", () => {
+  /** The part of the LD decay, after the diversity's. */
+  function ldPart(): Element {
+    const part = container.querySelector('[data-panel-analysis="ldDecay"]');
+    if (part === null) throw new Error("no part of the LD decay");
+    return part;
+  }
+
+  /** The button of the LD decay's part named `name`, or `null`. */
+  function ldButton(name: string): HTMLButtonElement | null {
+    return (
+      [...ldPart().querySelectorAll("button")].find(
+        (b) => b.textContent === name,
+      ) ?? null
+    );
+  }
+
+  test("its heading after the diversity's; Run locked until a distance is typed; Run and Stop recalculating through autoRuns of the LD decay alone; the time of the last run after a result, kept after a Stop", async () => {
+    const page = await readyTab();
+    const headings = [...container.querySelectorAll("h2")].map(
+      (h) => h.textContent,
+    );
+    expect(headings).toEqual(["Diversity", "LD decay"]);
+    expect(ldButton("Run")?.disabled).toBe(true);
+    expect(ldPart().textContent).toContain("Type the largest distance, above.");
+
+    await apply(page, (p) =>
+      setAnalysisOptions(p, ldDecayOnPopgen2, {
+        ...ldDecayOptions(p),
+        maxDist: 100_000,
+      }),
+    );
+    const run = vi.spyOn(page.autoRuns, "run");
+    const pause = vi.spyOn(page.autoRuns, "pause");
+    await press(ldButton("Run"));
+    expect(run).toHaveBeenCalledWith("ldDecay");
+    const sent = page.requests.filter((r) => r.job.analysis === "ldDecay");
+    expect(sent).toHaveLength(1);
+    expect(ldPart().textContent).not.toContain("The last run took");
+    const [request] = sent;
+    if (request === undefined) throw new Error("no LD decay sent");
+    request.end({ kind: "done", key: request.key, result: ldDecayResult() });
+    await settle();
+    expect(ldPart().textContent).toContain("the plot of the LD decay");
+    expect(ldPart().textContent).toContain(
+      "The last run took less than a second.",
+    );
+    expect(button("Run")).not.toBeNull();
+
+    await press(ldButton("Stop recalculating"));
+    expect(pause).toHaveBeenCalledWith("ldDecay");
+    expect(pause).not.toHaveBeenCalledWith("diversity");
+    expect(page.autoRuns.isLive("ldDecay")).toBe(false);
+    expect(ldPart().textContent).toContain(
+      "Stopped: the LD decay no longer starts by itself after a change.",
+    );
+    expect(ldPart().textContent).toContain(
+      "The last run took less than a second.",
+    );
   });
 });

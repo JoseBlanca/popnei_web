@@ -42,6 +42,7 @@
  * said by the page at every `pause` and `pauseAll`. Its alert and its own status region are live
  * announcers, which React Aria keeps readable while a dialog is open.
  */
+import type { AnalysisId } from "../../core/project.ts";
 import {
   useEffect,
   useLayoutEffect,
@@ -56,7 +57,10 @@ import type { PcaMethod } from "../../worker/protocol.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
 import type { Defects } from "../defects.ts";
-import { PANEL_HEADING_ATTRIBUTE } from "../analyses/AnalysisPanel.tsx";
+import {
+  PANEL_ANALYSIS_ATTRIBUTE,
+  PANEL_HEADING_ATTRIBUTE,
+} from "../analyses/AnalysisPanel.tsx";
 import {
   SPECTRUM_WARNING_ATTRIBUTE,
   WARNINGS_HEADING_ATTRIBUTE,
@@ -239,8 +243,8 @@ export function Band({
                 page={page}
                 narrow={narrow}
                 keepFocus={keepFocus}
-                onLink={(tab, at) => {
-                  showTab(page.pageTab, tab, at, headingRef.current);
+                onLink={(tab, at, analysis) => {
+                  showTab(page.pageTab, tab, at, analysis, headingRef.current);
                 }}
               />
             </ErrorBoundary>
@@ -313,7 +317,11 @@ interface ActivityProps {
       it has gone by itself; called after each drawing of the line. */
   readonly keepFocus: () => void;
   /** The link to the tab `tab` was followed, to `at` in it. */
-  readonly onLink: (tab: AnalysisTabId, at: LinkTarget) => void;
+  readonly onLink: (
+    tab: AnalysisTabId,
+    at: LinkTarget,
+    analysis: AnalysisId,
+  ) => void;
 }
 
 /** The line after "Popnei", worked out from the store, the live state of
@@ -363,7 +371,11 @@ interface LineProps {
   /** Whether the window is under 45 em wide (narrow.ts). */
   readonly narrow: boolean;
   /** The link to the tab `tab` was followed, to `at` in it. */
-  readonly onLink: (tab: AnalysisTabId, at: LinkTarget) => void;
+  readonly onLink: (
+    tab: AnalysisTabId,
+    at: LinkTarget,
+    analysis: AnalysisId,
+  ) => void;
 }
 
 /** The line after "Popnei": its words or its link, and its Stop. */
@@ -424,11 +436,11 @@ function Line({
             // Stop of another analysis is another button, so that Enter
             // never follows a link the focused one turned into.
             <Link
-              key={line.tab}
+              key={`${line.tab} ${line.named.id}`}
               label={words.full}
               {...(narrow && { shortLabel: words.short })}
               onPress={() => {
-                onLink(line.tab, line.at);
+                onLink(line.tab, line.at, line.named.id);
               }}
             />
           )}
@@ -533,8 +545,11 @@ function linkTargetAttribute(at: LinkTarget): string {
 }
 
 /** Shows the tab of the analyses `tab`, as a click on its label would,
-    and gives the focus to `at` in it, the heading of the warnings of its
-    result, the warning of the spectrum or the heading of its panel, once
+    and gives the focus to `at` in the panel of the analysis `analysis`
+    in it, the heading of the warnings of its result, the warning of the
+    spectrum or the heading of its panel, and not those of another
+    analysis of the same tab, as the diversity and the LD decay share the
+    Populations tab; once
     the application's root has drawn it; to the band's heading,
     `bandHeading`, when the tab has none, as when an error has emptied
     the application's root. */
@@ -542,12 +557,17 @@ function showTab(
   pageTab: PageTabStore,
   tab: AnalysisTabId,
   at: LinkTarget,
+  analysis: AnalysisId,
   bandHeading: HTMLHeadingElement | null,
 ): void {
   pageTab.show(tab);
   requestAnimationFrame(() => {
     const content = document.getElementById(tabContentId(tab));
-    const target = content?.querySelector(`[${linkTargetAttribute(at)}]`);
+    const panel =
+      content?.querySelector(
+        `[${PANEL_ANALYSIS_ATTRIBUTE}="${CSS.escape(analysis)}"]`,
+      ) ?? content;
+    const target = panel?.querySelector(`[${linkTargetAttribute(at)}]`);
     if (target instanceof HTMLElement) target.focus();
     else bandHeading?.focus();
   });
