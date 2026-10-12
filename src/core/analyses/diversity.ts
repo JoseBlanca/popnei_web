@@ -780,8 +780,9 @@ function popgen2DrawNeeds(p: Project, kept: IndividualsKept): string | null {
 /** `populationsKeptNeeds` on popgen2.html: the individuals kept, once
     known, leave none of the populations of the column, whose individuals
     are then all unclassified, in the words of the Variants tab; `null`
-    for the one population, which takes every individual kept. */
-function popgen2PopulationsKeptNeeds(
+    for the one population, which takes every individual kept. The
+    distances of popgen2.html give it too. */
+export function popgen2PopulationsKeptNeeds(
   p: Project,
   kept: IndividualsKept,
 ): string | null {

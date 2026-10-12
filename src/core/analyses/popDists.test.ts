@@ -1032,6 +1032,7 @@ describe("PA3 D4 refusalText", () => {
       refusalText(
         "the pass gave no variant: its source gave 1200 and the steps kept none of them, the `missing_data` filter was given 1200 and kept 0; a statistic of a pass is calculated over the variants it gives",
         project(),
+        "popgen",
       ),
     ).toBe(
       "The filters kept none of the variants of panel.nei, so there is no variant to calculate the distances between populations over. Loosen the filters in the Variants step.",
@@ -1043,6 +1044,7 @@ describe("PA3 D4 refusalText", () => {
       refusalText(
         "the distances between populations are calculated for each pair of populations, and `pops` names 1: name two populations at least",
         project(),
+        "popgen",
       ),
     ).toBe(
       "popnei could not calculate the distances between populations: the distances between populations are calculated for each pair of populations, and pops names 1: name two populations at least. Change the settings, or load the variants file again, to run it again.",

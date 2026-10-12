@@ -252,7 +252,8 @@ const POP_DISTS: AnalysisUi = Object.freeze({
           kept.list.kind === "needsStatistics",
         );
   },
-  refusalText: popDistsRefusalText,
+  refusalText: (message: string, p: Project): string =>
+    popDistsRefusalText(message, p, "popgen"),
   statisticsFailedText: (
     error: AnalysisError,
     p: Project,

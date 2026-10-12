@@ -12,6 +12,12 @@
  * minimum is left out of the request and named in a warning, by
  * `populationsWithMinimum` of populations.ts, which the diversity calls
  * too.
+ *
+ * Two definitions are made by the same code: `popDists`, of the old
+ * page, and `popDistsOnPopgen2`, of the Distances tab of popgen2.html,
+ * where an individual of no population is unclassified and left out,
+ * and whose words name the tabs and the boxes of that page
+ * (docs/specs/analyses/popDists.md, "On popgen2.html").
  */
 
 import { hasIndividualThreshold } from "../individualsKept.ts";
@@ -32,6 +38,10 @@ import {
   shown,
   LARGEST_WHOLE_NUMBER,
   MAX_NAMED,
+  popgen2OnePopulationCause,
+  popgen2Populations,
+  popgen2PopulationsKept,
+  popgen2PopulationsToRun,
 } from "../project.ts";
 import { filtersApplied } from "../filtersApplied.ts";
 import {
@@ -44,6 +54,8 @@ import {
 import type { Project } from "../project.ts";
 import type { Result } from "../result.ts";
 import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
+import { popgen2PopulationsKeptNeeds } from "./diversity.ts";
+import { fileRefusalText } from "./fileRefusals.ts";
 import {
   CHANGE_SETTINGS,
   csvField,
@@ -52,6 +64,7 @@ import {
   fourDecimals,
   orNull,
   percentOf,
+  populationNotInResult,
   populationWarnings,
   refusalWords,
 } from "./words.ts";
@@ -68,6 +81,33 @@ import type {
 
 /** The id of the analysis. */
 const ID = "popDists";
+
+/** The page a definition is for, which picks the populations and the
+    words: the old page, popgen.html, or popgen2.html (the spec, "On
+    popgen2.html"). */
+export type PopDistsPage = "popgen" | "popgen2";
+
+/** The places a sentence of the module names, by the page. */
+interface PlaceWords {
+  /** The individuals file: "the metadata file", or its name. */
+  readonly individualsFile: (p: Project) => string;
+  /** The filters of the individuals and where they are: "the filters of
+      individuals in the Variants step", "the thresholds of the
+      individuals in the Variants tab". */
+  readonly individualFilters: string;
+}
+
+/** The places of each page. */
+const PLACES: Readonly<Record<PopDistsPage, PlaceWords>> = Object.freeze({
+  popgen: Object.freeze({
+    individualsFile: () => "the metadata file",
+    individualFilters: "the filters of individuals in the Variants step",
+  }),
+  popgen2: Object.freeze({
+    individualsFile: (p: Project) => escaped(p.individuals?.name ?? ""),
+    individualFilters: "the thresholds of the individuals in the Variants tab",
+  }),
+});
 
 /** The two options of the distances between populations, as the project
     holds them. */
@@ -144,16 +184,48 @@ export function popDistsOptions(p: Project): PopDistsOptions {
     same options give the same object, which a screen may select. */
 const READ = new WeakMap<JsonObject, PopDistsOptions>();
 
+/** The end of a refusal on popgen2.html that leaves the distances live,
+    once the user has changed what the words ask: they start again by
+    themselves after the change, which nothing else says. */
+const AGAIN_BY_THEMSELVES =
+  "The distances are then calculated again by themselves.";
+
+/** Where the variants file is opened again on popgen2.html. */
+const IN_BOX_VARIANTS = " in the box Variants";
+
 /**
  * The words of a refusal of popnei, for the error state of the panel of
- * the project `p`: the rows every analysis shares, of `refusalWords`,
- * with "the distances between populations" in the place of "the
- * diversity" (popDists.md, "Its words"). Throws a defect on a project
+ * the project `p` on the page `page`: the rows every analysis shares, of
+ * `refusalWords`, with "the distances between populations" in the place
+ * of "the diversity" (popDists.md, "Its words"); on popgen2.html, the
+ * refusals of the variants file itself in the words of the box
+ * Variants, and the others in the words of that page, ending with what
+ * happens after the change they ask for. Throws a defect on a project
  * with no variants file.
  */
-export function refusalText(message: string, p: Project): string {
+export function refusalText(
+  message: string,
+  p: Project,
+  page: PopDistsPage,
+): string {
   if (p.variants === null) {
     throw defect("refusalText was given a project with no variants file.");
+  }
+  if (page === "popgen2") {
+    const fileWords = fileRefusalText(message, p, {
+      cannot: "the distances between populations cannot be calculated",
+      where: IN_BOX_VARIANTS,
+    });
+    if (fileWords !== null) return fileWords;
+    return `${refusalWords(message, p, {
+      change: `Change the settings, or open the variants file again${IN_BOX_VARIANTS}`,
+      calculate: "calculate the distances between populations",
+      nothingLeft:
+        "there is no variant to calculate the distances between populations over",
+      again: "to run it again",
+      emptyPass: (name) =>
+        `The thresholds of the Variants tab kept none of the variants of ${name}, so there is no variant to calculate the distances between populations over. Loosen them.`,
+    })} ${AGAIN_BY_THEMSELVES}`;
   }
   return refusalWords(message, p, {
     change: CHANGE_SETTINGS,
@@ -167,27 +239,60 @@ export function refusalText(message: string, p: Project): string {
 }
 
 /**
- * The definition of the distances between populations, as the store
- * knows them: both lists of filters in their key, and a `keptNeeds` that
- * locks when the individuals kept leave no population, or fewer than two
- * with the minimum of individuals (store.md, "The state of an analysis").
+ * The definition of the distances between populations on the page
+ * `page`, as the store knows them: both lists of filters in their key,
+ * and a `keptNeeds` that locks when the individuals kept leave no
+ * population, or fewer than two with the minimum of individuals
+ * (store.md, "The state of an analysis"); the same request and numbers
+ * on both pages, with the populations and the words of the page.
  */
-export const popDists: AnalysisDef<Job, JobResult> = Object.freeze({
-  id: ID,
-  app: Object.freeze(["popgen"] as const),
-  defaults: POP_DISTS_DEFAULTS,
-  keyVersion: 1,
-  filtersRead: Object.freeze({ variants: true, individuals: true }),
-  parseOptions,
-  keyInputs,
-  needs,
-  keptNeeds,
-  run,
-  warnings,
-  checkNumbers,
-  numCheckNumbers,
-  script,
-});
+function definitionOf(page: PopDistsPage): AnalysisDef<Job, JobResult> {
+  return Object.freeze({
+    id: ID,
+    app: Object.freeze(["popgen"] as const),
+    defaults: POP_DISTS_DEFAULTS,
+    keyVersion: 1,
+    filtersRead: Object.freeze({ variants: true, individuals: true }),
+    parseOptions,
+    keyInputs: (p: Project) =>
+      page === "popgen" ? keyInputs(p) : popgen2KeyInputs(p),
+    needs: (p: Project) => (page === "popgen" ? needs(p) : popgen2Needs(p)),
+    keptNeeds: (p: Project, kept: IndividualsKept) =>
+      page === "popgen" ? keptNeeds(p, kept) : popgen2KeptNeeds(p, kept),
+    run: (p: Project, c: WorkerClient<Job, JobResult>) => run(p, c, page),
+    warnings: (result: JobResult, p: Project) => warnings(result, p, page),
+    checkNumbers,
+    // popgen2.html opens no project file, so it compares no numbers.
+    numCheckNumbers: (p: Project) =>
+      page === "popgen" ? numCheckNumbers(p) : null,
+    script,
+  });
+}
+
+/** The distances of the old page, listed by POPGEN_ANALYSES of
+    src/core/apps.ts. */
+export const popDists: AnalysisDef<Job, JobResult> = definitionOf("popgen");
+
+/** The distances of the Distances tab of popgen2.html, of the same id,
+    listed last by POPGEN2_ANALYSES of src/core/apps.ts. */
+export const popDistsOnPopgen2: AnalysisDef<Job, JobResult> =
+  definitionOf("popgen2");
+
+/** The page of the definition `def` that a store runs, "popgen" for
+    `popDists` and "popgen2" for `popDistsOnPopgen2`. Throws a defect on
+    the definition of another analysis. */
+export function popDistsPageOf(def: AnalysisDef<Job, JobResult>): PopDistsPage {
+  if (def === popDists) return "popgen";
+  if (def === popDistsOnPopgen2) return "popgen2";
+  throw defect(
+    `the page of the distances was asked of the analysis ${def.id}.`,
+  );
+}
+
+/** The populations to run on the page `page`. */
+function populationsToRunOf(p: Project, page: PopDistsPage): Pops | null {
+  return page === "popgen" ? populationsToRun(p) : popgen2PopulationsToRun(p);
+}
 
 /**
  * Checks the options of the distances read from a project file and gives
@@ -246,6 +351,99 @@ function keyInputs(p: Project): JsonObject {
     pops: populationsOf(p),
     options: { minNumIndividuals: popDistsOptions(p).minNumIndividuals },
   };
+}
+
+/**
+ * What the key holds on popgen2.html: the populations of that page,
+ * `popgen2Populations`, the minimum of individuals, and what the
+ * warnings read beyond the populations, the column and the name of the
+ * individuals file, so that a result is never shown with the words of
+ * another file (popDists.md, "On popgen2.html").
+ */
+function popgen2KeyInputs(p: Project): JsonObject {
+  return {
+    pops: popgen2Populations(p),
+    options: { minNumIndividuals: popDistsOptions(p).minNumIndividuals },
+    words: {
+      column: populationsColumnOf(p),
+      individualsFile: p.individuals?.name ?? null,
+    },
+  };
+}
+
+/**
+ * The first reason the distances of popgen2.html cannot run beyond those
+ * the store asks of every analysis that reads the filters, or `null`:
+ * the individuals file being read; fewer than two populations, the one
+ * population of every individual among them, which greys the Distances
+ * tab; fewer than two populations with the minimum of individuals among
+ * every individual of the variants file. An individual of the variants
+ * file not in the individuals file does not lock: it is unclassified.
+ * Throws a defect on a project of association.
+ */
+function popgen2Needs(p: Project): string | null {
+  const individuals = p.individuals;
+  if (individuals?.read.kind === "pending") {
+    return `The distances wait for ${escaped(individuals.name)} to be read.`;
+  }
+  if (p.grouping.kind === "roles") {
+    throw defect("the distances were given a project of association.");
+  }
+  const toRun = popgen2PopulationsToRun(p);
+  if (toRun === null || p.variants === null) {
+    return null;
+  }
+  if (popgen2OnePopulationCause(p) !== null || toRun.length < 2) {
+    return `${NEED_TWO} with individuals in ${escaped(p.variants.name)}. Choose a column of the populations in the box Individuals that gives them two or more.`;
+  }
+  const min = popDistsOptions(p).minNumIndividuals;
+  const withMinimum = populationsWithMinimum(toRun, min).withMinimum;
+  return withMinimum.length >= 2
+    ? null
+    : minimumText(
+        withMinimum,
+        min,
+        "",
+        `${LOWER_THE_MINIMUM}, or merge populations in ${PLACES.popgen2.individualsFile(p)}.`,
+      );
+}
+
+/**
+ * The reason the distances of popgen2.html cannot run for the
+ * individuals kept, `kept`, or `null`: they leave none of the
+ * populations of the column, the diversity's words of the page; they
+ * leave one; or fewer than two of those they leave have the minimum,
+ * which `popgen2Needs` found over every individual, so the thresholds
+ * took them below it. `null` while the list is not known, and for the
+ * one population, which `popgen2Needs` locks on first.
+ */
+function popgen2KeptNeeds(p: Project, kept: IndividualsKept): string | null {
+  const noPopulation = popgen2PopulationsKeptNeeds(p, kept);
+  if (noPopulation !== null) {
+    return noPopulation;
+  }
+  const list = kept.list.kind === "known" ? kept.list.individuals : null;
+  if (list === null || popgen2OnePopulationCause(p) !== null) {
+    return null;
+  }
+  const left = popgen2PopulationsKept(p, list);
+  if (left === null) {
+    return null;
+  }
+  const [onlyLeft] = left.pops;
+  if (left.pops.length === 1 && onlyLeft !== undefined) {
+    return `The thresholds of the individuals leave one population, ${namesOf([onlyLeft[0]])}, and the distances need two or more. Loosen ${PLACES.popgen2.individualFilters}.`;
+  }
+  const min = popDistsOptions(p).minNumIndividuals;
+  const withMinimum = populationsWithMinimum(left.pops, min).withMinimum;
+  return withMinimum.length >= 2
+    ? null
+    : minimumText(
+        withMinimum,
+        min,
+        " among the individuals the thresholds keep",
+        `${LOWER_THE_MINIMUM}, merge populations in ${PLACES.popgen2.individualsFile(p)}, or loosen ${PLACES.popgen2.individualFilters}.`,
+      );
 }
 
 /**
@@ -404,12 +602,19 @@ function keptNeeds(p: Project, kept: IndividualsKept): string | null {
 }
 
 /** Builds the request, with the individuals the filters keep that the
-    store gives through `c`, the populations under the minimum sent apart
-    as `leftOut`, and sends it through `c`. Throws a defect when the
+    store gives through `c`, the populations of the page `page`, those
+    under the minimum sent apart as `leftOut`, and sends it through `c`. Throws a defect when the
     variants file is not read or fewer than two populations have the
     minimum, which `needs` and `keptNeeds` rule out. */
-function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
-  const kept = populationsKept(p, c.individuals);
+function run(
+  p: Project,
+  c: WorkerClient<Job, JobResult>,
+  page: PopDistsPage,
+): Run<JobResult> {
+  const kept =
+    page === "popgen"
+      ? populationsKept(p, c.individuals)
+      : popgen2PopulationsKept(p, c.individuals);
   if (p.variants === null || kept === null) {
     throw defect("the distances were run with no populations to run.");
   }
@@ -457,7 +662,11 @@ interface Pair {
  * project whose variants file is not read, and on a project of
  * association.
  */
-function warnings(result: JobResult, p: Project): readonly Warning[] {
+function warnings(
+  result: JobResult,
+  p: Project,
+  page: PopDistsPage,
+): readonly Warning[] {
   const r = popDistsResultOf(result);
   const variants = p.variants;
   if (variants?.read.kind !== "read") {
@@ -468,16 +677,23 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   if (r.leftOut.length > 0) {
     found.push({
       code: "tooFewIndividuals",
-      text: tooFewText(r, p, min),
+      text: tooFewText(r, p, min, page),
     });
   }
-  found.push(
-    ...populationWarnings(
-      [...r.pops, ...r.leftOut.map(([pop]) => pop)],
-      p,
-      POP_DISTS_WORDS,
-    ),
-  );
+  const accounted = [...r.pops, ...r.leftOut.map(([pop]) => pop)];
+  if (page === "popgen") {
+    found.push(...populationWarnings(accounted, p, POP_DISTS_WORDS));
+  } else {
+    // An unclassified individual is no fault on popgen2.html, whose tab
+    // says how many are left out.
+    const notInResult = populationNotInResult(
+      accounted,
+      popgen2PopulationsToRun(p) ?? [],
+      escaped(variants.name),
+      POP_DISTS_WORDS.notIn,
+    );
+    found.push(...(notInResult === null ? [] : [notInResult]));
+  }
   const pairs = pairsOf(r);
   const withoutDistance = pairs.filter((pair) => pair.numVars === 0);
   if (withoutDistance.length > 0) {
@@ -520,9 +736,16 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
 
 /** The text of `tooFewIndividuals`, for the populations of `r.leftOut`,
     offering to loosen the filters of individuals when they took
-    individuals from one of them, as the diversity finds it. */
-function tooFewText(r: PopDistsResult, p: Project, min: number): string {
-  const toRun = populationsToRun(p);
+    individuals from one of them, as the diversity finds it, in the words
+    of the page `page`. */
+function tooFewText(
+  r: PopDistsResult,
+  p: Project,
+  min: number,
+  page: PopDistsPage,
+): string {
+  const { individualsFile, individualFilters } = PLACES[page];
+  const toRun = populationsToRunOf(p, page);
   if (toRun === null) {
     throw defect("the warnings of the distances were given no populations.");
   }
@@ -542,9 +765,9 @@ function tooFewText(r: PopDistsResult, p: Project, min: number): string {
   const names = namesOf(r.leftOut.map(([pop]) => pop));
   const [only] = r.leftOut;
   if (r.leftOut.length === 1 && only !== undefined) {
-    const merge = "merge it with another population in the metadata file";
+    const merge = `merge it with another population in ${individualsFile(p)}`;
     const include = filtered
-      ? `lower the minimum of individuals, ${merge}, or loosen the filters of individuals in the Variants step`
+      ? `lower the minimum of individuals, ${merge}, or loosen ${individualFilters}`
       : `lower the minimum of individuals, or ${merge}`;
     return `Population ${names} has ${counted(only[1], "individual")}, fewer than the minimum of ${grouped(min)}, so it is left out of the distances. To include it, ${include}.`;
   }
@@ -552,9 +775,9 @@ function tooFewText(r: PopDistsResult, p: Project, min: number): string {
     r.leftOut.length <= MAX_NAMED
       ? `, ${bothOf(r.leftOut.map(([, numIndividuals]) => grouped(numIndividuals)))}`
       : "";
-  const merge = "merge each with another population in the metadata file";
+  const merge = `merge each with another population in ${individualsFile(p)}`;
   const include = filtered
-    ? `lower the minimum of individuals, ${merge}, or loosen the filters of individuals in the Variants step`
+    ? `lower the minimum of individuals, ${merge}, or loosen ${individualFilters}`
     : `lower the minimum of individuals, or ${merge}`;
   return `Populations ${names} have fewer than ${counted(min, "individual")}${counts}, so they are left out of the distances. To include them, ${include}.`;
 }
