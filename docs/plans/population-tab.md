@@ -957,7 +957,5 @@ a live analysis does not start), `technology.md`, the status line of
 each spec; the samples of NU4 D6 were 320 to 340 ms apart (250 ms of
 wait and 70 to 90 ms per sample), not "every 250 ms".
 
-Left: the review of package 4 (`api`, `react`,
-`accessibility`, `ux`, `browser` at 320 px, `bundle`, and the four that
-always run); package 5, the documents, with what the fix lists left
-for it; package 6; package 7, the owner's try.
+Left: the stale review of the documents; package 6; package 7, the
+owner's try.
