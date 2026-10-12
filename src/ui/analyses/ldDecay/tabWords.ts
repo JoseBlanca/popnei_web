@@ -22,6 +22,7 @@ import {
 import type { Project } from "../../../core/project.ts";
 import type { AboutToStart, LiveState } from "../../autoRuns.ts";
 import type { PanelLive } from "../AnalysisPanel.tsx";
+import type { RunWithheld } from "../status.ts";
 import { emptiedLine, unclassifiedLine } from "../diversity/tabWords.ts";
 import { passLockText } from "../pca/passLock.ts";
 import type { PassLock } from "../pca/passLock.ts";
@@ -51,10 +52,37 @@ export function ldDecayStoppedLine(resultShown: boolean): string {
 export const LD_DECAY_AFTER_CRASH_LINE =
   "The LD decay starts after the next change of the filters, of its options or of the populations, or when Run is pressed.";
 
+/** The start of the line after a failure that ended the live state. */
+const FAILURE_ENDED =
+  "The LD decay no longer starts by itself after a change, since its calculation failed.";
+
+/** The end of a line that names the Run the tab offers. */
+const RUN_STARTS_IT =
+  "Run calculates it and starts it again after each change.";
+
 /** The line after a failure that ended the live state, under the
-    failure's words, until Run or another variants file. */
-export const LD_DECAY_FAILURE_ENDED_LINE =
-  "The LD decay no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.";
+    failure's words, until Run or another variants file, while the tab
+    offers Run. */
+export const LD_DECAY_FAILURE_ENDED_LINE = `${FAILURE_ENDED} ${RUN_STARTS_IT}`;
+
+/** The line after a failure that ended the live state, as
+    `LD_DECAY_FAILURE_ENDED_LINE`, when the tab offers no Run, `withheld`:
+    after popnei's refusal for memory, the changes the refusal asks for;
+    after the variants file could no longer be read, its opening again;
+    with a result shown, the next change (the review of the LD decay, 12
+    October 2026: the line named a Run that was not there). */
+export function ldDecayFailureEndedLine(withheld: RunWithheld): string {
+  switch (withheld) {
+    case null:
+      return LD_DECAY_FAILURE_ENDED_LINE;
+    case "refused":
+      return "The LD decay no longer starts by itself after a change, since popnei refused it for lack of memory. Once a smaller largest distance is typed, or fewer individuals are kept, Run comes back: it calculates the LD decay and starts it again after each change.";
+    case "unreadable":
+      return `${FAILURE_ENDED} Once the variants file is opened again in the box Variants, ${RUN_STARTS_IT}`;
+    case "result":
+      return `${FAILURE_ENDED} After the next change, ${RUN_STARTS_IT}`;
+  }
+}
 
 /**
  * The lines under the options, of what Run will take, in `p` with the
@@ -140,20 +168,23 @@ export function ldDecayWaitingLine(
 }
 
 /** The live state `state` of the LD decay as its panel draws it, with
-    `before`, the live analysis its line of waiting names, and whether
-    its result is shown, `resultShown`. */
+    `before`, the live analysis its line of waiting names, and why its
+    state offers no Run, `withheld`, `runWithheldOf` of its status. */
 export function ldDecayPanelLive(
   state: LiveState,
   before: string | null,
-  resultShown: boolean,
+  withheld: RunWithheld,
 ): PanelLive {
   switch (state.kind) {
     case "off":
       return { kind: "off" };
     case "stopped":
-      return { kind: "stopped", line: ldDecayStoppedLine(resultShown) };
+      return {
+        kind: "stopped",
+        line: ldDecayStoppedLine(withheld === "result"),
+      };
     case "endedByFailure":
-      return { kind: "stopped", line: LD_DECAY_FAILURE_ENDED_LINE };
+      return { kind: "stopped", line: ldDecayFailureEndedLine(withheld) };
     case "live":
       return {
         kind: "live",

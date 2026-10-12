@@ -721,6 +721,53 @@ test.describe("LT1 D5 the band in the Populations tab", () => {
   });
 });
 
+/** Serves the calculation worker with every result of an LD decay
+    turned into popnei's refusal `message`, as popnei would refuse it;
+    to call before the page is opened. */
+async function refuseLdDecay(page: Page, message: string): Promise<void> {
+  await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
+    const response = await route.fetch();
+    const front = `{ const realPost = self.postMessage.bind(self); self.postMessage = (m, t) => { if (m && m.kind === "result" && m.result && m.result.analysis === "ldDecay") { realPost({ kind: "refused", id: m.id, message: ${JSON.stringify(message)} }); return; } realPost(m, t); }; }\n`;
+    await route.fulfill({ response, body: front + (await response.text()) });
+  });
+}
+
+test.describe("LT1 D5 the LD decay refused by popnei", () => {
+  test("LT1 D5 refused for memory: its words, no Run and no Stop recalculating, and the line that says what brings Run back; a smaller distance brings it (the review of the LD decay, 12 October 2026)", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await refuseLdDecay(
+      page,
+      "this machine has not the memory for the counts of 2 populations at 100,000 base pairs",
+    );
+    await ready(page);
+    await typeDistance(page, "100000");
+    await button(ldDecay(page), "Run").click();
+    const part = ldDecay(page);
+    await expect(part.getByText(/needed more memory/u)).toBeVisible({
+      timeout: RESULT_TIMEOUT,
+    });
+    await expect(
+      part.getByText(
+        "The LD decay no longer starts by itself after a change, since popnei refused it for lack of memory. Once a smaller largest distance is typed, or fewer individuals are kept, Run comes back: it calculates the LD decay and starts it again after each change.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(button(part, "Run")).toHaveCount(0);
+    await expect(button(part, "Stop recalculating")).toHaveCount(0);
+
+    await typeDistance(page, "50000");
+    await expect(button(part, "Run")).toBeEnabled();
+    await expect(
+      part.getByText(
+        "The LD decay no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+  });
+});
+
 test.describe("LT1 D5 the downloads of the LD decay", () => {
   test("LT1 D5 the table of the populations, the plot and the table of the bins saved by the keyboard and read back; each Download… of a table below it, the plot's above it", async ({
     page,

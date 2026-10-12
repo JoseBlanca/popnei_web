@@ -882,7 +882,18 @@ by itself after a change. After the next change, Run calculates it and
 starts it again after each change." After a failure that ended the live
 state: "The LD decay no longer starts by itself after a change, since
 its calculation failed. Run calculates it and starts it again after
-each change."
+each change."; after popnei's refusal for lack of memory, which offers
+no Run until a change takes the refusal away (12 October 2026, the
+review of the LD decay: the line named a Run that was not there), "The
+LD decay no longer starts by itself after a change, since popnei
+refused it for lack of memory. Once a smaller largest distance is
+typed, or fewer individuals are kept, Run comes back: it calculates the
+LD decay and starts it again after each change."; after a variants file
+the browser can no longer read, "… since its calculation failed. Once
+the variants file is opened again in the box Variants, Run calculates
+it and starts it again after each change."; and with a result shown,
+"… since its calculation failed. After the next change, Run calculates
+it and starts it again after each change."
 
 **The line in the place of the bar**, while it is live and does not
 run:
@@ -1000,7 +1011,7 @@ The warnings, above the table, are the module's with this page's words
 | waiting | live, another analysis running: as about to start, with "The LD decay starts once the diversity, which is running, ends." | change its options or the populations; Stop recalculating; Stop all in the band |
 | running | Stop, the time of the last run, the bar and the clock, the line under the bar; its options greyed; the filters and the box Individuals greyed, with their reasons | Stop; turn to another tab; open another variants file, which stops it |
 | done | the warnings, the table and its "Download…", the line of the versions, the tabs of the plot and the bins with their "Download…"; above them, while live, Stop recalculating and the time of the last run | download; change the options; Stop recalculating |
-| error | the words of the failure (`ldDecay.md`, "On popgen2.html"); while the failure leaves it live, Stop recalculating under them, with Run before it when Run may mend it; after a failure that ends it, Run with the line of that failure | Run again, or change the distance after a refusal for memory |
+| error | the words of the failure (`ldDecay.md`, "On popgen2.html"); while the failure leaves it live, Stop recalculating under them, with Run before it when Run may mend it; after a failure that ends it, the line of that failure, with Run after a crash, and none after the refusal for memory until a change | Run again, or change the distance after a refusal for memory |
 
 A failure ends its live state when it is a crash of the calculation
 worker, any crash, whose words name the memory; a failure only a reload

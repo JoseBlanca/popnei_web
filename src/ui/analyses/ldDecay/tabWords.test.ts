@@ -197,7 +197,7 @@ describe("LT1 D3 the words of the LD decay of the Populations tab", () => {
           after: "diversity",
         },
         "the diversity",
-        false,
+        null,
       ),
     ).toEqual({
       kind: "live",
@@ -205,9 +205,30 @@ describe("LT1 D3 the words of the LD decay of the Populations tab", () => {
         "The LD decay starts once the diversity, which is running, ends.",
       runBeside: false,
     });
-    expect(ldDecayPanelLive({ kind: "endedByFailure" }, null, false)).toEqual({
+    expect(ldDecayPanelLive({ kind: "endedByFailure" }, null, null)).toEqual({
       kind: "stopped",
       line: LD_DECAY_FAILURE_ENDED_LINE,
+    });
+  });
+
+  test("the line of a failure that ended it names no Run the tab does not offer: popnei's refusal for memory, and a file that can no longer be read (the review of the LD decay, 12 October 2026)", () => {
+    expect(
+      ldDecayPanelLive({ kind: "endedByFailure" }, null, "refused"),
+    ).toEqual({
+      kind: "stopped",
+      line: "The LD decay no longer starts by itself after a change, since popnei refused it for lack of memory. Once a smaller largest distance is typed, or fewer individuals are kept, Run comes back: it calculates the LD decay and starts it again after each change.",
+    });
+    expect(
+      ldDecayPanelLive({ kind: "endedByFailure" }, null, "unreadable"),
+    ).toEqual({
+      kind: "stopped",
+      line: "The LD decay no longer starts by itself after a change, since its calculation failed. Once the variants file is opened again in the box Variants, Run calculates it and starts it again after each change.",
+    });
+    expect(
+      ldDecayPanelLive({ kind: "endedByFailure" }, null, "result"),
+    ).toEqual({
+      kind: "stopped",
+      line: "The LD decay no longer starts by itself after a change, since its calculation failed. After the next change, Run calculates it and starts it again after each change.",
     });
   });
 

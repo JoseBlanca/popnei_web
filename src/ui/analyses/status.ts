@@ -58,6 +58,30 @@ export function buttonOf(status: AnalysisStatus<JobResult>): ButtonOf {
   }
 }
 
+/** Why a state that does not run offers no Run until something
+    changes, which the line of a Stop or of a failure that ended a live
+    state must not contradict: the result shown, until a change takes it
+    away; popnei's refusal, which the same settings give again, until a
+    change; the variants file the browser can no longer read, until it is
+    opened again; `null` while Run is offered, or Stop. */
+export type RunWithheld = "result" | "refused" | "unreadable" | null;
+
+/** Why the state `status` offers no Run, by `buttonOf`. */
+export function runWithheldOf(status: AnalysisStatus<JobResult>): RunWithheld {
+  switch (status.kind) {
+    case "done":
+      return "result";
+    case "error":
+      if (status.error.kind === "refused") return "refused";
+      return status.error.error.kind === "reopenFailed" ? "unreadable" : null;
+    case "locked":
+    case "ready":
+    case "removed":
+    case "running":
+      return null;
+  }
+}
+
 /** The result of the analysis `id`, of the union of the results of the
     workers. */
 export type ResultOf<Id extends JobResult["analysis"]> = Extract<

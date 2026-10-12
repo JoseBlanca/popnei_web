@@ -39,7 +39,7 @@ import { summaryStatus } from "../../variants/words.ts";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
 import { runLive } from "../liveRun.ts";
 import { passLock } from "../pca/passLock.ts";
-import { statusOf, waitsAfterName } from "../status.ts";
+import { runWithheldOf, statusOf, waitsAfterName } from "../status.ts";
 import { LD_DECAY_TAB_PANEL } from "../ldDecay/ldDecayTabPanel.tsx";
 import { lastRunClockOf } from "../ldDecay/lastRun.ts";
 import {
@@ -136,14 +136,14 @@ function LdDecayPart(): React.JSX.Element {
     autoRuns.liveState(LD_DECAY),
   );
   const before = useAppState((s) => waitsAfterName(s, state));
-  const resultShown = useAppState((s) => statusOf(s, LD_DECAY).kind === "done");
+  const withheld = useAppState((s) => runWithheldOf(statusOf(s, LD_DECAY)));
   return (
     <AnalysisPanel
       id={LD_DECAY}
       ui={LD_DECAY_TAB_PANEL}
       page={{
         lock,
-        live: ldDecayPanelLive(state, before, resultShown),
+        live: ldDecayPanelLive(state, before, withheld),
         onRun: () => {
           runLive(
             { autoRuns, announcer, getState: () => store.getState() },

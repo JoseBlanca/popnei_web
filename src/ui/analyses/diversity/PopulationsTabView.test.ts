@@ -793,6 +793,52 @@ describe("LT1 D4 the part of the LD decay in the Populations tab", () => {
     );
   }
 
+  /** Types the largest distance `maxDist` into the project, as its
+      field does. */
+  async function typeMaxDist(page: Page, maxDist: number): Promise<void> {
+    await apply(page, (p) =>
+      setAnalysisOptions(p, ldDecayOnPopgen2, {
+        ...ldDecayOptions(p),
+        maxDist,
+      }),
+    );
+  }
+
+  /** Ends the last LD decay sent with popnei's refusal `message`. */
+  async function refuseLdDecay(page: Page, message: string): Promise<void> {
+    const last = page.requests
+      .filter((r) => r.job.analysis === "ldDecay")
+      .at(-1);
+    if (last === undefined) throw new Error("no LD decay sent");
+    last.end({ kind: "failed", error: { kind: "popnei", message } });
+    await settle();
+  }
+
+  test("refused by popnei for memory: its words, no Run, and a line that names no Run until the distance is smaller; then Run, with the line of a failure (the review of the LD decay, 12 October 2026)", async () => {
+    const page = await readyTab();
+    await typeMaxDist(page, 100_000);
+    await press(ldButton("Run"));
+    await refuseLdDecay(
+      page,
+      "this machine has not the memory for the counts of 2 populations at 100,000 base pairs",
+    );
+    expect(page.autoRuns.isLive("ldDecay")).toBe(false);
+    expect(ldPart().textContent).toContain(
+      "The LD decay needed more memory than the browser tab could give.",
+    );
+    expect(ldButton("Run")).toBeNull();
+    expect(ldButton("Stop recalculating")).toBeNull();
+    expect(ldPart().textContent).toContain(
+      "The LD decay no longer starts by itself after a change, since popnei refused it for lack of memory. Once a smaller largest distance is typed, or fewer individuals are kept, Run comes back: it calculates the LD decay and starts it again after each change.",
+    );
+
+    await typeMaxDist(page, 50_000);
+    expect(ldButton("Run")?.disabled).toBe(false);
+    expect(ldPart().textContent).toContain(
+      "The LD decay no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.",
+    );
+  });
+
   test("its heading after the diversity's; Run locked until a distance is typed; Run and Stop recalculating through autoRuns of the LD decay alone; the time of the last run after a result, kept after a Stop", async () => {
     const page = await readyTab();
     const headings = [...container.querySelectorAll("h2")].map(
