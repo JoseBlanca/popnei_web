@@ -522,6 +522,205 @@ test.describe("LT1 D5 the LD decay held running", () => {
   });
 });
 
+/** The band at the top of the page. */
+function band(page: Page): Locator {
+  return page.getByRole("banner", { name: "What the page is doing" });
+}
+
+/** How the band's line lies at the window's width: the buttons drawn,
+    whether its words are cut, whether "Popnei", the words and the
+    buttons are on one row of the line and within it, whether the page
+    scrolls sideways, the line's room and the width its parts take, with the gaps
+    between them, the words' padding taken back by their margins; and
+    the width the words would take as `other`, measured in a copy of
+    them; `null` until the words hold `has`. */
+async function bandFit(
+  page: Page,
+  has: string,
+  other: string,
+): Promise<{
+  readonly buttons: readonly string[];
+  readonly wordsCut: boolean;
+  readonly oneLine: boolean;
+  readonly inLine: boolean;
+  readonly noSidewaysScroll: boolean;
+  readonly room: number;
+  readonly used: number;
+  readonly otherExtra: number;
+} | null> {
+  return band(page)
+    .getByRole("heading", { level: 1, name: "Popnei" })
+    .evaluate(
+      (h1, [want, otherWords]) => {
+        const line = h1.parentElement;
+        const words = h1.nextElementSibling;
+        if (line === null || !(words instanceof HTMLElement)) return null;
+        if (!words.textContent.includes(want)) return null;
+        const shownButtons = [...line.querySelectorAll("button")].filter(
+          (button) => button.getClientRects().length > 0,
+        );
+        const lineBox = line.getBoundingClientRect();
+        const parts = [h1, words, ...shownButtons].map((element) =>
+          element.getBoundingClientRect(),
+        );
+        const top = Math.min(...parts.map((box) => box.top));
+        const gapValue = parseFloat(getComputedStyle(line).columnGap);
+        const gap = Number.isNaN(gapValue) ? 0 : gapValue;
+        const wordsPadding =
+          parseFloat(getComputedStyle(words).paddingInlineStart) +
+          parseFloat(getComputedStyle(words).paddingInlineEnd);
+        // The words as `otherWords` would take, in a copy out of the
+        // flow, against the words shown.
+        const shownWidth = (element: HTMLElement): number => {
+          const copy = element.cloneNode(true);
+          if (!(copy instanceof HTMLElement)) return 0;
+          copy.style.position = "absolute";
+          copy.style.width = "max-content";
+          copy.style.visibility = "hidden";
+          document.body.append(copy);
+          const width = copy.getBoundingClientRect().width;
+          copy.remove();
+          return width;
+        };
+        const asShown = shownWidth(words);
+        const otherCopy = words.cloneNode(true);
+        let asOther = asShown;
+        if (otherCopy instanceof HTMLElement) {
+          const walker = document.createTreeWalker(
+            otherCopy,
+            NodeFilter.SHOW_TEXT,
+          );
+          for (
+            let node = walker.nextNode();
+            node !== null;
+            node = walker.nextNode()
+          ) {
+            if (node.textContent?.includes(want) === true) {
+              node.textContent = node.textContent.replace(want, otherWords);
+            }
+          }
+          asOther = shownWidth(otherCopy);
+        }
+        return {
+          buttons: shownButtons.map((button) => button.textContent),
+          wordsCut: words.scrollWidth > words.clientWidth,
+          oneLine: parts.every((box) => Math.abs(box.top - top) < 8),
+          inLine: parts.every((box) => box.right <= lineBox.right + 0.5),
+          noSidewaysScroll:
+            document.documentElement.scrollWidth <=
+            document.documentElement.clientWidth,
+          room: Math.round(lineBox.width * 10) / 10,
+          used:
+            Math.round(
+              (parts.reduce((sum, box) => sum + box.width, 0) +
+                gap * (parts.length - 1) -
+                wordsPadding) *
+                10,
+            ) / 10,
+          otherExtra: Math.round((asOther - asShown) * 10) / 10,
+        };
+      },
+      [has, other] as const,
+    );
+}
+
+test.describe("LT1 D5 the band in the Populations tab", () => {
+  test("LT1 D5 the LD decay alone live, held running, the Populations tab shown: the band keeps its Stop, after the diversity's part; at 320 px Popnei, LD decay · 0:0… and Stop on one line; the band's Stop ends it (the review of the LD decay, 12 October 2026)", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await holdSummary(page, { holdLdDecay: true });
+    await ready(page, true, true);
+    await typeDistance(page, "100000");
+    await button(ldDecay(page), "Run").click();
+    await expect(button(ldDecay(page), "Stop")).toBeVisible({
+      timeout: RESULT_TIMEOUT,
+    });
+    await expect(
+      band(page).getByText(/^LD decay running · 0:\d\d$/u),
+    ).toBeVisible();
+    await expect(
+      band(page).getByRole("button", {
+        name: "Stop the LD decay",
+        exact: true,
+      }),
+    ).toBeVisible();
+
+    await page.setViewportSize({ width: 320, height: 800 });
+    await expect
+      .poll(async () => bandFit(page, "LD decay", "LD decay"))
+      .toMatchObject({
+        buttons: ["Stop"],
+        wordsCut: false,
+        oneLine: true,
+        inLine: true,
+        noSidewaysScroll: true,
+      });
+    process.stdout.write(
+      `LD decay running at 320 px: ${JSON.stringify(await bandFit(page, "LD decay", "LD decay"))}\n`,
+    );
+
+    await band(page)
+      .getByRole("button", { name: "Stop the LD decay", exact: true })
+      .click();
+    await expect(
+      ldDecay(page).getByText(
+        "Stopped: the LD decay no longer starts by itself after a change. Run calculates it and starts it again after each change.",
+        { exact: true },
+      ),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
+  });
+
+  test("LT1 D5 the LD decay alone live and about to start, the Populations tab shown, at 320 px: Popnei and LD decay soon whole, the whole Stop recalculating on a second row, within the window, as LD decay later would be; the band's Stop recalculating ends it", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    // A clock of the test, so that the quiet second stands still while
+    // the line is measured.
+    await page.clock.install();
+    await ready(page);
+    await runLdDecay(page);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.clock.pauseAt(Date.now() + 1000);
+    await typeDistance(page, "90000");
+
+    await expect
+      .poll(async () =>
+        (
+          await bandFit(page, "LD decay soon", "LD decay later")
+        )?.buttons.join(),
+      )
+      .toBe("Stop recalculating");
+    const fit = await bandFit(page, "LD decay soon", "LD decay later");
+    process.stdout.write(`LD decay soon at 320 px: ${JSON.stringify(fit)}\n`);
+    if (fit === null) throw new Error("the band does not say LD decay soon");
+    // 295 px of the line's 288, and "LD decay later" 291.9, in
+    // Chromium 153 and WebKit 26.6 on 12 October 2026: Stop
+    // recalculating takes a second row, the words whole, as "Diversity
+    // later" does (docs/specs/steps/popgen2-band.md, "The LD decay").
+    expect(fit).toMatchObject({
+      wordsCut: false,
+      inLine: true,
+      noSidewaysScroll: true,
+    });
+    const { used, room, otherExtra } = fit;
+    expect(used).toBeGreaterThan(room);
+    expect(used + otherExtra).toBeGreaterThan(room);
+
+    await band(page)
+      .getByRole("button", {
+        name: "Stop recalculating the LD decay",
+        exact: true,
+      })
+      .click();
+    await expect(
+      ldDecay(page).getByText(
+        /^Stopped: the LD decay no longer starts by itself after a change\./u,
+      ),
+    ).toBeVisible();
+  });
+});
+
 test.describe("LT1 D5 the downloads of the LD decay", () => {
   test("LT1 D5 the table of the populations, the plot and the table of the bins saved by the keyboard and read back; each Download… of a table below it, the plot's above it", async ({
     page,

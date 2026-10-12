@@ -57,14 +57,29 @@ export const STOPPING_MAX_MS = 10_000;
 const PCA = pcaOnPopgen2.id;
 
 /** The tab of each analysis that can be live, where its Run, its Stop
-    and its result are: the tab the band's link shows, and the one whose
-    Stop the band drops while it is shown. */
+    and its result are: the tab the band's link shows, and, for an
+    analysis whose part is the first of its tab, the one whose Stop the
+    band drops while it is shown. */
 export const LIVE_TABS: Readonly<Record<Popgen2LiveId, AnalysisTabId>> =
   Object.freeze({
     pca: "pca",
     diversity: "populations",
     ldDecay: "populations",
   });
+
+/** The live analyses whose part comes after another's in their tab,
+    whose Stop and Stop recalculating the band keeps while that tab is
+    shown, as their own are then far down the tab: the LD decay, after
+    the diversity's whole result (docs/specs/steps/popgen2-band.md, "The
+    tab shown"; the review of the LD decay, 12 October 2026). */
+const BELOW_ANOTHER: readonly Popgen2LiveId[] = ["ldDecay"];
+
+/** Whether the band offers the Stop or the Stop recalculating of the
+    analysis `id` while the tab `shown` is: in a tab not its own, or in
+    its own when its part comes after another's. */
+function offersStop(id: Popgen2LiveId, shown: PageTab): boolean {
+  return shown !== LIVE_TABS[id] || BELOW_ANOTHER.includes(id);
+}
 
 /** What the band reads of the page, beside the log of the errors. */
 export interface BandPage {
@@ -116,7 +131,8 @@ export type BandLine =
   /** An analysis that can be live, `named`, runs, started by Run or by
       itself, as the request `runId`, whose clock the band reads; `then`,
       the live analyses that wait after it, in their order. Its Stop is
-      its tab's, offered while another tab is shown, `withStop`; Stop
+      its tab's, offered while another tab is shown, or its own when its
+      part comes after another's, `withStop`; Stop
       all, while two or more are live, ends `stopAll`. */
   | {
       readonly kind: "running";
@@ -142,7 +158,8 @@ export type BandLine =
       start by themselves, once what they wait for, `waitsFor`, the
       quiet second, the dialog of the download or the next change after a
       crash, is over. One alone offers its tab's Stop recalculating while
-      another tab is shown, `withStop`; Stop all, while two or more are
+      another tab is shown, or its own when its part comes after
+      another's, `withStop`; Stop all, while two or more are
       live, ends `stopAll`. */
   | {
       readonly kind: "aboutToStart";
@@ -286,7 +303,7 @@ export function lineOf(page: BandPage): BandLine {
       then: live
         .filter((other) => aboutToStartOf(page.live[other]) === "behind")
         .map((other) => liveAnalysisOf(state, other)),
-      withStop: page.tab !== LIVE_TABS[id],
+      withStop: offersStop(id, page.tab),
       stopAll,
     };
   }
@@ -325,7 +342,7 @@ export function lineOf(page: BandPage): BandLine {
       ids: together,
       named: together.map((id) => liveAnalysisOf(state, id)),
       waitsFor,
-      withStop: together.length === 1 && page.tab !== LIVE_TABS[first],
+      withStop: together.length === 1 && offersStop(first, page.tab),
       stopAll,
     };
   }

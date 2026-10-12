@@ -1135,9 +1135,11 @@ describe("LT1 D2 the band and the automatic runs with the LD decay", () => {
       "Stop the LD decay",
       "Stop all: the PCA, the diversity and the LD decay",
     ]);
+    // The LD decay's part comes after the diversity's in the Populations
+    // tab, so the band keeps its Stop there.
     testPage.tab = "populations";
     expect(buttons(testPage.band())).toEqual([
-      null,
+      "Stop the LD decay",
       "Stop all: the PCA, the diversity and the LD decay",
     ]);
     await endLast(testPage, "ldDecay");
@@ -1157,6 +1159,27 @@ describe("LT1 D2 the band and the automatic runs with the LD decay", () => {
     expect(buttons(testPage.band())).toEqual([
       "Stop recalculating the LD decay",
       null,
+    ]);
+    testPage.tab = "populations";
+    expect(buttons(testPage.band())).toEqual([
+      "Stop recalculating the LD decay",
+      null,
+    ]);
+  });
+
+  test("the Populations tab shown: the band drops the diversity's Stop, the first part of the tab, and keeps the LD decay's, after it", async () => {
+    const testPage = await threeDone();
+    testPage.tab = "populations";
+    moveThreshold(testPage, 0.05);
+    await flush();
+    await quietSecond();
+    await endLast(testPage, "pca");
+    expect(words(testPage.band(), 12)).toBe(
+      "Diversity running · 0:12 · then the LD decay",
+    );
+    expect(buttons(testPage.band())).toEqual([
+      null,
+      "Stop all: the PCA, the diversity and the LD decay",
     ]);
   });
 

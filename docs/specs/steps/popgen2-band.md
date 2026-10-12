@@ -50,6 +50,15 @@ as it names the diversity, and its link to the LD decay's warnings or
 error gives the focus to the LD decay's own, in the tab that holds the
 diversity's too ("Several live analyses", "The LD decay").
 
+Revised on 12 October 2026, the review of the LD decay: the band drops
+the Stop and the Stop recalculating of an analysis only while its tab is
+shown and its part is the first of that tab, the PCA's in the PCA tab,
+the diversity's in the Populations tab. The LD decay's part comes after
+the diversity's whole result, its Stop 3,216 px down at 1280 by 720
+and 16 presses of the Tab key away, so the band keeps the LD decay's Stop and
+Stop recalculating while the Populations tab is shown ("The LD decay",
+"The tab shown").
+
 Revised on 11 October 2026 for `docs/designs/population-tab.md`,
 approved by the owner that day with the recommendations of its two open
 points, which brings the diversity of the Populations tab as a second
@@ -341,14 +350,27 @@ a moment", "Stopping the LD decay…", "LD decay: 2 warnings, in the
 Populations tab", "LD decay: could not be calculated, in the
 Populations tab"; and the short forms "LD decay · 0:12", "LD decay
 soon", "LD decay later", "LD decay: 2 warnings", "LD decay: failed".
-While the Populations tab is shown the band drops the Stop and the Stop
-recalculating of both its analyses. The link to the LD decay's
+While the Populations tab is shown the band drops the diversity's Stop
+and Stop recalculating, as it drops the PCA's in the PCA tab, and keeps
+the LD decay's: its part comes after the diversity's whole result, its
+Stop 3,216 px down at 1280 by 720, four and a half heights of the
+window, and 16 presses of the Tab key from the tab's label, and a run of minutes greys the
+filters all that time (the review of the LD decay, 12 October 2026;
+until then the band dropped both). The link to the LD decay's
 warnings gives the focus to the heading of the LD decay's own warnings,
 and for an error to the heading "LD decay", not to the diversity's
 above them in the same tab; when both have warnings, the link is the
 diversity's, the first in the order. "LD decay · 59:59" is shorter than
 "Diversity · 59:59", so the line of an analysis running with Stop and
-Stop all fits at 320 px as the diversity's does.
+Stop all fits at 320 px as the diversity's does; with the LD decay alone
+live and running, "Popnei", "LD decay · 0:0…" and Stop take 214.8 px of
+the line's 288. "LD decay soon" with the whole "Stop recalculating",
+the LD decay alone live and about to start, needs 295 px of the 288, and
+"LD decay later" 291.9, in Chromium 153 and WebKit 26.6 on 12 October
+2026: as with "Diversity later", Stop recalculating takes a second row,
+the words whole and nothing past the window. From 12 October 2026 that
+line is shown in the Populations tab too, where the band keeps the LD
+decay's Stop recalculating.
 
 **Stop all** is shown whenever two or more analyses are live and one
 of them runs, waits or is about to start, as the design's choices 5
@@ -365,9 +387,12 @@ of another tab, and each tab keeps its own Stop recalculating. With one live ana
 recalculating stands alone, as until now.
 
 **The tab shown.** While the tab of the analysis that runs, or of the
-one about to start, is shown, the band drops that analysis's Stop or
-Stop recalculating, as it drops the PCA's in the PCA tab, and keeps
-Stop all, whose words differ from the tab's button. The link drops
+one about to start, is shown, and that analysis's part is the first of
+the tab, the band drops its Stop or Stop recalculating, as it drops the
+PCA's in the PCA tab, and keeps Stop all, whose words differ from the
+tab's button. The first parts are the PCA's and the diversity's; the
+LD decay's comes after the diversity's, so its Stop and Stop
+recalculating stay in the band in every tab (12 October 2026). The link drops
 while its tab is shown, as now, and names the next in the order that
 has warnings or failed in a tab not shown, if any.
 
