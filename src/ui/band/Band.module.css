@@ -124,7 +124,7 @@
   white-space: nowrap;
 }
 
-/* Narrow, under 45 rem (narrow.ts, which alone holds the width), the
+/* Narrow, under 45 em (narrow.ts, which alone holds the width), the
    heading smaller, the parts closer and the buttons' padding a quarter of
    a rem, so that the short form of the words fits beside its buttons:
    "Popnei", "Diversity · 59:59", Stop and Stop all take 282 px of the 288
@@ -132,7 +132,7 @@
    153 and WebKit 26.6; each button stays at least 40 px wide and 24
    tall, the target of WCAG 2.5.8. A Stop recalculating beside Stop
    all is not drawn then (popgen2-band.md, "Several live analyses"). At
-   45 rem and wider every whole line fits, the widest, "The diversity
+   45 em and wider every whole line fits, the widest, "The diversity
    starts after the next change" with Stop recalculating and Stop all,
    in 660 px, of the 673 at 720 px with a scrollbar of 15 px that takes
    room (the reviews of work package 4, 12 October 2026). */

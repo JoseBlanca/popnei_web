@@ -19,7 +19,7 @@
  * within the quiet second (WCAG 2.2.1; the review of work package 4 of
  * docs/plans/no-undo.md, 10 October 2026); and whenever two or more are
  * live and one of them runs, waits or is about to start, Stop all, which
- * ends them all. Under 45 rem, beside one about to start alone, the
+ * ends them all. Under 45 em, beside one about to start alone, the
  * line has room for Stop all only, as the owner chose on 12 October
  * 2026. While analyses are live and nothing runs nor is about to start,
  * the band shows "Popnei" alone, as the owner decided on 10 October

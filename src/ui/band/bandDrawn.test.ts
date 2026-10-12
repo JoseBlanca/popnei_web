@@ -57,7 +57,7 @@ beforeEach(() => {
     }
   };
   // jsdom has no matchMedia, through which the band reads whether the
-  // window is under 45 rem wide.
+  // window is under 45 em wide.
   narrowNow = false;
   narrowListeners.clear();
   window.matchMedia = (query: string): MediaQueryList =>
@@ -88,13 +88,13 @@ afterEach(() => {
   document.getElementById(tabContentId("populations"))?.remove();
 });
 
-/** Whether the window of the test is under 45 rem wide, which the
+/** Whether the window of the test is under 45 em wide, which the
     band reads through `window.matchMedia`; wide first. */
 let narrowNow = false;
 /** The listeners of the band to a change of that width. */
 const narrowListeners = new Set<() => void>();
 
-/** Narrows the window of the test under 45 rem, or widens it, `narrow`,
+/** Narrows the window of the test under 45 em, or widens it, `narrow`,
     and tells the band, as a browser tells it of a resize. */
 async function setNarrow(narrow: boolean): Promise<void> {
   narrowNow = narrow;
@@ -404,7 +404,7 @@ describe("NU5 D2 the band drawn", () => {
       await flush();
     });
     expect(container.textContent).toContain("The PCA starts in a moment");
-    // Alone, it fits beside the short form under 45 rem too.
+    // Alone, it fits beside the short form under 45 em too.
     await setNarrow(true);
     expect(container.textContent).toContain("PCA soon");
     expect(buttonNames()).toEqual(["Stop recalculating the PCA"]);
@@ -856,7 +856,7 @@ describe("PT4 D2 the band drawn with the PCA and the diversity", () => {
     expect(buttonNames()).toEqual(["Stop all: the PCA and the diversity"]);
   });
 
-  test("the diversity about to start alone beside the PCA live: its Stop recalculating, drawn for 45 rem and wider only, calls autoRuns.pause with the diversity, and Stop all is beside it", async () => {
+  test("the diversity about to start alone beside the PCA live: its Stop recalculating, drawn for 45 em and wider only, calls autoRuns.pause with the diversity, and Stop all is beside it", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
       const testPage = page(SUMMARY);
@@ -880,7 +880,7 @@ describe("PT4 D2 the band drawn with the PCA and the diversity", () => {
         "Stop recalculating the diversity",
         "Stop all: the PCA and the diversity",
       ]);
-      // Under 45 rem the line holds Stop all alone: its Stop
+      // Under 45 em the line holds Stop all alone: its Stop
       // recalculating is not drawn, and the focus it had goes to the
       // heading (the review of package 4, 12 October 2026).
       button("Stop recalculating the diversity").focus();

@@ -1,6 +1,6 @@
 /**
  * Whether the band at the top of popgen2.html is narrow, the window under
- * 45 rem wide, where it shows the short forms of its words, the heading
+ * 45 em wide, where it shows the short forms of its words, the heading
  * smaller and the parts closer, and leaves out a Stop recalculating
  * beside Stop all (docs/specs/steps/popgen2-band.md, "Its place" and
  * "Several live analyses"). Decided here alone, by one media query that
@@ -41,7 +41,7 @@ function isNarrow(): boolean {
   return narrowQuery().matches;
 }
 
-/** Whether the window is under 45 rem wide now, read again at each
+/** Whether the window is under 45 em wide now, read again at each
     change of its width across that line. */
 export function useBandNarrow(): boolean {
   return useSyncExternalStore(subscribeToNarrow, isNarrow);

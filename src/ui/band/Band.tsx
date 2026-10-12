@@ -160,7 +160,7 @@ export function Band({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const keepFocus = useFocusKept(headerRef, headingRef);
   useLayoutEffect(keepFocus);
-  // Under 45 rem: the short forms, and no Stop recalculating beside Stop
+  // Under 45 em: the short forms, and no Stop recalculating beside Stop
   // all, which then leaves the page and gives its focus to the heading.
   const narrow = useBandNarrow();
   useLayoutEffect(() => {
@@ -304,7 +304,7 @@ export function Band({
 /** What the line after "Popnei" works out its words from. */
 interface ActivityProps {
   readonly page: BandWith;
-  /** Whether the window is under 45 rem wide (narrow.ts). */
+  /** Whether the window is under 45 em wide (narrow.ts). */
   readonly narrow: boolean;
   /** Gives the focus to the heading when a control of the band that had
       it has gone by itself; called after each drawing of the line. */
@@ -358,7 +358,7 @@ function Activity({
 interface LineProps {
   readonly line: BandLine;
   readonly page: BandWith;
-  /** Whether the window is under 45 rem wide (narrow.ts). */
+  /** Whether the window is under 45 em wide (narrow.ts). */
   readonly narrow: boolean;
   /** The link to the tab `tab` was followed: to the warnings of its
       result, or, `false`, to its error. */
@@ -373,7 +373,7 @@ function Line({
   onLink,
 }: LineProps): React.JSX.Element | null {
   const shownStop = stopOf(line);
-  // Under 45 rem a Stop recalculating beside Stop all is not drawn.
+  // Under 45 em a Stop recalculating beside Stop all is not drawn.
   const stop = shownStop?.wideOnly === true && narrow ? null : shownStop;
   const stopAll = stopAllOf(line);
   // Stop, then Stop all, each beside the words, so that the one that
@@ -469,7 +469,7 @@ function Clocked({
   return <Words words={lineWords(line, seconds)} narrow={narrow} />;
 }
 
-/** The words of a line, whole, and while `narrow`, under 45 rem, in
+/** The words of a line, whole, and while `narrow`, under 45 em, in
     their short form, the whole words then still read by a screen
     reader. Whole words that hold the name of a file are drawn in three
     parts, so that the name alone is cut when the line has no room for
