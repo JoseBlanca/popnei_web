@@ -20,6 +20,7 @@
  */
 import { createContext, useContext, useSyncExternalStore } from "react";
 
+import { ldDecayOptions } from "../../../core/analyses/ldDecay.ts";
 import type { AnalysisId } from "../../../core/project.ts";
 import type { AppState } from "../../../core/store.ts";
 
@@ -31,13 +32,23 @@ export interface ClockStore {
   readonly subscribe: (listener: () => void) => () => void;
 }
 
+/** The last run of the LD decay that ended with a result or an error. */
+export interface LastRun {
+  /** The seconds it took. */
+  readonly seconds: number;
+  /** Its largest distance, in base pairs, which its time grows with, as
+      the project held it when it started; `null` for a project with no
+      distance, which no run of the LD decay has. */
+  readonly maxDist: number | null;
+}
+
 /** The time of the last run of one analysis. */
 export interface LastRunClock {
-  /** The seconds the last run that ended with a result or an error took,
-      for the variants file open; `null` before one. The same number
-      until another such run ends or another file is opened. */
-  readonly seconds: () => number | null;
-  /** Calls `listener` when `seconds` changes; returns the function that
+  /** The last run that ended with a result or an error, for the variants
+      file open; `null` before one. The same object until another such
+      run ends or another file is opened. */
+  readonly last: () => LastRun | null;
+  /** Calls `listener` when `last` changes; returns the function that
       stops it. */
   readonly subscribe: (listener: () => void) => () => void;
 }
@@ -58,10 +69,15 @@ export function createLastRunClock(
   startOf: (runId: number) => number | null,
 ): LastRunClock {
   const listeners = new Set<() => void>();
-  let seconds: number | null = null;
+  let last: LastRun | null = null;
   let fileId: string | null = store.getState().project.variants?.fileId ?? null;
-  // The run under way that the clock saw start, and when it started.
-  let running: { readonly runId: number; readonly start: number } | null = null;
+  // The run under way that the clock saw start, when it started, and its
+  // largest distance.
+  let running: {
+    readonly runId: number;
+    readonly start: number;
+    readonly maxDist: number | null;
+  } | null = null;
   const runningOf = (
     status:
       AppState<unknown, unknown>["analyses"][number]["status"] | undefined,
@@ -70,14 +86,15 @@ export function createLastRunClock(
       running = {
         runId: status.runId,
         start: startOf(status.runId) ?? now(),
+        maxDist: ldDecayOptions(store.getState().project).maxDist,
       };
     }
   };
   runningOf(store.getState().analyses.find((a) => a.id === id)?.status);
 
-  const set = (next: number | null): void => {
-    if (next === seconds) return;
-    seconds = next;
+  const set = (next: LastRun | null): void => {
+    if (next === last) return;
+    last = next;
     for (const listener of [...listeners]) listener();
   };
 
@@ -100,12 +117,15 @@ export function createLastRunClock(
       ended !== null &&
       (status?.kind === "done" || status?.kind === "error")
     ) {
-      set((now() - ended.start) / SECOND_MS);
+      set({
+        seconds: (now() - ended.start) / SECOND_MS,
+        maxDist: ended.maxDist,
+      });
     }
   });
 
   return {
-    seconds: () => seconds,
+    last: () => last,
     subscribe: (listener) => {
       listeners.add(listener);
       return () => {
@@ -121,15 +141,13 @@ const LastRunContext = createContext<LastRunClock | null>(null);
     it. */
 export const LastRunProvider = LastRunContext.Provider;
 
-/** The seconds the last run of the LD decay took, from the clock of the
-    `LastRunProvider` above, drawn again when they change; `null` before
-    one. Throws a defect outside a `LastRunProvider`. */
-export function useLastRunSeconds(): number | null {
+/** The last run of the LD decay, from the clock of the `LastRunProvider`
+    above, drawn again when it changes; `null` before one. Throws a
+    defect outside a `LastRunProvider`. */
+export function useLastRun(): LastRun | null {
   const clock = useContext(LastRunContext);
   if (clock === null) {
-    throw new Error(
-      "popnei_web defect: useLastRunSeconds outside a LastRunProvider",
-    );
+    throw new Error("popnei_web defect: useLastRun outside a LastRunProvider");
   }
-  return useSyncExternalStore(clock.subscribe, clock.seconds);
+  return useSyncExternalStore(clock.subscribe, clock.last);
 }

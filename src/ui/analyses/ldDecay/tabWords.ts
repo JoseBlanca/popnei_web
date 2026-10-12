@@ -16,6 +16,7 @@ import {
 import type { IndividualsKept } from "../../../core/individualsKept.ts";
 import {
   escaped,
+  grouped,
   popgen2OnePopulationCause,
   popgen2PopulationsKept,
 } from "../../../core/project.ts";
@@ -23,6 +24,7 @@ import type { Project } from "../../../core/project.ts";
 import type { AboutToStart, LiveState } from "../../autoRuns.ts";
 import type { PanelLive } from "../AnalysisPanel.tsx";
 import type { RunWithheld } from "../status.ts";
+import type { LastRun } from "./lastRun.ts";
 import { emptiedLine, unclassifiedLine } from "../diversity/tabWords.ts";
 import { passLockText } from "../pca/passLock.ts";
 import type { PassLock } from "../pca/passLock.ts";
@@ -197,11 +199,15 @@ export function ldDecayPanelLive(
 }
 
 /** The time of the last run of the LD decay that ended with a result or
-    an error, `seconds` long, as the clock of the bar writes it: "The
-    last run took 3:42."; "The last run took less than a second." under
-    one. */
-export function lastRunText(seconds: number): string {
-  return seconds < 1
-    ? "The last run took less than a second."
-    : `The last run took ${clockText(seconds)}.`;
+    an error, `last`, as the clock of the bar writes it, with its largest
+    distance, which its time grows with: "The last run, pairs up to
+    100,000 base pairs, took 3:42."; "… took less than a second." under
+    one (the distance from 12 October 2026, the review of the LD
+    decay). */
+export function lastRunText(last: LastRun): string {
+  const { seconds, maxDist } = last;
+  const took = seconds < 1 ? "less than a second" : clockText(seconds);
+  return maxDist === null
+    ? `The last run took ${took}.`
+    : `The last run, pairs up to ${grouped(maxDist)} base pairs, took ${took}.`;
 }

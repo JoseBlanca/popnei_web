@@ -894,14 +894,14 @@ describe("LT1 D4 the part of the LD decay in the Populations tab", () => {
     expect(run).toHaveBeenCalledWith("ldDecay");
     const sent = page.requests.filter((r) => r.job.analysis === "ldDecay");
     expect(sent).toHaveLength(1);
-    expect(ldPart().textContent).not.toContain("The last run took");
+    expect(ldPart().textContent).not.toContain("The last run");
     const [request] = sent;
     if (request === undefined) throw new Error("no LD decay sent");
     request.end({ kind: "done", key: request.key, result: ldDecayResult() });
     await settle();
     expect(ldPart().textContent).toContain("the plot of the LD decay");
     expect(ldPart().textContent).toContain(
-      "The last run took less than a second.",
+      "The last run, pairs up to 100,000 base pairs, took less than a second.",
     );
     expect(button("Run")).not.toBeNull();
 
@@ -913,7 +913,7 @@ describe("LT1 D4 the part of the LD decay in the Populations tab", () => {
       "Stopped: the LD decay no longer starts by itself after a change.",
     );
     expect(ldPart().textContent).toContain(
-      "The last run took less than a second.",
+      "The last run, pairs up to 100,000 base pairs, took less than a second.",
     );
   });
 });

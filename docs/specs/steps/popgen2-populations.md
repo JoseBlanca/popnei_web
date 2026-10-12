@@ -860,12 +860,16 @@ is live and does not run, ends the live state; and after a failure that
 leaves it live, or while a crash of another analysis holds its start,
 Run stands before Stop recalculating.
 
-**The time of the last run**, "The last run took 3:42.", stands after
+**The time of the last run**, "The last run, pairs up to 100,000 base
+pairs, took 3:42.", with the largest distance of that run, which its
+time grows with (from 12 October 2026, the review of the LD decay;
+until then "The last run took 3:42."), stands after
 the button, on its line, in the muted text of the line of the versions,
 from the first run of the open variants file that ended with a result
 or with an error, until another variants file is opened; in minutes
 and seconds as the clock of the bar writes them, "1:02:05" past an hour,
-and "The last run took less than a second." under one. It is the time
+and "The last run, pairs up to 100,000 base pairs, took less than a
+second." under one. It is the time
 from the moment the page asks the calculation worker for the run, when
 the tab shows it running, to its answer, of the last run that ended so,
 and it includes a wait for the worker: after another LD decay or a large
@@ -1043,7 +1047,7 @@ comes with it.
 | the heading | "LD decay" |
 | the line of the populations | as above, "The populations it runs on" |
 | the locks, the line in the place of the bar, the lines of a Stop and of a failure that ended it | as above, "Run, Stop and the time of the last run" |
-| the time of the last run | "The last run took 3:42."; "The last run took less than a second." |
+| the time of the last run | "The last run, pairs up to 100,000 base pairs, took 3:42."; "… took less than a second." |
 | the filters and its options while it runs, as tooltip and description | "Stop the LD decay in the Populations tab to change the filters; then press Run there to calculate it again." |
 | the column, the zone, Remove and the lists of the reader while it runs | "Stop the LD decay in the Populations tab to change the populations; then press Run there to calculate it again." |
 | the caption of the table of the populations | the old one; with unclassified left out, "… 7 unclassified individuals kept are not in it." |
@@ -1100,7 +1104,8 @@ has them, the missing data at 0.1, which keeps all 500 variants:
 
 - **The numbers**: 100000 typed and Run: the rows pop_a and pop_b, 50
   individuals, 432 variants, 29,367 pairs and half distances "7,548"
-  and "7,340"; no warning; "The last run took less than a second."; the
+  and "7,340"; no warning; "The last run, pairs up to 100,000 base
+  pairs, took less than a second."; the
   missing data moved to 0.05 with the LD decay live: "7,639" and
   "7,416", with no Run pressed. With no individuals file, the one row
   Unclassified, 100 individuals, 432 variants, 29,367 pairs, "7,151"

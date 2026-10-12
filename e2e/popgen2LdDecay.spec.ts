@@ -344,7 +344,9 @@ test.describe("LT1 D5 the LD decay in the Populations tab", () => {
     // Under a second on the owner's Mac when the machine is idle; a run
     // of a second or more under load is written in minutes and seconds.
     await expect(
-      part.getByText(/^The last run took (less than a second|\d+:\d\d)\.$/u),
+      part.getByText(
+        /^The last run, pairs up to 100,000 base pairs, took (less than a second|\d+:\d\d)\.$/u,
+      ),
     ).toBeVisible();
     await expect(
       part.getByText(

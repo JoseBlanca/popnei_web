@@ -25,8 +25,8 @@ describe("LT1 D4 the time of the last run of the LD decay", () => {
       () => null,
     );
     const told: (number | null)[] = [];
-    clock.subscribe(() => told.push(clock.seconds()));
-    expect(clock.seconds()).toBeNull();
+    clock.subscribe(() => told.push(clock.last()?.seconds ?? null));
+    expect(clock.last()?.seconds ?? null).toBeNull();
 
     testPage.auto.run("ldDecay");
     await flush();
@@ -34,8 +34,10 @@ describe("LT1 D4 the time of the last run of the LD decay", () => {
     const first = testPage.lastLdDecay();
     first.end({ kind: "done", key: first.key, result: ldDecayResult() });
     await flush();
-    expect(clock.seconds()).toBeCloseTo(3725.4, 6);
-    expect(told).toEqual([clock.seconds()]);
+    expect(clock.last()?.seconds ?? null).toBeCloseTo(3725.4, 6);
+    expect(told).toEqual([clock.last()?.seconds]);
+    // The distance the run was started at, which its time grows with.
+    expect(clock.last()?.maxDist).toBe(100_000);
 
     // A change that starts it again, stopped before its end.
     testPage.setLdDecay({ maxDist: 50_000 });
@@ -43,7 +45,7 @@ describe("LT1 D4 the time of the last run of the LD decay", () => {
     now += 9_000;
     testPage.auto.pause("ldDecay");
     await flush();
-    expect(clock.seconds()).toBeCloseTo(3725.4, 6);
+    expect(clock.last()?.seconds ?? null).toBeCloseTo(3725.4, 6);
 
     openVariantsFile(testPage.store, {
       fileId: "f".repeat(32),
@@ -52,7 +54,7 @@ describe("LT1 D4 the time of the last run of the LD decay", () => {
       format: "nei",
       readOptions: null,
     });
-    expect(clock.seconds()).toBeNull();
+    expect(clock.last()?.seconds ?? null).toBeNull();
   });
 
   test("a run that ended with an error counts", async () => {
@@ -73,7 +75,7 @@ describe("LT1 D4 the time of the last run of the LD decay", () => {
       error: { kind: "popnei", message: "`numBins` is 0." },
     });
     await flush();
-    expect(clock.seconds()).toBeCloseTo(0.5, 6);
+    expect(clock.last()?.seconds ?? null).toBeCloseTo(0.5, 6);
   });
 
   test("a run under way when the clock is made is timed from its start, as the page noted it (the review of the LD decay, 12 October 2026)", async () => {
@@ -96,7 +98,7 @@ describe("LT1 D4 the time of the last run of the LD decay", () => {
     const run = testPage.lastLdDecay();
     run.end({ kind: "done", key: run.key, result: ldDecayResult() });
     await flush();
-    expect(clock.seconds()).toBeCloseTo(6.5, 6);
+    expect(clock.last()?.seconds ?? null).toBeCloseTo(6.5, 6);
   });
 
   test("a change of the store during the run does not restart its time, and one after its end does not lengthen it (the review of the LD decay, 12 October 2026)", async () => {
@@ -121,12 +123,12 @@ describe("LT1 D4 the time of the last run of the LD decay", () => {
     const run = testPage.lastLdDecay();
     run.end({ kind: "done", key: run.key, result: ldDecayResult() });
     await flush();
-    expect(clock.seconds()).toBeCloseTo(3, 6);
+    expect(clock.last()?.seconds ?? null).toBeCloseTo(3, 6);
     now += 5000;
     testPage.setPca({
       ld: { follow: false, maxAllowedR2: 0.3, maxDist: 50_000 },
     });
     await flush();
-    expect(clock.seconds()).toBeCloseTo(3, 6);
+    expect(clock.last()?.seconds ?? null).toBeCloseTo(3, 6);
   });
 });

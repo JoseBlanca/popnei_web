@@ -240,10 +240,23 @@ describe("LT1 D3 the words of the LD decay of the Populations tab", () => {
   });
 
   test("the time of the last run: under a second, minutes and seconds, and past an hour", () => {
-    expect(lastRunText(0.4)).toBe("The last run took less than a second.");
-    expect(lastRunText(59)).toBe("The last run took 0:59.");
-    expect(lastRunText(61.7)).toBe("The last run took 1:01.");
-    expect(lastRunText(3725)).toBe("The last run took 1:02:05.");
+    const at = (seconds: number): string =>
+      lastRunText({ seconds, maxDist: 100_000 });
+    expect(at(0.4)).toBe(
+      "The last run, pairs up to 100,000 base pairs, took less than a second.",
+    );
+    expect(at(1)).toBe(
+      "The last run, pairs up to 100,000 base pairs, took 0:01.",
+    );
+    expect(at(59)).toBe(
+      "The last run, pairs up to 100,000 base pairs, took 0:59.",
+    );
+    expect(at(61.7)).toBe(
+      "The last run, pairs up to 100,000 base pairs, took 1:01.",
+    );
+    expect(at(3725)).toBe(
+      "The last run, pairs up to 100,000 base pairs, took 1:02:05.",
+    );
   });
 
   test("the status region: its start by itself, held after a crash, a Stop", () => {

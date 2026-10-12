@@ -20,7 +20,7 @@
  * comes. After a Stop or a failure that ended the live state, the line
  * that says why nothing starts by itself stands there. The LD decay's
  * part does the same with its own words, and says beside its button how
- * long its last run took, from the page's clock, `useLastRunSeconds`, so that the user knows what
+ * long its last run took, from the page's clock, `useLastRun`, so that the user knows what
  * a change will cost them.
  *
  * A module of its own, which `PopulationsTab.tsx` alone imports with
@@ -41,7 +41,7 @@ import { runLive } from "../liveRun.ts";
 import { passLock } from "../pca/passLock.ts";
 import { runWithheldOf, statusOf, waitsAfterName } from "../status.ts";
 import { LD_DECAY_TAB_PANEL } from "../ldDecay/ldDecayTabPanel.tsx";
-import { useLastRunSeconds } from "../ldDecay/lastRun.ts";
+import { useLastRun } from "../ldDecay/lastRun.ts";
 import {
   lastRunText,
   ldDecayPanelLive,
@@ -120,7 +120,7 @@ function LdDecayPart(): React.JSX.Element {
   const autoRuns = useAutoRuns();
   const store = useStore();
   const announcer = useAnnouncer();
-  const lastRun = useLastRunSeconds();
+  const lastRun = useLastRun();
   const lock = useAppState((s) =>
     ldDecayTabLock(
       s.project,
