@@ -6946,3 +6946,547 @@ test.describe("PT1 D5 the memory of the diversity after the PCA", () => {
     });
   }
 });
+
+// ---------------------------------------------------------------------
+// LD2, the LD decay on popgen2.html (docs/plans/ld-decay-tab.md, phase 2).
+
+/** The variants of the dense file of LD2, a variant every 100 bp: 1.5 Mb,
+    so that the pass holds a whole 1,000,000 bp of variants for its last
+    5,000. */
+const LD2_VARIANTS = 15_000;
+
+/** How long into a test of LD2 its calculations are waited for, under
+    the 540 s of the test, itself under the 550,000 ms of a command of the
+    measurement run; a calculation not ended then is reported with the
+    time it reached. */
+const LD2_DEADLINE_MS = 490_000;
+
+/** The pause between two samples of the memory, in ms. */
+const LD2_SAMPLE_PAUSE_MS = 100;
+
+/** The words of the tab with the time of the last run of the LD decay. */
+const LD2_LAST_RUN =
+  /^The last run(, pairs up to [\d,]+ base pairs,)? took .*\.$/u;
+
+/** The dense file of LD2 in MEASURE_DIR, written when it is not there,
+    and the CSV of its 1,000 individuals in two populations of 500, q0
+    and q1, beside it. */
+async function ld2Files(): Promise<{ vcf: string; twoPops: string }> {
+  const name = `ld_dense_1000x${String(LD2_VARIANTS)}`;
+  const { vcf } = await ldVcf(name, LD2_VARIANTS, 1_000, { every: 100 });
+  const twoPops = join(MEASURE_DIR, `${name}_two_pops.csv`);
+  await writeFile(twoPops, bigVcfPopsCsv(1_000, 500));
+  return { vcf, twoPops };
+}
+
+/** The tab of the row of tabs of popgen2.html named `name`. */
+function ld2Tab(page: Page, name: "Variants" | "PCA" | "Populations"): Locator {
+  return page
+    .getByRole("tablist", { name: "Files and analyses" })
+    .getByRole("tab", { name, exact: true });
+}
+
+/** The part of the LD decay, and of the diversity, in the Populations
+    tab. */
+function ld2Part(page: Page, name: "LD decay" | "Diversity"): Locator {
+  return page.getByRole("region", { name, exact: true, includeHidden: true });
+}
+
+/** Opens popgen2.html, the dense file and, when `pops` is given, its
+    individuals file; waits for the line of the populations of the LD
+    decay and the diversity's Run enabled, and until 2 s after the one
+    pass's answer, so that the memory of the pass settles. */
+async function ld2Open(
+  page: Page,
+  vcf: string,
+  pops: string | null,
+): Promise<void> {
+  await page.addInitScript(instrument);
+  await page.goto("popgen2.html");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  const variants = page.waitForEvent("filechooser");
+  await page
+    .getByRole("button", { name: /^Open (another )?variants file…$/u })
+    .click();
+  await (await variants).setFiles(vcf);
+  let pass: Logged | undefined;
+  await expect
+    .poll(
+      async () => {
+        pass = (await logOf(page)).find(
+          (l) => isCalc(l) && l.event === "in" && AFTER_PASS_ENDS.has(l.kind),
+        );
+        return pass !== undefined;
+      },
+      { timeout: 300_000, intervals: [200] },
+    )
+    .toBe(true);
+  if (pass?.kind !== "result") {
+    throw new Error(`the one pass ended with ${pass?.kind ?? "nothing"}`);
+  }
+  if (pops !== null) {
+    const individuals = page.waitForEvent("filechooser");
+    await page
+      .getByRole("region", { name: "Individuals", exact: true })
+      .getByRole("button", { name: /^Open (another )?individuals file…$/u })
+      .click();
+    await (await individuals).setFiles(pops);
+  }
+  await ld2Tab(page, "Populations").click();
+  await expect(
+    ld2Part(page, "LD decay").getByText(
+      pops === null
+        ? /^1 population, Unclassified: 1,000 individuals\./u
+        : /^2 populations: q0, 500 individuals; q1, 500 individuals/u,
+    ),
+  ).toBeVisible({ timeout: 60_000 });
+  await expect(
+    ld2Part(page, "Diversity").getByRole("button", {
+      name: "Run",
+      exact: true,
+    }),
+  ).toBeEnabled({ timeout: 60_000 });
+  const settleUntil = pass.wall + 2000;
+  if (Date.now() < settleUntil) {
+    await page.waitForTimeout(settleUntil - Date.now());
+  }
+}
+
+/** A calculation of `analysis` posted to the calculation worker after
+    the entry `from` of the log, and its worker's answer, either missing
+    when not there yet. */
+async function ld2Calc(
+  page: Page,
+  from: number,
+  analysis: "pca" | "diversity" | "ldDecay",
+): Promise<{ posted?: Logged; answer?: Logged }> {
+  const log = (await logOf(page)).slice(from).filter(isCalc);
+  const at = log.findIndex(
+    (l) => l.event === "out" && l.kind === "run" && l.analysis === analysis,
+  );
+  const posted = log[at];
+  if (posted === undefined) return {};
+  const answer = log
+    .slice(at + 1)
+    .find(
+      (l) =>
+        l.event === "in" &&
+        l.worker === posted.worker &&
+        AFTER_PASS_ENDS.has(l.kind),
+    );
+  return answer === undefined ? { posted } : { posted, answer };
+}
+
+/** Waits until `done` is true, the tab closed, or `deadline`, a
+    `Date.now()`; says which. */
+async function ld2Until(
+  done: () => Promise<boolean>,
+  closed: { crashed: boolean },
+  deadline: number,
+): Promise<"done" | "closed" | "deadline"> {
+  for (;;) {
+    if (closed.crashed) return "closed";
+    try {
+      if (await done()) return "done";
+    } catch (error) {
+      if (/crash|closed/i.test(String(error))) {
+        return "closed";
+      }
+      throw error;
+    }
+    if (Date.now() > deadline) return "deadline";
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+}
+
+/** The text of `part`, its lines joined by " / ", or "" when the page
+    cannot give it. */
+async function ld2Text(part: Locator): Promise<string> {
+  try {
+    return (await part.innerText({ timeout: 5_000 }))
+      .split(/\n/u)
+      .map((s) => s.trim())
+      .filter((s) => s !== "")
+      .join(" / ");
+  } catch {
+    return "";
+  }
+}
+
+/** The words of the tab with the time of the last run of the LD decay, or
+    "" when it shows none. */
+async function ld2LastRun(page: Page): Promise<string> {
+  const words = ld2Part(page, "LD decay").getByText(LD2_LAST_RUN);
+  try {
+    return (await words.count()) === 0
+      ? ""
+      : (await words.first().innerText({ timeout: 5_000 })).trim();
+  } catch {
+    return "";
+  }
+}
+
+const ld2Gb = (x: number | null): string =>
+  x === null ? "not taken" : `${(x / 1e9).toFixed(2)} GB`;
+const ld2S = (x: number | null): string =>
+  x === null ? "not taken" : `${(x / 1000).toFixed(1)} s`;
+
+/** The largest sample of `samples` from `from` to `to`, `Date.now()`s. */
+function ld2Peak(
+  samples: readonly Sample[],
+  from: number,
+  to: number,
+): number | null {
+  const xs = samples
+    .filter((s) => s.t >= from && s.t <= to)
+    .map((s) => s.total);
+  return xs.length === 0 ? null : Math.max(...xs);
+}
+
+/** The last sample of `samples` before `to`. */
+function ld2Last(samples: readonly Sample[], to: number): number | null {
+  return samples.filter((s) => s.t <= to).at(-1)?.total ?? null;
+}
+
+/** The head of a table of LD2. */
+function ld2Head(browser: Browser, browserName: string, what: string): string {
+  return `${machine(browser, browserName)}, macOS ${macOs()}; ${what}; the gzipped VCF of e2e/bigVcf.ts of ${LD2_VARIANTS.toLocaleString("en-US")} variants every 100 bp on one chromosome, 1,000 individuals; the memory is the footprints of the engine's processes summed, a sample every ${String(LD2_SAMPLE_PAUSE_MS)} ms and the time of a sample`;
+}
+
+/** One LD decay alone on popgen2.html, on a new page: the distance
+    `maxDist` typed and Run pressed, with the populations of `pops`. */
+async function ld2Alone(
+  browser: Browser,
+  browserName: string,
+  vcf: string,
+  pops: string | null,
+  maxDist: number,
+  deadline: number,
+): Promise<string[]> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const closed = { crashed: false, at: 0 };
+  page.on("crash", () => {
+    closed.crashed = true;
+    closed.at = Date.now();
+  });
+  const sampler = sampleMemory(browser, browserName, LD2_SAMPLE_PAUSE_MS);
+  const loadStart = machineLoad();
+  try {
+    await ld2Open(page, vcf, pops);
+    const part = ld2Part(page, "LD decay");
+    const field = part.getByRole("textbox", {
+      name: /^Largest distance between the two variants of a pair/u,
+    });
+    await field.fill(String(maxDist));
+    await field.press("Enter");
+    const run = part.getByRole("button", { name: "Run", exact: true });
+    await expect(run).toBeEnabled();
+    const logged = (await logOf(page)).length;
+    const clickedAt = Date.now();
+    await run.click();
+    const caption = part.getByRole("table", {
+      name: new RegExp(
+        `^The LD decay of each population, over .* pairs up to ${maxDist.toLocaleString("en-US")} base pairs apart\\.`,
+        "u",
+      ),
+    });
+    let calc: { posted?: Logged; answer?: Logged } = {};
+    const ended = await ld2Until(
+      async () => {
+        calc = await ld2Calc(page, logged, "ldDecay");
+        return calc.answer !== undefined;
+      },
+      closed,
+      deadline,
+    );
+    let shownMs: number | null = null;
+    let words = "";
+    let outcome: string;
+    let end = Date.now();
+    if (ended === "closed") {
+      outcome = "the tab closed";
+      end = closed.at === 0 ? Date.now() : closed.at;
+    } else if (ended === "deadline") {
+      outcome = `not ended at ${ld2S(Date.now() - clickedAt)}`;
+      words = await ld2Text(part);
+    } else if (calc.answer?.kind === "result") {
+      await expect(caption).toBeVisible({ timeout: 60_000 });
+      shownMs = Date.now() - clickedAt;
+      end = Date.now();
+      outcome = "result";
+      words = await ld2LastRun(page);
+    } else {
+      outcome = calc.answer?.kind ?? "nothing";
+      await page.waitForTimeout(2000);
+      words = await ld2Text(part);
+    }
+    const runMs =
+      calc.posted !== undefined && calc.answer !== undefined
+        ? calc.answer.t - calc.posted.t
+        : null;
+    if (!closed.crashed) await page.waitForTimeout(3000);
+    await sampler.stop();
+    const samples = sampler.samples;
+    return [
+      `${maxDist.toLocaleString("en-US")} bp, ${pops === null ? "one population of 1,000" : "two populations of 500"}`,
+      outcome,
+      ld2S(shownMs ?? (outcome === "result" ? null : end - clickedAt)),
+      ld2S(runMs),
+      words === "" ? "" : `"${words.slice(0, 220)}"`,
+      ld2Gb(ld2Last(samples, clickedAt)),
+      ld2Gb(ld2Peak(samples, clickedAt, end)),
+      closed.crashed ? "not taken" : ld2Gb(samples.at(-1)?.total ?? null),
+      `${loadStart}; ${machineLoad()}`,
+    ];
+  } finally {
+    await sampler.stop();
+    await context.close().catch(() => undefined);
+  }
+}
+
+const LD2_ALONE_COLUMNS = [
+  "case",
+  "outcome",
+  "Run to the result shown (or to the end of the wait)",
+  "request posted to the worker's answer",
+  "the tab's words",
+  "memory before Run",
+  "peak during the run",
+  "3 s after the answer",
+  "load averages at start; at end",
+] as const;
+
+/** The PCA, the diversity and the LD decay at `maxDist`, run once each on
+    a new page, then live; the threshold of missing data moved once, and
+    the time until each result. */
+async function ld2Live(
+  browser: Browser,
+  browserName: string,
+  vcf: string,
+  pops: string,
+  maxDist: number,
+  deadline: number,
+): Promise<string[][]> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const closed = { crashed: false, at: 0 };
+  page.on("crash", () => {
+    closed.crashed = true;
+    closed.at = Date.now();
+  });
+  const sampler = sampleMemory(browser, browserName, LD2_SAMPLE_PAUSE_MS);
+  const loadStart = machineLoad();
+  const shown = page.getByRole("tabpanel");
+  const runIn = (part: Locator): Locator =>
+    part.getByRole("button", { name: "Run", exact: true });
+  const firstRound = async (
+    analysis: "pca" | "diversity" | "ldDecay",
+    press: () => Promise<void>,
+  ): Promise<void> => {
+    const logged = (await logOf(page)).length;
+    await press();
+    const ended = await ld2Until(
+      async () => (await ld2Calc(page, logged, analysis)).answer !== undefined,
+      closed,
+      deadline,
+    );
+    const { answer } = await ld2Calc(page, logged, analysis);
+    if (ended !== "done" || answer?.kind !== "result") {
+      throw new Error(
+        `the first ${analysis} ended with ${answer?.kind ?? ended}`,
+      );
+    }
+  };
+  try {
+    const opened = Date.now();
+    await ld2Open(page, vcf, pops);
+    await ld2Tab(page, "PCA").click();
+    await shown
+      .locator("label")
+      .filter({ hasText: "Prune the variants by linkage disequilibrium (LD)" })
+      .click();
+    await firstRound("pca", () => runIn(shown).click());
+    await ld2Tab(page, "Populations").click();
+    await firstRound("diversity", () =>
+      runIn(ld2Part(page, "Diversity")).click(),
+    );
+    const ld = ld2Part(page, "LD decay");
+    const field = ld.getByRole("textbox", {
+      name: /^Largest distance between the two variants of a pair/u,
+    });
+    await field.fill(String(maxDist));
+    await field.press("Enter");
+    await firstRound("ldDecay", () => runIn(ld).click());
+    await expect(
+      ld.getByRole("button", { name: "Stop recalculating", exact: true }),
+    ).toBeVisible({ timeout: 60_000 });
+    await page.waitForTimeout(2000);
+    // The threshold of the missing data moved: 3 in 100 genotypes of the
+    // file are missing, so 0.04 drops a few of its variants and every
+    // analysis reads a new count.
+    await ld2Tab(page, "Variants").click();
+    const missing = page
+      .getByRole("region", { name: "Statistics of the file" })
+      .getByRole("group", {
+        name: "Proportion of missing genotypes",
+        exact: true,
+      })
+      .getByRole("textbox");
+    const value = (await missing.inputValue()) === "0.04" ? "0.05" : "0.04";
+    const logged = (await logOf(page)).length;
+    const changeAt = Date.now();
+    await missing.fill(value);
+    await missing.press("Enter");
+    await ld2Tab(page, "Populations").click();
+    const newCaption = (part: Locator, what: string): Locator =>
+      part.getByRole("table", {
+        name: new RegExp(
+          `^The ${what} of each population, over the (?!${LD2_VARIANTS.toLocaleString("en-US")} )[\\d,]+ variants`,
+          "u",
+        ),
+      });
+    const shownAt = new Map<string, number>();
+    const calcs = new Map<string, { posted?: Logged; answer?: Logged }>();
+    const analyses = ["pca", "diversity", "ldDecay"] as const;
+    const ended = await ld2Until(
+      async () => {
+        for (const a of analyses) calcs.set(a, await ld2Calc(page, logged, a));
+        for (const [a, part, what] of [
+          ["diversity", ld2Part(page, "Diversity"), "diversity"],
+          ["ldDecay", ld, "LD decay"],
+        ] as const) {
+          if (!shownAt.has(a) && (await newCaption(part, what).count()) > 0) {
+            shownAt.set(a, Date.now());
+          }
+        }
+        return (
+          analyses.every((a) => calcs.get(a)?.answer !== undefined) &&
+          shownAt.has("diversity") &&
+          shownAt.has("ldDecay")
+        );
+      },
+      closed,
+      deadline,
+    );
+    const end = ended === "closed" && closed.at !== 0 ? closed.at : Date.now();
+    const words = ended === "closed" ? "" : await ld2LastRun(page);
+    if (!closed.crashed) await page.waitForTimeout(3000);
+    await sampler.stop();
+    const samples = sampler.samples;
+    const loadEnd = machineLoad();
+    const since = (x: number | undefined): string =>
+      x === undefined ? "not reached" : ld2S(x - changeAt);
+    const byAnswer = [...analyses].sort(
+      (a, b) =>
+        (calcs.get(a)?.answer?.wall ?? Infinity) -
+        (calcs.get(b)?.answer?.wall ?? Infinity),
+    );
+    const names = { pca: "PCA", diversity: "diversity", ldDecay: "LD decay" };
+    return [
+      ...byAnswer.map((a) => {
+        const c = calcs.get(a) ?? {};
+        return [
+          names[a],
+          c.answer?.kind ??
+            (ended === "closed" ? "the tab closed" : "no answer"),
+          since(c.posted?.wall),
+          since(c.answer?.wall),
+          a === "pca" ? "(its result was shown before)" : since(shownAt.get(a)),
+          c.posted !== undefined && c.answer !== undefined
+            ? ld2S(c.answer.t - c.posted.t)
+            : "not taken",
+          a === "ldDecay" && words !== "" ? `"${words}"` : "",
+        ];
+      }),
+      [
+        "the whole case",
+        ended === "deadline"
+          ? `not all ended at ${ld2S(end - changeAt)}`
+          : ended,
+        `memory at the change ${ld2Gb(ld2Last(samples, changeAt))}`,
+        `peak from the change ${ld2Gb(ld2Peak(samples, changeAt, end))}`,
+        `peak from the opening ${ld2Gb(ld2Peak(samples, opened, end))}`,
+        `3 s after the last ${closed.crashed ? "not taken" : ld2Gb(samples.at(-1)?.total ?? null)}`,
+        `load averages at start ${loadStart}; at end ${loadEnd}`,
+      ],
+    ];
+  } finally {
+    await sampler.stop();
+    await context.close().catch(() => undefined);
+  }
+}
+
+test.describe("LD2 the LD decay on popgen2.html", () => {
+  const alone = [
+    { maxDist: 100_000, two: false },
+    { maxDist: 1_000_000, two: false },
+    { maxDist: 100_000, two: true },
+    { maxDist: 1_000_000, two: true },
+  ] as const;
+  for (const c of alone) {
+    const what = `${c.maxDist.toLocaleString("en-US")} bp, ${c.two ? "two populations of 500" : "one population of 1,000"}`;
+    test(`LD2 the LD decay alone, ${what}: the time from Run to the result shown, the tab's words, the peak of the engine`, async ({
+      browser,
+      browserName,
+    }) => {
+      // Under the 550,000 ms of a command of the measurement run.
+      test.setTimeout(540_000);
+      const deadline = Date.now() + LD2_DEADLINE_MS;
+      const { vcf, twoPops } = await ld2Files();
+      const row = await ld2Alone(
+        browser,
+        browserName,
+        vcf,
+        c.two ? twoPops : null,
+        c.maxDist,
+        deadline,
+      );
+      report(
+        `LD2 the LD decay alone, ${what}`,
+        ld2Head(
+          browser,
+          browserName,
+          `${c.two ? "the individuals in two populations of 500, q0 and q1" : "no individuals file, one population"}, the thresholds of a new page; the LD decay run from the Populations tab on a new page after the one pass`,
+        ),
+        LD2_ALONE_COLUMNS,
+        [row],
+      );
+    });
+  }
+
+  test("LD2 the PCA, the diversity and the LD decay at 100,000 bp live together, two populations of 500: the missing data moved once, the time until each result, in their order, and the peak", async ({
+    browser,
+    browserName,
+  }) => {
+    test.setTimeout(540_000);
+    const deadline = Date.now() + LD2_DEADLINE_MS;
+    const { vcf, twoPops } = await ld2Files();
+    const rows = await ld2Live(
+      browser,
+      browserName,
+      vcf,
+      twoPops,
+      100_000,
+      deadline,
+    );
+    report(
+      "LD2 the PCA, the diversity and the LD decay live together",
+      ld2Head(
+        browser,
+        browserName,
+        "the individuals in two populations of 500, the PCA's LD pruning off; each analysis run once by its Run, then the threshold of missing data moved to 0.04 in the Variants tab and the Populations tab shown; the times from the change",
+      ),
+      [
+        "analysis, in the order of their answers",
+        "answer",
+        "posted after the change",
+        "answered after the change",
+        "new caption shown after the change",
+        "request posted to answer",
+        "the tab's words",
+      ],
+      rows,
+    );
+  });
+});
