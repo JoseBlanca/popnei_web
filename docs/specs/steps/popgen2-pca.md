@@ -626,7 +626,9 @@ would have to be kept out of the PCA's key by hand (the design, choice
 
 From 11 October 2026, for `docs/designs/population-tab.md`, the PCA and
 the diversity of the Populations tab are each live on their own, and
-later the LD decay and the distances between populations will be too.
+later the LD decay and the distances between populations will be too
+(the distances are, since 12 October 2026, `popgen2-distances.md` and
+below).
 What this section says holds for every live analysis; what the section
 above says of the PCA, its live state, its quiet second, its changes
 under way, its Stop and its failures, holds for each, with its own key,
@@ -1412,7 +1414,9 @@ plot could not be made as a PNG in this browser; download it as SVG."
 ## The states
 
 Of the PCA tab. The tab of Populations and of Distances is either
-greyed or shows its line of not built yet.
+greyed or shows its line of not built yet; since 11 and 12 October
+2026 they show the diversity and the distances, whose states are in
+`popgen2-populations.md` and `popgen2-distances.md`.
 
 | state | what the user sees | what they can do |
 |---|---|---|
@@ -1974,7 +1978,8 @@ and those of `docs/designs/no-undo.md` on 10 October 2026.
   `docs/specs/core/store.md`.
 - The boxes, the Variants tab and the Individuals tab:
   `popgen2-input.md`, `popgen2-filters.md`, `popgen2-download.md`.
-- The Populations tab: `popgen2-populations.md`. The LD decay and the
-  Distances tab, later pieces.
+- The Populations tab: `popgen2-populations.md`. The LD decay, a later
+  piece. The Distances tab: `popgen2-distances.md`, since 12 October
+  2026.
 - The saving of a project on this page, and the help drawer.
 - The old page, `popgen.html`, which gets none of this.

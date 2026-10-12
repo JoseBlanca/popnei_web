@@ -1064,3 +1064,5 @@ in the band, which the heading line had at `--text-xl`.
 - The error bar of `popgen.html`: `docs/specs/shell.md`.
 - The tabs of the Populations and the Distances, not built: when they
   have results with warnings, the link names them as it names the PCA's.
+  Both are built since 11 and 12 October 2026 (`popgen2-populations.md`,
+  `popgen2-distances.md`).

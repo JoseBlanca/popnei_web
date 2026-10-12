@@ -49,7 +49,11 @@ the box says of a file dropped, pasted or picked on the greyed zone,
 which names that file and says it was not opened, and of a folder, a
 text or several files there, which get the words they get when the zone
 does not wait; and the lock's words, which name the diversity alone;
-each where this spec says so, with its date.
+each where this spec says so, with its date. Since 12 October 2026 the
+distances between populations of the Distances tab read the
+populations too, and while they run the same controls are greyed, with
+words that name the distances (`popgen2-distances.md`, "While the
+distances run").
 
 The two tabs were called "Variants file" and "Individuals file" until 9
 October 2026, when the row of five tabs of `popgen2-pca.md` renamed them
@@ -472,6 +476,11 @@ one height as the table scrolls sideways: "Fecha de muestreo" of
 33 to 57 pixels when it came into view. The types of the columns are not shown.
 
 ### While the diversity runs
+
+Since 12 October 2026, all of this holds while the distances between
+populations run too, with "the distances" in the words
+(`popgen2-distances.md`, "While the distances run").
+
 
 From 11 October 2026, while the diversity of the Populations tab runs,
 whether its Run or a change started it, what gives the populations is

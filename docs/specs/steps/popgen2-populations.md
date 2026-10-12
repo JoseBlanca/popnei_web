@@ -330,8 +330,10 @@ in the Populations tab and the PCA in the PCA tab to change the
 filters; then press Run in each tab to calculate them again."
 
 The words of the lock of the populations name, beside the diversity,
-only the live analyses that read the populations, none today: the PCA
-does not read them, so a change of the column or of the individuals
+only the live analyses that read the populations, none today (since 12
+October 2026 the distances between populations of the Distances tab
+read them too, and are named beside the diversity,
+`popgen2-distances.md`): the PCA does not read them, so a change of the column or of the individuals
 file sends it no request, and stopping it to make one would end its
 live state for nothing. With the PCA live, they are those of the
 diversity alone, "Stop the diversity in the Populations tab to change
