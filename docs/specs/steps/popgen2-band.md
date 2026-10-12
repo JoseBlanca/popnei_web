@@ -354,7 +354,12 @@ it names the one that ran.
 At 320 px the short forms drop the analyses waiting, "PCA · 1:20", the
 whole words given to a screen reader, and the line holds "Popnei", the
 short form, Stop and Stop all; the flows check that it fits on one
-line, as "PCoA soon" with the whole "Stop recalculating" does.
+line, as "PCoA soon" with the whole "Stop recalculating" does. One
+line does not fit: "Diversity later" with the whole "Stop
+recalculating", the diversity alone live and waiting for the download
+or held after a crash, needs 288.4 px of 288 and takes a second row,
+its words whole (left so after the review of work package 4 of
+`docs/plans/population-tab.md`, 12 October 2026).
 
 Under 45 rem, where the band shows its short forms, an analysis about
 to start beside Stop all loses its Stop recalculating in the band, and
@@ -713,9 +718,11 @@ the control beside the words it acts on and not at the far end of the
 column. At 320 px
 the same, within the 16 px margins of the page, the status in its short
 form and in the small text of the page, `--text-sm`, the heading in
-`--text-lg` and the parts a quarter of a rem apart, so that the
-longest, "PCoA soon" with the whole "Stop recalculating", fits beside
-"Popnei"; the flows check that it does.
+`--text-lg` and the parts a quarter of a rem apart, so that "PCoA
+soon" with the whole "Stop recalculating" fits beside "Popnei"; the
+flows check that it does. The one line longer than it, "Diversity
+later" with the whole "Stop recalculating", 288.4 px of 288, takes a
+second row for its button (above, "Several live analyses").
 
 The width under which the band is narrow was 44 rem, 704 px at the
 browser's usual size of text, from 12 October 2026, the review of work
