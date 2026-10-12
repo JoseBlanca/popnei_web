@@ -22,7 +22,7 @@ import type {
 } from "../../worker/protocol.ts";
 import type { WriteFormat } from "../../core/keys.ts";
 import type { LiveAnalysisName } from "../analyses/status.ts";
-import { STOP_ALL_PLACE, clockText, eachInItsTab } from "../analyses/words.ts";
+import { STOP_ALL_PLACE, clockText } from "../analyses/words.ts";
 import { failedText } from "./words.ts";
 
 /** The words of the button, whose three dots say that it opens a
@@ -43,24 +43,19 @@ export const DOWNLOAD_NEEDS =
     the one pass is finished: "Waits for the PCA to end; or stop it in the
     PCA tab." (docs/specs/steps/popgen2-download.md, "While a PCA runs");
     and, while others wait to start after it, `waiting`, in their order,
-    since each starts when the one before ends, with Stop all offered,
-    `stopAllOffered`: "Waits for the PCA, and the diversity after it, to
-    end; or press Stop all beside the heading Popnei." (the same, "While
-    an analysis runs"); until the band offers it, the Stop of each tab:
-    "Waits for the PCA, and the diversity after it, to end; or stop the
-    PCA in the PCA tab and the diversity in the Populations tab." */
+    since each starts when the one before ends, with Stop all of the
+    band, which ends them all: "Waits for the PCA, and the diversity
+    after it, to end; or press Stop all beside the heading Popnei." (the
+    same, "While an analysis runs"). */
 export function analysisWaitsText(
   running: LiveAnalysisName,
   waiting: readonly LiveAnalysisName[],
-  stopAllOffered: boolean,
 ): string {
   if (waiting.length === 0) {
     return `Waits for ${running.name} to end; or stop it in the ${running.tab} tab.`;
   }
   const waits = `Waits for ${running.name}, and ${bothOf(waiting.map((one) => one.name))} after it, to end`;
-  return stopAllOffered
-    ? `${waits}; or press ${STOP_ALL_PLACE}.`
-    : `${waits}; or stop ${eachInItsTab([running, ...waiting])}.`;
+  return `${waits}; or press ${STOP_ALL_PLACE}.`;
 }
 
 /** The heading of the dialog, which is also its name. */

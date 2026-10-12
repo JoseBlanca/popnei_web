@@ -8,7 +8,6 @@ import {
   clockText,
   failedWordsOf,
   failureText,
-  STOP_ALL_OFFERED,
   filtersLockedText,
   populationsLockedText,
   popgen2FailureText,
@@ -430,58 +429,41 @@ const DIVERSITY: LiveAnalysisName = {
 
 describe("PT1 D7 the words of the lock of the filters, with and without another analysis live", () => {
   test("the PCA alone, and the PCoA, as before", () => {
-    expect(filtersLockedText(PCA, [], false)).toBe(
+    expect(filtersLockedText(PCA, [])).toBe(
       "Stop the PCA in the PCA tab to change the filters; then press Run there to calculate it again.",
     );
-    expect(filtersLockedText(PCOA, [], false)).toBe(
+    expect(filtersLockedText(PCOA, [])).toBe(
       "Stop the PCoA in the PCA tab to change the filters; then press Run there to calculate it again.",
     );
   });
 
   test("the diversity alone names its tab, Populations", () => {
-    expect(filtersLockedText(DIVERSITY, [], false)).toBe(
+    expect(filtersLockedText(DIVERSITY, [])).toBe(
       "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again.",
     );
   });
 
-  test("until the band offers Stop all, the words name the Stop of each tab", () => {
-    expect(filtersLockedText(PCA, [DIVERSITY], false)).toBe(
-      "Stop the PCA in the PCA tab and the diversity in the Populations tab to change the filters; then press Run in each tab to calculate them again.",
-    );
-    expect(filtersLockedText(DIVERSITY, [PCA], false)).toBe(
-      "Stop the diversity in the Populations tab and the PCA in the PCA tab to change the filters; then press Run in each tab to calculate them again.",
-    );
-    expect(filtersLockedText(PCA, [], false)).toBe(
-      filtersLockedText(PCA, [], true),
-    );
-  });
-
-  test("the band offers Stop all, so that the words name it", () => {
-    expect(STOP_ALL_OFFERED).toBe(true);
-  });
-
   test("the PCA running with the diversity live adds Stop all, which stops the diversity too", () => {
-    expect(filtersLockedText(PCA, [DIVERSITY], true)).toBe(
+    expect(filtersLockedText(PCA, [DIVERSITY])).toBe(
       "Stop the PCA in the PCA tab to change the filters, or press Stop all beside the heading Popnei to stop the diversity too; then press Run in each tab to calculate them again.",
     );
-    expect(filtersLockedText(PCOA, [DIVERSITY], true)).toBe(
+    expect(filtersLockedText(PCOA, [DIVERSITY])).toBe(
       "Stop the PCoA in the PCA tab to change the filters, or press Stop all beside the heading Popnei to stop the diversity too; then press Run in each tab to calculate them again.",
     );
   });
 
   test("the diversity running with the PCA live adds Stop all, which stops the PCA too", () => {
-    expect(filtersLockedText(DIVERSITY, [PCA], true)).toBe(
+    expect(filtersLockedText(DIVERSITY, [PCA])).toBe(
       "Stop the diversity in the Populations tab to change the filters, or press Stop all beside the heading Popnei to stop the PCA too; then press Run in each tab to calculate them again.",
     );
   });
 
   test("two analyses live beside the one running are named both, in their order", () => {
     expect(
-      filtersLockedText(
-        PCA,
-        [DIVERSITY, { ...DIVERSITY, name: "the LD decay" }],
-        true,
-      ),
+      filtersLockedText(PCA, [
+        DIVERSITY,
+        { ...DIVERSITY, name: "the LD decay" },
+      ]),
     ).toBe(
       "Stop the PCA in the PCA tab to change the filters, or press Stop all beside the heading Popnei to stop the diversity and the LD decay too; then press Run in each tab to calculate them again.",
     );
@@ -490,22 +472,13 @@ describe("PT1 D7 the words of the lock of the filters, with and without another 
 
 describe("PT3 D1 the words of the lock of the populations, with and without another analysis live", () => {
   test("the diversity alone: stop it in the Populations tab to change the populations, then Run there", () => {
-    expect(populationsLockedText(DIVERSITY, [], false)).toBe(
+    expect(populationsLockedText(DIVERSITY, [])).toBe(
       "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again.",
     );
-    expect(populationsLockedText(DIVERSITY, [], true)).toBe(
-      populationsLockedText(DIVERSITY, [], false),
-    );
   });
 
-  test("until the band offers Stop all, the words name the Stop of each tab of an analysis beside that reads the populations", () => {
-    expect(populationsLockedText(DIVERSITY, [DISTANCES], false)).toBe(
-      "Stop the diversity in the Populations tab and the distances in the Distances tab to change the populations; then press Run in each tab to calculate them again.",
-    );
-  });
-
-  test("with Stop all offered and an analysis that reads the populations live beside it, the words name Stop all, which stops it too", () => {
-    expect(populationsLockedText(DIVERSITY, [DISTANCES], true)).toBe(
+  test("with an analysis that reads the populations live beside it, the words name Stop all, which stops it too", () => {
+    expect(populationsLockedText(DIVERSITY, [DISTANCES])).toBe(
       "Stop the diversity in the Populations tab to change the populations, or press Stop all beside the heading Popnei to stop the distances too; then press Run in each tab to calculate them again.",
     );
   });

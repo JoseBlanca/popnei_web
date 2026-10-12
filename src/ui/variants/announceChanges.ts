@@ -31,7 +31,6 @@ import {
   pcaStoppedText,
 } from "../analyses/pca/tabWords.ts";
 import { buttonOf, liveAnalysisOf, statusOf } from "../analyses/status.ts";
-import { STOP_ALL_OFFERED } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import type { Announcer } from "../shell/status.ts";
 import { noVariantAnnouncement } from "./downloadState.ts";
@@ -245,10 +244,7 @@ export function announceLive(
         const text =
           rest.length === 0
             ? liveSaidOf(first).startedAlone(s)
-            : roundText(
-                event.round.map((id) => liveAnalysisOf(s, id)),
-                STOP_ALL_OFFERED,
-              );
+            : roundText(event.round.map((id) => liveAnalysisOf(s, id)));
         // Of the kind of the round's last analysis, whose end alone drops
         // it: an end of an earlier one within the region's pause is said
         // after it, since the next one then starts, said nowhere else.

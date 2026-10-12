@@ -29,19 +29,14 @@ function joined(names: readonly string[], then: boolean): string {
  * diversity: "Calculating the PCA and then the diversity again. To
  * change the filters, press Stop all beside the heading Popnei, or stop
  * each in its tab; to change the populations, stop the diversity in the
- * Populations tab." when the band offers Stop all, `stopAllOffered`;
- * until then "… To change the filters, stop each in its tab; …". The
+ * Populations tab." The
  * populations are named with the analyses of the round that read them,
  * since only those lock them, and with "or the populations" when all
  * do.
  */
-export function roundText(
-  named: readonly LiveAnalysisName[],
-  stopAllOffered: boolean,
-): string {
-  const how = stopAllOffered
-    ? "press Stop all beside the heading Popnei, or stop each in its tab"
-    : "stop each in its tab";
+export function roundText(named: readonly LiveAnalysisName[]): string {
+  const how =
+    "press Stop all beside the heading Popnei, or stop each in its tab";
   const readers = named.filter((one) => one.readsPopulations);
   const start = `Calculating ${joined(
     named.map((one) => one.name),

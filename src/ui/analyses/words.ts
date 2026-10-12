@@ -551,20 +551,16 @@ export function minimumRefusedText(
     runs"). With other analyses live beside it, `beside`, in their order,
     the words name them too, since a Stop of the one running alone lets
     the others start a second after the next change and lock the filters
-    again: with Stop all offered, `stopAllOffered`, "Stop the PCA in the
-    PCA tab to change the filters, or press Stop all beside the heading
-    Popnei to stop the diversity too; then press Run in each tab to
-    calculate them again." (popgen2-pca.md, "Several analyses calculated
-    again by themselves", "The lock"); until the band offers it, the
-    Stop of each tab: "Stop the PCA in the PCA tab and the diversity in
-    the Populations tab to change the filters; then press Run in each tab
-    to calculate them again." */
+    again, and Stop all of the band, which ends them all: "Stop the PCA
+    in the PCA tab to change the filters, or press Stop all beside the
+    heading Popnei to stop the diversity too; then press Run in each tab
+    to calculate them again." (popgen2-pca.md, "Several analyses
+    calculated again by themselves", "The lock"). */
 export function filtersLockedText(
   running: LiveAnalysisName,
   beside: readonly LiveAnalysisName[],
-  stopAllOffered: boolean,
 ): string {
-  return lockedText("the filters", running, beside, stopAllOffered);
+  return lockedText("the filters", running, beside);
 }
 
 /** The reason the column of the populations, the individuals file and
@@ -577,9 +573,8 @@ export function filtersLockedText(
 export function populationsLockedText(
   running: LiveAnalysisName,
   beside: readonly LiveAnalysisName[],
-  stopAllOffered: boolean,
 ): string {
-  return lockedText("the populations", running, beside, stopAllOffered);
+  return lockedText("the populations", running, beside);
 }
 
 /** The words of a lock of `what`, "the filters" or "the populations",
@@ -588,15 +583,11 @@ function lockedText(
   what: "the filters" | "the populations",
   running: LiveAnalysisName,
   beside: readonly LiveAnalysisName[],
-  stopAllOffered: boolean,
 ): string {
   if (beside.length === 0) {
     return `Stop ${running.name} in the ${running.tab} tab to change ${what}; then press Run there to calculate it again.`;
   }
-  const again = "then press Run in each tab to calculate them again.";
-  return stopAllOffered
-    ? `Stop ${running.name} in the ${running.tab} tab to change ${what}, or press ${STOP_ALL_PLACE} to stop ${bothOf(beside.map((one) => one.name))} too; ${again}`
-    : `Stop ${eachInItsTab([running, ...beside])} to change ${what}; ${again}`;
+  return `Stop ${running.name} in the ${running.tab} tab to change ${what}, or press ${STOP_ALL_PLACE} to stop ${bothOf(beside.map((one) => one.name))} too; then press Run in each tab to calculate them again.`;
 }
 
 /** The analyses `named`, each with its tab, as a Stop of each names
@@ -608,12 +599,3 @@ export function eachInItsTab(named: readonly LiveAnalysisName[]): string {
 
 /** Stop all and where it is, in the words of a lock or of a wait. */
 export const STOP_ALL_PLACE = "Stop all beside the heading Popnei";
-
-/** Whether the band offers Stop all, which the words of the locks of the
-    filters and of the populations, of the download's wait and of a round
-    name when another analysis is live beside the one running: the band
-    offers it whenever two or more analyses are live and one of them
-    runs, waits or is about to start (docs/specs/steps/popgen2-band.md,
-    "Several live analyses"), from work package 4 of
-    docs/plans/population-tab.md; false names the Stop of each tab. */
-export const STOP_ALL_OFFERED = true;

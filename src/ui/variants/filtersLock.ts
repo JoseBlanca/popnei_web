@@ -29,11 +29,7 @@ import type { AppState } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { liveBeside, runningAnalysisOf } from "../analyses/status.ts";
 import type { LiveAnalysisName } from "../analyses/status.ts";
-import {
-  STOP_ALL_OFFERED,
-  filtersLockedText,
-  populationsLockedText,
-} from "../analyses/words.ts";
+import { filtersLockedText, populationsLockedText } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { useLive } from "../autoRunsContext.ts";
 
@@ -47,11 +43,7 @@ export function filtersLockOf(
   const running = runningAnalysisOf(s);
   return running === null
     ? null
-    : filtersLockedText(
-        running,
-        liveBeside(s, running, live),
-        STOP_ALL_OFFERED,
-      );
+    : filtersLockedText(running, liveBeside(s, running, live));
 }
 
 /** The reason the options of the analysis `id` wait in `s`, the words of
@@ -86,7 +78,6 @@ export function populationsLockOf(
     : populationsLockedText(
         running,
         liveBeside(s, running, live).filter((one) => one.readsPopulations),
-        STOP_ALL_OFFERED,
       );
 }
 

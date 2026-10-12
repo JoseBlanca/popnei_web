@@ -324,28 +324,19 @@ const DIVERSITY: LiveAnalysisName = {
 
 describe("PT1 D7 the words of the download's wait for the analyses", () => {
   test("the PCA, and the diversity, running with none waiting after it: stop it in its tab", () => {
-    expect(analysisWaitsText(PCA, [], false)).toBe(
+    expect(analysisWaitsText(PCA, [])).toBe(
       "Waits for the PCA to end; or stop it in the PCA tab.",
     );
-    expect(analysisWaitsText(DIVERSITY, [], false)).toBe(
+    expect(analysisWaitsText(DIVERSITY, [])).toBe(
       "Waits for the diversity to end; or stop it in the Populations tab.",
     );
   });
 
-  test("until the band offers Stop all: both named, and the Stop of each tab", () => {
-    expect(analysisWaitsText(PCA, [DIVERSITY], false)).toBe(
-      "Waits for the PCA, and the diversity after it, to end; or stop the PCA in the PCA tab and the diversity in the Populations tab.",
-    );
-    expect(analysisWaitsText(DIVERSITY, [PCA], false)).toBe(
-      "Waits for the diversity, and the PCA after it, to end; or stop the diversity in the Populations tab and the PCA in the PCA tab.",
-    );
-  });
-
   test("the PCA running and the diversity waiting after it: both named, and Stop all", () => {
-    expect(analysisWaitsText(PCA, [DIVERSITY], true)).toBe(
+    expect(analysisWaitsText(PCA, [DIVERSITY])).toBe(
       "Waits for the PCA, and the diversity after it, to end; or press Stop all beside the heading Popnei.",
     );
-    expect(analysisWaitsText(DIVERSITY, [PCA], true)).toBe(
+    expect(analysisWaitsText(DIVERSITY, [PCA])).toBe(
       "Waits for the diversity, and the PCA after it, to end; or press Stop all beside the heading Popnei.",
     );
   });

@@ -63,10 +63,10 @@ describe("AP6 D1 the words of the PCA tab", () => {
       tab: "PCA",
       readsPopulations: false,
     };
-    expect(filtersLockedText(pca, [], false)).toBe(
+    expect(filtersLockedText(pca, [])).toBe(
       "Stop the PCA in the PCA tab to change the filters; then press Run there to calculate it again.",
     );
-    expect(filtersLockedText({ ...pca, name: "the PCoA" }, [], false)).toBe(
+    expect(filtersLockedText({ ...pca, name: "the PCoA" }, [])).toBe(
       "Stop the PCoA in the PCA tab to change the filters; then press Run there to calculate it again.",
     );
   });
