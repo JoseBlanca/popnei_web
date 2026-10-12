@@ -13,7 +13,11 @@ import { barsHeight, createBars } from "./bars.ts";
 import type { Bar, BarsData } from "./bars.ts";
 import { MAX_BARS } from "./limits.ts";
 import { symbolPath } from "./marks.ts";
-import { fakeWidth, measureWithFake, stopFakeMeasure } from "./testSupport.ts";
+import {
+  fakeMeasured,
+  measureWithFake,
+  stopFakeMeasure,
+} from "./testSupport.ts";
 
 /** The frame of an element of 400 by 136 with names of two characters,
     their 18 pixels with 4 before them and 20 after, for their marks. */
@@ -290,7 +294,7 @@ describe("review of round 1: the names measured, not counted", () => {
     stopFakeMeasure();
   });
 
-  test("names of wide letters, measured at 11 pixels a W and 6 another: ten Ws whole at 1,000 pixels in a margin of 134; twenty cut at 400 pixels to the eleven Ws that fit 136 pixels about the ellipsis, in a margin of 151", () => {
+  test("names of wide letters, measured at 11 pixels a W and 5.5 another: ten Ws whole at 1,000 pixels in a margin of 134; twenty cut at 400 pixels to the eleven Ws that fit 136 pixels about the ellipsis, 126.5, in a margin of 151", () => {
     measureWithFake();
     const wide = sizedElement(1000, 136);
     createBars(wide, barsOf([{ name: "W".repeat(10), group: 0, value: 0.3 }]));
@@ -303,7 +307,7 @@ describe("review of round 1: the names measured, not counted", () => {
       barsOf([{ name: "W".repeat(20), group: 0, value: 0.3 }]),
     );
     const cut = `${"W".repeat(6)}…${"W".repeat(5)}`;
-    expect(fakeWidth(cut)).toBe(127);
+    expect(fakeMeasured(cut)).toBe(126.5);
     expect(ticks(narrow, "y")).toEqual([cut]);
     expect(leftMargin(narrow)).toBe(4 + 127 + 20);
   });

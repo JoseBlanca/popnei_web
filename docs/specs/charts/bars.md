@@ -80,7 +80,10 @@ and nothing told the two bars apart but the order of the table.) A name is measu
 pixels, by `textWidth` of `src/charts/textWidth.ts`; where
 nothing measures, under jsdom, a character counts 9 pixels, as the
 heatmap counts its names (`docs/specs/charts/heatmap.md`, "The names on
-the axes"). (Changed on 12 October 2026, the review of round 1: the names
+the axes"). A width measured is taken a tenth wider, to a hundredth of
+a pixel: WebKit draws the exported image, the PNG, in a wider font than
+the page's, and a name that fit the screen started about 10 pixels left
+of the image. (Changed on 12 October 2026, the review of round 1: the names
 were counted at 9 pixels a character, and a name of capital Ws, 11
 pixels each in the system font of the Mac, started 13.5 pixels left of
 the SVG and was cut on the screen and in the files.)
@@ -204,9 +207,9 @@ element stubbed at 400 by 136:
   rows 2 and 3, alike once cut, written "Lan…_1 (2)" and "Lan…_1 (3)",
   and "p0" in row 1 whole, in a left margin of 114;
 - measured by a fake measure of the test that gives a W 11 pixels and
-  any other character 6: ten Ws whole at 1,000 pixels, in a left margin
+  any other character 5.5, the tenth more included: ten Ws whole at 1,000 pixels, in a left margin
   of 134; twenty Ws at 400 pixels cut to six, the ellipsis and five,
-  the 127 pixels that fit 136, in a margin of 151;
+  the 126.5 pixels that fit 136, in a margin of 151;
 - the marks: three names of groups 0, 2 and 1, three
   `path.chart-points.chart-bars-mark` of `chart-colour-0`, `-2` and
   `-1`, the symbols of those groups, each translated to x −10 and the

@@ -20,6 +20,14 @@ export const ELLIPSIS = "…";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
+/**
+ * What a measured width is taken times: WebKit draws an exported SVG,
+ * the PNG, in a wider font than the page's, and a name that fit the
+ * screen started 10 pixels or so left of the image, "MMMMMM…MMMMM"; a
+ * tenth more holds it (the review of round 1, 12 October 2026).
+ */
+const MEASURE_SLACK = 1.1;
+
 /** The text that measures, in its SVG in the body; null before the
     first measure, and made again when a page or a test emptied the body. */
 let measuring: SVGTextElement | null = null;
@@ -70,7 +78,11 @@ export function measuredWidth(text: string, fontSize: number): number | null {
   if (measure === null) return null;
   measure.setAttribute("font-size", String(fontSize));
   measure.textContent = text;
-  return measure.getComputedTextLength();
+  // To a hundredth of a pixel, so that a sum of widths is the same in
+  // every engine and a test can give it exactly.
+  return (
+    Math.round(measure.getComputedTextLength() * MEASURE_SLACK * 100) / 100
+  );
 }
 
 /** How a text is cut to a width. */

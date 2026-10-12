@@ -17,7 +17,11 @@ import { MAX_LINE_SERIES, MAX_SVG_POINTS } from "./limits.ts";
 import { createLine, lineLegendRoom } from "./line.ts";
 import type { LineData, LineSeries, XY } from "./line.ts";
 import { drawSymbolAt, SYMBOL_AREA } from "./marks.ts";
-import { fakeWidth, measureWithFake, stopFakeMeasure } from "./testSupport.ts";
+import {
+  fakeMeasured,
+  measureWithFake,
+  stopFakeMeasure,
+} from "./testSupport.ts";
 
 /** The right margin of a legend at the right of the frame whose longest
     label has four characters: 12 to its rows, their piece of line of 24,
@@ -755,7 +759,7 @@ describe("review of round 1: the labels of the legend measured, not counted", ()
       above.querySelector("g.chart-legend")?.getAttribute("data-place"),
     ).toBe("above");
     const cut = `${"W".repeat(12)}…${"W".repeat(12)}`;
-    expect(fakeWidth(cut)).toBe(270);
+    expect(fakeMeasured(cut)).toBe(269.5);
     expect(legendTexts(above)).toEqual([cut, "pop1"]);
   });
 });
@@ -779,7 +783,7 @@ describe("review of round 1: the label up the plot keeps its gap from the number
     yWholeNumbers: true,
   });
 
-  test("numbers of 7 characters, measured at 42 pixels: the left margin widens from 60 to 77, 16 to the label's baseline, 4 of its descent, 6, 9 to the numbers and 42; numbers of 0.2 keep the 60; counted, as under jsdom, the margin stays 60", () => {
+  test("numbers of 7 characters, measured at 38.5 pixels: the left margin widens from 60 to 74, 16 to the label's baseline, 4 of its descent, 6, 9 to the numbers and 38.5; numbers of 0.2 keep the 60; counted, as under jsdom, the margin stays 60", () => {
     const counted = sizedElement();
     createLine(counted, wideNumbers());
     expect(leftOf(counted)).toBe(60);
@@ -791,7 +795,7 @@ describe("review of round 1: the label up the plot keeps its gap from the number
 
     const wide = sizedElement();
     createLine(wide, wideNumbers());
-    expect(fakeWidth("100,000")).toBe(42);
-    expect(leftOf(wide)).toBe(16 + 4 + 6 + 9 + 42);
+    expect(fakeMeasured("100,000")).toBe(38.5);
+    expect(leftOf(wide)).toBe(Math.ceil(16 + 4 + 6 + 9 + 38.5));
   });
 });
