@@ -32,6 +32,7 @@ import {
 import type { ExportSize } from "./export.ts";
 import { createPlot2d } from "./plot2d.ts";
 import type { Frame, Margin, Plot2dDefinition, PlotText } from "./plot2d.ts";
+import { cutText, textWidth } from "./textWidth.ts";
 import type { Chart } from "./types.ts";
 
 /**
@@ -134,10 +135,14 @@ const LEGEND_LINE = 24;
 const LEGEND_GAP = 6;
 /**
  * The width a character of a label is taken to have, at the 12 pixels of
- * the text of a legend: the labels are not measured, and 7.5 pixels holds
- * a name in capitals in the fonts of macOS and of Linux.
+ * the text of a legend, where nothing measures text (textWidth.ts): 7.5
+ * pixels held a name in capitals in the fonts of macOS and of Linux.
  */
 const LEGEND_CHARACTER = 7.5;
+/** The size of the text of the legend, as charts.css writes it. */
+const LEGEND_FONT_SIZE = 12;
+/** The fewest characters a label of the legend keeps when it is cut. */
+const LEGEND_LEAST = 4;
 /**
  * The legend stands at the right of the frame while that leaves the frame
  * this wide, and above the plot otherwise.
@@ -145,13 +150,16 @@ const LEGEND_CHARACTER = 7.5;
 const MIN_FRAME_WIDTH = 300;
 
 /** The width of the longest row of the legend: its piece of line, the gap
-    and its label, by the count of its characters. */
+    and its label, measured. */
 function legendRowWidth(data: LineData): number {
   let longest = 0;
   for (const series of data.series) {
-    longest = Math.max(longest, Array.from(series.label).length);
+    longest = Math.max(
+      longest,
+      textWidth(series.label, LEGEND_FONT_SIZE, LEGEND_CHARACTER),
+    );
   }
-  return LEGEND_LINE + LEGEND_GAP + Math.ceil(LEGEND_CHARACTER * longest);
+  return LEGEND_LINE + LEGEND_GAP + Math.ceil(longest);
 }
 
 /** The right margin with the legend at the right of the frame. */
@@ -418,7 +426,9 @@ function markPath(group: number, x: number, y: number): string {
  * middle of that piece, and its text after it. The rows stand at the right
  * of the frame, from its top down, or, in a narrow element, above the
  * plot, from the top left corner of the SVG; `data-place` of the group
- * says which. It is placed without measuring its text.
+ * says which. Above the plot, a label longer than the SVG leaves it is
+ * cut to its first characters and an ellipsis, measured, so that no row
+ * passes the right edge of the SVG.
  */
 function drawLegend(frame: Frame, data: LineData): void {
   const { margin } = frame;
@@ -430,6 +440,21 @@ function drawLegend(frame: Frame, data: LineData): void {
     ? LEGEND_FROM_EDGE
     : margin.left + frame.innerWidth + LEGEND_FROM_FRAME;
   const top = (above ? 0 : margin.top) + LEGEND_TOP + LEGEND_ROW / 2;
+  const labelRoom =
+    margin.left +
+    frame.innerWidth +
+    margin.right -
+    left -
+    LEGEND_LINE -
+    LEGEND_GAP -
+    (above ? LEGEND_FROM_EDGE : LEGEND_END);
+  const labelOf = (label: string): string =>
+    cutText(label, labelRoom, {
+      fontSize: LEGEND_FONT_SIZE,
+      perCharacter: LEGEND_CHARACTER,
+      most: Number.POSITIVE_INFINITY,
+      least: LEGEND_LEAST,
+    });
   frame.legend
     .attr("data-place", above ? "above" : "right")
     .selectAll<SVGGElement, LineSeries>("g.chart-legend-row")
@@ -468,7 +493,7 @@ function drawLegend(frame: Frame, data: LineData): void {
         .attr("class", "chart-legend-text")
         .attr("x", LEGEND_LINE + LEGEND_GAP)
         .attr("dy", "0.35em")
-        .text(series.label);
+        .text(labelOf(series.label));
     });
 }
 

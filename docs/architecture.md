@@ -3441,6 +3441,10 @@ src/charts/
   bars.ts           from 12 October 2026, a bar across for each of a few
                     names, the plots of the table of the diversity in
                     the Populations tab (docs/specs/charts/bars.md)
+  textWidth.ts      from 12 October 2026, the width of a text of a plot,
+                    measured on a canvas in the font of the plots, and a
+                    text cut to a width, for the names of bars.ts and the
+                    legend of line.ts
   marks.ts          the colour and the symbol of each group of points, and
                     the colours of a column of numbers, for the 2D and 3D
                     plots of the PCA (docs/specs/charts/scatter.md)

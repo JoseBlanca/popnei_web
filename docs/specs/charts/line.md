@@ -99,12 +99,16 @@ and not HTML of the screen, as the scatter's is: the scatter's legend is
 made of buttons that highlight a population, which must be outside the
 SVG to be reached by the keyboard, and this legend has no control.
 
-**The room of the legend** is counted and not measured, as the margins
-of every plot are (`plot2d.md`): a label is taken to be 7.5 pixels wide
-for each of its characters, at the 12 pixels of the text of a legend,
-which held the labels of two populations named in 16 capitals,
-"MESOAMERICA_WILD", in the system font of macOS and in DejaVu Sans, the
-font of the Linux of the checks; a row is its piece of line, 24 pixels,
+**The room of the legend** holds its labels measured, in the font of
+the plots at the 12 pixels of the text of a legend, by `textWidth` of
+`src/charts/textWidth.ts`, the measure of the bar plot's names
+(`bars.md`, "The room of the names"); where nothing measures, under
+jsdom, a character counts 7.5 pixels, which held the labels of two
+populations named in 16 capitals, "MESOAMERICA_WILD", in the system
+font of macOS and in DejaVu Sans, the font of the Linux of the checks.
+(Changed on 12 October 2026, the review of round 1: counted at 7.5
+pixels, a label of 25 capital Ws ended 53 pixels past the right edge of
+the SVG.) A row is its piece of line, 24 pixels,
 6 more, and its label. At the right, the legend starts 12 pixels from
 the frame, and the right margin is those 12, the longest row and 4
 more, and never less than 28 pixels: with the 16 the plot had, the last
@@ -263,8 +267,10 @@ piece. At the right of the frame the rows start 12 pixels from it, the
 first 8 pixels below its top; above the plot they start 8 pixels from
 the left edge of the SVG, the first 8 pixels below its top, and the
 frame starts 12 pixels under the last. `chart-legend` has `data-place`,
-"right" or "above". The legend is placed without measuring its text, as
-the histogram's is.
+"right" or "above". Above the plot, a label longer than the SVG leaves
+it, from the start of its text to 8 pixels before the right edge, is
+cut to as many of its first characters as fit with an ellipsis, 3 and
+the ellipsis at the fewest, measured as above (from 12 October 2026).
 
 The classes the plot adds to `charts.css`, colours from the tokens:
 
@@ -310,9 +316,10 @@ definition's `margin` with the data from 1 October 2026 (`plot2d.md`,
   element higher by `narrowHeight` exactly when it is narrower than
   `narrowUnder`, and never narrower than `narrowWidth`, below which it
   scrolls sideways in its frame as it does under 320 pixels.
-- **A label longer than its room**, wider than 7.5 pixels a character:
-  cut by the right edge of the SVG. The LD decay cuts the names of its
-  labels at 16 characters (`ldDecay.md`, "What it shows").
+- **A label longer than its room**: at the right of the frame the
+  margin holds it whole, measured; above the plot it is cut with an
+  ellipsis, as "The SVG it builds" says. The LD decay cuts the names of
+  its labels at 16 characters (`ldDecay.md`, "What it shows").
 - **A label with markup**, `<b>p1</b>`: written as text.
 - **A change of theme**: nothing is drawn again; the file is in the
   light theme.
@@ -351,6 +358,11 @@ element stubbed at 600 by 375:
   margin of 60, a frame of 300 and the 226, `narrowHeight` 44 and
   `narrowWidth` 226; a series more makes the right margin no larger
   and `narrowHeight` 18 larger; with no series, a right margin of 28;
+- from the review of round 1, measured by a canvas of the test that
+  gives a W 11 pixels and any other character 6, a label of 25 Ws: a
+  right margin of 321 at 1,000 pixels, 12, 24, 6, 275 and 4, and
+  `narrowUnder` 681; at 320 pixels, above the plot, the label cut to 24
+  Ws and the ellipsis, the 270 pixels that fit 274;
 - the order in `chart-marks`: every line before every set of points;
 - a NaN in `points.y` leaves that point out of the path; a NaN in
   `line.y` breaks the path into two parts, two `M` commands;

@@ -332,8 +332,15 @@ their labels, and everything else is drawn in the `chart-frame` group,
 translated by the margin, over `innerWidth` by `innerHeight`. The ranges
 of the scales are `[0, innerWidth]` and `[innerHeight, 0]`. The margins
 of each kind of plot are a named constant in its file. They are fixed,
-not measured from the labels, while the labels fit; measuring text in
-the DOM needs the font loaded and does not work in the unit tests.
+not measured from the labels, while the labels fit. Where a text of the
+user's file sets a margin, the names of the bar plot and the labels of
+the legend of the line plot, it is measured with `textWidth` of
+`src/charts/textWidth.ts`, on a canvas in the font of the plots, which
+needs no layout and so measures in a hidden tab too; under jsdom, which
+has no canvas, it counts a width per character, so the unit tests keep
+their numbers, and `src/charts/testSupport.ts` gives them a fake canvas
+to test the measure (from 12 October 2026: counted, names of capital Ws
+passed the edge of the SVG).
 
 ## Accessibility
 

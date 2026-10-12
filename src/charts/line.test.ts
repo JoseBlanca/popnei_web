@@ -17,6 +17,7 @@ import { MAX_LINE_SERIES, MAX_SVG_POINTS } from "./limits.ts";
 import { createLine, lineLegendRoom } from "./line.ts";
 import type { LineData, LineSeries, XY } from "./line.ts";
 import { drawSymbolAt, SYMBOL_AREA } from "./marks.ts";
+import { fakeWidth, measureWithFake, stopFakeMeasure } from "./testSupport.ts";
 
 /** The right margin of a legend at the right of the frame whose longest
     label has four characters: 12 to its rows, their piece of line of 24,
@@ -719,5 +720,42 @@ describe("PA4 D4 the line plot under jsdom, its refusals", () => {
     );
     createLine(element, withTotal(50000));
     expect(inMarks(element, "path.chart-line")).toHaveLength(2);
+  });
+});
+
+describe("review of round 1: the labels of the legend measured, not counted", () => {
+  afterEach(() => {
+    stopFakeMeasure();
+  });
+
+  /** A series of 25 Ws, 275 pixels by the fake canvas, and one of pop1. */
+  const wide = (): LineData =>
+    lineOf([seriesOf(0, "W".repeat(25)), seriesOf(1)]);
+
+  test("a label of 25 Ws, measured at 275 pixels: at 1,000 pixels the legend at the right in a right margin of 321, 12, 24, 6, 275 and 4, and narrowUnder 681; at 320 above the plot, cut to the 24 Ws that fit 274 pixels with the ellipsis", () => {
+    measureWithFake();
+    expect(lineLegendRoom(wide())).toEqual({
+      narrowUnder: 60 + 300 + 321,
+      narrowHeight: 8 + 2 * 18,
+      narrowWidth: 16 + 30 + 275,
+    });
+    const atRight = sizedElement(1000, 400);
+    createLine(atRight, wide());
+    expect(
+      atRight.querySelector("g.chart-legend")?.getAttribute("data-place"),
+    ).toBe("right");
+    expect(
+      Number(atRight.querySelector("clipPath rect")?.getAttribute("width")),
+    ).toBe(1000 - 60 - 321);
+    expect(legendTexts(atRight)).toEqual(["W".repeat(25), "pop1"]);
+
+    const above = sizedElement(320, 444);
+    createLine(above, wide());
+    expect(
+      above.querySelector("g.chart-legend")?.getAttribute("data-place"),
+    ).toBe("above");
+    const cut = `${"W".repeat(24)}…`;
+    expect(fakeWidth(cut)).toBe(270);
+    expect(legendTexts(above)).toEqual([cut, "pop1"]);
   });
 });

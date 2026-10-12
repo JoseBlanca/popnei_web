@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { barsHeight, createBars } from "./bars.ts";
 import type { Bar, BarsData } from "./bars.ts";
 import { MAX_BARS } from "./limits.ts";
+import { fakeWidth, measureWithFake, stopFakeMeasure } from "./testSupport.ts";
 
 /** The frame of an element of 400 by 136 with names of two characters. */
 const INNER_WIDTH = 400 - 30 - 20;
@@ -278,5 +279,29 @@ describe("review of round 1 the bar plot's cases the tests missed", () => {
     const narrow = sizedElement(100, 136);
     createBars(narrow, barsOf([{ name: sixteen, group: 0, value: 0.3 }]));
     expect(ticks(narrow, "y")).toEqual(["abc…"]);
+  });
+});
+
+describe("review of round 1: the names measured, not counted", () => {
+  afterEach(() => {
+    stopFakeMeasure();
+  });
+
+  test("names of wide letters, measured at 11 pixels a W and 6 another: ten Ws whole at 1,000 pixels in a margin of 122; twenty cut at 400 pixels to the twelve Ws that fit 148 pixels with the ellipsis, in a margin of 150", () => {
+    measureWithFake();
+    const wide = sizedElement(1000, 136);
+    createBars(wide, barsOf([{ name: "W".repeat(10), group: 0, value: 0.3 }]));
+    expect(ticks(wide, "y")).toEqual(["W".repeat(10)]);
+    expect(leftMargin(wide)).toBe(4 + 110 + 8);
+
+    const narrow = sizedElement(400, 136);
+    createBars(
+      narrow,
+      barsOf([{ name: "W".repeat(20), group: 0, value: 0.3 }]),
+    );
+    const cut = `${"W".repeat(12)}…`;
+    expect(fakeWidth(cut)).toBe(138);
+    expect(ticks(narrow, "y")).toEqual([cut]);
+    expect(leftMargin(narrow)).toBe(4 + 138 + 8);
   });
 });

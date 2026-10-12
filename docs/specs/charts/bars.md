@@ -52,15 +52,20 @@ and the names of the populations are at most 20 on `popgen2.html`
 
 ### The room of the names
 
-The left margin holds the longest name, at 9 pixels a character, as
-the heatmap counts its names (`docs/specs/charts/heatmap.md`, "The
-names on the axes"), with 8 pixels between the name and the frame and 4
-before the left edge of the SVG. A name keeps at most 20 characters,
-and at most what 40% of the width of the element holds once those 12
-pixels are taken, (0.4 × width − 12) / 9 characters, rounded down, 4
-at least; a longer name is cut to one character fewer and an ellipsis,
-"population_number_…". At 288 pixels, an element in a page of 320, a
-name keeps 11 characters. The names are not measured, as no text of a plot is.
+The left margin holds the longest name as written, measured, with 8
+pixels between the name and the frame and 4 before the left edge of the
+SVG. A name keeps at most 20 characters, and at most what 40% of the
+width of the element holds once those 12 pixels are taken, 0.4 × width
+− 12 pixels; a longer name is cut to as many of its first characters as
+fit with an ellipsis, "population_number_…", and 3 and the ellipsis at
+the fewest. A name is measured in the font of the plots at its 12
+pixels, on a canvas, by `textWidth` of `src/charts/textWidth.ts`; where
+nothing measures, under jsdom, a character counts 9 pixels, as the
+heatmap counts its names (`docs/specs/charts/heatmap.md`, "The names on
+the axes"). (Changed on 12 October 2026, the review of round 1: the names
+were counted at 9 pixels a character, and a name of capital Ws, 11
+pixels each in the system font of the Mac, started 13.5 pixels left of
+the SVG and was cut on the screen and in the files.)
 
 ### The height
 
@@ -167,10 +172,15 @@ element stubbed at 400 by 136:
 - the names on the axis, "p0", "p2", "p1", from the top down;
 - the axis from 0 to 0.3: its last tick 0.3; with every value NaN, from
   0 to 1;
-- the left margin of names of 2 characters, 30 pixels, 4, 18 and 8; a
-  name of 30 characters at 400 pixels, where 16 characters fit, written
-  as its first 15 and an ellipsis, with a left margin of 156; at 1,000
-  pixels, as its first 19 and an ellipsis, with a margin of 192;
+- where nothing measures, the left margin of names of 2 characters, 30
+  pixels, 4, 18 and 8; a name of 30 characters at 400 pixels, where 16
+  characters fit, written as its first 15 and an ellipsis, with a left
+  margin of 156; at 1,000 pixels, as its first 19 and an ellipsis, with
+  a margin of 192;
+- measured by a canvas of the test that gives a W 11 pixels and any
+  other character 6: ten Ws whole at 1,000 pixels, in a left margin of
+  122; twenty Ws at 400 pixels cut to twelve and the ellipsis, the 138
+  pixels that fit 148, in a margin of 150;
 - `barsHeight(3)` 152 and `barsHeight(1)` 96;
 - two bars of one name, `a\nb` twice: two rows, each with its bar;
 - from the review of round 1, 12 October 2026: a value of 0, one bar of

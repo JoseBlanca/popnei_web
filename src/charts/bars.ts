@@ -15,6 +15,7 @@ import { groupColourClass, groupMark, isOutlined } from "./marks.ts";
 import type { ExportSize } from "./export.ts";
 import { createPlot2d } from "./plot2d.ts";
 import type { Frame, Margin, Plot2dDefinition, PlotText } from "./plot2d.ts";
+import { cutText, textWidth } from "./textWidth.ts";
 import type { Chart } from "./types.ts";
 
 /** What a bar plot draws. Every text is the screen's. */
@@ -54,18 +55,19 @@ const NAME_PADDING = 8;
 /** Between the left edge of the SVG and the start of the longest name. */
 const NAME_EDGE = 4;
 /**
- * The width counted for a character of a name, at 12 pixels: 9, as the
- * heatmap counts its names, which at 7.2 cut a name in capitals.
+ * The width counted for a character of a name, at 12 pixels, where
+ * nothing measures text (textWidth.ts): 9, as the heatmap counts its
+ * names, which at 7.2 cut a name in capitals.
  */
 const NAME_CHARACTER_WIDTH = 9;
+/** The size of the text of a name, as charts.css writes the axes. */
+const NAME_FONT_SIZE = 12;
 /** The most characters a name keeps. */
 const NAME_MOST = 20;
 /** The fewest characters a name keeps, however narrow the element. */
 const NAME_LEAST = 4;
 /** The share of the width of the element the names may take. */
 const NAME_SHARE = 0.4;
-/** The ellipsis that ends a name cut. */
-const ELLIPSIS = "…";
 /** The second line of a label of the axis broken in two, which
     barsHeight leaves room for, as the base adds it to the bottom margin. */
 const SECOND_LABEL_LINE = 16;
@@ -82,37 +84,44 @@ export function barsHeight(numBars: number): number {
   return TOP + ROW * numBars + BOTTOM + SECOND_LABEL_LINE;
 }
 
-/** The characters a name keeps in an element `width` pixels wide: what
-    40% of it holds, less the 12 pixels around the names, from 4 to 20. */
+/** The pixels a name may take in an element `width` pixels wide: 40%
+    of it, less the 12 pixels around the names. */
 function nameRoom(width: number): number {
-  const fits = Math.floor(
-    (NAME_SHARE * width - NAME_EDGE - NAME_PADDING) / NAME_CHARACTER_WIDTH,
-  );
-  return Math.min(NAME_MOST, Math.max(NAME_LEAST, fits));
+  return NAME_SHARE * width - NAME_EDGE - NAME_PADDING;
 }
 
-/** `name` as the axis writes it in `room` characters: whole when it fits,
-    and otherwise its first `room` − 1 and an ellipsis. */
-function cutName(name: string, room: number): string {
-  const characters = Array.from(name);
-  return characters.length <= room
-    ? name
-    : `${characters.slice(0, room - 1).join("")}${ELLIPSIS}`;
+/** `name` as the axis writes it in an element `width` pixels wide:
+    whole when it has at most 20 characters and fits its room, measured;
+    otherwise as many of its first characters as fit and an ellipsis,
+    from 3 and the ellipsis. */
+function cutName(name: string, width: number): string {
+  return cutText(name, nameRoom(width), {
+    fontSize: NAME_FONT_SIZE,
+    perCharacter: NAME_CHARACTER_WIDTH,
+    most: NAME_MOST,
+    least: NAME_LEAST,
+  });
 }
 
 /** The margins for `data` in an element of `size`: at the left, the
-    longest name as written, at 9 pixels a character, and 12 around it. */
+    longest name as written, measured, and 12 pixels around it. */
 function barsMargin(data: BarsData, size: ExportSize): Margin {
-  const room = nameRoom(size.width);
   let longest = 0;
   for (const bar of data.bars) {
-    longest = Math.max(longest, Array.from(cutName(bar.name, room)).length);
+    longest = Math.max(
+      longest,
+      textWidth(
+        cutName(bar.name, size.width),
+        NAME_FONT_SIZE,
+        NAME_CHARACTER_WIDTH,
+      ),
+    );
   }
   return {
     top: TOP,
     right: RIGHT,
     bottom: BOTTOM,
-    left: NAME_EDGE + longest * NAME_CHARACTER_WIDTH + NAME_PADDING,
+    left: NAME_EDGE + Math.ceil(longest) + NAME_PADDING,
   };
 }
 
@@ -213,16 +222,14 @@ function drawBars(frame: Frame, data: BarsData): void {
     .attr("dy", "0.35em")
     .text(data.noValue);
 
-  const room = nameRoom(
-    frame.margin.left + frame.innerWidth + frame.margin.right,
-  );
+  const width = frame.margin.left + frame.innerWidth + frame.margin.right;
   frame.axes(x, y, {
     nameFormat: (row) => {
       const name = nameOf.get(row);
       if (name === undefined) {
         throw new Error(`popnei_web defect: the bar plot has no row ${row}.`);
       }
-      return cutName(name, room);
+      return cutName(name, width);
     },
   });
 }

@@ -2022,7 +2022,112 @@ function renamedP1(name: string): Made {
   };
 }
 
+/** Twenty populations of ten individuals each, of names long, wide,
+    short and alike in their first characters, the most the tab lists. */
+const TWENTY_NAMES = [
+  "Landrace_Mediterranean_Valencia",
+  "WILD_ANCESTOR_ECUADOR_NORTH",
+  "p3",
+  "Cultivar Group Alpha 2024",
+  "MMMMMMMMMMMMMMMMMMMMMMMM",
+  "Heirloom_collection_Peru_B",
+  "short",
+  "Traditional_variety_Spain_1",
+  "WWWWWWWWWWWWWWWWWWWWWWWWW",
+  "Breeding_line_set_number_10",
+  "Pop11",
+  "Accessions_from_Galapagos",
+  "Modern_hybrid_greenhouse_x",
+  "Pop14",
+  "Andean_highland_population",
+  "Coastal_lowland_population",
+  "Pop17",
+  "Landrace_Valencia_coast",
+  "Landrace_Valencia_inland",
+  "Pop20",
+];
+
+/** The individuals file of the 200 individuals of panel.nei in the
+    twenty populations of TWENTY_NAMES, ten each in order. */
+function twentyPopulations(): Made {
+  const [header, ...rows] = panelPopsRows();
+  return {
+    name: "panel_twenty.csv",
+    text: `${[
+      header,
+      ...rows.map((line, index) => {
+        const [individual] = line.split(",");
+        return `${individual ?? ""},${TWENTY_NAMES[Math.floor(index / 10)] ?? ""}`;
+      }),
+    ].join("\n")}\n`,
+  };
+}
+
+/** Opens panel.nei with the twenty populations, sets the minimum of
+    individuals to 8, since each population has 10, and runs the
+    diversity; waits for the five bar plots. */
+async function runTwenty(page: Page): Promise<void> {
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await pickIndividuals(page, twentyPopulations());
+  await tab(page, "Populations").click();
+  const minimum = shown(page).getByRole("textbox", {
+    name: /^Individuals with a called genotype needed in each population, per variant/u,
+  });
+  await minimum.fill("8");
+  await minimum.press("Enter");
+  await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+  await button(page, "Run").click();
+  await expect(shown(page).locator("svg.chart-bars")).toHaveCount(5, {
+    timeout: RESULT_TIMEOUT,
+  });
+}
+
+/** The texts of the plots of the tab shown that `selector` picks and
+    that pass an edge of their SVG, each with its box. */
+async function textsOutside(page: Page, selector: string): Promise<string[]> {
+  return shown(page)
+    .locator("svg.chart-bars, svg.chart-line")
+    .evaluateAll((svgs, picked) => {
+      const outside: string[] = [];
+      for (const svg of svgs) {
+        const plot = svg.getBoundingClientRect();
+        for (const text of svg.querySelectorAll(picked)) {
+          const box = text.getBoundingClientRect();
+          if (box.width === 0) continue;
+          if (
+            box.left < plot.left - 0.5 ||
+            box.right > plot.right + 0.5 ||
+            box.top < plot.top - 0.5 ||
+            box.bottom > plot.bottom + 0.5
+          ) {
+            outside.push(
+              `${text.textContent} [${String(Math.round(box.left))}, ${String(Math.round(box.right))}] in [${String(Math.round(plot.left))}, ${String(Math.round(plot.right))}]`,
+            );
+          }
+        }
+      }
+      return outside;
+    }, selector);
+}
+
 test.describe("review of round 1: long names of populations", () => {
+  for (const width of [1280, 720, 320] as const) {
+    test(`twenty populations of long and wide names at ${String(width)} px: every name of the bar plots and every label of the legend of the spectrum within its SVG`, async ({
+      page,
+    }) => {
+      test.setTimeout(120_000);
+      await page.setViewportSize({ width, height: 900 });
+      await runTwenty(page);
+      expect(
+        await textsOutside(
+          page,
+          "g.chart-axis-y g.tick text, .chart-legend-text",
+        ),
+      ).toEqual([]);
+    });
+  }
+
   test("a population named with 46 characters at 320 px: no sideways scroll, and the plot of the spectrum 288 px wide", async ({
     page,
   }) => {

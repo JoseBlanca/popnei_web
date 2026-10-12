@@ -1420,7 +1420,14 @@ async function useWideFont(page: Page): Promise<void> {
   await page.addStyleTag({
     content: `${faces.join("\n")}\n:root { --font-body: "Wide test font"; font-family: "Wide test font"; }`,
   });
-  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  // Loaded before a plot is drawn, since the names and the legends of the
+  // plots are measured, from 12 October 2026 (src/charts/textWidth.ts),
+  // and a font not yet used is not loading, so fonts.ready does not wait
+  // for it.
+  await page.evaluate(async () => {
+    await document.fonts.load('12px "Wide test font"');
+    await document.fonts.ready;
+  });
 }
 
 /** Draws the heatmap of `kind` in an element of `width` by `height`. */
