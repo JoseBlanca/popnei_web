@@ -10,11 +10,16 @@ import {
   diversityOnPopgen2,
   diversityOptions,
 } from "../../core/analyses/diversity.ts";
+import {
+  ldDecayOnPopgen2,
+  ldDecayOptions,
+} from "../../core/analyses/ldDecay.ts";
 import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
 import { setAnalysisOptions } from "../../core/project.ts";
 import { noPopDiversity, summaryResult } from "../../core/testSupport.ts";
 import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
 import { statusOf } from "../analyses/status.ts";
+import { ldDecayResult } from "../band/testSupport.ts";
 import type { LiveEvent } from "../autoRuns.ts";
 import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
 import type { Popgen2PageStore } from "../popgen2Store.ts";
@@ -536,5 +541,73 @@ describe("PT2 D2 the status region says each live analysis a crash holds", () =>
       "The PCoA did not start: it starts after the next change of the filters or of its options, or when Run is pressed in the PCA tab.",
       "The diversity did not start: it starts after the next change of the filters, of its options or of the populations, or when Run is pressed in the Populations tab.",
     ]);
+  });
+});
+
+describe("the status region says the LD decay's start, its hold after a crash, its Stop and its end, in its own words (the review of the LD decay, 12 October 2026)", () => {
+  /** Types the largest distance of the LD decay, so that it is ready. */
+  function typeMaxDist(page: {
+    readonly store: Popgen2PageStore<JobResult, Blob>;
+  }): void {
+    page.store.apply("the largest distance of the LD decay changed", (p) =>
+      setAnalysisOptions(p, ldDecayOnPopgen2, {
+        ...ldDecayOptions(p),
+        maxDist: 100_000,
+      }),
+    );
+  }
+
+  test("started by itself alone, its own words", () => {
+    const { said, tell } = setUp();
+    tell({ kind: "startedByItself", id: "ldDecay", round: ["ldDecay"] });
+    expect(said).toEqual([
+      "Calculating the LD decay again. To change the filters or the populations, stop it in the Populations tab.",
+    ]);
+  });
+
+  test("held after a crash, its own words with what starts it", () => {
+    const { said, tell } = setUp();
+    tell({ kind: "heldAfterCrash", ids: ["ldDecay"] });
+    expect(said).toEqual([
+      "The LD decay did not start: it starts after the next change of the filters, of its options or of the populations, or when Run is pressed in the Populations tab.",
+    ]);
+  });
+
+  test("its Stop, alone while no Run is offered, and with Run to press once it is", async () => {
+    const locked = setUp();
+    locked.tell({ kind: "paused", id: "ldDecay" });
+    expect(locked.said).toEqual(["LD decay stopped."]);
+    const ready = await setUpReady();
+    typeMaxDist(ready);
+    ready.tell({ kind: "paused", id: "ldDecay" });
+    expect(ready.said).toEqual([
+      "LD decay stopped. Press Run in the Populations tab to calculate it again.",
+    ]);
+  });
+
+  test("the diversity and then the LD decay ending within the region's pause: both ends said, the LD decay's after the diversity's", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const announcer = createAnnouncer();
+      const page = await setUpReady(announcer);
+      typeMaxDist(page);
+      announceChanges(page.store, announcer, () => null);
+      const diversity = startAnalysis(page.store, "diversity");
+      page.endLast((key) => ({
+        kind: "done",
+        key,
+        result: diversityResult(),
+      }));
+      await diversity;
+      const ld = startAnalysis(page.store, "ldDecay");
+      page.endLast((key) => ({ kind: "done", key, result: ldDecayResult() }));
+      await ld;
+      await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+      expect(announcer.getState()).toBe(
+        "Diversity of panel.nei calculated. LD decay of panel.nei calculated.",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
