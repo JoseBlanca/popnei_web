@@ -78,8 +78,11 @@ and those of `popgen2-populations.md`: **waiting**, **unclassified**,
 ### The order of the tab
 
 Its heading, an `<h2>`, "Distances between populations", the title of
-the old panel. Under it, in this order: the two options; the lines of
-the populations it runs on; Run, Stop or Stop recalculating, with the
+the old panel. Under it, in this order: the two options; before a
+result, the lines of the populations it runs on, which the frame of the
+panel draws only then (since 12 October 2026, the review of the
+Distances tab; with a result the caption of the table gives the
+populations and their individuals); Run, Stop or Stop recalculating, with the
 lock beside it; the line in the place of the bar; and, once calculated,
 the result: the warnings, the heatmap with its "Download…" above it and
 its line of order under it, the table and its "Download…", and the

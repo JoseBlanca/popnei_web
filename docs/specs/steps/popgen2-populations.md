@@ -136,7 +136,9 @@ And these:
 ### The order of the tab
 
 Its heading, an `<h2>`, "Diversity". Under it, in this order: the
-three options; the line of the populations it runs on; Run, Stop or
+three options; before a result, the line of the populations it runs
+on, which the frame of the panel draws only then (said since 12
+October 2026, the review of the Distances tab); Run, Stop or
 Stop recalculating, with the lock beside it; the line in the place of
 the bar; and, once calculated, the result: the warnings, the table,
 its "Download…", the line of the versions, and the block of the
