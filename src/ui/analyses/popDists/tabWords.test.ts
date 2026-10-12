@@ -183,7 +183,7 @@ describe("DT1 D3 the words of the Distances tab", () => {
       distancesTabReadyLines(project(names, pops, 2), keptOf(names, null)),
     ).toEqual([
       "2 populations: p0, 3 individuals; p1, 2 individuals",
-      "p2 has 1 individual, fewer than the minimum of 2, and is left out.",
+      "p2 has 1 individual, fewer than the 2 individuals needed per variant, and is left out.",
       "2 unclassified individuals kept are left out, as the box Individuals says.",
     ]);
   });

@@ -417,7 +417,7 @@ test.describe("DT1 D5 the Distances tab", () => {
     await setMinimum(page, "25");
     await expect(
       shown(page).getByText(
-        "p0a and p0b have 24 and 24 individuals, fewer than the minimum of 25, and are left out.",
+        "p0a and p0b have 24 and 24 individuals, fewer than the 25 individuals needed per variant, and are left out.",
         { exact: true },
       ),
     ).toBeVisible({ timeout: RESULT_TIMEOUT });
@@ -430,7 +430,7 @@ test.describe("DT1 D5 the Distances tab", () => {
 
     await setMinimum(page, "70");
     const lock =
-      "Only p2 has 70 individuals or more, and a variant counts for a pair of populations only where both have 70 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, or merge populations in panel_split.csv.";
+      "Only p2 has 70 individuals or more, and a variant counts for a pair of populations only where both have 70 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, or merge populations in panel_split.csv.";
     await expect(shown(page).getByText(lock, { exact: true })).toBeVisible({
       timeout: RESULT_TIMEOUT,
     });

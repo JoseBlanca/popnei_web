@@ -20,6 +20,7 @@ import { fourDecimals } from "../../../core/analyses/words.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import { counted, escaped, grouped } from "../../../core/project.ts";
 import {
+  minimumOf,
   populationsWithMinimum,
   underMinimumText,
 } from "../../../core/populations.ts";
@@ -97,7 +98,7 @@ export function readyLines(
   return [
     ...(withMinimum.length > 0 ? [populationsText(withMinimum)] : []),
     ...(under.length > 0
-      ? [underMinimumText(under, minNumIndividuals, UNDER_MINIMUM)]
+      ? [underMinimumText(under, minimumOf(minNumIndividuals), UNDER_MINIMUM)]
       : []),
     ...(kept.emptied.length > 0 ? [emptiedText(kept.emptied)] : []),
     ...(waitsForStatistics ? [WAITS_FOR_STATISTICS_TEXT] : []),

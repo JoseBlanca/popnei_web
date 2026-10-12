@@ -151,10 +151,13 @@ panel's ready state with this page's words:
 
 - the populations that have the minimum, "3 populations: p0, 48
   individuals; p2, 84 individuals; p1, 68 individuals";
-- the populations under the minimum, which are left out, the old
-  panel's words, "p3 has 12 individuals, fewer than the minimum of 20,
-  and is left out.", or "p3 and p5 have 12 and 8 individuals, fewer than
-  the minimum of 20, and are left out.";
+- the populations under the minimum, which are left out, in the words
+  of the field, "the individuals needed per variant", the one name
+  this page gives the minimum in its lines, its locks and its warnings
+  (since 12 October 2026, the review of the Distances tab: until then
+  the old panel's "the minimum of 20", beside "the number of
+  individuals needed" and "the minimum of individuals"), "p3 has 12 individuals, fewer than the 20 individuals needed per variant,
+  and is left out.", or "p3 and p5 have 12 and 8 individuals, fewer than the 20 individuals needed per variant, and are left out.";
 - the unclassified individuals kept, as the Populations tab says them,
   "7 unclassified individuals kept are left out, as the box Individuals
   says.";
@@ -213,7 +216,7 @@ disabled, or beside Stop recalculating while the distances are live:
 | the one pass stopped by the user, or failed in a way its box offers Start again for | "Run once panel.nei is read to the end: Start again its reading in the box Variants." |
 | the one pass refused by popnei, or the file no longer readable | "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again there, or open another." |
 | the filters of the individuals keep no individual at all | the store's words of `keptNoneReason`, as the other tabs give them |
-| fewer than two of the populations have the minimum of individuals | "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, or merge populations in panel_pops.csv."; with none, "No population has 20 individuals or more, and …"; when the thresholds of the individuals took a population below the minimum, "Only p0 has 20 individuals or more among the individuals the thresholds keep, and … Lower the number of individuals needed, above, merge populations in panel_pops.csv, or loosen the thresholds of the individuals in the Variants tab." |
+| fewer than two of the populations have the minimum of individuals | "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, or merge populations in panel_pops.csv."; with none, "No population has 20 individuals or more, and …"; when the thresholds of the individuals took a population below the minimum, "Only p0 has 20 individuals or more among the individuals the thresholds keep, and … Lower the individuals needed per variant, above, merge populations in panel_pops.csv, or loosen the thresholds of the individuals in the Variants tab." |
 
 The three of the one pass are the PCA tab's with "the distances"
 (`passLockText` of `src/ui/analyses/pca/passLock.ts`). The lock of the

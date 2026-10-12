@@ -13,6 +13,7 @@
  */
 import {
   MEASURE_NAMES,
+  neededPerVariant,
   popDistsHeatmap,
   popDistsOptions,
   popDistsRows,
@@ -79,7 +80,9 @@ export function distancesTabReadyLines(
   const { withMinimum, under } = populationsWithMinimum(pops.pops, min);
   return [
     ...(withMinimum.length > 0 ? [populationsText(withMinimum)] : []),
-    ...(under.length > 0 ? [underMinimumText(under, min, UNDER_MINIMUM)] : []),
+    ...(under.length > 0
+      ? [underMinimumText(under, neededPerVariant(min), UNDER_MINIMUM)]
+      : []),
     ...(pops.unclassifiedLeftOut > 0
       ? [unclassifiedLine(pops.unclassifiedLeftOut)]
       : []),

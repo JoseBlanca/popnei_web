@@ -960,7 +960,7 @@ that send the user to "the Variants step", "the Individuals step" and
   |---|---|
   | the individuals file being read | "The distances wait for panel_pops.csv to be read." |
   | the one population of `popgen2OnePopulationCause`, no individuals file, "None", a refused file, a column absent, not offered, of more than 20 values or that classifies nobody, or one population of the column with an individual in the variants file | "The distances between populations need two populations or more with individuals in panel.nei. Choose a column of the populations in the box Individuals that gives them two or more." |
-  | fewer than two populations with the minimum of individuals, over every individual of the variants file | "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, or merge populations in panel_pops.csv."; with none, "No population has 20 individuals or more, and …" |
+  | fewer than two populations with the minimum of individuals, over every individual of the variants file | "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, or merge populations in panel_pops.csv."; with none, "No population has 20 individuals or more, and …" |
 
   The second row comes with a greyed tab (`docs/specs/core/popgen2Tabs.md`),
   whose reason is what the user reads; it locks so that no request of
@@ -975,12 +975,12 @@ that send the user to "the Variants step", "the Individuals step" and
   distances need two or more. Loosen the thresholds of the individuals
   in the Variants tab."; fewer than two of those they leave have the
   minimum, "Only p0 has 20 individuals or more among the individuals the
-  thresholds keep, and … Lower the number of individuals needed, above,
+  thresholds keep, and … Lower the individuals needed per variant, above,
   merge populations in panel_pops.csv, or loosen the thresholds of the
   individuals in the Variants tab." The first two come with a greyed
   tab too, `fewKept`.
 - **The warnings**, in the order of "The warnings": `tooFewIndividuals`
-  ends "To include it, lower the minimum of individuals, or merge it
+  ends "To include it, lower the individuals needed per variant, or merge it
   with another population in panel_pops.csv.", with ", merge it with
   another population in panel_pops.csv, or loosen the thresholds of the
   individuals in the Variants tab" when the thresholds took individuals
@@ -1161,7 +1161,7 @@ Beside it, the line of the versions, as the diversity's.
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason | |
 | locked | the reason, beside a disabled Run button that it describes, as the diversity's; the field of the minimum stays enabled, since lowering it can unlock | go where the reason says; change the minimum |
-| ready | Run, the options, and the populations it will run on with their sizes, as the diversity's ready state, from `populationsBeforeRun`; the populations under the minimum named after them by `underMinimumText` of `project.md`, as the diversity names its own, "p3 has 12 individuals, fewer than the minimum of 20, and is left out.", or together, "p3 and p5 have 12 and 8 individuals, fewer than the minimum of 20, and are left out." | Run; change the options |
+| ready | Run, the options, and the populations it will run on with their sizes, as the diversity's ready state, from `populationsBeforeRun`; the populations under the minimum named after them by `underMinimumText` of `project.md`, as the diversity names its own, "p3 has 12 individuals, fewer than the 20 individuals needed per variant, and is left out.", or together, "p3 and p5 have 12 and 8 individuals, fewer than the 20 individuals needed per variant, and are left out." | Run; change the options |
 | running | the diversity's bar and clock, "Calculating · 35% · 0:12", the bar labelled "Calculating the distances between populations", and its words while it waits for the statistics of each individual | Stop |
 | done | the warnings above, each as a sentence, with their count; the heatmap, its line of order and its radio buttons; the table and its download; the comparison of an opened project file under the table. Above 200 populations, the line of `tooManyPopulationsText` and the download in place of the heatmap, its line of order and the table | change the measure; download |
 | results removed | the diversity's words, with `resultName` "the heatmap and the table": "The distances between populations were removed because the filter of the variants by missing data changed. Undo brings back the heatmap and the table as they were, with no calculation; Run calculates new ones for the new settings." | Run; Undo or Redo |

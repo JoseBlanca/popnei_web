@@ -72,6 +72,7 @@ import {
   populationListsNeeds,
   populationsKeptNeeds,
   populationsWithMinimum,
+  minimumOf,
   underMinimumText,
   allEmptiedText,
 } from "./populations.ts";
@@ -5664,14 +5665,14 @@ describe("PA1 D1 the populations under the minimum of individuals", () => {
   });
 
   test("underMinimumText of one population gives its count and the consequence of one", () => {
-    expect(underMinimumText([["p3", 12]], 20, consequence)).toBe(
+    expect(underMinimumText([["p3", 12]], minimumOf(20), consequence)).toBe(
       "p3 has 12 individuals, fewer than the minimum of 20, and is left out.",
     );
-    expect(underMinimumText([["p\t3", 12]], 20, consequence)).toBe(
+    expect(underMinimumText([["p\t3", 12]], minimumOf(20), consequence)).toBe(
       "p\\t3 has 12 individuals, fewer than the minimum of 20, and is left out.",
     );
     expect(
-      underMinimumText([["p3", 1]], 1_000, {
+      underMinimumText([["p3", 1]], minimumOf(1_000), {
         one: "so it will have no values, and is left out of the count of the private alleles of the others.",
         many: "so they will have no values, and are left out of the count of the private alleles of the others.",
       }),
@@ -5687,7 +5688,7 @@ describe("PA1 D1 the populations under the minimum of individuals", () => {
           ["p3", 12],
           ["p5", 8],
         ],
-        20,
+        minimumOf(20),
         consequence,
       ),
     ).toBe(
@@ -5700,7 +5701,7 @@ describe("PA1 D1 the populations under the minimum of individuals", () => {
           ["p5", 8],
           ["p\t7", 1],
         ],
-        20,
+        minimumOf(20),
         consequence,
       ),
     ).toBe(
@@ -5717,7 +5718,7 @@ describe("PA1 D1 the populations under the minimum of individuals", () => {
           ["p6", 3],
           ["p7", 1],
         ],
-        20,
+        minimumOf(20),
         consequence,
       ),
     ).toBe(
@@ -5726,7 +5727,9 @@ describe("PA1 D1 the populations under the minimum of individuals", () => {
   });
 
   test("underMinimumText of no population is a defect", () => {
-    expect(() => underMinimumText([], 20, consequence)).toThrow(DEFECT);
+    expect(() => underMinimumText([], minimumOf(20), consequence)).toThrow(
+      DEFECT,
+    );
   });
 });
 

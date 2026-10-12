@@ -451,12 +451,12 @@ describe("DT1 D4 the Distances tab", () => {
     const run = button("Run");
     expect(run?.disabled).toBe(true);
     expect(descriptionOf(run)).toBe(
-      "No population has 5 individuals or more, and a variant counts for a pair of populations only where both have 5 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, or merge populations in pops.csv.",
+      "No population has 5 individuals or more, and a variant counts for a pair of populations only where both have 5 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, or merge populations in pops.csv.",
     );
     const field = container.querySelector("input");
     expect(field?.getAttribute("aria-disabled")).toBeNull();
     expect(lines()).toContain(
-      "A and B have 4 and 4 individuals, fewer than the minimum of 5, and are left out.",
+      "A and B have 4 and 4 individuals, fewer than the 5 individuals needed per variant, and are left out.",
     );
   });
 

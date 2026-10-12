@@ -167,10 +167,16 @@ export function populationsWithMinimum(
   });
 }
 
+/** The minimum of individuals as the words of the panels of popgen.html
+    and of the diversity name it: "the minimum of 20". */
+export function minimumOf(minNumIndividuals: number): string {
+  return `the minimum of ${grouped(minNumIndividuals)}`;
+}
+
 /**
- * The words of the populations under the minimum of individuals, which
- * the ready state of the panels of the diversity and of the distances
- * shows: "p3 has 12 individuals, fewer than the minimum of 20, " and the
+ * The words of the populations under the minimum of individuals, named
+ * `minimum`, which the ready state of the panels of the diversity and of
+ * the distances shows: "p3 has 12 individuals, fewer than the minimum of 20, " and the
  * consequence of one, `consequence.one`; "p3 and p5 have 12 and 8
  * individuals, fewer than the minimum of 20, " and that of several,
  * `consequence.many`; past three populations, named as `namesOf` names
@@ -179,10 +185,9 @@ export function populationsWithMinimum(
  */
 export function underMinimumText(
   under: LeftOut,
-  minNumIndividuals: number,
+  minimum: string,
   consequence: { readonly one: string; readonly many: string },
 ): string {
-  const minimum = `the minimum of ${grouped(minNumIndividuals)}`;
   const [only] = under;
   if (only === undefined) {
     throw defect("underMinimumText was given no population.");

@@ -317,10 +317,10 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
 
   test("fewer than two populations with the minimum, over every individual", () => {
     expect(popDistsOnPopgen2.needs(sizedProject([30, 10, 5], 20))).toBe(
-      "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, or merge populations in panel_pops.csv.",
+      "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, or merge populations in panel_pops.csv.",
     );
     expect(popDistsOnPopgen2.needs(sizedProject([10, 5], 20))).toBe(
-      "No population has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, or merge populations in panel_pops.csv.",
+      "No population has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, or merge populations in panel_pops.csv.",
     );
     expect(popDistsOnPopgen2.needs(sizedProject([20, 20], 20))).toBeNull();
   });
@@ -341,7 +341,7 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
       (_, i) => `s${String(i).padStart(3, "0")}`,
     );
     expect(keptNeeds(p, knownKept(all, ["s000", "s001", "s003", "s006"]))).toBe(
-      "Only p0 has 2 individuals or more among the individuals the thresholds keep, and a variant counts for a pair of populations only where both have 2 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, merge populations in panel_pops.csv, or loosen the thresholds of the individuals in the Variants tab.",
+      "Only p0 has 2 individuals or more among the individuals the thresholds keep, and a variant counts for a pair of populations only where both have 2 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, merge populations in panel_pops.csv, or loosen the thresholds of the individuals in the Variants tab.",
     );
   });
 
@@ -375,7 +375,7 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
     const [warning] = warningsOf(result(["p0", "p1"], [["p2", 12]]), p);
     expect(warning).toEqual({
       code: "tooFewIndividuals",
-      text: "Population p2 has 12 individuals, fewer than the minimum of 20, so it is left out of the distances. To include it, lower the minimum of individuals, or merge it with another population in panel_pops.csv.",
+      text: "Population p2 has 12 individuals, fewer than the 20 individuals needed per variant, so it is left out of the distances. To include it, lower the individuals needed per variant, or merge it with another population in panel_pops.csv.",
     });
     const two = sizedProject([30, 30, 12, 8], 20);
     expect(
@@ -390,14 +390,14 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
         two,
       )[0]?.text,
     ).toBe(
-      "Populations p2 and p3 have fewer than 20 individuals, 12 and 8, so they are left out of the distances. To include them, lower the minimum of individuals, or merge each with another population in panel_pops.csv.",
+      "Populations p2 and p3 have 12 and 8 individuals, fewer than the 20 individuals needed per variant, so they are left out of the distances. To include them, lower the individuals needed per variant, or merge each with another population in panel_pops.csv.",
     );
   });
 
   test("tooFewIndividuals when the thresholds took individuals from one", () => {
     const p = sizedProject([30, 30, 22], 20);
     expect(warningsOf(result(["p0", "p1"], [["p2", 12]]), p)[0]?.text).toBe(
-      "Population p2 has 12 individuals, fewer than the minimum of 20, so it is left out of the distances. To include it, lower the minimum of individuals, merge it with another population in panel_pops.csv, or loosen the thresholds of the individuals in the Variants tab.",
+      "Population p2 has 12 individuals, fewer than the 20 individuals needed per variant, so it is left out of the distances. To include it, lower the individuals needed per variant, merge it with another population in panel_pops.csv, or loosen the thresholds of the individuals in the Variants tab.",
     );
   });
 

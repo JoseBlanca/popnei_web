@@ -404,7 +404,7 @@ function popgen2Needs(p: Project): string | null {
         withMinimum,
         min,
         "",
-        `${LOWER_THE_MINIMUM}, or merge populations in ${PLACES.popgen2.individualsFile(p)}.`,
+        `${LOWER_NEEDED}, or merge populations in ${PLACES.popgen2.individualsFile(p)}.`,
       );
 }
 
@@ -442,7 +442,7 @@ function popgen2KeptNeeds(p: Project, kept: IndividualsKept): string | null {
         withMinimum,
         min,
         " among the individuals the thresholds keep",
-        `${LOWER_THE_MINIMUM}, merge populations in ${PLACES.popgen2.individualsFile(p)}, or loosen ${PLACES.popgen2.individualFilters}.`,
+        `${LOWER_NEEDED}, merge populations in ${PLACES.popgen2.individualsFile(p)}, or loosen ${PLACES.popgen2.individualFilters}.`,
       );
 }
 
@@ -531,6 +531,22 @@ function minimumNeeds(p: Project): string | null {
     each population, per variant", and says where it is, above the Run
     button. */
 const LOWER_THE_MINIMUM = "Lower the number of individuals needed, above";
+
+/** What to do when the minimum is too high, on popgen2.html, which names
+    the field by one name throughout, "the individuals needed per
+    variant" (the review of the Distances tab, 12 October 2026). */
+const LOWER_NEEDED = "Lower the individuals needed per variant, above";
+
+/**
+ * The minimum of individuals of the distances as popgen2.html names it in
+ * its lines, its locks and its warnings, after its field, "Individuals
+ * with a called genotype needed in each population, per variant": "the
+ * 20 individuals needed per variant". The old page says "the minimum of
+ * 20" (the review of the Distances tab, 12 October 2026).
+ */
+export function neededPerVariant(minNumIndividuals: number): string {
+  return `the ${counted(minNumIndividuals, "individual")} needed per variant`;
+}
 
 /** The words of a lock when the lists of individuals, or the filters of
     individuals, `what`, leave an individual to the one population `pop`:
@@ -763,6 +779,9 @@ function tooFewText(
     return numIndividuals < size;
   });
   const names = namesOf(r.leftOut.map(([pop]) => pop));
+  if (page === "popgen2") {
+    return tooFewOnPopgen2(r, min, names, filtered, individualsFile(p));
+  }
   const [only] = r.leftOut;
   if (r.leftOut.length === 1 && only !== undefined) {
     const merge = `merge it with another population in ${individualsFile(p)}`;
@@ -780,6 +799,40 @@ function tooFewText(
     ? `lower the minimum of individuals, ${merge}, or loosen ${individualFilters}`
     : `lower the minimum of individuals, or ${merge}`;
   return `Populations ${names} have fewer than ${counted(min, "individual")}${counts}, so they are left out of the distances. To include them, ${include}.`;
+}
+
+/** The text of `tooFewIndividuals` on popgen2.html, which names the
+    minimum as its field does, `neededPerVariant`, for the populations of
+    `r.leftOut`, named `names`, offering to loosen the thresholds of the
+    individuals when they took individuals from one of them, `filtered`,
+    and to merge populations in the individuals file `file`. */
+function tooFewOnPopgen2(
+  r: PopDistsResult,
+  min: number,
+  names: string,
+  filtered: boolean,
+  file: string,
+): string {
+  const needed = neededPerVariant(min);
+  const lower = "lower the individuals needed per variant";
+  const loosen = `, or loosen ${PLACES.popgen2.individualFilters}`;
+  const [only] = r.leftOut;
+  if (r.leftOut.length === 1 && only !== undefined) {
+    const merge = `merge it with another population in ${file}`;
+    const include = filtered
+      ? `${lower}, ${merge}${loosen}`
+      : `${lower}, or ${merge}`;
+    return `Population ${names} has ${counted(only[1], "individual")}, fewer than ${needed}, so it is left out of the distances. To include it, ${include}.`;
+  }
+  const fewer =
+    r.leftOut.length <= MAX_NAMED
+      ? `${bothOf(r.leftOut.map(([, numIndividuals]) => grouped(numIndividuals)))} individuals, fewer than ${needed}`
+      : `fewer individuals than ${needed}`;
+  const merge = `merge each with another population in ${file}`;
+  const include = filtered
+    ? `${lower}, ${merge}${loosen}`
+    : `${lower}, or ${merge}`;
+  return `Populations ${names} have ${fewer}, so they are left out of the distances. To include them, ${include}.`;
 }
 
 /** The text of `pairWithoutDistance`, for its pairs. */
