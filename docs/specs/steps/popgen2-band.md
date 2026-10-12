@@ -151,6 +151,8 @@ to a screen reader:
 | "PCA running · 1:20 · then the diversity" | "PCA · 1:20" |
 | "Stopping the diversity…" | "Stopping…" |
 | "The diversity starts in a moment" | "Diversity soon" |
+| "The diversity starts after the next change" | "Diversity later" |
+| "The diversity starts again when the download is written or closed" | "Diversity later" |
 | "The PCA and the diversity start in a moment" | "Analyses soon" |
 | "The PCA and the diversity start again when the download is written or closed" | "Analyses later" |
 | "Diversity: 2 warnings, in the Populations tab" | "Diversity: 2 warnings" |
@@ -534,6 +536,7 @@ change; it is still the screen's, not the project's
 | the PCA about to start | "The PCA starts in a moment"; "The PCoA starts in a moment"; held after a crash, "The PCA starts after the next change"; while the dialog of the download is open, "The PCA starts again when the download is written or closed"; "The PCoA starts again when the download is written or closed" |
 | the link to the warnings | "PCA: 1 warning, in the PCA tab"; "PCA: 2 warnings, in the PCA tab"; "PCoA: 1 warning, in the PCA tab" |
 | the link to an error | "PCA: could not be calculated, in the PCA tab"; "PCoA: could not be calculated, in the PCA tab" |
+| the short forms, under 30 rem wide, the whole words given to a screen reader ("Its place") | "Statistics · 45%"; "PCA · 1:20"; "Diversity · 0:12"; "Writing · 45%"; "Stopping…"; "PCA soon"; "Diversity soon"; "Analyses soon"; "PCA later"; "Diversity later"; "Analyses later"; "PCA: 2 warnings"; "Diversity: 2 warnings"; "PCA: failed"; "Diversity: failed"; "PCoA" in place of "PCA" under the PCoA (listed here on 12 October 2026, the review of work package 4) |
 | the buttons | "Stop"; "Stop recalculating"; "Stop all"; "Details"; "Close"; "Copy the details" |
 | the name of the Stop for a screen reader | "Stop the statistics of panel.vcf.gz"; "Stop the PCA"; "Stop the PCoA"; "Stop recalculating the PCA"; "Stop recalculating the PCoA"; "Stop the diversity"; "Stop recalculating the diversity"; "Stop all: the PCA and the diversity" |
 | an error of the application | the three sentences of `barText` on this page, "An error of the application", with the message in each |
