@@ -24,6 +24,13 @@ and on `docs/specs/analyses/pca.md`, "On popgen2.html", for the CSV of
 the PCA's coordinates. The old page, `popgen.html`, gets none of this:
 where it shares a component, the download is a prop it does not give.
 
+Revised and built on the branch `population-tab` on 11 October 2026
+(`docs/plans/population-tab.md`, work package 2 and the review of work
+packages 2 and 3), not yet tried by the owner: a histogram of the
+spectrum of a population downloads the population's rows of the CSV of
+the spectra ("A plot"), and Tab or Shift+Tab in an open menu closes it
+and moves the focus on ("The menu").
+
 ## What it does
 
 A user who downloads a table to work on in a spreadsheet, or in R or
