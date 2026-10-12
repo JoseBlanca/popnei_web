@@ -1898,6 +1898,19 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
     expect(jobsOf(extra)).toEqual(jobsOf(page2()));
   });
 
+  test("numCheckNumbers of the page counts 1 + 3 × its populations, 7 for pop_a and pop_b and 4 for Unclassified; needs of a project of association is a defect (the review of the LD decay, 12 October 2026)", () => {
+    expect(ldDecayOnPopgen2.numCheckNumbers(page2())).toBe(7);
+    expect(ldDecayOnPopgen2.numCheckNumbers(page2({ table: null }))).toBe(4);
+    const association = deepFreeze<Project>({
+      ...page2(),
+      app: "gwas",
+      grouping: { kind: "roles", roles: [] },
+    });
+    expect(() => ldDecayOnPopgen2.needs(association)).toThrow(
+      /^popnei_web defect: the LD decay was given a project of association\.$/u,
+    );
+  });
+
   test("the script of the page: Unclassified for the one population of no file, of None and of a refused file, the populations of the column otherwise, in the words of the Variants tab (the review of the LD decay, 12 October 2026)", () => {
     for (const p of [
       page2({ table: null }),

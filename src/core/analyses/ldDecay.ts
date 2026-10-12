@@ -1106,6 +1106,9 @@ function warnings(
   // An unclassified individual is no fault on popgen2.html, whose tab
   // says how many are left out.
   const toRun: Pops = popgen2PopulationsToRun(p) ?? [];
+  // The one population is always in the result, so populationNotInResult
+  // would find nothing either; the guard says that a warning of a
+  // population missing is of the populations of a column alone.
   const notInResult =
     popgen2OnePopulationCause(p) !== null
       ? null
