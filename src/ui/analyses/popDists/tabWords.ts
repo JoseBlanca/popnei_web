@@ -220,6 +220,17 @@ export function distancesPanelLive(
   }
 }
 
+/** The line under the heatmap while its cells are too small to hold
+    their values, as on a page of 320 pixels with four populations: where
+    the values are, and, when the heatmap has a negative distance,
+    `negative`, that its colour is that of 0, which its cell does not
+    write (docs/specs/steps/popgen2-distances.md, "The result"). */
+export function heatmapValuesLine(negative: boolean): string {
+  const where =
+    "The cells are too small for their values, which the table below gives.";
+  return negative ? `${where} A negative distance has the colour of 0.` : where;
+}
+
 /** What the "Download…" of the table downloads, for a screen reader. */
 export const DISTANCES_TABLE_WHAT = "the table of the distances";
 

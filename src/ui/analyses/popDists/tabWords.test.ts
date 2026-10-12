@@ -27,6 +27,7 @@ import {
   distancesWaitingLine,
   heatmapFiles,
   heatmapWhat,
+  heatmapValuesLine,
   matrixCsv,
   pairsCsv,
   unclassifiedCaption,
@@ -273,6 +274,15 @@ describe("DT1 D3 the words of the Distances tab", () => {
         "The distances start after the next change of the filters, of their options or of the populations, or when Run is pressed.",
       runBeside: true,
     });
+  });
+
+  test("the line under a heatmap whose cells hold no values: where the values are, and the colour of a negative distance when there is one (the review of the Distances tab, 12 October 2026)", () => {
+    expect(heatmapValuesLine(false)).toBe(
+      "The cells are too small for their values, which the table below gives.",
+    );
+    expect(heatmapValuesLine(true)).toBe(
+      "The cells are too small for their values, which the table below gives. A negative distance has the colour of 0.",
+    );
   });
 
   test("the caption of the unclassified, and what each download names", () => {

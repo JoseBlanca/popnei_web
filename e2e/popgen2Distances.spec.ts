@@ -662,6 +662,41 @@ test.describe("DT1 D5 the Distances tab", () => {
     ).toBeFocused({ timeout: RESULT_TIMEOUT });
   });
 
+  test("DT1 D5 the heatmap at 320 px (the review of the Distances tab, 12 October 2026): three populations, its values in the cells for both measures and no line under it; four, none in the cells, and the line says where they are and the colour of the negative distance", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 320, height: 900 });
+    await openPage(page);
+    await pick(page, "panel.nei");
+    await pickIndividuals(page, "panel_pops.csv");
+    await runDistances(page);
+    const line = shown(page).getByText(/^The cells are too small/u);
+    await expect(heatmap(page, "Hudson's Fst")).toBeVisible();
+    expect(await heatmapValues(page)).toHaveLength(6);
+    await expect(line).toHaveCount(0);
+    await shown(page)
+      .getByRole("radiogroup", { name: "Distance in the heatmap" })
+      .locator("label")
+      .filter({ hasText: "Jost's D" })
+      .click();
+    await expect(heatmap(page, "Jost's D")).toBeVisible();
+    expect(await heatmapValues(page)).toHaveLength(6);
+    await expect(line).toHaveCount(0);
+
+    // The distances are live: the other file is calculated by itself.
+    await pickIndividuals(page, "panel_split.csv");
+    await expect
+      .poll(() => heatmapRows(page), { timeout: RESULT_TIMEOUT })
+      .toEqual(["p0b", "p0a", "p2", "p1"]);
+    expect(await heatmapValues(page)).toHaveLength(0);
+    await expect(line).toHaveText(
+      "The cells are too small for their values, which the table below gives. A negative distance has the colour of 0.",
+    );
+    await expectNoAxeViolations(page, makeAxeBuilder);
+  });
+
   test("DT1 D5 the band at 320 px, the distances held running beside the PCA live: Popnei, Distances · 0:0…, Stop and Stop all on one line", async ({
     page,
   }) => {

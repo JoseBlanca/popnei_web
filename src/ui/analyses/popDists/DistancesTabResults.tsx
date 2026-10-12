@@ -44,6 +44,7 @@ import {
   DISTANCES_TABLE_WHAT,
   TABLE_FILE,
   heatmapFiles,
+  heatmapValuesLine,
   heatmapWhat,
   matrixCsv,
   pairsCsv,
@@ -178,9 +179,14 @@ function DistancesHeatmap({
     [result, measure, variantsName],
   );
   const order = orderText(result, measure);
+  const negative = data.values.some((value) => value < 0);
   return (
     <div className={classOf(styles, "heatmapPart")}>
-      <HeatmapPlot data={data} download={download} />
+      <HeatmapPlot
+        data={data}
+        download={download}
+        valuesLine={heatmapValuesLine(negative)}
+      />
       {order !== null && <p className={classOf(styles, "line")}>{order}</p>}
     </div>
   );

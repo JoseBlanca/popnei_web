@@ -248,14 +248,27 @@ function legendValues(data: HeatmapData): string[] {
 }
 
 /**
+ * The width of the legend right of the gap after the grid: the bar, 4
+ * pixels, and the longest of the texts at the ends of the bar, at 7.2
+ * pixels a character. The name of the value, above the bar, ends where
+ * the legend ends and reaches left over the room above the grid, so it
+ * takes none of this width: "Hudson's Fst", wider than its numbers, left
+ * the cells of three populations 55.7 pixels on a page of 320, too
+ * narrow for their values, where "Jost's D" left them room (the review
+ * of the Distances tab, 12 October 2026).
+ */
+function legendWidth(data: HeatmapData): number {
+  const longest = Math.max(...legendValues(data).map((text) => text.length));
+  return BAR_WIDTH + BAR_TEXT_GAP + longest * CHARACTER_WIDTH;
+}
+
+/**
  * The margins of the heatmap for `data` with its names written, fixed
  * numbers made from the data, since nothing in a plot measures text:
  * left, 8 pixels and the longest name as written, at 9 pixels a
  * character; bottom, 8 pixels, 0.71 of that width, the slant of 45°, and
- * 8 more; top, 24; right, 16 pixels, the bar, 4 pixels and the longest
- * of the name of the value and the texts at the ends of the bar, at 7.2
- * pixels a character (heatmap.md, "The names on the axes" and "The
- * legend").
+ * 8 more; top, 24; right, 16 pixels and the legend, `legendWidth`
+ * (heatmap.md, "The names on the axes" and "The legend").
  */
 function marginWithNames(data: HeatmapData): Margin {
   const longestName = Math.max(
@@ -263,14 +276,9 @@ function marginWithNames(data: HeatmapData): Margin {
     ...data.names.map((name) => Array.from(axisName(name)).length),
   );
   const namesWidth = longestName * NAME_CHARACTER_WIDTH;
-  const longestLegend = Math.max(
-    Array.from(data.valueName).length,
-    ...legendValues(data).map((text) => text.length),
-  );
   return {
     top: TOP_MARGIN,
-    right:
-      LEGEND_GAP + BAR_WIDTH + BAR_TEXT_GAP + longestLegend * CHARACTER_WIDTH,
+    right: LEGEND_GAP + legendWidth(data),
     bottom: NAME_PADDING + SLANT * namesWidth + BOTTOM_PADDING,
     left: NAME_PADDING + namesWidth,
   };
@@ -291,6 +299,22 @@ export function writesNames(data: HeatmapData, size: ExportSize): boolean {
     size.height - margin.top - margin.bottom,
   );
   return scale.step() >= NAMES_MIN;
+}
+
+/**
+ * Whether the heatmap of `data` in an element of `size` writes the
+ * values in its cells: when its band, in the margins `heatmapMargin`
+ * gives for that size, is of `CELL_TEXT_MIN` pixels or more. So the
+ * screen can say where the values are when the cells hold none.
+ */
+export function writesValues(data: HeatmapData, size: ExportSize): boolean {
+  const margin = heatmapMargin(data, size);
+  const scale = heatmapScale(
+    data.names,
+    size.width - margin.left - margin.right,
+    size.height - margin.top - margin.bottom,
+  );
+  return scale.step() >= CELL_TEXT_MIN;
 }
 
 /**
@@ -396,10 +420,13 @@ interface BarBand {
   readonly fill: string;
 }
 
-/** A text of the legend: the name of the value, or a number at an end of the bar. */
+/** A text of the legend: the name of the value, or a number at an end of
+    the bar; `anchor`, the end of the text at `x`, "end" for the name of
+    the value. */
 interface LegendText {
   readonly key: string;
   readonly className: string;
+  readonly anchor: "start" | "end";
   readonly x: number;
   readonly y: number;
   readonly dy: string;
@@ -552,7 +579,8 @@ function drawCells(frame: Frame, data: HeatmapData, scales: GridScales): void {
 /**
  * Draws the legend from the top left of the SVG, right of the grid of
  * side `side` whose top is `top` pixels down the frame: the name of the
- * value above; a bar of 32 bands of viridis from the top of the grid, as
+ * value above, ending where the legend ends; a bar of 32 bands of
+ * viridis from the top of the grid, as
  * high as the grid, at most 240 pixels, the largest value at its top and
  * 0 at its bottom, one band of step 0 when no value is above 0, none when
  * no value is finite; and the texts at its ends, or "no value".
@@ -574,7 +602,8 @@ function drawLegend(
     {
       key: "title",
       className: "chart-legend-text chart-legend-title",
-      x: barLeft,
+      anchor: "end",
+      x: barLeft + legendWidth(data),
       y: barTop - LEGEND_TITLE_ABOVE,
       dy: "0",
       text: data.valueName,
@@ -584,6 +613,7 @@ function drawLegend(
     texts.push({
       key: "none",
       className: "chart-legend-text chart-legend-value",
+      anchor: "start",
       x: barLeft,
       y: barTop,
       dy: "0.71em",
@@ -594,6 +624,7 @@ function drawLegend(
     texts.push({
       key: "top",
       className: "chart-legend-text chart-legend-value",
+      anchor: "start",
       x: textLeft,
       y: barTop + barHeight / 2,
       dy: "0.35em",
@@ -610,6 +641,7 @@ function drawLegend(
       {
         key: "top",
         className: "chart-legend-text chart-legend-value",
+        anchor: "start",
         x: textLeft,
         y: barTop,
         dy: "0.71em",
@@ -618,6 +650,7 @@ function drawLegend(
       {
         key: "bottom",
         className: "chart-legend-text chart-legend-value",
+        anchor: "start",
         x: textLeft,
         y: barTop + barHeight,
         dy: "0",
@@ -641,6 +674,7 @@ function drawLegend(
     .data(texts, (text) => text.key)
     .join("text")
     .attr("class", (text) => text.className)
+    .attr("text-anchor", (text) => text.anchor)
     .attr("x", (text) => text.x)
     .attr("y", (text) => text.y)
     .attr("dy", (text) => text.dy)

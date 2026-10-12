@@ -19,6 +19,7 @@ import {
   heatmapNumber,
   heatmapScale,
   writesNames,
+  writesValues,
   type HeatmapData,
 } from "./heatmap.ts";
 import { MAX_HEATMAP_NAMES } from "./limits.ts";
@@ -101,16 +102,16 @@ function sizedElement(width: number, height: number): HTMLDivElement {
 
 /**
  * The side of the grid of the panel's heatmap in an element of 640 by
- * 640: the frame is 640 less the margins, 26 and 118.4 across, 495.6,
- * and 24 and 8 + 0.71 × 18 + 8 down, 587.22, so the grid is 495.6 a
+ * 640: the frame is 640 less the margins, 26 and 75.2 across, 538.8,
+ * and 24 and 8 + 0.71 × 18 + 8 down, 587.22, so the grid is 538.8 a
  * side.
  */
-const PANEL_SIDE = 640 - 26 - 118.4;
-/** Each of its three bands, (495.6 + 1) / 3. */
+const PANEL_SIDE = 640 - 26 - 75.2;
+/** Each of its three bands, (538.8 + 1) / 3. */
 const PANEL_BAND = (PANEL_SIDE + 1) / 3;
 /**
  * The top of that grid in the frame: the grid stands at the foot of the
- * frame, so the room left over, 587.22 − 495.6, is above it.
+ * frame, so the room left over, 587.22 − 538.8, is above it.
  */
 const PANEL_TOP = 640 - 24 - (8 + 0.71 * 18 + 8) - PANEL_SIDE;
 
@@ -233,12 +234,16 @@ describe("PA4 D2 the heatmap without a DOM: its numbers, steps and classes", () 
     expect(axisName("p0")).toBe("p0");
   });
 
-  test("the margins of the panel, of names of 2 characters at 9 pixels a character and a legend at 7.2: 26 left, 28.78 below, 24 above and 118.4 right", () => {
+  test("the margins of the panel, of names of 2 characters at 9 pixels a character and a legend at 7.2: 26 left, 28.78 below, 24 above and 75.2 right, the numbers of the bar and not the title, which stands above it (the review of the Distances tab, 12 October 2026)", () => {
     const margin = heatmapMargin(panel());
     expect(margin.left).toBeCloseTo(26, 9);
     expect(margin.bottom).toBeCloseTo(8 + 0.71 * 18 + 8, 9);
     expect(margin.top).toBe(24);
-    expect(margin.right).toBeCloseTo(118.4, 9);
+    // 16 + 12 + 4 + "0.1096" at 7.2: "Hudson's Fst", wider, takes none.
+    expect(margin.right).toBeCloseTo(75.2, 9);
+    expect(heatmapMargin({ ...panel(), valueName: "Jost's D" }).right).toBe(
+      margin.right,
+    );
     // A name of 30 characters is counted as the 20 it is written with.
     const long = heatmapMargin(heatmapOf(["a".repeat(30), "b"], [0.1], "Fst"));
     expect(long.left).toBeCloseTo(8 + 20 * 9, 9);
@@ -256,7 +261,7 @@ describe("PA4 D2 the heatmap without a DOM: its numbers, steps and classes", () 
     const withNames = heatmapMargin(data);
     expect(withNames.left).toBeCloseTo(8 + 20 * 9, 9);
     const size = { width: 640, height: 640 };
-    // With the names, (640 − 188 − 118.4 + 1) / 60 is a band of 5.6 pixels.
+    // With the names, (640 − 188 − 75.2 + 1) / 60 is a band of 6.3 pixels.
     expect(writesNames(data, size)).toBe(false);
     const margin = heatmapMargin(data, size);
     expect(margin).toEqual({ ...withNames, left: 8, bottom: 8 });
@@ -265,9 +270,9 @@ describe("PA4 D2 the heatmap without a DOM: its numbers, steps and classes", () 
     expect(heatmapMargin(panel(), size)).toEqual(heatmapMargin(panel()));
   });
 
-  test("PA10 whether the names are written is decided with their margins: 30 names of 20 characters at 640 pixels have bands of 11.2 with them, and are not written, though without them the bands are of 16.6", () => {
+  test("PA10 whether the names are written is decided with their margins: 33 names of 20 characters at 640 pixels have bands of 11.4 with them, and are not written, though without them the bands are of 16.9", () => {
     const names = Array.from(
-      { length: 30 },
+      { length: 33 },
       (_v, i) => `population_number_${String(i).padStart(2, "0")}`,
     );
     const data = heatmapOf(names, []);
@@ -278,11 +283,44 @@ describe("PA4 D2 the heatmap without a DOM: its numbers, steps and classes", () 
       640 - margin.left - margin.right,
       640 - margin.top - margin.bottom,
     );
-    expect((side + 1) / 30).toBeGreaterThan(12);
+    expect((side + 1) / 33).toBeGreaterThan(12);
   });
 });
 
 describe("PA4 D2 the heatmap under jsdom, its cells, values and names", () => {
+  test.each([
+    { names: ["p2", "p0", "p1"], valueName: "Hudson's Fst", writes: true },
+    { names: ["p2", "p0", "p1"], valueName: "Jost's D", writes: true },
+    {
+      names: ["p0b", "p0a", "p2", "p1"],
+      valueName: "Hudson's Fst",
+      writes: false,
+    },
+    { names: ["p0b", "p0a", "p2", "p1"], valueName: "Jost's D", writes: false },
+  ])(
+    "writesValues tells whether the cells hold their values, as drawn: $names.length names of $valueName in an element 310 pixels wide, the panel's on a page of 320, $writes (the review of the Distances tab, 12 October 2026)",
+    ({ names, valueName, writes }) => {
+      const upper = Array.from(
+        { length: (names.length * (names.length - 1)) / 2 },
+        (_v, i) => 0.1 + i / 100,
+      );
+      const data = heatmapOf(names, upper, valueName);
+      // The screen's height: the width less the left and the right
+      // margins, with the top and the bottom ones added.
+      const margin = heatmapMargin(data);
+      const size = {
+        width: 310,
+        height: 310 - margin.left - margin.right + margin.top + margin.bottom,
+      };
+      const element = sizedElement(size.width, size.height);
+      createHeatmap(element, data);
+      expect(writesValues(data, size)).toBe(writes);
+      expect(element.querySelectorAll("text.chart-cell-text").length > 0).toBe(
+        writes,
+      );
+    },
+  );
+
   test("the Fst of panel.nei in 640 by 640: three paths of the steps 239, 245 and 255 in their colours, two cells each, and the six values in black", () => {
     const element = sizedElement(640, 640);
     createHeatmap(element, panel());
@@ -331,11 +369,11 @@ describe("PA4 D2 the heatmap under jsdom, its cells, values and names", () => {
     expect(corners).toContain(`${at(PANEL_BAND)},${at(PANEL_TOP)}`);
   });
 
-  test("PA10 the grid stands at the bottom left of the frame: its first row starts 91.6 pixels down, its last ends at the foot, where the base writes the names of the columns, and the bar of the legend starts level with it", () => {
+  test("PA10 the grid stands at the bottom left of the frame: its first row starts 48.4 pixels down, its last ends at the foot, where the base writes the names of the columns, and the bar of the legend starts level with it", () => {
     const element = sizedElement(640, 640);
     createHeatmap(element, panel());
     const innerHeight = 640 - 24 - (8 + 0.71 * 18 + 8);
-    expect(PANEL_TOP).toBeCloseTo(91.62, 9);
+    expect(PANEL_TOP).toBeCloseTo(48.42, 9);
     const tops = [
       ...element.querySelectorAll("g.chart-marks > path.chart-cells"),
     ]
@@ -351,9 +389,16 @@ describe("PA4 D2 the heatmap under jsdom, its cells, values and names", () => {
       ...element.querySelectorAll("rect.chart-legend-band"),
     ].map((band) => Number(band.getAttribute("y")));
     expect(Math.min(...bandTops)).toBeCloseTo(24 + PANEL_TOP, 9);
-    // The name of the value is 8 pixels above the bar.
+    // The name of the value is 8 pixels above the bar, its end at the
+    // right of the numbers of the bar, so that it takes no width of the
+    // grid: 26 + 538.8 + 16, the bar, 12 + 4, and "0.1096", 43.2.
     const title = element.querySelector("text.chart-legend-title");
     expect(Number(title?.getAttribute("y"))).toBeCloseTo(24 + PANEL_TOP - 8, 9);
+    expect(title?.getAttribute("text-anchor")).toBe("end");
+    expect(Number(title?.getAttribute("x"))).toBeCloseTo(
+      26 + PANEL_SIDE + 16 + 12 + 4 + 6 * 7.2,
+      9,
+    );
   });
 
   test("the names on the vertical axis read p2, p0, p1 from the top, those under the columns slanted at −45°, and no label of the axes is written", () => {
@@ -534,22 +579,22 @@ describe("PA4 D2 the heatmap under jsdom, its cells, values and names", () => {
     expect(
       element.querySelector("g.chart-frame")?.getAttribute("transform"),
     ).toBe("translate(8,24)");
-    // The grid takes the room of the names: 640 − 8 − 118.4 a side.
+    // The grid takes the room of the names: 640 − 8 − 75.2 a side.
     expect(
       element.querySelector("rect.chart-overlay")?.getAttribute("width"),
-    ).toBe(String(640 - 8 - 118.4));
+    ).toBe(String(640 - 8 - 75.2));
     expect(
       element.querySelector("rect.chart-overlay")?.getAttribute("height"),
     ).toBe(String(640 - 24 - 8));
   });
 
   test("PA10 an element narrower than the margins of the names draws the heatmap with no name, where it drew nothing", () => {
-    // The left and right margins of the panel's names take 144.4 pixels.
-    const element = sizedElement(140, 140);
+    // The left and right margins of the panel's names take 101.2 pixels.
+    const element = sizedElement(100, 100);
     createHeatmap(element, panel());
     expect(axisNames(element, "g.chart-axis-y")).toEqual([]);
     expect(cellPaths(element).map(([, cells]) => cells)).toEqual([2, 2, 2]);
-    expect(element.querySelector("svg")?.getAttribute("width")).toBe("140");
+    expect(element.querySelector("svg")?.getAttribute("width")).toBe("100");
   });
 
   test("a name with markup is written as text on the axes and in the tooltip, and no b element is made", () => {
@@ -758,9 +803,9 @@ describe("PA4 D2 the heatmap under jsdom, the cell under the pointer", () => {
       heatmapOf(["p0a", "p0b", "p1"], [FST_P0A_P0B, 0.1028, 0.102]),
     );
     // Names of 3 characters: the left margin is 8 + 3 × 9, 35, and the
-    // one below 8 + 0.71 × 27 + 8, so the grid of 486.6 pixels a side
-    // starts 581.83 − 486.6 pixels down the frame.
-    const side = 640 - 35 - 118.4;
+    // one below 8 + 0.71 × 27 + 8, so the grid of 529.8 pixels a side
+    // starts 581.83 − 529.8 pixels down the frame.
+    const side = 640 - 35 - 75.2;
     const band = (side + 1) / 3;
     const top = 640 - 24 - (8 + 0.71 * 27 + 8) - side;
     moveTo(element, 1.5 * band - 0.5, top + 0.5 * band - 0.5);
