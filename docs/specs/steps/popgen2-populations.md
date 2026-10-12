@@ -763,8 +763,11 @@ as the diversity is. The owner's decisions it takes, of 12 October
 
 - **Live, like the others.** After its first Run it is calculated again
   by itself after each change of what it reads, last in the order of
-  the page, after the PCA and the diversity, so that they never wait
-  for it. While it runs, what it reads is greyed with the reason. With
+  the page, after the PCA and the diversity, so that after one change
+  the others start before it; a change of another analysis's own
+  options while it runs waits for it, as "While it runs" says
+  (corrected on 12 October 2026, the review of the LD decay, where this
+  said the others never wait for it). While it runs, what it reads is greyed with the reason. With
   a long distance on a dense file a run lasts minutes, 222 s at
   2,000,000 bp on 1,000 individuals with a variant every 100 bp in
   Chromium 153 on the owner's Mac (`ldDecay.md`, "In the browsers"), and
