@@ -287,7 +287,7 @@ test.describe("PA5 D2 the distances on the screen", () => {
     await chooseMeasure(page, "Jost's D");
     await expect(heatmap(page, "Jost's D")).toBeVisible();
     await expect(heatmap(page, "Hudson's Fst")).toHaveCount(0);
-    await expect(status(page)).toContainText("Heatmap of Jost's D");
+    await expect(status(page)).toContainText("The heatmap now shows Jost's D.");
     expect(await heatmapRows(page)).toEqual(["p2", "p0", "p1"]);
     expect(await heatmapValues(page)).toEqual(DEST_CELLS);
     await expect(panel(page).getByRole("progressbar")).toHaveCount(0);
@@ -721,7 +721,7 @@ test.describe("PA5 D2 the review of the panel of the distances", () => {
     await expect(heatmap(page, "Jost's D")).toBeVisible();
     expect(await heatmapValues(page)).toEqual(DEST_CELLS);
     await expect(group.getByRole("radio", { name: "Jost's D" })).toBeFocused();
-    await expect(status(page)).toContainText("Heatmap of Jost's D");
+    await expect(status(page)).toContainText("The heatmap now shows Jost's D.");
   });
 
   test("PA5 D2 the measure changed while the distances run: the result shows the measure chosen, and nothing is announced before it", async ({

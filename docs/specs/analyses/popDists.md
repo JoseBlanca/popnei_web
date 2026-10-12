@@ -1256,7 +1256,7 @@ The help, for the help drawer of stage 8:
   0.1027".
 - The radio buttons are React Aria's `RadioGroup`, one stop of the Tab
   key and the arrow keys between the two; a change of the measure is
-  said by the status region of the shell, "Heatmap of Jost's D", since
+  said by the status region of the shell, "The heatmap now shows Jost's D." (since 12 October 2026, the review of the Distances tab: until then "Heatmap of Jost's D"), since
   the heatmap changes without moving the focus (WCAG 2.2, success
   criterion 4.1.3).
 - The colour of a cell is never the only way its value is told: the

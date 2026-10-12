@@ -122,7 +122,7 @@ options), with their labels and defaults, each a command of
   7). A change of them redraws the heatmap from the same result and
   calculates nothing, since the measure is in no key; so they are never
   greyed, also while the distances run, and the status region says
-  "Heatmap of Jost's D" when a heatmap is drawn again. Under them, a
+  "The heatmap now shows Jost's D." when a heatmap is drawn again. Under them, a
   line says what each measure measures and when to read it, in the
   words of popnei's `docs/specs/dists.md`, and describes the group for
   a screen reader: "Hudson's Fst is the share of the diversity of the
@@ -415,7 +415,7 @@ scroll of the heatmap and of the table, and the words of a PNG refused.
 | the status region, the end | "Distances between the populations of panel.nei calculated."; a refusal or a failure, "The distances between the populations of panel.nei could not be calculated: " and the words of its error |
 | the status region, held by a crash of another analysis | "The distances did not start: they start after the next change of the filters, of their options or of the populations, or when Run is pressed in the Distances tab." |
 | the status region, a Stop | "Distances stopped. Press Run in the Distances tab to calculate them again."; with no Run to press, "Distances stopped." |
-| the status region, the measure changed with a heatmap shown | "Heatmap of Jost's D", "Heatmap of Hudson's Fst" |
+| the status region, the measure changed with a heatmap shown | "The heatmap now shows Jost's D.", "The heatmap now shows Hudson's Fst." (until 12 October 2026, "Heatmap of Jost's D") |
 | the tab while its code downloads | "Loading the Distances tab…" |
 | the tab whose code could not be downloaded | "The Distances tab could not be loaded. Press Try again. If it fails again, the site may have been updated since this page was opened: reload the page and open panel.nei again; what the page has calculated is lost." with "Try again" |
 

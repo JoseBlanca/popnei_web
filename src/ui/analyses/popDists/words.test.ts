@@ -34,8 +34,8 @@ describe("PA5 D1 the words of the panel of the distances", () => {
   });
 
   test("a change of the measure is announced as the heatmap of the measure drawn, and the heatmap is titled by it", () => {
-    expect(measureAnnounced("dest")).toBe("Heatmap of Jost's D");
-    expect(measureAnnounced("fst")).toBe("Heatmap of Hudson's Fst");
+    expect(measureAnnounced("dest")).toBe("The heatmap now shows Jost's D.");
+    expect(measureAnnounced("fst")).toBe("The heatmap now shows Hudson's Fst.");
     expect(heatmapTitle("fst")).toBe("Hudson's Fst between populations");
     expect(heatmapTitle("dest")).toBe("Jost's D between populations");
   });

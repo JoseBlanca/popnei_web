@@ -283,12 +283,12 @@ describe("PA5 the options of the distances, drawn by React", () => {
       minNumIndividuals: 12,
       measure: "dest",
     });
-    expect(announced).toEqual(["Heatmap of Jost's D"]);
+    expect(announced).toEqual(["The heatmap now shows Jost's D."]);
     expect(document.activeElement).toBe(dest);
     press("ArrowUp");
     expect(announced).toEqual([
-      "Heatmap of Jost's D",
-      "Heatmap of Hudson's Fst",
+      "The heatmap now shows Jost's D.",
+      "The heatmap now shows Hudson's Fst.",
     ]);
     expect(document.activeElement).toBe(radio("Hudson's Fst"));
   });

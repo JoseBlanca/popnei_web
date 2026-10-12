@@ -112,9 +112,10 @@ export function heatmapTitle(measure: ShownMeasure): string {
 }
 
 /** What the status region says when the radio buttons "Distance in the
-    heatmap" are set to `measure`, "Heatmap of Jost's D". */
+    heatmap" are set to `measure`, "The heatmap now shows Jost's D.", a
+    sentence with its verb (until 12 October 2026, "Heatmap of Jost's D"). */
 export function measureAnnounced(measure: ShownMeasure): string {
-  return `Heatmap of ${MEASURE_NAMES[measure]}`;
+  return `The heatmap now shows ${MEASURE_NAMES[measure]}.`;
 }
 
 /** What the status region says when the radio buttons are set to
