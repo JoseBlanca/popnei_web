@@ -49,6 +49,12 @@ leaves it out then, and gives `p.filters` itself otherwise. On
 `popgen.html`, whose projects never hold that filter, the two are the
 same array, so nothing a user sees changes.
 
+Revised on 12 October 2026 for the Distances tab of `popgen2.html`
+(`docs/plans/distances-tab.md`): a second definition,
+`popDistsOnPopgen2`, with the populations of that page, where the
+unclassified are left out, its locks and its words (below, "On
+popgen2.html"). The old page changes in nothing.
+
 The owner decided on 30 September 2026, before this spec was written
 (`docs/specs/stage-5-open-points.md`, decisions 1 and 2):
 
@@ -918,6 +924,158 @@ The panel shows the text of `tooManyPopulationsText` with 201 and the
 download, and neither the heatmap's SVG nor a table; the download saves
 a CSV of 20,100 rows and its header. axe runs on that state.
 
+## On popgen2.html
+
+From 12 October 2026, for `docs/plans/distances-tab.md`. The Distances
+tab of `popgen2.html` (`docs/specs/steps/popgen2-distances.md`) runs
+the analysis of this module through a second definition,
+`popDistsOnPopgen2`, made by the same code with what differs given as a
+page, as the diversity has `diversityOnPopgen2` (`diversity.md`, "On
+popgen2.html"); the old page changes in nothing a user sees. The
+request, the runner, the numbers, the orders of the heatmap and the
+result are the old ones. A user of the new page would see three things
+go wrong with the old definition: the distances locked because some
+individual of the variants file is not in the individuals file, which
+that page calls unclassified and not an error
+(`docs/functionality.md`, section 4); a warning that names the
+unclassified as individuals with no population to fill in; and words
+that send the user to "the Variants step", "the Individuals step" and
+"the metadata file", which the page does not have.
+
+### What differs
+
+- **The populations** are those of the diversity of this page: the key
+  holds `popgen2Populations(p)`, and `run`, the lines of the tab, the
+  locks and the warnings read `popgen2PopulationsToRun(p)` and
+  `popgen2PopulationsKept(p, kept)` of `src/core/project.ts`, so the
+  unclassified, an empty cell or an individual not in the individuals
+  file, are in no population and are left out. The one population of
+  the diversity, "Unclassified", is never run here: it is one
+  population, and the distances need two.
+- **`needs`**, without `individualsNeeds` and `populationsNeeds`, which
+  lock on an individual missing from the file and on a column that
+  classifies none, gives the first of these:
+
+  | the project | the reason |
+  |---|---|
+  | the individuals file being read | "The distances wait for panel_pops.csv to be read." |
+  | the one population of `popgen2OnePopulationCause`, no individuals file, "None", a refused file, a column absent, not offered, of more than 20 values or that classifies nobody, or one population of the column with an individual in the variants file | "The distances between populations need two populations or more with individuals in panel.nei. Choose a column of the populations in the box Individuals that gives them two or more." |
+  | fewer than two populations with the minimum of individuals, over every individual of the variants file | "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, or merge populations in panel_pops.csv."; with none, "No population has 20 individuals or more, and …" |
+
+  The second row comes with a greyed tab (`docs/specs/core/popgen2Tabs.md`),
+  whose reason is what the user reads; it locks so that no request of
+  one population is ever made, and its words are true wherever they are
+  read.
+- **`keptNeeds`**, which the store asks after its own lock of no
+  individual kept, gives: the individuals kept leave none of the
+  populations of the column, the diversity's words of this page
+  (`popgen2PopulationsKeptNeeds`, "Loosen the thresholds of the
+  individuals in the Variants tab to keep them."); they leave one, "The
+  thresholds of the individuals leave one population, p0, and the
+  distances need two or more. Loosen the thresholds of the individuals
+  in the Variants tab."; fewer than two of those they leave have the
+  minimum, "Only p0 has 20 individuals or more among the individuals the
+  thresholds keep, and … Lower the number of individuals needed, above,
+  merge populations in panel_pops.csv, or loosen the thresholds of the
+  individuals in the Variants tab." The first two come with a greyed
+  tab too, `fewKept`.
+- **The warnings**, in the order of "The warnings": `tooFewIndividuals`
+  ends "To include it, lower the minimum of individuals, or merge it
+  with another population in panel_pops.csv.", with ", merge it with
+  another population in panel_pops.csv, or loosen the thresholds of the
+  individuals in the Variants tab" when the thresholds took individuals
+  from one of them, and "merge each" for several;
+  `individualsWithoutPopulation` is not raised, an unclassified
+  individual being no fault on this page, whose tab says how many are
+  left out; `populationNotInResult` names the populations of
+  `popgen2PopulationsToRun` that the thresholds emptied, "…, so it is not
+  in the distances."; the others, of the pairs, the negative distances
+  and Jost's D at ploidy 1, are the old ones, whose words name no place.
+- **The words of popnei's refusals**: those of the variants file itself
+  in the words of the box Variants, `fileRefusalText`, as the
+  diversity's; the others with "Change the settings, or open the variants
+  file again in the box Variants", and the filters keeping no variant,
+  "The thresholds of the Variants tab kept none of the variants of
+  panel.nei, so there is no variant to calculate the distances between
+  populations over. Loosen them."; each but those that ask to open the
+  file again ends "The distances are then calculated again by
+  themselves.", since they stay live after a refusal. The statistics of
+  each individual that failed are the diversity's words of this page,
+  with "the distances between populations". The failures that are not
+  popnei's refusals are in the words of `popgen2FailureText`, as the
+  other tabs have them.
+- **The key**, `keyInputs`, as the old one with `popgen2Populations(p)`
+  for `pops`, and `words`, what the warnings read beyond the
+  populations: the name of the individuals file, which
+  `tooFewIndividuals` names, and the column of the populations. So
+  another individuals file of the same table calculates again, and a
+  result is never shown with the words of another file. The key version
+  stays 1; the definitions share the id `popDists`, and each page has
+  its own store and cache, so neither finds a result of the other.
+- **The check numbers and the script** are the old ones; the page
+  compares none and shows no script, so `numCheckNumbers` gives `null`
+  on this page, as for a project that cannot be compared.
+
+### The TypeScript interface
+
+```ts
+export type PopDistsPage = "popgen" | "popgen2";
+
+/** The two definitions, both of the id "popDists": `popDists`, listed by POPGEN_ANALYSES, and
+    `popDistsOnPopgen2`, listed last by POPGEN2_ANALYSES of src/core/apps.ts. */
+export const popDists: AnalysisDef<Job, JobResult>;
+export const popDistsOnPopgen2: AnalysisDef<Job, JobResult>;
+
+/** The words of a refusal of popnei by the page. */
+export function refusalText(message: string, p: Project, page: PopDistsPage): string;
+```
+
+`POPGEN2_LIVE` of `src/core/apps.ts` gains `"popDists"`, last, after
+the LD decay when it comes, so the distances start last after a change
+(`popgen2-pca.md`, "Several analyses calculated again by themselves").
+
+### The cases
+
+- **Some individuals not in the file**, or with an empty cell: left out
+  of `pops`; no lock; the tab's line says how many.
+- **A population under the minimum**: left out of the request, named
+  in the tab's lines and in `tooFewIndividuals`, as on the old page.
+- **The thresholds of the individuals leave one population**: the tab
+  greys (`fewKept`), and `keptNeeds` locks; nothing is sent.
+- **The same file opened again**, its table the same: the key the same,
+  so the result is shown with no calculation while the store holds it.
+
+### How it is verified
+
+With Vitest, at the definition, on frozen projects of `popgen2.html`
+made in the test, beside the old page's cases, which stay:
+
+- `run` with a fake client: the worked example of the diversity with
+  `i4`, of no population, and `i5`, not in the variants file, at the
+  minimum of 1, `pops` `[["A", ["i1", "i3"]], ["B", ["i2"]]]` and
+  `leftOut` `[]`, as the old page; with no individuals file, "None" and
+  a column that classifies nobody, `needs` locks with the words of two
+  populations, and nothing is sent.
+- `needs` and `keptNeeds`, each row above with its words whole; a
+  project with an individual missing from the file, `null`.
+- The warnings: `tooFewIndividuals` with and without the thresholds,
+  each whole; `individualsWithoutPopulation` absent with an
+  unclassified individual; `populationNotInResult` with a population
+  emptied by the thresholds.
+- `refusalText` of the page: the filters keeping no variant, and a
+  message of a file popnei could not read, whole.
+- The key: two individuals files of the same table under other names,
+  different keys; "None" and a column, different keys; the measure, the
+  same key; the old page's key unchanged.
+
+The numbers of `panel.nei` on this page are those of "How it is
+verified" above, popnei 0.2.2 under node, run again on 12 October 2026
+by `order.mjs` and the same to the last digit, the missing data of the
+variants at 0.1, the default of the page, which keeps the 1,200
+variants (the FILTER filter, on in the page's first project, is left
+out for `panel.nei`, `filtersApplied`). The Playwright flows read them
+in the Distances tab (`popgen2-distances.md`, "How it is checked").
+
 ## The panel
 
 The panel of the distances in the Analyses step, after the diversity,
@@ -1271,3 +1429,4 @@ as decided (`docs/specs/stage-5-open-points.md`, points 13 to 16):
 - A tree of the populations: left out, `docs/functionality.md`
   section 10.
 - The heatmap as a plot: `docs/specs/charts/heatmap.md`.
+- The distances of `popgen2.html`: above, "On popgen2.html".

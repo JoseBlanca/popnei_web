@@ -629,6 +629,21 @@ calculated again does not get a PCA of minutes they never asked for:
 each analysis is live once its own Run is pressed (the design, choice
 4).
 
+From 12 October 2026 the distances between populations of the
+Distances tab are a further live analysis (`popgen2-distances.md`,
+`docs/plans/distances-tab.md`), last in the order, `"popDists"` at the
+end of `POPGEN2_LIVE`, with nothing of this section changed but the
+words that name them: they read the populations, as the diversity does,
+so the lock of the populations and the round's words name them where
+they name the diversity; and the page calls them "the distances", a
+plural, so the sentences that name an analysis by its words give them
+a verb and a pronoun in the plural: "The distances start in a moment",
+"Stop the distances in the Distances tab to change the filters; then
+press Run there to calculate them again.", "Waits for the distances to
+end; or stop them in the Distances tab.", "…while the distances run."
+`LiveAnalysisName` of `src/ui/analyses/status.ts` says which analyses
+are named in the plural.
+
 **The order.** The calculation worker runs one calculation at a time.
 When several live analyses are about to start after one change, a
 threshold of the Variants tab for instance, they run one after the
@@ -966,7 +981,8 @@ showed one line, "Not built yet: the diversity of each population, its
 site frequency spectrum and its LD decay come in a later version of the
 page." Distances: "Not built yet:
 the distances between the populations, Hudson's Fst or Jost's D, come
-in a later version of the page."
+in a later version of the page.", until 12 October 2026, when the tab
+shows the distances between populations (`popgen2-distances.md`).
 
 ### The PCA tab
 
