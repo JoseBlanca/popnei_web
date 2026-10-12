@@ -6130,7 +6130,7 @@ for (const theme of ["light", "dark"] as const) {
         "done-live",
         "one-population-done",
       ] as const) {
-        test(`the Populations tab done: ${shot === "one-population-done" ? "the one row Unclassified" : "the table of the three populations"} and the spectrum, each with its "Download…"${shot === "done" ? ", after Stop recalculating, with the line of a Stop" : ", live, Stop recalculating above them"}`, async ({
+        test(`the Populations tab done: ${shot === "one-population-done" ? "the one row Unclassified" : "the table of the three populations"} and the plot of the spectrum, each with its "Download…"${shot === "done" ? ", after Stop recalculating, with the line of a Stop" : ", live, Stop recalculating above them"}`, async ({
           page,
         }) => {
           const panel = await populationsReady(
@@ -6138,10 +6138,10 @@ for (const theme of ["light", "dark"] as const) {
             shot !== "one-population-done",
           );
           await panel.getByRole("button", { name: "Run", exact: true }).click();
-          await expect(panel.locator("svg.chart")).toHaveCount(
-            shot === "one-population-done" ? 1 : 3,
-            { timeout: 20_000 },
-          );
+          // One plot of the spectrum, a line per population.
+          await expect(panel.locator("svg.chart-line")).toHaveCount(1, {
+            timeout: 20_000,
+          });
           if (shot === "done") {
             await panel
               .getByRole("button", { name: "Stop recalculating", exact: true })
@@ -6994,6 +6994,48 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-band-diversity-warning${at}-${theme}`, {
           fullPage: false,
         });
+      });
+
+      test("PT7 R1.3 the band's link to the spectrum's warning, the MAF threshold at 0.95, the Variants tab shown; then the Populations tab after the link, the focus on that warning", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await pickIndividualsOnNewPage(page, "panel_pops.csv");
+        const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+        const panel = page.getByRole("tabpanel");
+        const maf = page
+          .getByRole("region", { name: "Statistics of the file" })
+          .getByRole("group", { name: "Major allele frequency", exact: true })
+          .getByRole("textbox");
+        await expect(maf).toBeVisible({ timeout: 20_000 });
+        await maf.fill("0.95");
+        await maf.press("Enter");
+        await tabs
+          .getByRole("tab", { name: "Populations", exact: true })
+          .click();
+        const run = panel.getByRole("button", { name: "Run", exact: true });
+        await expect(run).toBeEnabled({ timeout: 20_000 });
+        await run.click();
+        await expect(panel.locator("[data-spectrum-warning]")).toBeVisible({
+          timeout: 30_000,
+        });
+        await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
+        const link = band(page).getByRole("link", {
+          name: "Diversity: 1 warning, in the Populations tab",
+        });
+        await expect(link).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-band-spectrum-warning${at}-${theme}`, {
+          fullPage: false,
+        });
+        await link.focus();
+        await page.keyboard.press("Enter");
+        await expect(panel.locator("[data-spectrum-warning]")).toBeFocused();
+        await save(
+          page,
+          `popgen2-band-spectrum-warning-followed${at}-${theme}`,
+          { fullPage: false },
+        );
       });
 
       for (const shot of ["diversity-failed", "held-after-crash"] as const) {

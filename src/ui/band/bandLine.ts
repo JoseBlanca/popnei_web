@@ -31,6 +31,7 @@
 import { POPGEN2_LIVE, isPopgen2Live } from "../../core/apps.ts";
 import type { Popgen2LiveId } from "../../core/apps.ts";
 import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
+import { spectrumWarnings } from "../../core/analyses/sfsWarnings.ts";
 import { writtenName } from "../../core/fileNames.ts";
 import type { Key } from "../../core/keys.ts";
 import type { AnalysisTabId, PageTab } from "../../core/popgen2Tabs.ts";
@@ -149,15 +150,25 @@ export type BandLine =
       readonly withStop: boolean;
       readonly stopAll: StopAll;
     }
-  /** The result of `named` has `warnings` warnings, or it could not be
+  /** The result of `named` has `warnings` warnings, those of its status
+      and, for the diversity, that of its spectrum, or it could not be
       calculated, `warnings` then `null`, and its tab, `tab`, is not the
-      one shown: the link to it. */
+      one shown: the link to it, which gives the focus to `at`. */
   | {
       readonly kind: "result";
       readonly named: LiveAnalysisName;
       readonly tab: AnalysisTabId;
       readonly warnings: number | null;
+      readonly at: LinkTarget;
     };
+
+/** Where the band's link gives the focus in the tab it shows: the
+    heading of the warnings above the result, when the result has some
+    of its status; the warning of the spectrum of the diversity, at the
+    end of the caption of its block, when it is the only one; the heading
+    of the tab, for an error (docs/specs/steps/popgen2-band.md, "The
+    link" and "The warning of the spectrum"). */
+export type LinkTarget = "warnings" | "spectrumWarning" | "heading";
 
 /** The live state of each analysis of the page that can be live, as
     `live` tells it now: read at each change its `subscribe` tells. */
@@ -337,11 +348,26 @@ export function lineOf(page: BandPage): BandLine {
     if (page.tab === tab) continue;
     const status = statusOf(state, id);
     const named = liveAnalysisOf(state, id);
-    if (status.kind === "done" && status.warnings.length > 0) {
-      return { kind: "result", named, tab, warnings: status.warnings.length };
+    if (status.kind === "done") {
+      // The warning of the spectrum, said in its block and not among the
+      // result's, counted with them (the owner, 12 October 2026).
+      const spectrum =
+        status.result.analysis === "diversity"
+          ? spectrumWarnings(status.result, state.project, "popgen2").length
+          : 0;
+      const own = status.warnings.length;
+      if (own + spectrum > 0) {
+        return {
+          kind: "result",
+          named,
+          tab,
+          warnings: own + spectrum,
+          at: own > 0 ? "warnings" : "spectrumWarning",
+        };
+      }
     }
     if (status.kind === "error") {
-      return { kind: "result", named, tab, warnings: null };
+      return { kind: "result", named, tab, warnings: null, at: "heading" };
     }
   }
 

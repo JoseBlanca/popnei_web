@@ -979,3 +979,74 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
     expect(short(testPage.band())).toBe("Diversity: failed");
   });
 });
+
+describe("PT7 R1.3 the band counts the warning of the spectrum with the diversity's", () => {
+  /** The band of the page with the PCA and the diversity done, the
+      Variants tab shown, the diversity's result with `warnings` warnings
+      of its own and a MAF filter that removed 8 of its 548 variants, and
+      the project's filters `maf`, a MAF threshold or none. */
+  async function bandWithMaf(
+    warnings: number,
+    maf: number | null,
+  ): Promise<Band> {
+    const testPage = await bothDone();
+    const state = testPage.store.getState();
+    const withMaf = {
+      ...state,
+      project: {
+        ...state.project,
+        filters:
+          maf === null
+            ? state.project.filters
+            : [
+                ...state.project.filters,
+                { kind: "maf" as const, maxAllowedMaf: maf },
+              ],
+      },
+      analyses: state.analyses.map((view) =>
+        view.id === "diversity" && view.status.kind === "done"
+          ? {
+              ...view,
+              status: {
+                ...view.status,
+                result: {
+                  ...view.status.result,
+                  passStats: {
+                    numVars: 540,
+                    filtering: { maf: { varsProcessed: 548, varsKept: 540 } },
+                  },
+                },
+                warnings: Array.from({ length: warnings }, (_, i) => ({
+                  code: `w${String(i)}`,
+                  text: "A warning.",
+                })),
+              },
+            }
+          : view.id === "pca" && view.status.kind === "done"
+            ? { ...view, status: { ...view.status, warnings: [] } }
+            : view,
+      ),
+    };
+    return bandOf(
+      { ...pageOf(testPage), state: withMaf },
+      testPage.defects.getState(),
+    );
+  }
+
+  test("the spectrum's warning alone: 1 warning, and the link's target the warning itself", async () => {
+    const band = await bandWithMaf(0, 0.95);
+    expect(words(band)).toBe("Diversity: 1 warning, in the Populations tab");
+    expect(band.line).toMatchObject({ kind: "result", at: "spectrumWarning" });
+  });
+
+  test("with two warnings of the result: 3 warnings, and the link's target the heading of the warnings", async () => {
+    const band = await bandWithMaf(2, 0.95);
+    expect(words(band)).toBe("Diversity: 3 warnings, in the Populations tab");
+    expect(band.line).toMatchObject({ kind: "result", at: "warnings" });
+  });
+
+  test("no MAF threshold: no warning of the spectrum, Popnei alone", async () => {
+    const band = await bandWithMaf(0, null);
+    expect(band.line).toEqual({ kind: "nothing" });
+  });
+});

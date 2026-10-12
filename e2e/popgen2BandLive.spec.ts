@@ -959,3 +959,48 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     await workersListening(page);
   });
 });
+
+test("PT7 R1.3 the MAF threshold at 0.95 and the diversity calculated, the Variants tab shown: the link Diversity: 1 warning counts the spectrum's warning; pressed with Enter, the Populations tab shown and the focus on that warning, the link gone; axe, light and dark", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  test.setTimeout(120_000);
+  await page.goto("popgen2.html");
+  await pick(page, "Variants", "panel.nei");
+  await pick(page, "Individuals", "panel_pops.csv");
+  await tab(page, "Variants").click();
+  const maf = page
+    .getByRole("region", { name: "Statistics of the file" })
+    .getByRole("group", { name: "Major allele frequency", exact: true })
+    .getByRole("textbox");
+  await maf.fill("0.95");
+  await maf.press("Enter");
+  await tab(page, "Populations").click();
+  await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+  await button(page, "Run").click();
+  const warning = shown(page).locator("[data-spectrum-warning]");
+  await expect(warning).toContainText(
+    "Warning: The MAF threshold of the Variants tab removes",
+    { timeout: RESULT_TIMEOUT },
+  );
+  // The result of panel.nei and its three populations has no warning of
+  // its own: the spectrum's is the only one.
+  await expect(
+    shown(page).getByRole("heading", { name: /^\d+ warnings?$/u }),
+  ).toHaveCount(0);
+
+  await tab(page, "Variants").click();
+  const link = band(page).getByRole("link", {
+    name: "Diversity: 1 warning, in the Populations tab",
+  });
+  await expect(link).toBeVisible();
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+  await link.focus();
+  await page.keyboard.press("Enter");
+  await expect(tab(page, "Populations")).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(warning).toBeFocused();
+  await expect(link).toHaveCount(0);
+});

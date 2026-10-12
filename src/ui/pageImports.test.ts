@@ -88,10 +88,14 @@ describe("what the pages load first", () => {
     }
   });
 
-  test("popgen2.html loads the rows, the lines and the CSV of the spectrum with the code of the Populations tab, not first", () => {
+  test("popgen2.html loads the rows, the lines and the CSV of the spectrum with the code of the Populations tab, not first, and its warning first, for the band", () => {
     expect(
       reachedFrom("ui/analyses/diversity/PopulationsTabView.tsx"),
     ).toContain("core/analyses/sfs.ts");
     expect(reachedFrom("ui/popgen2.tsx")).not.toContain("core/analyses/sfs.ts");
+    // The warning of the spectrum, which the band counts, apart.
+    expect(reachedFrom("ui/popgen2.tsx")).toContain(
+      "core/analyses/sfsWarnings.ts",
+    );
   });
 });
