@@ -623,6 +623,11 @@ same request, as on the old page. Four things differ, the plot since
     allele; the largest proportion, 0.0562, of p1 at 0.625." The table,
     in the tab beside the plot, holds every number.
   - **Its tab** is "Plot", where it was "Histograms".
+  - **A defect** thrown while the plot is drawn takes the plot alone,
+    as a defect of a histogram did: the heading "Plot" stands in its
+    place, and the table of the spectrum, the bar plots and the Run of
+    the tab stay (from 12 October 2026, the review of round 1; before,
+    it took the whole tab until another variants file was opened).
 - **The words of its warning**, `spectrumWarnings(r, p, page)`, with
   the page of the diversity's definition (`diversity.md`, "On
   popgen2.html"): "The MAF threshold of the Variants tab removes the

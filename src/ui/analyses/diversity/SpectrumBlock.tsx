@@ -27,9 +27,11 @@
  * link to it gives it (docs/specs/steps/popgen2-band.md, "The warning of
  * the spectrum").
  *
- * Each population's histogram is inside an error boundary of its own, so
- * that one that throws takes neither the others nor the table, the fields
- * and the Run of the panel with it.
+ * Each population's histogram, and on popgen2.html the plot of the lines,
+ * is inside an error boundary of its own, so that one that throws takes
+ * neither the others nor the table, the fields and the Run of the panel
+ * with it; the boundary of the lines draws the heading "Plot" in its
+ * place.
  *
  * The histograms go in a grid of as many columns as the width holds, each
  * at least 28rem wide, one column at the width of a phone: the spec leaves
@@ -206,11 +208,13 @@ export const SpectrumBlock = memo(function SpectrumBlock({
                 id: HISTOGRAMS_ID,
                 label: PLOT_TAB,
                 content: (
-                  <SpectrumLines
-                    result={result}
-                    variantsName={variantsName}
-                    minimum={minimum}
-                  />
+                  <ErrorBoundary level={4} heading={PLOT_TAB}>
+                    <SpectrumLines
+                      result={result}
+                      variantsName={variantsName}
+                      minimum={minimum}
+                    />
+                  </ErrorBoundary>
                 ),
               }
             : { id: HISTOGRAMS_ID, label: HISTOGRAMS_TAB, content: histograms },
