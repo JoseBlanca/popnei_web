@@ -7,7 +7,7 @@
  * The expected numbers of variants are popnei's, `foldedSfs` of
  * `calcPopDiversity`, carried by the diversity's result; this module only
  * divides bins 1 to n / 2 of each population by their sum, the proportions
- * the histograms and the lines draw. Its warning is in sfsWarnings.ts.
+ * that the histograms of popgen.html and the lines of popgen2.html draw. Its warning is in sfsWarnings.ts.
  */
 
 import { csvField, defect } from "./words.ts";

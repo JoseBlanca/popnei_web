@@ -3,8 +3,8 @@
  * diversity in its state done (docs/specs/analyses/sfs.md, "The block of
  * the panel"): its heading, which names it as a region of the page; its
  * caption, which the warning of a MAF filter on the spectrum ends, said
- * here beside the histograms and not among the warnings above the table;
- * two tabs, "Histograms", selected when the
+ * here beside the plot and not among the warnings above the table;
+ * two tabs. On popgen.html, "Histograms", selected when the
  * block is drawn, with one histogram per population on one vertical scale,
  * each in a group named by the heading of its population, one level
  * under the block's, or the line
@@ -92,9 +92,11 @@ import {
 } from "./spectrumWords.ts";
 
 /** The ids of the two tabs. */
-const HISTOGRAMS_ID = "histograms";
+// The tab of the plot: the histograms on popgen.html, the lines on
+// popgen2.html.
+const PLOT_ID = "plot";
 const TABLE_ID = "table";
-type SpectrumTab = typeof HISTOGRAMS_ID | typeof TABLE_ID;
+type SpectrumTab = typeof PLOT_ID | typeof TABLE_ID;
 
 /** What the block is drawn with. */
 export interface SpectrumBlockProps {
@@ -115,7 +117,7 @@ export const SpectrumBlock = memo(function SpectrumBlock({
   page,
 }: SpectrumBlockProps): React.JSX.Element {
   const headingId = useId();
-  const [tab, setTab] = useState<SpectrumTab>(HISTOGRAMS_ID);
+  const [tab, setTab] = useState<SpectrumTab>(PLOT_ID);
   // The warnings of the spectrum, of the project the result is shown
   // under; their words and not the project, so that a change of the
   // project that keeps the result does not draw the block again.
@@ -205,7 +207,7 @@ export const SpectrumBlock = memo(function SpectrumBlock({
         tabs={[
           page === "popgen2"
             ? {
-                id: HISTOGRAMS_ID,
+                id: PLOT_ID,
                 label: PLOT_TAB,
                 content: (
                   <ErrorBoundary level={4} heading={PLOT_TAB}>
@@ -217,7 +219,7 @@ export const SpectrumBlock = memo(function SpectrumBlock({
                   </ErrorBoundary>
                 ),
               }
-            : { id: HISTOGRAMS_ID, label: HISTOGRAMS_TAB, content: histograms },
+            : { id: PLOT_ID, label: HISTOGRAMS_TAB, content: histograms },
           {
             id: TABLE_ID,
             label: SPECTRUM_TABLE_TAB,
