@@ -147,25 +147,6 @@ export function allSpectraCsv(r: DiversityResult): string {
   return csvOf(spectraOf(r).pops.flatMap(spectrumLines));
 }
 
-/**
- * The rows of the population `population` of `allSpectraCsv(r)`, after its
- * header, the CSV of one histogram of popgen2.html (sfs.md, "On
- * popgen2.html"); the header alone for a population not calculated.
- * Throws a defect for a population not in the result.
- */
-export function populationSpectrumCsv(
-  r: DiversityResult,
-  population: string,
-): string {
-  const pop = spectraOf(r).pops.find((p) => p.population === population);
-  if (pop === undefined) {
-    throw defect(
-      `the spectrum of ${population} was asked of a result without it.`,
-    );
-  }
-  return csvOf(spectrumLines(pop));
-}
-
 /** The lines of the CSV of one population's spectrum, with no header. */
 function spectrumLines(pop: SpectrumOfPop): readonly string[] {
   return [...pop.expected].map((variants, count) => {

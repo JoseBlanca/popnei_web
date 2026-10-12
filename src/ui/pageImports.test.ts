@@ -88,12 +88,10 @@ describe("what the pages load first", () => {
     }
   });
 
-  test("popgen2.html loads the parts of file names made of the names of populations with the code of the Populations tab, not first", () => {
+  test("popgen2.html loads the rows, the lines and the CSV of the spectrum with the code of the Populations tab, not first", () => {
     expect(
       reachedFrom("ui/analyses/diversity/PopulationsTabView.tsx"),
-    ).toContain("core/fileNameParts.ts");
-    expect(reachedFrom("ui/popgen2.tsx")).not.toContain(
-      "core/fileNameParts.ts",
-    );
+    ).toContain("core/analyses/sfs.ts");
+    expect(reachedFrom("ui/popgen2.tsx")).not.toContain("core/analyses/sfs.ts");
   });
 });

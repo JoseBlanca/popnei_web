@@ -23,6 +23,13 @@
   min-inline-size: 0;
 }
 
+/* The warning, which takes the focus from the band's link and shows
+   it. */
+.warning:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
 .caption {
   margin: 0;
   overflow-wrap: anywhere;

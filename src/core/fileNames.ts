@@ -7,9 +7,7 @@
  * (docs/specs/analyses/writeVariants.md, "The functions of core"); the
  * stem of an individuals file; and the name of a file the menu
  * "Download…" of a table or a plot saves (docs/specs/widgets/downloads.md,
- * "The names of the files"). The parts of those names made of the names
- * of populations are in fileNameParts.ts, which only the code of the
- * Populations tab loads.
+ * "The names of the files").
  */
 
 import { filtersApplied } from "./filtersApplied.ts";

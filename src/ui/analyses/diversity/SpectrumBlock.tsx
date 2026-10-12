@@ -16,14 +16,16 @@
  * tab is selected is the block's own state, kept while it is drawn.
  *
  * In the Populations tab of popgen2.html, `page` "popgen2", the warning
- * is in that page's words and the old button of the download of the
- * spectrum gives way to a "Download…" of each histogram, on a line of its
- * own above it, "Image as SVG", "Image as PNG" and "Data as CSV", the
- * population's rows of the spectrum, and one below the table, "Table as
- * CSV", as every plot and table of that page offers its data
- * (docs/specs/analyses/sfs.md, "On popgen2.html"). Their files are named
- * after the variants file and the population, `panel.sfs.p0.svg`, the
- * name made a part of a file name by `fileNameParts`.
+ * is in that page's words, and the spectrum is one plot of lines, a line
+ * per population, in a tab "Plot" in place of the histograms, with its
+ * own "Download…" above it, `SpectrumLines.tsx`, from 12 October 2026;
+ * its caption says what the axes of the plot are and what it leaves out.
+ * The old button of the download of the spectrum gives way to that menu
+ * and to one below the table, "Table as CSV", as every plot and table of
+ * that page offers its data (docs/specs/analyses/sfs.md, "On
+ * popgen2.html"). The warning is a target of the focus, which the band's
+ * link to it gives it (docs/specs/steps/popgen2-band.md, "The warning of
+ * the spectrum").
  *
  * Each population's histogram is inside an error boundary of its own, so
  * that one that throws takes neither the others nor the table, the fields
@@ -44,14 +46,8 @@ import type { HistogramData } from "../../../charts/histogram.ts";
 import { MAX_HISTOGRAM_BINS } from "../../../charts/limits.ts";
 import { diversityOptions } from "../../../core/analyses/diversity.ts";
 import type { DiversityPage } from "../../../core/analyses/diversity.ts";
-import {
-  allSpectraCsv,
-  populationSpectrumCsv,
-  spectraOf,
-} from "../../../core/analyses/sfs.ts";
+import { allSpectraCsv, spectraOf } from "../../../core/analyses/sfs.ts";
 import { spectrumWarnings } from "../../../core/analyses/sfsWarnings.ts";
-import { fileNameParts } from "../../../core/fileNameParts.ts";
-import { variantsStem } from "../../../core/fileNames.ts";
 import type { SpectrumOfPop } from "../../../core/analyses/sfs.ts";
 import { escaped } from "../../../core/project.ts";
 import type { DiversityResult } from "../../../worker/protocol.ts";
@@ -60,16 +56,18 @@ import { downloadText } from "../../download.ts";
 import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
 import { useAppState } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
-import type { PlotDownload } from "../../widgets/downloadItems.ts";
 import { HistogramPlot } from "../../widgets/HistogramPlot.tsx";
 import { Table } from "../../widgets/Table.tsx";
 import type { TableColumn, TableRow } from "../../widgets/Table.tsx";
 import { Tabs } from "../../widgets/Tabs.tsx";
 import { Warning } from "../../widgets/Warning.tsx";
+import { SPECTRUM_WARNING_ATTRIBUTE } from "../Warnings.tsx";
+import { SpectrumLines } from "./SpectrumLines.tsx";
 import styles from "./SpectrumBlock.module.css";
 import {
   COUNT_COLUMN,
   HISTOGRAMS_TAB,
+  PLOT_TAB,
   SPECTRUM_CSV_LABEL,
   SPECTRUM_HEADING,
   SPECTRUM_TABLE_CAPTION,
@@ -78,11 +76,11 @@ import {
   SPECTRUM_TABS_LABEL,
   SPECTRUM_Y_LABEL,
   drawLineOf,
+  linesCaption,
   noSpectrumLine,
   populationCells,
   populationColumns,
   populationValues,
-  spectrumWhat,
   spectrumCaption,
   allSpectraCsvName,
   spectrumDescription,
@@ -132,10 +130,6 @@ export const SpectrumBlock = memo(function SpectrumBlock({
   const draw = spectra.numCalledAlleles;
   const tooMany = Math.floor(draw / 2) > MAX_HISTOGRAM_BINS;
   const anyShares = spectra.pops.some((pop) => pop.shares !== null);
-  // The part of the names of the files of each population, in the order
-  // of the result, so that two names that give the same part differ.
-  const parts = fileNameParts(spectra.pops.map((pop) => pop.population));
-  const stem = variantsStem(variantsName);
 
   const download = (): void => {
     downloadText(
@@ -151,20 +145,8 @@ export const SpectrumBlock = memo(function SpectrumBlock({
         <p className={classOf(styles, "line")}>{tooManyBarsLine(draw)}</p>
       )}
       <div className={classOf(styles, "plots")}>
-        {spectra.pops.map((pop, index) => {
+        {spectra.pops.map((pop) => {
           const noSpectrum = noSpectrumLine(pop, minimum, draw);
-          const part = parts[index] ?? "";
-          const download: PlotDownload | null =
-            page === "popgen2"
-              ? {
-                  what: spectrumWhat(pop.population),
-                  stem,
-                  imageWhat: `sfs.${part}`,
-                  csvWhat: `sfs.${part}`,
-                  csv: () => populationSpectrumCsv(result, pop.population),
-                  waiting: null,
-                }
-              : null;
           // Above the bars a histogram draws, a population with a
           // spectrum has no group: the line above says so for all.
           if (tooMany && noSpectrum === null) return null;
@@ -179,7 +161,6 @@ export const SpectrumBlock = memo(function SpectrumBlock({
                 numCalledAlleles={draw}
                 yMax={spectra.largestShare}
                 noSpectrum={noSpectrum}
-                download={download}
               />
             </ErrorBoundary>
           );
@@ -198,16 +179,41 @@ export const SpectrumBlock = memo(function SpectrumBlock({
       </h3>
       <div className={classOf(styles, "captionBox")}>
         <p className={classOf(styles, "caption")}>
-          {spectrumCaption(draw, result.passStats.numVars, variantsName)}
+          {(page === "popgen2" ? linesCaption : spectrumCaption)(
+            draw,
+            result.passStats.numVars,
+            variantsName,
+          )}
         </p>
-        {warning !== "" && <Warning>{warning}</Warning>}
+        {warning !== "" && (
+          // Reached by the band's link alone, not by the Tab key.
+          <div
+            tabIndex={-1}
+            {...{ [SPECTRUM_WARNING_ATTRIBUTE]: "" }}
+            className={classOf(styles, "warning")}
+          >
+            <Warning>{warning}</Warning>
+          </div>
+        )}
       </div>
       <Tabs<SpectrumTab>
         label={SPECTRUM_TABS_LABEL}
         selected={tab}
         onChange={setTab}
         tabs={[
-          { id: HISTOGRAMS_ID, label: HISTOGRAMS_TAB, content: histograms },
+          page === "popgen2"
+            ? {
+                id: HISTOGRAMS_ID,
+                label: PLOT_TAB,
+                content: (
+                  <SpectrumLines
+                    result={result}
+                    variantsName={variantsName}
+                    minimum={minimum}
+                  />
+                ),
+              }
+            : { id: HISTOGRAMS_ID, label: HISTOGRAMS_TAB, content: histograms },
           {
             id: TABLE_ID,
             label: SPECTRUM_TABLE_TAB,
@@ -242,9 +248,6 @@ interface PopulationSpectrumProps {
   readonly yMax: number;
   /** The line in place of its histogram, or `null` when it has one. */
   readonly noSpectrum: string | null;
-  /** The download of its histogram, on popgen2.html; `null` on
-      popgen.html. */
-  readonly download: PlotDownload | null;
 }
 
 /** The group of one population: its heading, and its histogram with the
@@ -254,7 +257,6 @@ function PopulationSpectrum({
   numCalledAlleles,
   yMax,
   noSpectrum,
-  download,
 }: PopulationSpectrumProps): React.JSX.Element {
   const headingId = useId();
   const shares = pop.shares;
@@ -275,7 +277,6 @@ function PopulationSpectrum({
             shares={shares}
             numCalledAlleles={numCalledAlleles}
             yMax={yMax}
-            download={download}
           />
         </>
       ) : (
@@ -295,8 +296,6 @@ interface SpectrumHistogramProps {
   readonly numCalledAlleles: number;
   /** The top of every vertical axis. */
   readonly yMax: number;
-  /** The download of the histogram, or `null` for none. */
-  readonly download: PlotDownload | null;
 }
 
 /** The histogram of a population with shares, its data made once for
@@ -307,7 +306,6 @@ function SpectrumHistogram({
   shares,
   numCalledAlleles,
   yMax,
-  download,
 }: SpectrumHistogramProps): React.JSX.Element {
   const data = useMemo((): HistogramData => {
     // Each bar one count wide and centred on it, from 0.5 to n / 2 + 0.5.
@@ -327,13 +325,7 @@ function SpectrumHistogram({
       xWholeNumbers: true,
     };
   }, [pop, shares, numCalledAlleles, yMax]);
-  return (
-    <HistogramPlot
-      data={data}
-      shape="tall"
-      {...(download !== null && { download })}
-    />
-  );
+  return <HistogramPlot data={data} shape="tall" />;
 }
 
 /** The table of the spectra: a row per count of the rarer allele, 0 to

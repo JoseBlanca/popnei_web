@@ -1,0 +1,57 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.lines {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* The line of the menu "Download…" above the plot. */
+.menuLine {
+  margin-block-end: var(--space-1);
+}
+
+/* A container, so that the plot in it can tell, by 100cqi, how wide it
+   is, and never wider than the block, so that the plot fits the page at
+   320 px with no sideways scroll. */
+.frame {
+  min-inline-size: 0;
+  container-type: inline-size;
+}
+
+/* The element of the line plot: as wide as the block, up to 48rem, and
+   from its ratio of 16 by 10 never lower than 18rem, so that the label
+   of the vertical axis fits along it at the width of a phone, as the
+   histograms of the spectrum were. The three lengths --legend-narrow-…
+   are what the legend of the plot asks, which SpectrumLines.tsx sets
+   from lineLegendRoom: in an element narrower than
+   --legend-narrow-under the plot draws its legend above the frame, and
+   the element is higher by --legend-narrow-height, the clamp giving that
+   height under the bound and 0 above it, as the LD decay's element does
+   (LdDecayResults.module.css). */
+.plot {
+  position: relative;
+  inline-size: 100%;
+  max-inline-size: 48rem;
+  min-inline-size: 0;
+  aspect-ratio: 16 / 10;
+  min-block-size: calc(
+    18rem +
+      clamp(
+        0px,
+        (var(--legend-narrow-under, 0px) - min(100cqi, 48rem)) * 10000,
+        var(--legend-narrow-height, 0px)
+      )
+  );
+}

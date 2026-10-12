@@ -8,10 +8,13 @@
  * the columns and cells of its table, and the name of its download. Pure,
  * so that a test in node checks them; the block draws them.
  */
-import type { SpectrumOfPop } from "../../../core/analyses/sfs.ts";
+import type {
+  SpectrumLines,
+  SpectrumOfPop,
+} from "../../../core/analyses/sfs.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
-import { counted, escaped, grouped } from "../../../core/project.ts";
+import { counted, escaped, grouped, namesOf } from "../../../core/project.ts";
 import { MIN_DRAW } from "../../../worker/protocol.ts";
 
 /** The heading of the block, which names its region of the page, so
@@ -52,12 +55,15 @@ export function drawLineOf(pop: SpectrumOfPop): string {
  * individuals than the minimum, `minNumIndividuals`; with the minimum and
  * not in the call, which is not made when the populations hold fewer than
  * 2 chromosomes between them, one haploid individual; no variant in the
- * draw; or no variant with both alleles in it.
+ * draw; or no variant with both alleles in it, whose spectrum has no
+ * `drawn`, a bar of a histogram on popgen.html, a line of the plot of
+ * popgen2.html.
  */
 export function noSpectrumLine(
   pop: SpectrumOfPop,
   minNumIndividuals: number,
   numCalledAlleles: number,
+  drawn: "bar" | "line" = "bar",
 ): string | null {
   const name = escaped(pop.population);
   if (!pop.calculated && pop.numIndividuals >= minNumIndividuals) {
@@ -70,7 +76,7 @@ export function noSpectrumLine(
     return `${name} has no variant with ${grouped(numCalledAlleles)} called chromosomes, so it has no spectrum.`;
   }
   if (pop.shares === null) {
-    return `Every variant of ${name} in the draw shows one allele only, so its spectrum has no bar.`;
+    return `Every variant of ${name} in the draw shows one allele only, so its spectrum has no ${drawn}.`;
   }
   return null;
 }
@@ -191,12 +197,6 @@ export function populationValues(
   return [variants, share ?? null];
 }
 
-/** What the "Download…" of the histogram of `population` downloads,
-    after "Download ": "the spectrum of p0". */
-export function spectrumWhat(population: string): string {
-  return `the spectrum of ${escaped(population)}`;
-}
-
 /** What the "Download…" of the table of the spectrum downloads. */
 export const SPECTRUM_TABLE_WHAT = "the table of the spectrum";
 
@@ -207,4 +207,115 @@ export const SPECTRUM_CSV_LABEL = "Download the spectrum as CSV";
     `.sfs.csv`; `panel.nei` gives `panel.sfs.csv`. */
 export function allSpectraCsvName(variantsName: string): string {
   return `${variantsStem(variantsName)}.sfs.csv`;
+}
+
+/** What the "Download…" of the plot of the spectrum of popgen2.html
+    downloads, after "Download ". */
+export const LINES_WHAT = "the plot of the spectrum";
+
+/** The label of the tab of the plot of popgen2.html, beside "Table". */
+export const PLOT_TAB = "Plot";
+
+/** The title of the plot of the spectrum as lines, which a screen reader
+    reads before its description. */
+export const LINES_TITLE = "The spectrum of each population";
+
+/** The label of the horizontal axis of the plot as lines. */
+export const LINES_X_LABEL = "Frequency of the commonest allele in the draw";
+
+/** The label of the vertical axis of the plot as lines. */
+export const LINES_Y_LABEL =
+  "Proportion of the population's variants in the draw";
+
+/**
+ * The caption of the block of popgen2.html, whose plot draws a line per
+ * population (docs/specs/analyses/sfs.md, "On popgen2.html"): the
+ * spectrum, its draw and the variants kept, what each axis is, the
+ * variants left out of the plot and where the draw is set.
+ */
+export function linesCaption(
+  numCalledAlleles: number,
+  numVars: number,
+  variantsName: string,
+): string {
+  const draw = grouped(numCalledAlleles);
+  return `The folded site frequency spectrum of each population, in a draw of ${draw} of its chromosomes at each variant, over the ${counted(numVars, "variant")} of ${escaped(variantsName)} the filters kept. Each line is a population: across, the frequency of the commonest allele in the draw, 1 \u2212 j/${draw} for j copies of the rarer allele; up, the proportion of that population's variants in the draw with that frequency. Variants with no copy of the rarer allele in the draw are left out of the plot; the table holds them. The number of chromosomes is set above the table, with the rarefaction.`;
+}
+
+/** The line under the plot of the variants in the draw of each
+    population with a line, which its proportions are over: "Each
+    proportion is over …: p0, 1,200; p2, 1,151." */
+export function variantsInDrawLine(
+  pops: readonly {
+    readonly population: string;
+    readonly variantsInDraw: number;
+  }[],
+): string {
+  const each = pops
+    .map((pop) => `${escaped(pop.population)}, ${grouped(pop.variantsInDraw)}`)
+    .join("; ");
+  return `Each proportion is over the population's variants in the draw, those with no copy of the rarer allele among them: ${each}.`;
+}
+
+/** The line under the plot of the points at 0.5, which hold one count
+    of the rarer allele where the others hold two; `null` for an odd
+    draw, whose last point holds two too. */
+export function halfPointsLine(numCalledAlleles: number): string | null {
+  if (numCalledAlleles % 2 !== 0) return null;
+  return `The points at 0.5 hold one count of the rarer allele, ${grouped(numCalledAlleles / 2)}, where the others hold two, such as 1 and ${grouped(numCalledAlleles - 1)}, so they are about half as high.`;
+}
+
+/** A frequency of the commonest allele as the description writes it, to
+    four decimals at most: 0.975, 0.5122. */
+const FREQUENCY = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 4,
+});
+
+/**
+ * The description of the plot as lines, read after its title, "The
+ * spectrum of each population": the lines, their populations, their
+ * points from the lowest to the highest frequency of the commonest
+ * allele, and the largest proportion, with its population when there
+ * are several, and where. A defect for no line, which draws no plot.
+ */
+export function linesDescription(spectrum: SpectrumLines): string {
+  const { lines } = spectrum;
+  let largest = -1;
+  let largestOf = "";
+  let largestAt = 0;
+  for (const line of lines) {
+    for (const [i, proportion] of line.proportion.entries()) {
+      if (proportion > largest) {
+        largest = proportion;
+        largestOf = line.population;
+        largestAt = line.frequency[i] ?? Number.NaN;
+      }
+    }
+  }
+  const [first] = lines;
+  if (first === undefined) {
+    throw new Error(
+      "popnei_web defect: a plot of the spectrum is described with no line.",
+    );
+  }
+  const frequencies = [...first.frequency];
+  const lowest = FREQUENCY.format(Math.min(...frequencies));
+  const highest = FREQUENCY.format(Math.max(...frequencies));
+  const points = first.frequency.length;
+  const which =
+    lines.length === 1
+      ? `1 line, of ${escaped(first.population)}, of ${counted(points, "point")}`
+      : `${counted(lines.length, "line")}, one per population, ${namesOf(lines.map((line) => line.population))}, of ${counted(points, "point")} each`;
+  const of = lines.length === 1 ? "" : ` of ${escaped(largestOf)}`;
+  return `${which}, from ${lowest} to ${highest} of the commonest allele; the largest proportion, ${fourDecimals(largest)},${of} at ${FREQUENCY.format(largestAt)}.`;
+}
+
+/** The line in place of the plot when its lines hold too many points:
+    "A draw of 20,000 chromosomes gives 10,000 points to each of the 3
+    lines, too many to draw. …" */
+export function tooManyPointsLine(
+  numCalledAlleles: number,
+  numLines: number,
+): string {
+  return `A draw of ${counted(numCalledAlleles, "chromosome")} gives ${counted(Math.floor(numCalledAlleles / 2), "point")} to each of the ${counted(numLines, "line")}, too many to draw. The table of the spectrum holds them.`;
 }

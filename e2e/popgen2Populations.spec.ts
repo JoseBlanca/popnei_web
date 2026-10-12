@@ -1568,15 +1568,14 @@ test.describe("PT2 D3 the Populations tab while the diversity waits, and what th
   });
 });
 
-/** The rows of counts 0 and 1 of p0's spectrum, as its CSV writes them,
-    at the missing data of 0.1, which keeps the 1,200 variants of
-    panel.nei: popnei 0.2.2 under node, `calcPopDiversity` with
-    `numCalledAlleles` 40, `minNumIndividuals` 20 and `folded_sfs`, the
-    command of docs/specs/analyses/sfs.md, "The numbers of popnei", whose
-    table has the same values; the share is bin 1 over the sum of bins 1
-    to 20. */
-const P0_SPECTRUM_0 = "p0,0,44.79323144486922,";
-const P0_SPECTRUM_1 = "p0,1,38.07795856907602,0.03296202862168288";
+/** The row of p0 at one copy of the rarer allele of the CSV of the plot
+    of the spectrum: the frequency of the commonest allele, 39 / 40, the
+    expected number of variants, and the proportion, that number over the
+    sum of p0's 21 bins, 1199.9999999999998: popnei 0.2.2 under node,
+    12 October 2026, `calcPopDiversity` with `numCalledAlleles` 40,
+    `minNumIndividuals` 20 and `folded_sfs`, the missing data at 0.1,
+    which keeps the 1,200 variants of panel.nei. */
+const P0_LINE_1 = "p0,1,0.975,38.07795856907602,0.031731632140896686";
 
 /** The button "Download…" of `what` in the tab shown. */
 function menuButton(page: Page, what: string): Locator {
@@ -1624,7 +1623,7 @@ async function isBelow(below: Locator, above: Locator): Promise<boolean> {
 
 test.describe("PT2 D3 the downloads of the Populations tab", () => {
   for (const width of [null, 320] as const) {
-    test(`PT2 D3 the table, a histogram and the table of the spectrum saved by the keyboard alone and read back${width === null ? "" : `, at ${String(width)} px`}: each "Download…" of a table below it, each histogram's above it; axe with a menu open, light and dark`, async ({
+    test(`PT2 D3 PT7 R1.2 the table, the plot and the table of the spectrum saved by the keyboard alone and read back${width === null ? "" : `, at ${String(width)} px`}: each "Download…" of a table below it, the plot's above it; axe with a menu open, light and dark`, async ({
       page,
       makeAxeBuilder,
     }) => {
@@ -1651,26 +1650,33 @@ test.describe("PT2 D3 the downloads of the Populations tab", () => {
         .poll(() => saidWith(page, "Saving panel.diversity.csv."))
         .toHaveLength(1);
 
-      // The histogram of p0, its menu above its plot.
-      const p0 = shown(page).getByRole("group", { name: "p0", exact: true });
-      const p0Menu = menuButton(page, "the spectrum of p0");
-      expect(await isBelow(p0.locator("svg.chart"), p0Menu)).toBe(true);
-      await p0Menu.focus();
-      const p0File = await chooseByKeys(page, "Data as CSV");
-      expect(p0File.suggestedFilename()).toBe("panel.sfs.p0.csv");
-      const p0Lines = (await textOf(p0File)).trimEnd().split("\n");
-      expect(p0Lines.slice(0, 3)).toEqual([
-        "population,rarer_allele,variants,share",
-        P0_SPECTRUM_0,
-        P0_SPECTRUM_1,
+      // The plot of the spectrum, its menu above it.
+      const plotMenu = menuButton(page, "the plot of the spectrum");
+      expect(
+        await isBelow(shown(page).locator("svg.chart-line"), plotMenu),
+      ).toBe(true);
+      await plotMenu.focus();
+      const plotCsv = await chooseByKeys(page, "Data as CSV");
+      expect(plotCsv.suggestedFilename()).toBe("panel.sfs.proportions.csv");
+      const plotLines = (await textOf(plotCsv)).trimEnd().split("\n");
+      expect(plotLines.slice(0, 2)).toEqual([
+        "population,rarer_allele,commonest_allele_frequency,variants,proportion",
+        P0_LINE_1,
       ]);
-      expect(p0Lines).toHaveLength(22);
-      await p0Menu.focus();
-      const p0Svg = await chooseByKeys(page, "Image as SVG");
-      expect(p0Svg.suggestedFilename()).toBe("panel.sfs.p0.svg");
+      // 20 points for each of the 3 populations.
+      expect(plotLines).toHaveLength(61);
+      await plotMenu.focus();
+      const plotSvg = await chooseByKeys(page, "Image as SVG");
+      expect(plotSvg.suggestedFilename()).toBe("panel.sfs.svg");
+      expect(await textOf(plotSvg)).toContain(
+        "The spectrum of each population",
+      );
+      await plotMenu.focus();
+      const plotPng = await chooseByKeys(page, "Image as PNG");
+      expect(plotPng.suggestedFilename()).toBe("panel.sfs.png");
 
       // The table of the spectrum, by its tab, its menu below it.
-      await shown(page).getByRole("tab", { name: "Histograms" }).focus();
+      await shown(page).getByRole("tab", { name: "Plot" }).focus();
       await page.keyboard.press("ArrowRight");
       await expect(
         shown(page).getByRole("tab", { name: "Table" }),
@@ -1704,48 +1710,62 @@ test.describe("PT2 D3 the downloads of the Populations tab", () => {
     });
   }
 
-  test("PT2 D3 the files of the histograms of populations a/b and A?b are named with a_b and A_b_2, and hold their population's rows", async ({
-    page,
-  }) => {
-    test.setTimeout(120_000);
-    await openPage(page);
-    await pick(page, "panel.nei");
-    const [header, ...rows] = panelPopsRows();
-    // p0 renamed a/b and p1 renamed A?b: both give a_b as a part of a
-    // file name, which macOS and Windows hold as one name in any case.
-    await pickIndividuals(page, {
-      name: "panel_slash.csv",
-      text: [
-        header ?? "",
-        ...rows.map((line) =>
-          line.replace(/,p0$/u, ",a/b").replace(/,p1$/u, ",A?b"),
+  for (const width of [null, 320] as const) {
+    test(`PT7 R1.2 the spectrum as one plot of three lines, p0, p2 and p1 in its legend, its description, the caption's words of the variants left out and the variants in the draw under it${width === null ? "" : `, at ${String(width)} px with no sideways scroll`}`, async ({
+      page,
+    }) => {
+      test.setTimeout(120_000);
+      if (width !== null) await page.setViewportSize({ width, height: 900 });
+      await openPage(page);
+      await pick(page, "panel.nei");
+      await pickIndividuals(page, "panel_pops.csv");
+      await runDiversity(page);
+
+      const plot = shown(page).locator("svg.chart-line");
+      await expect(plot).toHaveCount(1);
+      // No histogram of the old block.
+      await expect(shown(page).locator("svg.chart-histogram")).toHaveCount(0);
+      await expect(
+        plot.locator(".chart-line:not(.chart-line-casing)"),
+      ).toHaveCount(
+        // A line per population in the frame, and a piece of each in
+        // the legend.
+        6,
+      );
+      await expect(plot.locator(".chart-legend-text")).toHaveText([
+        "p0",
+        "p2",
+        "p1",
+      ]);
+      await expect(plot).toHaveAccessibleName(
+        "The spectrum of each population 3 lines, one per population, p0, p2 and p1, of 20 points each, from 0.5 to 0.975 of the commonest allele; the largest proportion, 0.0539, of p1 at 0.625.",
+      );
+      await expect(
+        shown(page).getByText(
+          /Variants with no copy of the rarer allele in the draw are left out of the plot; the table holds them\./u,
         ),
-        "",
-      ].join("\n"),
+      ).toBeVisible();
+      await expect(
+        shown(page).getByText(
+          "Each proportion is over the population's variants in the draw, those with no copy of the rarer allele among them: p0, 1,200; p2, 1,200; p1, 1,200.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+      if (width !== null) {
+        const sideways = await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth -
+            document.documentElement.clientWidth,
+        );
+        expect(sideways).toBe(0);
+        const box = await plot.boundingBox();
+        expect(box).not.toBeNull();
+        expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
+        await expect(plot.locator(".chart-legend")).toHaveAttribute(
+          "data-place",
+          "above",
+        );
+      }
     });
-    await runDiversity(page);
-
-    const slashMenu = menuButton(page, "the spectrum of a/b");
-    await slashMenu.focus();
-    const slashCsv = await chooseByKeys(page, "Data as CSV");
-    expect(slashCsv.suggestedFilename()).toBe("panel.sfs.a_b.csv");
-    expect((await textOf(slashCsv)).trimEnd().split("\n").slice(1, 3)).toEqual([
-      P0_SPECTRUM_0.replace(/^p0,/u, "a/b,"),
-      P0_SPECTRUM_1.replace(/^p0,/u, "a/b,"),
-    ]);
-    await slashMenu.focus();
-    const slashPng = await chooseByKeys(page, "Image as PNG");
-    expect(slashPng.suggestedFilename()).toBe("panel.sfs.a_b.png");
-
-    const questionMenu = menuButton(page, "the spectrum of A?b");
-    await questionMenu.focus();
-    const questionSvg = await chooseByKeys(page, "Image as SVG");
-    expect(questionSvg.suggestedFilename()).toBe("panel.sfs.A_b_2.svg");
-    await questionMenu.focus();
-    const questionCsv = await chooseByKeys(page, "Data as CSV");
-    expect(questionCsv.suggestedFilename()).toBe("panel.sfs.A_b_2.csv");
-    expect((await textOf(questionCsv)).trimEnd().split("\n")[2]).toBe(
-      "A?b,1,43.859352021499134,0.03811931601019699",
-    );
-  });
+  }
 });

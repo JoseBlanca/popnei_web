@@ -16,6 +16,13 @@ import { warningsHeading } from "./words.ts";
     link to the warnings of the PCA on popgen2.html finds it. */
 export const WARNINGS_HEADING_ATTRIBUTE = "data-warnings-heading";
 
+/** The attribute of the warning of the spectrum of the diversity, said
+    at the end of the caption of its block and not among the warnings
+    above the result, by which the band's link on popgen2.html finds it
+    when it is the only warning (docs/specs/steps/popgen2-band.md, "The
+    warning of the spectrum"). */
+export const SPECTRUM_WARNING_ATTRIBUTE = "data-spectrum-warning";
+
 /** The warnings of a result, above it, with their count on their
     heading. */
 export function Warnings({

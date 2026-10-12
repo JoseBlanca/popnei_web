@@ -11,7 +11,6 @@ import {
   SPECTRUM_TABLE_WHAT,
   drawLineOf,
   populationValues,
-  spectrumWhat,
   noSpectrumLine,
   populationCells,
   populationColumns,
@@ -21,6 +20,12 @@ import {
   tooManyBarsLine,
   underHistogramsLine,
   xLabelOf,
+  LINES_WHAT,
+  halfPointsLine,
+  linesCaption,
+  linesDescription,
+  tooManyPointsLine,
+  variantsInDrawLine,
 } from "./spectrumWords.ts";
 
 const P0: SpectrumOfPop = {
@@ -140,7 +145,6 @@ describe("PA7 D2 the words of the block of the spectrum", () => {
 
 describe("PT2 D1 the downloads of the spectrum on popgen2.html", () => {
   test("what each menu downloads, for a screen reader", () => {
-    expect(spectrumWhat("p0")).toBe("the spectrum of p0");
     expect(SPECTRUM_TABLE_WHAT).toBe("the table of the spectrum");
   });
 
@@ -153,5 +157,86 @@ describe("PT2 D1 the downloads of the spectrum on popgen2.html", () => {
     expect(populationValues(P0, 1)).toEqual([2, 0.5]);
     expect(populationValues(P1, 1)).toEqual([0, null]);
     expect(populationValues(P3, 1)).toEqual([null, null]);
+  });
+});
+
+describe("PT7 R1.2 the words of the plot of the spectrum as lines", () => {
+  test("the caption says what each axis is, that the variants with no copy of the rarer allele are left out, and where the table and the draw are", () => {
+    expect(linesCaption(40, 1200, "panel.nei")).toBe(
+      "The folded site frequency spectrum of each population, in a draw of 40 of its chromosomes at each variant, over the 1,200 variants of panel.nei the filters kept. Each line is a population: across, the frequency of the commonest allele in the draw, 1 \u2212 j/40 for j copies of the rarer allele; up, the proportion of that population's variants in the draw with that frequency. Variants with no copy of the rarer allele in the draw are left out of the plot; the table holds them. The number of chromosomes is set above the table, with the rarefaction.",
+    );
+  });
+
+  test("the line of the variants in the draw, which the proportions are over", () => {
+    expect(
+      variantsInDrawLine([
+        { population: "p0", variantsInDraw: 1200 },
+        { population: "p2", variantsInDraw: 1151 },
+      ]),
+    ).toBe(
+      "Each proportion is over the population's variants in the draw, those with no copy of the rarer allele among them: p0, 1,200; p2, 1,151.",
+    );
+  });
+
+  test("the line of the points at 0.5 for an even draw, none for an odd one", () => {
+    expect(halfPointsLine(40)).toBe(
+      "The points at 0.5 hold one count of the rarer allele, 20, where the others hold two, such as 1 and 39, so they are about half as high.",
+    );
+    expect(halfPointsLine(41)).toBeNull();
+  });
+
+  test("the description: the lines, their populations, their points and the largest proportion", () => {
+    const line = (
+      population: string,
+      index: number,
+      proportion: readonly number[],
+    ): {
+      population: string;
+      index: number;
+      frequency: Float64Array;
+      proportion: Float64Array;
+      variants: Float64Array;
+    } => ({
+      population,
+      index,
+      frequency: Float64Array.from([0.975, 0.625, 0.5]),
+      proportion: Float64Array.from(proportion),
+      variants: Float64Array.from([1, 1, 1]),
+    });
+    expect(
+      linesDescription({
+        numCalledAlleles: 40,
+        lines: [
+          line("p0", 0, [0.03, 0.05, 0.02]),
+          line("p2", 1, [0.04, 0.01, 0.02]),
+          line("p1", 2, [0.03, 0.05386774831954687, 0.02]),
+        ],
+        largestProportion: 0.05386774831954687,
+      }),
+    ).toBe(
+      "3 lines, one per population, p0, p2 and p1, of 3 points each, from 0.5 to 0.975 of the commonest allele; the largest proportion, 0.0539, of p1 at 0.625.",
+    );
+    expect(
+      linesDescription({
+        numCalledAlleles: 40,
+        lines: [line("Unclassified", 0, [0.03, 0.05, 0.02])],
+        largestProportion: 0.05,
+      }),
+    ).toBe(
+      "1 line, of Unclassified, of 3 points, from 0.5 to 0.975 of the commonest allele; the largest proportion, 0.0500, at 0.625.",
+    );
+  });
+
+  test("too many points, the line of a population with no line, and what the menu downloads", () => {
+    expect(tooManyPointsLine(20000, 3)).toBe(
+      "A draw of 20,000 chromosomes gives 10,000 points to each of the 3 lines, too many to draw. The table of the spectrum holds them.",
+    );
+    expect(noSpectrumLine(P1, 20, 4, "line")).toBe(
+      "Every variant of p1 in the draw shows one allele only, so its spectrum has no line.",
+    );
+    expect(noSpectrumLine(P1, 20, 4)).toBe(
+      "Every variant of p1 in the draw shows one allele only, so its spectrum has no bar.",
+    );
+    expect(LINES_WHAT).toBe("the plot of the spectrum");
   });
 });
