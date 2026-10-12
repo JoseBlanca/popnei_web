@@ -222,3 +222,61 @@ describe("PT7 R1.1 the bar plot refuses what its contract does not draw", () => 
     );
   });
 });
+
+describe("review of round 1 the bar plot's cases the tests missed", () => {
+  test("a value of 0, as the observed heterozygosity of an inbred line, is a bar of no width, not a refusal", () => {
+    const element = sizedElement();
+    createBars(element, barsOf([{ name: "p0", group: 0, value: 0 }]));
+    const bars = [...element.querySelectorAll("g.chart-marks > rect")];
+    expect(bars).toHaveLength(1);
+    expect(Number(bars[0]?.getAttribute("width"))).toBe(0);
+    expect(element.querySelectorAll("text.chart-bars-none")).toHaveLength(0);
+  });
+
+  test("the axis of the values made round by nice(): 0.3567 runs to 0.4", () => {
+    const element = sizedElement();
+    createBars(element, barsOf([{ name: "p0", group: 0, value: 0.3567 }]));
+    expect(ticks(element, "x").at(-1)).toBe("0.4");
+  });
+
+  test("the words of no value are the data's, set on the middle of the row", () => {
+    const element = sizedElement();
+    createBars(element, {
+      ...barsOf(THREE),
+      noValue: "not calculated",
+    });
+    const none = [...element.querySelectorAll("text.chart-bars-none")];
+    expect(none.map((text) => text.textContent)).toEqual(["not calculated"]);
+    expect(none[0]?.getAttribute("dy")).toBe("0.35em");
+  });
+
+  test("exactly MAX_BARS bars are drawn", () => {
+    const element = sizedElement();
+    createBars(
+      element,
+      barsOf(
+        Array.from({ length: MAX_BARS }, (_each, i): Bar => ({
+          name: `p${String(i)}`,
+          group: i,
+          value: 0.1,
+        })),
+      ),
+    );
+    expect(element.querySelectorAll("g.chart-marks > rect")).toHaveLength(
+      MAX_BARS,
+    );
+  });
+
+  test("a name exactly as long as its room is whole; in a narrow element a name keeps 4 characters, 3 and an ellipsis", () => {
+    // At 400 pixels the room is 16 characters.
+    const sixteen = "abcdefghijklmnop";
+    const element = sizedElement();
+    createBars(element, barsOf([{ name: sixteen, group: 0, value: 0.3 }]));
+    expect(ticks(element, "y")).toEqual([sixteen]);
+
+    // At 100 pixels (0.4 × 100 − 12) / 9 is 3, below the least, 4.
+    const narrow = sizedElement(100, 136);
+    createBars(narrow, barsOf([{ name: sixteen, group: 0, value: 0.3 }]));
+    expect(ticks(narrow, "y")).toEqual(["abc…"]);
+  });
+});

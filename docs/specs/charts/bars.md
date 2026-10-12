@@ -173,6 +173,11 @@ element stubbed at 400 by 136:
   pixels, as its first 19 and an ellipsis, with a margin of 192;
 - `barsHeight(3)` 152 and `barsHeight(1)` 96;
 - two bars of one name, `a\nb` twice: two rows, each with its bar;
+- from the review of round 1, 12 October 2026: a value of 0, one bar of
+  no width; a largest value of 0.3567, the axis to 0.4; words of no
+  value other than "no value", written as given, at `dy` 0.35em;
+  exactly 200 bars drawn; a name exactly as long as its room, whole;
+  at 100 pixels a name keeps 4 characters, "abc…";
 - `check` throws for 201 bars, a group of 1.5, a value of −0.1 and one
   of Infinity.
 

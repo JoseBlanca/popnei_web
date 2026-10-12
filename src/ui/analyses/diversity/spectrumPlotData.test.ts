@@ -91,12 +91,27 @@ describe("PT7 R1.2 the data of the plot of the spectrum", () => {
     ).toEqual([0]);
   });
 
+  test("review of round 1: a line is named by its population as a text shows it", () => {
+    const [first] = LINES.lines;
+    if (first === undefined) throw new Error("no line");
+    const named: SpectrumLines = {
+      ...LINES,
+      lines: [{ ...first, population: "a\nb" }],
+    };
+    expect(
+      spectrumPlotData(named, "One.", "all").series.map((one) => one.label),
+    ).toEqual(["a\\nb"]);
+  });
+
   test("the top of the vertical axis: the largest proportion made round up to a half of its first digit, 1 for none", () => {
     expect(linesTop(0.05386774831954687)).toBe(0.055);
     expect(linesTop(0.4)).toBe(0.4);
     expect(linesTop(0.41)).toBe(0.45);
     expect(linesTop(0.05)).toBe(0.05);
     expect(linesTop(0.003)).toBe(0.003);
+    // 0.035 is a whole number of half steps; its multiple comes out a
+    // hair above 7, and the correction keeps it at 0.035.
+    expect(linesTop(0.035)).toBe(0.035);
     expect(linesTop(0)).toBe(1);
   });
 

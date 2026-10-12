@@ -1895,6 +1895,69 @@ test.describe("PT7 R1.1 the bar plots of the table", () => {
     });
   }
 
+  test("review of round 1: from a dark page, the SVG of a bar plot is in the light theme: the axis and its names in the light theme's colour, the bar of p0 orange with its outline, no colour of the dark theme and no var(", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.emulateMedia({ colorScheme: "dark" });
+    await openPage(page);
+    await pick(page, "panel.nei");
+    await pickIndividuals(page, "panel_pops.csv");
+    await runDiversity(page);
+    const plot = barPlots(page).locator("svg.chart-bars").first();
+    // The page is dark: the axis on the screen is in the dark theme.
+    expect(
+      await plot
+        .locator("g.chart-axis-x path.domain")
+        .evaluate((path) => getComputedStyle(path).stroke),
+    ).toBe("rgb(163, 171, 181)");
+    const menu = menuButton(
+      page,
+      "the bar plot of expected heterozygosity (unbiased)",
+    );
+    await menu.focus();
+    const text = await textOf(await chooseByKeys(page, "Image as SVG"));
+    expect(text).not.toContain("var(");
+    // The colours of the dark theme that the light one does not have:
+    // its text, background and axis (sky blue, the bar of p1, is the
+    // same in both).
+    for (const dark of [
+      "rgb(232, 234, 237)",
+      "rgb(22, 24, 27)",
+      "rgb(163, 171, 181)",
+    ]) {
+      expect(text).not.toContain(dark);
+    }
+    const found = await page.evaluate((svg) => {
+      const root = new DOMParser().parseFromString(
+        svg,
+        "image/svg+xml",
+      ).documentElement;
+      const styleOf = (each: Element | null, property: string): string =>
+        (each?.getAttribute("style") ?? "")
+          .split(";")
+          .map((declaration) => declaration.trim())
+          .filter((declaration) => declaration.startsWith(`${property}:`))
+          .map((declaration) => declaration.slice(property.length + 1).trim())
+          .join("");
+      const bar = root.querySelector("rect.chart-bars-bar");
+      return {
+        axis: styleOf(
+          root.querySelector("g.chart-axis-x path.domain"),
+          "stroke",
+        ),
+        name: styleOf(root.querySelector("g.chart-axis-y g.tick text"), "fill"),
+        bar: [styleOf(bar, "fill"), styleOf(bar, "stroke")],
+      };
+    }, text);
+    expect(found).toEqual({
+      axis: "rgb(85, 93, 104)",
+      // The names in the colour of the axes of the light theme.
+      name: "rgb(85, 93, 104)",
+      bar: ["rgb(230, 159, 0)", "rgb(85, 93, 104)"],
+    });
+  });
+
   test("PT7 R1.1 the minimum of individuals at 50, where p0's 48 give it no value: no value in p0's row of each plot, in place of its bar, and two bars", async ({
     page,
   }) => {

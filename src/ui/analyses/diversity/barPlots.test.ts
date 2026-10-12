@@ -133,6 +133,38 @@ describe("PT7 R1.1 the bar plots of the table of the diversity", () => {
     ]);
   });
 
+  test("review of round 1: each of the five plots draws its own column of the row", () => {
+    const [, p2] = ROWS;
+    if (p2 === undefined) throw new Error("no row");
+    expect(
+      BAR_PLOTS.map((plot) => barsDataOf(ROWS, plot, 40, POPS).bars[1]?.value),
+    ).toEqual([
+      p2.expectedHeterozygosity,
+      p2.observedHeterozygosity,
+      p2.polymorphic,
+      p2.allelesPerVariantRarefied,
+      p2.allelesPerVariant,
+    ]);
+  });
+
+  test("review of round 1: a name as a text shows it, in the descriptions and on the bar", () => {
+    const [first] = BAR_PLOTS;
+    if (first === undefined) throw new Error("no plot");
+    const two = [
+      rowOf("a\nb", [0.1, 0, 0, 0, 0]),
+      rowOf("c\u202ed", [0.2, 0, 0, 0, 0]),
+    ];
+    expect(barsDescription(two, first)).toBe(
+      "2 bars, one per population: a\\nb, 0.1000; c\\u202ed, 0.2000.",
+    );
+    expect(barsDescription([rowOf("a\nb", [0.1, 0, 0, 0, 0])], first)).toBe(
+      "1 bar, of a\\nb: 0.1000.",
+    );
+    expect(
+      barsDataOf(two, first, 40, "all").bars.map((bar) => bar.name),
+    ).toEqual(["a\\nb", "c\\u202ed"]);
+  });
+
   test("the description of one population, and a name as a text shows it", () => {
     const [first] = BAR_PLOTS;
     if (first === undefined) throw new Error("no plot");
