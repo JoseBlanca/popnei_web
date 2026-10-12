@@ -165,3 +165,26 @@ distances, LD decay, the tabs keeping theirs. A change of another
 analysis's own options while a long LD decay runs waits for it, which the
 owner was not shown with (a): put to them in the report.
 
+
+The fixes, 12 and 13 October 2026, d2e3c23c to 629a2663, every test seen
+failing first or a mutation of the review now killed: the band keeps the
+LD decay's Stop while its tab is shown (it drops the Stop only of the
+first analysis of the tab shown); after a refusal for memory the tab says
+what brings Run back; "then calculated again by itself" only while live,
+for the diversity too; the clock of the last run made once with the
+page, beside the automatic runs; it counts from the page's request, the
+worker's restart included, as the spec now says (counting from the post
+would change the interface of the worker); the old page's script no
+longer given to popgen2.html; defaults that fell back to the diversity
+made required; popnei's refusal for memory recognised in a shared place;
+each population's fitted curve and half mark in its own dash (the
+spectrum's lines too); the legend's names cut in the middle; "half
+distance" defined; "ρ per base pair, 4Nₑr"; "The last run, pairs up to
+100,000 base pairs, took 3:42."; the LD decay's own maximum major allele
+frequency named once; 40 px before its heading. "LD decay soon" with its
+Stop recalculating needs 295 px of 288 at 320 px and takes a second row,
+as "Diversity later". Checks at 629a2663: typecheck, lint, format clean;
+Vitest 180 files, 5,550 tests; Chromium and WebKit, `popgen2LdDecay`
+24, `popgen2BandLive` 26, `popgen2Band` 40, `ldDecay` 24,
+`popgen2Populations` 92, `popgen2Live` 30, `plots` and `ldDecay` 96;
+screens 136; no flow failed on any run.
