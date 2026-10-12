@@ -827,6 +827,114 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     ).toHaveCount(1);
   });
 
+  test("NU5 D3 at 320 px with the text twice its size and the page scrolled down, the PCA live started by a threshold and ended: the band grows and shrinks, and what the user reads stays where it was, within 2 px, at every frame (the second review of package 4, 12 October 2026)", async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 320, height: 700 });
+    await holdSummary(page, { holdPca: true });
+    await page.goto("popgen2.html");
+    await openHeldPassDone(page);
+    await runPca(page);
+    await release(page, "pca");
+    await expect(caption(page)).toBeAttached({ timeout: RESULT_TIMEOUT });
+    await tab(page, "Variants").click();
+    await expect.poll(() => lineText(page)).toBe("Popnei");
+    // Chromium sets the browser's size of text, as its setting does;
+    // WebKit has no such call, and the closest is the page's own text
+    // at 200%.
+    if (testInfo.project.name === "chromium") {
+      const session = await page.context().newCDPSession(page);
+      await session.send("Page.setFontSizes", {
+        fontSizes: { standard: 32, fixed: 26 },
+      });
+    } else {
+      await page.addStyleTag({ content: "html { font-size: 200%; }" });
+    }
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => getComputedStyle(document.documentElement).fontSize,
+        ),
+      )
+      .toBe("32px");
+    // A threshold typed and not yet given, then the page scrolled down
+    // to the heading of the statistics of the file, in the middle of the
+    // window.
+    const box = page
+      .getByRole("region", { name: "Statistics of the file" })
+      .getByRole("group", {
+        name: "Proportion of missing genotypes",
+        exact: true,
+      })
+      .getByRole("textbox");
+    await box.fill("0.05");
+    const read = page
+      .getByRole("region", { name: "Statistics of the file" })
+      .getByRole("heading")
+      .first();
+    await read.evaluate((element) => {
+      window.scrollTo(
+        0,
+        element.getBoundingClientRect().top + window.scrollY - 350,
+      );
+    });
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    // The top of that heading and the band's height, at every frame.
+    await read.evaluate((element) => {
+      const header = document.querySelector("#defects header");
+      const frames: { top: number; band: number }[] = [];
+      Reflect.set(window, "readTops", frames);
+      const look = (): void => {
+        frames.push({
+          top: element.getBoundingClientRect().top,
+          band: header?.getBoundingClientRect().height ?? 0,
+        });
+        requestAnimationFrame(look);
+      };
+      requestAnimationFrame(look);
+    });
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => (Reflect.get(window, "readTops") as unknown[]).length,
+        ),
+      )
+      .toBeGreaterThan(2);
+    // Given with the key alone, which scrolls nothing.
+    await page.keyboard.press("Enter");
+    await expect
+      .poll(() => lineText(page), { timeout: RESULT_TIMEOUT })
+      .not.toBe("Popnei");
+    await expect
+      .poll(() => lineText(page), { timeout: RESULT_TIMEOUT })
+      .toBe("Popnei");
+    // A few frames more, after the band's last change.
+    await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(resolve);
+          });
+        }),
+    );
+    const frames = await page.evaluate(
+      () => Reflect.get(window, "readTops") as { top: number; band: number }[],
+    );
+    const first = frames[0]?.top ?? 0;
+    const bands = new Set(frames.map((frame) => Math.round(frame.band)));
+    const moved = Math.max(
+      ...frames.map((frame) => Math.abs(frame.top - first)),
+    );
+    process.stdout.write(
+      `scrolled at 320 px, text 32 px: band heights ${[...bands].join(", ")}; the heading moved at most ${moved.toFixed(1)} px over ${String(frames.length)} frames\n`,
+    );
+    // The band changed its height, and the heading did not move.
+    expect(bands.size).toBeGreaterThan(1);
+    expect(moved).toBeLessThanOrEqual(2);
+    await workersListening(page);
+  });
+
   for (const width of [720, 1280]) {
     test(`NU5 D3 at ${String(width)} px the one pass of a file with a name of 74 characters: the band one row, as tall as with Popnei alone, the name cut with "…" and the percentage whole, the whole name for a screen reader (the second review of package 4, 12 October 2026)`, async ({
       page,

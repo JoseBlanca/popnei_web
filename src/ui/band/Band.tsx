@@ -24,8 +24,10 @@
  * (WCAG 2.4.11). At the browser's usual size of text its line is one row
  * at every width from 320 px, whatever it says, the name of a long file
  * cut, so that nothing under it moves when it starts or stops saying
- * something; with larger text its buttons may take a second row, and
- * the room the page keeps under it grows with it. While
+ * something; with larger text its buttons may take a second row, the
+ * room the page keeps under it grows with it, and a page scrolled down
+ * is scrolled by as much, so that what the user reads stays where it
+ * was. While
  * an error of the application is shown it scrolls with the page, at its
  * top, and the room is 0: fixed, its error covered half the window at
  * 200% zoom and all of it at 400%, Close out of reach. When the error
@@ -652,16 +654,26 @@ const STOPPING_LOOK_MS = 10_050;
  * Keeps room at the top of the page for the band `header`, as tall as
  * it is, while it is fixed there; none while it scrolls with the page,
  * `scrolls`. Gives the room back when the band goes.
+ *
+ * When the band's height changes with the page scrolled down, as its
+ * buttons take a second row with the text at 200% and leave it, the
+ * page is scrolled by as much in the same frame, so that what the user
+ * reads stays where it was: it moved 102 to 120 px at 320 px when an
+ * analysis started or ended, in Chromium and WebKit, whose scroll
+ * anchoring does not follow a change of the room (the second review of
+ * work package 4, 12 October 2026). At the top of the page the content
+ * moves with the band, and nothing is scrolled.
  */
 function keepRoom(header: HTMLElement, scrolls: boolean): () => void {
   const root = document.documentElement;
+  let room: number | null = null;
   const measure = (): void => {
-    root.style.setProperty(
-      ROOM_PROPERTY,
-      scrolls
-        ? "0px"
-        : `${String(Math.ceil(header.getBoundingClientRect().height))}px`,
-    );
+    const next = scrolls ? 0 : Math.ceil(header.getBoundingClientRect().height);
+    root.style.setProperty(ROOM_PROPERTY, `${String(next)}px`);
+    if (room !== null && next !== room && window.scrollY > 0) {
+      window.scrollBy({ top: next - room, behavior: "auto" });
+    }
+    room = next;
   };
   measure();
   const observer = new ResizeObserver(measure);

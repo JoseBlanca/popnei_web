@@ -724,7 +724,10 @@ When the parts do not fit on one line, with the text at 200% or a
 clock past an hour at 320 px ("Diversity · 1:59:59" with its buttons
 takes 294 px), the buttons, and the words if they must, go to a row
 under them, and the band, and the room the page keeps under it, grow
-by that row; the words are never shrunk below their whole width, but
+by that row; with the page scrolled down, the page is scrolled by as
+much in the same frame, so that what the user reads stays where it was,
+where it moved 102 to 120 px at 320 px when an analysis started or
+ended (the second review of work package 4, 12 October 2026); the words are never shrunk below their whole width, but
 for the name of a file: it is cut with "…" at its end when the row
 beside the heading has no room for it, the words before and after it
 whole, and the line wraps only when what is never cut does not fit
