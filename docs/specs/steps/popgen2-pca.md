@@ -689,8 +689,9 @@ in a new worker at once. Meanwhile each of them is about to start
 change of the filters or of its options, or when Run is pressed."
 ("The PCoA …"), "The diversity starts after the next change of the
 filters, of its options or of the populations, or when Run is
-pressed."; the band, "The PCA starts again after the next change",
-"PCA later". The tab offers Run there, beside Stop recalculating, in
+pressed."; the band, "The PCA starts after the next change", "PCA
+later" ("starts again" until 11 October 2026, when the band's words
+were made to follow the tabs', `popgen2-band.md`). The tab offers Run there, beside Stop recalculating, in
 that order of the Tab key: a Run starts its own analysis and lifts the
 hold for it alone; the others wait for the next change (since 11
 October 2026, after the second review of the fixes of work package 1:
