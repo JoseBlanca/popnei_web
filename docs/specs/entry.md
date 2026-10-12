@@ -18,6 +18,12 @@ the band of `popgen2.html` (`docs/designs/no-undo.md`): on that page
 `#defects` holds the band, of which the error bar is a line (below,
 "The page"). Built on the branch `pca-tab` on 10 October 2026, work
 package 5 of `docs/plans/no-undo.md`; not yet tried by the owner.
+Revised and built on the branch `population-tab` on 11 October 2026,
+after the review of work packages 2 and 3 of
+`docs/plans/population-tab.md` found that a file dropped beside the
+zones replaced either page with the file: both pages refuse such a
+drop (below, "A file dropped outside a zone"); not yet tried by the
+owner.
 
 25 September 2026, approved by the owner on 25 September 2026, and revised
 on 26 September 2026 with the owner's decisions at stop 9.6 of
