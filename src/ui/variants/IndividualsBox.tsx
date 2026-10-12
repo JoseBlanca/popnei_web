@@ -208,7 +208,14 @@ export function IndividualsBox({
               : {
                   reason: lock,
                   onRefused: (name) => {
-                    refuse("locked", notOpenedWhileRunningText(name, running));
+                    if (name === null) {
+                      refuse("notOneFile", INDIVIDUALS_SEVERAL_DROPPED);
+                    } else {
+                      refuse(
+                        "locked",
+                        notOpenedWhileRunningText(name, running),
+                      );
+                    }
                   },
                 }
           }

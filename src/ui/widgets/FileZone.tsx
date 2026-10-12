@@ -21,8 +21,10 @@
  * no tooltip, since it is drawn nowhere; and a file dropped, pasted, or
  * picked in a picker opened before the zone waited, opens nothing: its
  * name is given to the `onRefused` of `waiting`, which says it was not
- * opened. The drop is still taken by the zone, so that the browser does
- * not open the file dropped in the tab in place of the page. The picker
+ * opened; a folder or a piece of text goes to `onNotFiles`, as when the
+ * zone does not wait, since it would not open after the wait either.
+ * The drop is still taken by the zone, so that the browser does not
+ * open the file dropped in the tab in place of the page. The picker
  * is opened from an input of the zone's own, and not from React Aria's
  * `FileTrigger`, whose press reaches the button through a context that a
  * button that waits cannot refuse.
@@ -43,10 +45,11 @@ export interface ZoneWaiting {
   /** The reason the zone waits, its button's tooltip and the
       description of its two buttons. */
   readonly reason: string;
-  /** Called for a drop or a paste while the zone waits, and for a file
-      picked then in a picker opened before, which open nothing: with the
-      name of the one file, or `null` for anything else, several files, a
-      folder, a piece of text. */
+  /** Called for files dropped or pasted while the zone waits, and for a
+      file picked then in a picker opened before, which open nothing:
+      with the name of the one file, or `null` for several. A folder or a
+      piece of text goes to `onNotFiles`, as when the zone does not
+      wait. */
   readonly onRefused: (name: string | null) => void;
 }
 
@@ -79,9 +82,9 @@ export interface FileZoneProps {
   readonly waiting?: ZoneWaiting | null;
 }
 
-/** The name of the one file of `names`, or `null` for none, several, or
-    one thing that is not a file, given as `null`. */
-function oneName(names: readonly (string | null)[]): string | null {
+/** The name of the one file of `names`, or `null` for none or
+    several. */
+function oneName(names: readonly string[]): string | null {
   const [only, ...others] = names;
   return only !== undefined && others.length === 0 ? only : null;
 }
@@ -130,17 +133,19 @@ export function FileZone({
     }
   };
   const onDrop = (event: { readonly items: readonly DropItem[] }): void => {
-    if (waiting !== null) {
-      waiting.onRefused(
-        oneName(
-          event.items.map((item) => (item.kind === "file" ? item.name : null)),
-        ),
-      );
-      return;
-    }
     const dropped = droppedOf(event.items.map((item) => item.kind));
     if (dropped !== "files") {
       if (dropped !== "nothing") onNotFiles(dropped);
+      return;
+    }
+    if (waiting !== null) {
+      waiting.onRefused(
+        oneName(
+          event.items.flatMap((item) =>
+            item.kind === "file" ? [item.name] : [],
+          ),
+        ),
+      );
       return;
     }
     const reads: Promise<File>[] = [];

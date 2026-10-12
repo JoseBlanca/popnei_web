@@ -1149,6 +1149,19 @@ async function pasteFile(name: string): Promise<void> {
   });
 }
 
+/** Pastes the files named `names` together into the zone's hidden
+    button. */
+async function pasteFiles(names: readonly string[]): Promise<void> {
+  await paste({
+    types: ["Files"],
+    items: names.map((name) => {
+      const file = new File(["IID,pop\n"], name);
+      return { kind: "file", type: "text/csv", getAsFile: () => file };
+    }),
+    getData: () => "",
+  });
+}
+
 /** Pastes a piece of text into the zone's hidden button. */
 async function pasteText(text: string): Promise<void> {
   await paste({
@@ -1262,15 +1275,41 @@ describe("PT3 D2 the box Individuals and the Individuals tab greyed while the di
     expect(paragraphs(box())).not.toContain(POPULATIONS_LOCKED);
   });
 
-  test("a piece of text pasted while the diversity runs opens nothing and shows that nothing was opened, with no name", async () => {
+  test("a piece of text pasted while the diversity runs opens nothing and gets the words it gets when the zone does not wait, not the lock's (the review of package 4, 12 October 2026)", async () => {
     const { store } = await bothRead();
     await running(store, "diversity");
     const before = store.getState().project;
     await pasteText("IID,pop");
     expect(store.getState().project).toBe(before);
     expect(paragraphs(box())).toContain(
-      "Nothing was opened: the populations cannot change while the diversity runs. Stop the diversity in the Populations tab, then open the individuals file again.",
+      "Open an individuals file, a CSV, a TSV or an xlsx, not a piece of text.",
     );
+    expect(
+      paragraphs(box()).filter((text) => text.includes("was opened")),
+    ).toEqual([]);
+  });
+
+  test("several files pasted while the diversity runs open nothing: Open one individuals file at a time, as when the zone does not wait (the review of package 4, 12 October 2026)", async () => {
+    const { store } = await bothRead();
+    await running(store, "diversity");
+    const before = store.getState().project;
+    await pasteFiles(["one.csv", "two.csv"]);
+    expect(store.getState().project).toBe(before);
+    expect(paragraphs(box())).toContain("Open one individuals file at a time.");
+    expect(
+      paragraphs(box()).filter((text) => text.includes("was opened")),
+    ).toEqual([]);
+  });
+
+  test("one file pasted while the diversity runs with no individuals file open before: the file named, not opened, to open again once the diversity is stopped", async () => {
+    const drawn = await drawPage();
+    await openVariants(drawn.store);
+    await passEnded(drawn.store, drawn.requests);
+    await running(drawn.store, "diversity");
+    const before = drawn.store.getState().project;
+    await pasteFile("other.csv");
+    expect(drawn.store.getState().project).toBe(before);
+    expect(paragraphs(box())).toContain(OTHER_NOT_OPENED);
   });
 
   test("a file picked while the diversity runs, in a picker opened before it started, opens nothing and shows the file not opened", async () => {

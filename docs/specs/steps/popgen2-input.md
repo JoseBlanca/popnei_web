@@ -492,9 +492,18 @@ picker the button opened before the diversity started; the box shows,
 where it shows the words of a folder dropped, what happened to the file
 and what works, "other.csv was not opened: the populations cannot
 change while the diversity runs. Stop the diversity in the Populations
-tab, then open other.csv again.", "Nothing was opened: …, then open the
-individuals file again." for a drop of anything but one file, and the
-status region says them once. Until 11 October 2026, after the review
+tab, then open other.csv again.", and the status region says them
+once. A folder or a piece of text dropped or pasted on the greyed zone
+gets the words it gets on the zone that does not wait, "Open an
+individuals file, a CSV, a TSV or an xlsx, not a folder." or "…, not a
+piece of text.", and several files "Open one individuals file at a
+time.", since none of them would open once the diversity is stopped
+either. Until 12 October 2026, after the review of work package 4 of
+`docs/plans/population-tab.md`, these said "Nothing was opened: the
+populations cannot change while the diversity runs. Stop the diversity
+in the Populations tab, then open the individuals file again.", which
+named a file never opened and sent the user to a Stop after which the
+same folder was refused anyway. Until 11 October 2026, after the review
 of work packages 2 and 3, the box showed the words of the lock, which
 named no file and sent the user to Stop and then Run, which calculated
 again with the old file. The words go when the diversity ends, fails
@@ -641,7 +650,7 @@ the project's (`docs/architecture.md`, section 7).
 | the line over the table of the file, and while a sort is drawn | "200 rows, 2 columns"; "200 rows, 2 columns. Sorting…" |
 | the status region, a file read | "panel_pops.csv read: 200 rows, the populations from popcat."; with no column chosen, "panel_pops.csv read: 200 rows, no column chosen for the populations."; with rows not used, at the end, "18 individuals in panel_pops.csv are not in panel.nei, as the Individuals tab says." |
 | the status region, a file refused | the words of the box |
-| the box, and the status region, a file dropped, pasted or picked while the diversity runs | "other.csv was not opened: the populations cannot change while the diversity runs. Stop the diversity in the Populations tab, then open other.csv again."; for anything but one file, "Nothing was opened: the populations cannot change while the diversity runs. Stop the diversity in the Populations tab, then open the individuals file again." |
+| the box, and the status region, a file dropped, pasted or picked while the diversity runs | "other.csv was not opened: the populations cannot change while the diversity runs. Stop the diversity in the Populations tab, then open other.csv again."; a folder, a piece of text, or several files, the words they get when the zone does not wait (12 October 2026) |
 | the status region, the names copied | the old step's, "4 names copied." |
 
 The other words are given above, where they stand. "Warning: " opens

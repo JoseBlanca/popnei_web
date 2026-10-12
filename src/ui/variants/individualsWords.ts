@@ -117,22 +117,19 @@ export const INDIVIDUALS_SEVERAL_DROPPED =
   "Open one individuals file at a time.";
 
 /**
- * What the box says of a drop, a paste or a pick refused while `running`,
- * a live analysis that reads the populations, runs: of the one file
- * `name`, "other.csv was not opened: the populations cannot change while
- * the diversity runs. Stop the diversity in the Populations tab, then
- * open other.csv again."; of anything else, `null`, "Nothing was opened:
- * … then open the individuals file again."
+ * What the box says of the one file `name` dropped, pasted or picked
+ * while `running`, a live analysis that reads the populations, runs:
+ * "other.csv was not opened: the populations cannot change while the
+ * diversity runs. Stop the diversity in the Populations tab, then open
+ * other.csv again." A folder, a piece of text or several files get the
+ * words they get when the zone does not wait
  * (docs/specs/steps/popgen2-input.md, "While the diversity runs").
  */
 export function notOpenedWhileRunningText(
-  name: string | null,
+  name: string,
   running: LiveAnalysisName,
 ): string {
-  const why = `the populations cannot change while ${running.name} runs. Stop ${running.name} in the ${running.tab} tab, then open`;
-  return name === null
-    ? `Nothing was opened: ${why} the individuals file again.`
-    : `${escaped(name)} was not opened: ${why} ${escaped(name)} again.`;
+  return `${escaped(name)} was not opened: the populations cannot change while ${running.name} runs. Stop ${running.name} in the ${running.tab} tab, then open ${escaped(name)} again.`;
 }
 
 /** The label of the list of the column of the populations, and its first

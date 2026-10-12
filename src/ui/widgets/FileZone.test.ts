@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 /**
  * The zone to load a file drawn by React in jsdom, while it waits: what
- * is dropped or pasted on it opens nothing and is given to the
+ * is dropped or pasted on it opens nothing: files are given to the
  * `onRefused` of its wait, by the name of the one file, or `null` for
- * anything that is not one file, a piece of text among them (the review
- * of work package 4 of docs/plans/population-tab.md, 12 October 2026).
+ * several, and a folder or a piece of text to `onNotFiles`, as when the
+ * zone does not wait (the review of work package 4 of
+ * docs/plans/population-tab.md, 12 October 2026).
  * React Aria gives a paste as a drop, so a paste into the zone's hidden
  * button stands for both, as jsdom has no drag and drop.
  */
@@ -83,16 +84,37 @@ async function paste(clipboardData: object): Promise<void> {
   });
 }
 
-describe("PT4 the zone that waits, given what is not a file", () => {
-  test("a piece of text pasted or dropped on it opens nothing and is refused with no name", async () => {
+describe("PT4 the zone that waits", () => {
+  test("a piece of text pasted or dropped on it opens nothing and is given to onNotFiles, as on the zone that does not wait (the review of package 4, 12 October 2026)", async () => {
     const { onRefused, onFiles, onNotFiles } = drawWaiting();
     await paste({
       types: ["text/plain"],
       items: [{ kind: "string", type: "text/plain" }],
       getData: () => "IID,pop",
     });
-    expect(onRefused.mock.calls).toEqual([[null]]);
+    expect(onNotFiles.mock.calls).toEqual([["text"]]);
+    expect(onRefused).not.toHaveBeenCalled();
+    expect(onFiles).not.toHaveBeenCalled();
+  });
+
+  test("one file pasted on it opens nothing and is refused by its name; several, with no name", async () => {
+    const { onRefused, onFiles, onNotFiles } = drawWaiting();
+    await paste(filesPasted(["other.csv"]));
+    await paste(filesPasted(["one.csv", "two.csv"]));
+    expect(onRefused.mock.calls).toEqual([["other.csv"], [null]]);
     expect(onFiles).not.toHaveBeenCalled();
     expect(onNotFiles).not.toHaveBeenCalled();
   });
 });
+
+/** What the clipboard holds after a copy of the files named `names`. */
+function filesPasted(names: readonly string[]): object {
+  return {
+    types: ["Files"],
+    items: names.map((name) => {
+      const file = new File(["IID,pop\n"], name);
+      return { kind: "file", type: "text/csv", getAsFile: () => file };
+    }),
+    getData: () => "",
+  };
+}
