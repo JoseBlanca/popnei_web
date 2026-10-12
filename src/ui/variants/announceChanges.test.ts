@@ -11,9 +11,22 @@ import {
   diversityOptions,
 } from "../../core/analyses/diversity.ts";
 import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
-import { setAnalysisOptions } from "../../core/project.ts";
+import {
+  popDistsOnPopgen2,
+  popDistsOptions,
+} from "../../core/analyses/popDists.ts";
+import {
+  loadIndividuals,
+  setAnalysisOptions,
+  setGrouping,
+} from "../../core/project.ts";
 import { noPopDiversity, summaryResult } from "../../core/testSupport.ts";
-import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
+import type {
+  CsvOptions,
+  JobResult,
+  Outcome,
+  Run,
+} from "../../worker/protocol.ts";
 import { statusOf } from "../analyses/status.ts";
 import type { LiveEvent } from "../autoRuns.ts";
 import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
@@ -536,5 +549,206 @@ describe("PT2 D2 the status region says each live analysis a crash holds", () =>
       "The PCoA did not start: it starts after the next change of the filters or of its options, or when Run is pressed in the PCA tab.",
       "The diversity did not start: it starts after the next change of the filters, of its options or of the populations, or when Run is pressed in the Populations tab.",
     ]);
+  });
+});
+
+/** A result of the distances between A and B, `s000` and `s001`. */
+function distancesResult(): JobResult {
+  return {
+    analysis: "popDists",
+    pops: ["A", "B"],
+    numIndividuals: Uint32Array.from([1, 1]),
+    fst: Float64Array.from([0.1]),
+    dest: Float64Array.from([0.05]),
+    numVarsPerPair: Uint32Array.from([548]),
+    order: {
+      fst: { kind: "file", reason: "twoPopulations" },
+      dest: { kind: "file", reason: "twoPopulations" },
+    },
+    leftOut: [],
+    passStats: { numVars: 548, filtering: {} },
+  };
+}
+
+/** A result of the diversity of A and B, `s000` and `s001`. */
+function twoPopDiversityResult(): JobResult {
+  return {
+    analysis: "diversity",
+    pops: ["A", "B"],
+    numIndividuals: Uint32Array.from([1, 1]),
+    unbiasedExpHet: Float64Array.from([0.3, 0.3]),
+    obsHet: Float64Array.from([0.3, 0.3]),
+    polyRatio: Float64Array.from([0.9, 0.9]),
+    numVarsWithValue: Uint32Array.from([548, 548]),
+    ...noPopDiversity(2),
+    passStats: { numVars: 548, filtering: {} },
+  };
+}
+
+/** As `setUpReady`, with `pops.csv` read, `s000` in A and `s001` in B,
+    and the minimums of the distances and of the diversity at 1, so that
+    both are ready and their Runs enabled. */
+async function setUpDistancesReady(
+  announcer?: Announcer,
+): Promise<Awaited<ReturnType<typeof setUpReady>>> {
+  const page = await setUpReady(announcer);
+  const csv: CsvOptions = {
+    encoding: "auto",
+    separator: "auto",
+    decimal: "auto",
+  };
+  const fileId = "b".repeat(32);
+  page.store.applyAfresh((p) =>
+    loadIndividuals(p, { fileId, name: "pops.csv", csv }),
+  );
+  page.store.individualsRead(fileId, csv, {
+    kind: "read",
+    table: {
+      columns: ["id", "pop"],
+      rows: [
+        ["s000", "A"],
+        ["s001", "B"],
+      ],
+    },
+    columns: [{ kind: "identifier" }, { kind: "categorical" }],
+    found: {
+      encoding: "utf-8",
+      separator: ",",
+      decimal: ".",
+      undecodedLine: null,
+    },
+  });
+  page.store.apply("the column of the populations changed", (p) =>
+    setGrouping(p, { kind: "populations", column: "pop" }),
+  );
+  page.store.apply("the minimum of the distances changed", (p) =>
+    setAnalysisOptions(p, popDistsOnPopgen2, {
+      ...popDistsOptions(p),
+      minNumIndividuals: 1,
+    }),
+  );
+  page.store.apply("the options of the diversity changed", (p) =>
+    setAnalysisOptions(p, diversityOnPopgen2, {
+      ...diversityOptions(p),
+      minNumIndividuals: 1,
+      numCalledAlleles: 2,
+    }),
+  );
+  expect(statusOf(page.store.getState(), "popDists").kind).toBe("ready");
+  expect(statusOf(page.store.getState(), "diversity").kind).toBe("ready");
+  return page;
+}
+
+describe("the status region says the distances' start by themselves, the start of a Run that waited, their Stop, their end and their hold after a crash (the review of the Distances tab, 12 October 2026)", () => {
+  test("the distances started by themselves alone say their own words", () => {
+    const { said, tell } = setUp();
+    tell({ kind: "startedByItself", id: "popDists", round: ["popDists"] });
+    expect(said).toEqual([
+      "Calculating the distances between populations again. To change the filters or the populations, stop them in the Distances tab.",
+    ]);
+  });
+
+  test("a Run of the distances that waited is said at its start", () => {
+    const { said, tell } = setUp();
+    tell({ kind: "startedAfterWaiting", id: "popDists" });
+    expect(said).toEqual(["Calculating the distances of panel.nei."]);
+  });
+
+  test("a Stop of the distances, with Run to press, or alone while Run is not offered", async () => {
+    const locked = setUp();
+    // panel.nei opened and not read: the distances locked.
+    locked.tell({ kind: "paused", id: "popDists" });
+    expect(locked.said).toEqual(["Distances stopped."]);
+    const ready = await setUpDistancesReady();
+    ready.tell({ kind: "paused", id: "popDists" });
+    expect(ready.said).toEqual([
+      "Distances stopped. Press Run in the Distances tab to calculate them again.",
+    ]);
+  });
+
+  test("the distances held after a crash are said in their own words", () => {
+    const { said, tell } = setUp();
+    tell({ kind: "heldAfterCrash", ids: ["popDists"] });
+    expect(said).toEqual([
+      "The distances did not start: they start after the next change of the filters, of their options or of the populations, or when Run is pressed in the Distances tab.",
+    ]);
+  });
+
+  test.each(["startedByItself", "startedAfterWaiting"] as const)(
+    "the distances %s and ended within the region's pause are said by their end alone",
+    async (started) => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      try {
+        const announcer = createAnnouncer();
+        const page = await setUpDistancesReady(announcer);
+        announceChanges(page.store, announcer, () => null);
+        const run = startAnalysis(page.store, "popDists");
+        page.tell(
+          started === "startedByItself"
+            ? { kind: started, id: "popDists", round: ["popDists"] }
+            : { kind: started, id: "popDists" },
+        );
+        page.endLast((key) => ({
+          kind: "done",
+          key,
+          result: distancesResult(),
+        }));
+        await run;
+        await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+        expect(announcer.getState()).toBe(
+          "Distances between the populations of panel.nei calculated.",
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  test("a crash of the distances is said, with what to do", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const announcer = createAnnouncer();
+      const page = await setUpDistancesReady(announcer);
+      announceChanges(page.store, announcer, () => null);
+      const run = startAnalysis(page.store, "popDists");
+      page.endLast(() => ({
+        kind: "failed",
+        error: { kind: "workerFailed", message: "a crash" },
+      }));
+      await run;
+      await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+      expect(announcer.getState()).toMatch(
+        /^The distances between the populations of panel\.nei could not be calculated: /u,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a diversity that ends within the region's pause does not drop the round's start, which says the distances start next", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const announcer = createAnnouncer();
+      const page = await setUpDistancesReady(announcer);
+      announceChanges(page.store, announcer, () => null);
+      const run = startAnalysis(page.store, "diversity");
+      page.tell({
+        kind: "startedByItself",
+        id: "diversity",
+        round: ["diversity", "popDists"],
+      });
+      page.endLast((key) => ({
+        kind: "done",
+        key,
+        result: twoPopDiversityResult(),
+      }));
+      await run;
+      await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
+      expect(announcer.getState()).toMatch(
+        /^Calculating the diversity and then the distances again\. .* Diversity of panel\.nei calculated\.$/u,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
