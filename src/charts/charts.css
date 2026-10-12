@@ -350,6 +350,29 @@
   stroke-dasharray: 4 3;
 }
 
+/* The dashes of the lines of a series of the line plot, by its group,
+   group % 4: its curve, its casing, the lines of its marks and their
+   casings, and the piece of line of its legend, so that two series whose
+   curves lie over each other differ by more than their colour (line.md,
+   "What the user sees"; the review of the LD decay, 12 October 2026).
+   After .chart-mark-line and .chart-mark-casing, whose dashes of one
+   class they replace. */
+.chart-dash-0 {
+  stroke-dasharray: none;
+}
+
+.chart-dash-1 {
+  stroke-dasharray: 8 4;
+}
+
+.chart-dash-2 {
+  stroke-dasharray: 2 3;
+}
+
+.chart-dash-3 {
+  stroke-dasharray: 10 3 2 3;
+}
+
 /* The texts of the legend of the line plot start after the piece of line
    of their row. */
 .chart.chart-line .chart-legend-text {

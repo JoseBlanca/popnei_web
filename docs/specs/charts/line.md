@@ -70,11 +70,22 @@ group `i` has the colour `i % 7` of Okabe and Ito and the shape
   light theme the dashed lines of orange, sky blue and yellow were
   2.25, 2.31 and 1.32 to 1 on white, and both guides of `ld.nei`,
   orange and sky blue, were faint (point 22).
+- **Its dashes**, from 12 October 2026 (the review of the LD decay):
+  the line, its casing, the dashed lines of its marks and their
+  casings, and the piece of line of its legend take the dashes of its
+  group, `group % 4`: solid, dashes of 8 and 4 pixels, dots of 2 and 3,
+  and a dash and a dot, 10, 3, 2 and 3. On `ld.nei` the two fitted
+  curves lay over each other and the two half marks, at 7,548 and
+  7,340 bp, read as one olive line, told apart by colour alone (WCAG
+  2.2, success criterion 1.4.1); now pop_a's curve and half mark are
+  solid and pop_b's dashed. A series whose group is 0 modulo 4 has a
+  solid line of its mark, where every mark had dashes of 4 and 3 until
+  then.
 - **A legend** outside the frame, so that no row of it lies over a
   point: for each series a short piece of its line with its mark on it,
   and then its label, which the screen gives, "pop_a · half at 7,548
-  bp". The series differ by shape as well as by colour, and the legend
-  shows both (WCAG 2.2, success criterion 1.4.1). It stands in a margin
+  bp". The series differ by shape and dashes as well as by colour, and
+  the legend shows all three (WCAG 2.2, success criterion 1.4.1). It stands in a margin
   at the right of the frame, its rows from the top of the frame down,
   while that leaves the frame 300 pixels wide or more; in a narrower
   element it stands above the plot, in the top margin, where the
@@ -251,15 +262,17 @@ constants are in `src/charts/limits.ts`.
 The base makes the skeleton with the class `chart chart-line`. In
 `chart-marks`, for each series `i`, in this order across the series:
 
-- `path.chart-line-casing` for a light colour, and `path.chart-line
-  chart-line-colour-‹group % 7›`, with the numbers of the path rounded to one
+- `path.chart-line-casing chart-dash-‹group % 4›` for a light colour,
+  and `path.chart-line chart-line-colour-‹group % 7› chart-dash-‹group %
+  4›`, with the numbers of the path rounded to one
   decimal, `pathRound(1)`, as the scatter's;
 - `path.chart-points chart-colour-‹group % 7›`, the points of the series, as
   the scatter's groups.
 
 In `chart-annotations`, for each mark of a light colour
-`line.chart-mark-casing`, and for each mark `line.chart-mark-line
-chart-line-colour-‹group % 7›` and `path.chart-points chart-mark
+`line.chart-mark-casing chart-dash-‹group % 4›`, and for each mark
+`line.chart-mark-line chart-line-colour-‹group % 7› chart-dash-‹group %
+4›` and `path.chart-points chart-mark
 chart-colour-‹group % 7›`, every casing under every dashed line and
 every dashed line under every mark. In `chart-legend`, one
 `g.chart-legend-row` per series, one row every 18 pixels: its piece of
@@ -283,6 +296,10 @@ The classes the plot adds to `charts.css`, colours from the tokens:
 .chart-line-colour-0 { stroke: var(--chart-cat-1); }   /* to .chart-line-colour-6, --chart-cat-7 */
 .chart-mark-line     { stroke-width: 1px; stroke-dasharray: 4 3; }
 .chart-mark-casing   { stroke: var(--chart-axis); stroke-width: 3px; stroke-dasharray: 4 3; }
+.chart-dash-0        { stroke-dasharray: none; }       /* after the two above, which they replace */
+.chart-dash-1        { stroke-dasharray: 8 4; }
+.chart-dash-2        { stroke-dasharray: 2 3; }
+.chart-dash-3        { stroke-dasharray: 10 3 2 3; }
 .chart.chart-line .chart-legend-text { text-anchor: start; }
 ```
 

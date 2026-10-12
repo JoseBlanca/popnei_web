@@ -1,8 +1,8 @@
 /**
  * The line plot (docs/specs/charts/line.md): a few series of numbers
  * against a numeric horizontal axis, each series drawn as its points, a
- * line and marks at chosen places along it, in the colour and the shape
- * of its group, with a legend in the SVG, outside the frame: at its right
+ * line and marks at chosen places along it, in the colour, the shape and
+ * the dashes of its group, with a legend in the SVG, outside the frame: at its right
  * in a wide element and above the plot in a narrow one. The LD decay draws
  * one series
  * for each population: the mean r² of its bins as the points, its fitted curve
@@ -283,6 +283,20 @@ function lineColourClass(group: number): string {
   return `chart-line-colour-${String(groupMark(group).colour)}`;
 }
 
+/** How many dash patterns the lines take, by group: solid, dashed,
+    dotted and dash-dot, `chart-dash-‹0 to 3›` of charts.css. */
+const NUM_DASHES = 4;
+
+/** The class of the dashes of the lines of `group`, its curve, the
+    dashed lines of its marks, their casings and the piece of line of its
+    legend: chart-dash-‹group % 4›, so that two series whose curves and
+    marks lie over each other differ by more than their colour (WCAG 2.2,
+    success criterion 1.4.1; the review of the LD decay, 12 October
+    2026). */
+function dashClass(group: number): string {
+  return `chart-dash-${String(group % NUM_DASHES)}`;
+}
+
 /** Whether `value` lies in `domain`, its ends included. */
 function within(value: number, domain: readonly [number, number]): boolean {
   return value >= domain[0] && value <= domain[1];
@@ -349,13 +363,13 @@ function marksPaths(
         if (isOutlined(group)) {
           lines.push({
             key: `casing-${key}`,
-            className: "chart-line-casing",
+            className: `chart-line-casing ${dashClass(group)}`,
             d,
           });
         }
         lines.push({
           key: `line-${key}`,
-          className: `chart-line ${lineColourClass(group)}`,
+          className: `chart-line ${lineColourClass(group)} ${dashClass(group)}`,
           d,
         });
       }
@@ -481,8 +495,8 @@ function drawLegend(frame: Frame, data: LineData): void {
           .attr("y1", 0)
           .attr("y2", 0);
       };
-      if (isOutlined(group)) piece("chart-line-casing");
-      piece(`chart-line ${lineColourClass(group)}`);
+      if (isOutlined(group)) piece(`chart-line-casing ${dashClass(group)}`);
+      piece(`chart-line ${lineColourClass(group)} ${dashClass(group)}`);
       row
         .append("path")
         .attr("class", `chart-points ${groupColourClass(group)}`)
@@ -520,7 +534,7 @@ function drawLine(frame: Frame, data: LineData): void {
       (mark) => mark.key,
     )
     .join("line")
-    .attr("class", "chart-mark-casing")
+    .attr("class", (mark) => `chart-mark-casing ${dashClass(mark.group)}`)
     .attr("x1", (mark) => mark.x)
     .attr("x2", (mark) => mark.x)
     .attr("y1", frame.innerHeight)
@@ -530,7 +544,11 @@ function drawLine(frame: Frame, data: LineData): void {
     .selectAll<SVGLineElement, DrawnMark>("line.chart-mark-line")
     .data(marks, (mark) => mark.key)
     .join("line")
-    .attr("class", (mark) => `chart-mark-line ${lineColourClass(mark.group)}`)
+    .attr(
+      "class",
+      (mark) =>
+        `chart-mark-line ${lineColourClass(mark.group)} ${dashClass(mark.group)}`,
+    )
     .attr("x1", (mark) => mark.x)
     .attr("x2", (mark) => mark.x)
     .attr("y1", frame.innerHeight)

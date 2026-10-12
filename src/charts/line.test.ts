@@ -168,8 +168,8 @@ describe("PA4 D4 the line plot under jsdom, its SVG", () => {
     const handle = createLine(element, lineOf([seriesOf(0), seriesOf(1)]));
     const lines = inMarks(element, "path.chart-line");
     expect(lines.map((line) => line.getAttribute("class"))).toEqual([
-      "chart-line chart-line-colour-0",
-      "chart-line chart-line-colour-1",
+      "chart-line chart-line-colour-0 chart-dash-0",
+      "chart-line chart-line-colour-1 chart-dash-1",
     ]);
     expect(inMarks(element, "path.chart-line-casing")).toHaveLength(2);
     // The four positions at the scales, with one decimal.
@@ -178,10 +178,10 @@ describe("PA4 D4 the line plot under jsdom, its SVG", () => {
     );
     // Each casing is the path of its line, drawn just before it.
     expect(marksOrder(element).slice(0, 4)).toEqual([
-      "chart-line-casing",
-      "chart-line chart-line-colour-0",
-      "chart-line-casing",
-      "chart-line chart-line-colour-1",
+      "chart-line-casing chart-dash-0",
+      "chart-line chart-line-colour-0 chart-dash-0",
+      "chart-line-casing chart-dash-1",
+      "chart-line chart-line-colour-1 chart-dash-1",
     ]);
     expect(
       inMarks(element, "path.chart-line-casing")[0]?.getAttribute("d"),
@@ -214,13 +214,13 @@ describe("PA4 D4 the line plot under jsdom, its SVG", () => {
     );
     // Its line and its mark are green too, with no casing.
     expect(inMarks(element, "path.chart-line")[2]?.getAttribute("class")).toBe(
-      "chart-line chart-line-colour-2",
+      "chart-line chart-line-colour-2 chart-dash-1",
     );
     expect(
       element
         .querySelectorAll("line.chart-mark-line")[2]
         ?.getAttribute("class"),
-    ).toBe("chart-mark-line chart-line-colour-2");
+    ).toBe("chart-mark-line chart-line-colour-2 chart-dash-1");
     expect(inMarks(element, "path.chart-line-casing")).toHaveLength(2);
   });
 
@@ -240,14 +240,14 @@ describe("PA4 D4 the line plot under jsdom, its SVG", () => {
       ]),
     ).toEqual([
       [
-        "chart-mark-line chart-line-colour-0",
+        "chart-mark-line chart-line-colour-0 chart-dash-0",
         px(40),
         px(40),
         INNER_HEIGHT,
         py(0.25),
       ],
       [
-        "chart-mark-line chart-line-colour-1",
+        "chart-mark-line chart-line-colour-1 chart-dash-1",
         px(40),
         px(40),
         INNER_HEIGHT,
@@ -280,8 +280,20 @@ describe("PA4 D4 the line plot under jsdom, its SVG", () => {
         Number(line.getAttribute("y2")),
       ]),
     ).toEqual([
-      ["chart-mark-casing", px(40), px(40), INNER_HEIGHT, py(0.25)],
-      ["chart-mark-casing", px(40), px(40), INNER_HEIGHT, py(0.25)],
+      [
+        "chart-mark-casing chart-dash-1",
+        px(40),
+        px(40),
+        INNER_HEIGHT,
+        py(0.25),
+      ],
+      [
+        "chart-mark-casing chart-dash-0",
+        px(40),
+        px(40),
+        INNER_HEIGHT,
+        py(0.25),
+      ],
     ]);
     // The casings under the dashed lines, and the marks over them.
     const annotations = (): (string | undefined)[] =>
@@ -322,6 +334,59 @@ describe("PA4 D4 the line plot under jsdom, its SVG", () => {
     ]);
   });
 
+  test("each series has the dashes of its group, group % 4, solid, dashed, dotted and dash-dot, on its line, its casing, the dashed lines of its marks and their casing, and the piece of line of its legend (the review of the LD decay, 12 October 2026)", () => {
+    const element = sizedElement();
+    createLine(
+      element,
+      lineOf([0, 1, 2, 3, 4].map((group) => seriesOf(group))),
+    );
+    const dashOf = (element: Element): string | null =>
+      [...element.classList].find((name) => name.startsWith("chart-dash-")) ??
+      null;
+    expect(inMarks(element, "path.chart-line").map(dashOf)).toEqual([
+      "chart-dash-0",
+      "chart-dash-1",
+      "chart-dash-2",
+      "chart-dash-3",
+      "chart-dash-0",
+    ]);
+    // Orange and sky blue, groups 0 and 1, light, on casings of their
+    // dashes, and yellow, group 3.
+    expect(inMarks(element, "path.chart-line-casing").map(dashOf)).toEqual([
+      "chart-dash-0",
+      "chart-dash-1",
+      "chart-dash-3",
+    ]);
+    const annotations = (selector: string): string[] =>
+      [...element.querySelectorAll(`g.chart-annotations > ${selector}`)].map(
+        (line) => dashOf(line) ?? "none",
+      );
+    expect(annotations("line.chart-mark-line")).toEqual([
+      "chart-dash-0",
+      "chart-dash-1",
+      "chart-dash-2",
+      "chart-dash-3",
+      "chart-dash-0",
+    ]);
+    // The casings, each lowered under every dashed line, in any order.
+    expect(annotations("line.chart-mark-casing").toSorted()).toEqual([
+      "chart-dash-0",
+      "chart-dash-1",
+      "chart-dash-3",
+    ]);
+    expect(
+      [...element.querySelectorAll("g.chart-legend-row")].map((row) =>
+        [...row.querySelectorAll("line")].map((line) => dashOf(line)),
+      ),
+    ).toEqual([
+      ["chart-dash-0", "chart-dash-0"],
+      ["chart-dash-1", "chart-dash-1"],
+      ["chart-dash-2"],
+      ["chart-dash-3", "chart-dash-3"],
+      ["chart-dash-0"],
+    ]);
+  });
+
   test("the legend has a row per series in their order, its label as text, its mark, and its piece of line on a casing for a light colour", () => {
     const element = sizedElement();
     createLine(
@@ -340,13 +405,13 @@ describe("PA4 D4 the line plot under jsdom, its SVG", () => {
       ),
     ).toEqual([
       [
-        "chart-line-casing",
-        "chart-line chart-line-colour-1",
+        "chart-line-casing chart-dash-1",
+        "chart-line chart-line-colour-1 chart-dash-1",
         "chart-points chart-colour-1",
         "chart-legend-text",
       ],
       [
-        "chart-line chart-line-colour-2",
+        "chart-line chart-line-colour-2 chart-dash-2",
         "chart-points chart-colour-2",
         "chart-legend-text",
       ],

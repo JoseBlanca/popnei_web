@@ -2059,15 +2059,22 @@ test("PA4 D5 toSVG of the LD decay of ld.nei, from a dark page, is in the light 
     [LIGHT_AXIS, "4px", "none"],
   ]);
   expect(found.points).toEqual([50, 50]);
+  // pop_a's, of group 0, solid, and pop_b's, of group 1, in dashes of 8
+  // and 4, as their curves (line.md, "Its dashes", 12 October 2026).
   expect(found.markLines).toEqual([
-    ["rgb(230, 159, 0)", "4px, 3px"],
-    ["rgb(86, 180, 233)", "4px, 3px"],
+    ["rgb(230, 159, 0)", "none"],
+    ["rgb(86, 180, 233)", "8px, 4px"],
   ]);
-  // Orange and sky blue are below 3:1 on white: each dashed line has its
-  // casing in the colour of the axes, of the same dashes.
-  expect(found.markCasings).toEqual([
-    [LIGHT_AXIS, "3px", "4px, 3px"],
-    [LIGHT_AXIS, "3px", "4px, 3px"],
+  // Orange and sky blue are below 3:1 on white: each line of a mark has
+  // its casing in the colour of the axes, of the same dashes, each
+  // casing lowered under every line, in either order.
+  expect(
+    found.markCasings.toSorted((a, b) =>
+      String(a[2]) < String(b[2]) ? -1 : 1,
+    ),
+  ).toEqual([
+    [LIGHT_AXIS, "3px", "8px, 4px"],
+    [LIGHT_AXIS, "3px", "none"],
   ]);
   expect(found.marks).toBe(2);
   expect(found.legend).toEqual([
@@ -2178,10 +2185,10 @@ test("PA4 D5 the lines of the four colours without a casing, green, blue, vermil
     );
     expect(found.casings).toBe(0);
     expect(found.lines.map((line) => line.className)).toEqual([
-      "chart-line chart-line-colour-2",
-      "chart-line chart-line-colour-4",
-      "chart-line chart-line-colour-5",
-      "chart-line chart-line-colour-6",
+      "chart-line chart-line-colour-2 chart-dash-2",
+      "chart-line chart-line-colour-4 chart-dash-0",
+      "chart-line chart-line-colour-5 chart-dash-1",
+      "chart-line chart-line-colour-6 chart-dash-2",
     ]);
     for (const line of found.lines) {
       expect(
