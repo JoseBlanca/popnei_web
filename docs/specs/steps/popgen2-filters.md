@@ -80,8 +80,13 @@ and with Stop all named while another analysis is live
 by themselves", "The lock"; `popgen2-populations.md`, "While the
 diversity runs"). A change of a threshold or of the FILTER box starts
 again every live analysis whose key it changes, one after the other.
-Nothing else here changes. Approved by the owner on 11 October 2026; not yet built; its plan is
-`docs/plans/population-tab.md`.
+Nothing else here changes. Approved by the owner on 11 October 2026; its plan is
+`docs/plans/population-tab.md`. Built on the branch `population-tab` on
+11 October 2026, task 1.6 of that plan, and not yet tried by the
+owner. The review of work packages 2 and 3 changed one thing here: a
+threshold that removes some values again is announced as "This filter
+removes some variants of the plot." and no longer by its number alone,
+which a screen reader already heard from the field ("Its words").
 
 The commands of the project, the kind `passed`, the opening of a file
 as a new history, the failures that
