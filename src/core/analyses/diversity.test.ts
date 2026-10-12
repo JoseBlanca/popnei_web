@@ -16,7 +16,7 @@ import {
 import {
   DIVERSITY_ONE_POPULATION,
   popgen2OnePopulationLine,
-} from "./diversityOnePopulation.ts";
+} from "./onePopulation.ts";
 import { pcaOnPopgen2 } from "./pca.ts";
 import {
   POPGEN2_ANALYSES,

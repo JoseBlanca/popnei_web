@@ -140,7 +140,8 @@ as a population that has a population.
 
 "On popgen2.html" is built on the branch `population-tab` on 11
 October 2026, work packages 1 and 2 of that plan, in
-`src/core/analyses/diversity.ts`, `diversityOnePopulation.ts` and
+`src/core/analyses/diversity.ts`, `diversityOnePopulation.ts` (named
+`onePopulation.ts` from 12 October 2026, when the LD decay shared it) and
 `src/core/project.ts`, and not yet tried by the owner. Beside the
 corrections above, the rounds of review changed the words of the one
 population, which no longer say "taken as one population since none

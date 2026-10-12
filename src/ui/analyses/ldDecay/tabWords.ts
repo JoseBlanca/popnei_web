@@ -12,7 +12,7 @@
 import {
   LD_DECAY_ONE_POPULATION,
   popgen2OnePopulationLine,
-} from "../../../core/analyses/diversityOnePopulation.ts";
+} from "../../../core/analyses/onePopulation.ts";
 import type { IndividualsKept } from "../../../core/individualsKept.ts";
 import {
   escaped,

@@ -1,10 +1,14 @@
 /**
- * The line of the one population of the Populations tab of popgen2.html
- * (docs/specs/steps/popgen2-populations.md, "The populations it runs
- * on"). Apart from `diversity.ts`, whose definition the store of the page
- * loads with its first screen: only the code of the tab, downloaded when
- * the tab is first shown, draws this line, and a module is loaded whole
- * by every page that imports any of it. Pure.
+ * The line of the one population of the Populations tab of popgen2.html,
+ * which the diversity and the LD decay each say in their part of the tab
+ * with their own words (docs/specs/steps/popgen2-populations.md, "The
+ * populations it runs on", and "The LD decay"). Apart from
+ * `diversity.ts` and `ldDecay.ts`, whose definitions the store of the
+ * page loads with its first screen: only the code of the tab, downloaded
+ * when the tab is first shown, draws this line, and a module is loaded
+ * whole by every page that imports any of it. Named for the one
+ * population, not for the diversity, since 12 October 2026 (the review
+ * of the LD decay). Pure.
  */
 import {
   MAX_LISTED_POPULATIONS,
@@ -20,10 +24,11 @@ import { defect } from "./words.ts";
 
 /**
  * The line of the populations of the Populations tab of popgen2.html for
- * the one population of `numIndividuals` individuals: "1 population,
- * Unclassified: 200 individuals. No individual is assigned to a
- * population, so the diversity is of every individual kept as one
- * population.", and a sentence that says why and how to get populations
+ * the one population of `numIndividuals` individuals, in the words
+ * `words` of the analysis that says it, the diversity's or the LD
+ * decay's: "1 population, Unclassified: 200 individuals. No individual
+ * is assigned to a population, so the diversity is of every individual
+ * kept as one population.", and a sentence that says why and how to get populations
  * for a refused file, a column absent and a column of too many values;
  * and, when the one population stands for an individuals file or a
  * column the user opened, one that says what it does to the numbers if
@@ -79,8 +84,9 @@ export const LD_DECAY_ONE_POPULATION: OnePopulationWords = Object.freeze({
   mixed: `the r² of ${UNCLASSIFIED_POPULATION} is that of all the individuals taken as one population, and comes out higher than within each population at every distance`,
 });
 
-/** The end of `MIXED_POPULATIONS` when no sentence before it says how
-    to get populations. */
+/** The end of the sentence of what the mixture does, `mixed` of
+    `OnePopulationWords`, when no sentence before it says how to get
+    populations. */
 const GET_EACH =
   "; choose a column of populations in the box Individuals to get each one's.";
 
