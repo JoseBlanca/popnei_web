@@ -735,10 +735,11 @@ populations raises it (the Wahlund effect).
 
 Below the table, five bar plots draw five of its columns, so that the
 populations are compared at a glance, as the owner asked on 12 October
-2026: the expected heterozygosity (unbiased), the observed
-heterozygosity, the proportion of polymorphic variants, and the alleles
-per variant, in the draw of the rarefaction and as called, in that
-order. The inbreeding coefficient and the private alleles have no plot.
+2026, in this order: the expected heterozygosity (unbiased), the
+observed heterozygosity, the proportion of polymorphic variants, the
+mean number of alleles per variant rarefied to a common number of
+chromosomes (the rarefaction, below), and the same number as called,
+not rarefied. The inbreeding coefficient and the private alleles have no plot.
 Each plot has one bar per population, in the order of the table, and
 its axis of values starts at 0, so that the length of a bar is in
 proportion to its value. The bars lie across, each with the name of its
@@ -841,16 +842,16 @@ have their minor allele in 1, 2, ... of the sampled chromosomes.
   out, and the table of the spectrum, in a tab beside the plot, holds
   those variants and popnei's expected number of variants at each
   frequency. A legend names each population beside a piece of its line
-  and its mark. Under the plot, a line gives the number of variants that
+  and the shape its points are drawn with. Under the plot, a line gives the number of variants that
   each population's proportions are over, and, for an even n, a line
   says that the points at 0.5 stand about half as high as their
   neighbours, since they hold one count of the rarer allele, n/2, where
   every other point holds two, such as 1 and n − 1. A population with no
-  line, not calculated or with no variant that shows both alleles in
-  the draw, is named above the plot with the reason. The denominator
-  was chosen by the session on 12 October 2026 and explained to the
-  owner; the option not taken was the sum of every count, j = 0 among
-  them.
+  line, because it has fewer individuals than the minimum of the
+  diversity or no variant that shows both alleles in the draw, is named
+  above the plot with the reason. The sum without j = 0 was chosen on
+  12 October 2026; the option not taken was the sum of every count, j =
+  0 among them.
 - A MAF filter of the Variants step removes the variants whose rarer
   allele is rare over all the individuals, and so empties the first bins
   of the spectrum; the application warns of it and says to turn it off
