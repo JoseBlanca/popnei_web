@@ -192,9 +192,13 @@ function shown(page: Page): Locator {
   return page.getByRole("tabpanel");
 }
 
-/** The button of the tab shown named `name`. */
+/** The button of the tab shown named `name`, outside the part of the
+    LD decay, which follows the diversity in the Populations tab with a
+    Run of its own (from 12 October 2026). */
 function button(page: Page, name: "Run" | "Stop"): Locator {
-  return shown(page).getByRole("button", { name, exact: true });
+  return shown(page)
+    .getByRole("button", { name, exact: true })
+    .and(page.locator(':not([data-panel-analysis="ldDecay"] *)'));
 }
 
 /** Picks the fixture `name` with the button of the box `box`. */

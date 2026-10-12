@@ -251,12 +251,22 @@ function diversity(page: Page): Locator {
   });
 }
 
-/** The button of the tab shown named `name`. */
+/** The elements of the page outside the part of the LD decay, which
+    follows the diversity in the Populations tab with a Run and lines of
+    its own (from 12 October 2026). */
+function outsideLdDecay(page: Page): Locator {
+  return page.locator(':not([data-panel-analysis="ldDecay"] *)');
+}
+
+/** The button of the tab shown named `name`, outside the part of the LD
+    decay. */
 function button(
   page: Page,
   name: "Run" | "Stop" | "Stop recalculating",
 ): Locator {
-  return shown(page).getByRole("button", { name, exact: true });
+  return shown(page)
+    .getByRole("button", { name, exact: true })
+    .and(outsideLdDecay(page));
 }
 
 /** The table of the diversity by its caption. */
@@ -364,7 +374,7 @@ test.describe("PT1 D4 the Populations tab", () => {
     await pickIndividuals(page, "panel_pops.csv");
     await tab(page, "Populations").click();
     await expect(
-      shown(page).getByText(
+      diversity(page).getByText(
         "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals",
         { exact: true },
       ),
@@ -525,7 +535,7 @@ test.describe("PT1 D4 the Populations tab", () => {
     });
     await tab(page, "Populations").click();
     await expect(
-      shown(page).getByText(
+      diversity(page).getByText(
         "7 unclassified individuals kept are left out, as the box Individuals says.",
         { exact: true },
       ),
@@ -1119,8 +1129,9 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
     await button(page, "Run").click();
     await expect(button(page, "Stop")).toBeVisible();
 
-    // The options of the diversity, with the words of the filters.
-    const options = shown(page).getByRole("textbox");
+    // The options of the diversity, with the words of the filters; the
+    // LD decay's, after them in the tab, are not its own.
+    const options = diversity(page).getByRole("textbox");
     expect(await options.count()).toBeGreaterThan(0);
     for (const option of await options.all()) {
       await expect(option).toHaveAttribute("aria-disabled", "true");
