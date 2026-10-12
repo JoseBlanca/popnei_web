@@ -34,7 +34,9 @@ and moves the focus on ("The menu").
 Revised on 12 October 2026 for the owner's first round of trying the
 Populations tab (`docs/plans/population-tab.md`, "Work package 7, round
 1"): the spectrum is one plot of lines, with one menu, and no longer a
-histogram per population ("A plot").
+histogram per population ("A plot"); and, the same day, each of the
+five bar plots of the table of the diversity has a menu of its own
+("A plot").
 
 ## What it does
 
@@ -200,6 +202,19 @@ What each plot's CSV holds, written by the functions of core below:
   own above it, as `HistogramPlot` does. (From 11 October 2026 until
   then, each population's histogram of the spectrum had a menu, whose
   CSV was that population's rows of the CSV of the spectra.)
+- **A bar plot of the table of the diversity**, in the Populations
+  tab of `popgen2.html`, from 12 October 2026, one for each of five
+  columns (`docs/specs/steps/popgen2-populations.md`, "The result"):
+  `tableCsv` of `src/core/csv.ts` over two columns of the table, the
+  header "Population" and the label of the column, as the table's own
+  CSV has them, `Population,Expected heterozygosity (unbiased)`, a row
+  per population in the order of the table, the value as stored and an
+  empty field for none; its files
+  `panel.diversity.expected_heterozygosity_unbiased.svg`, `.png` and
+  `.csv`, and the same for `observed_heterozygosity`,
+  `proportion_polymorphic`, `alleles_per_variant_rarefied` and
+  `alleles_per_variant`, the names of the columns of the old page's CSV.
+  The screen places each menu on a line of its own above its plot.
 - **The PCA's plot**, 2D or 3D: `pcaCoordinatesCsv` of
   `docs/specs/analyses/pca.md`, the coordinates vavilov-explorer
   imports.

@@ -1854,7 +1854,15 @@ which the page does not have. The request, the runner, the numbers and
 the result are the old ones. From 12 October 2026, the owner's first
 round of trying the tab, the spectrum of each population is drawn there
 as one plot of lines, and the band at the top of the page counts its
-warning with the result's (`sfs.md`, "On popgen2.html").
+warning with the result's (`sfs.md`, "On popgen2.html"). In the same
+round, on 12 October 2026, five columns of the table are drawn below it
+as bar plots, a bar per population, each with its own "Download…":
+the expected heterozygosity (unbiased), the observed heterozygosity,
+the proportion of polymorphic variants, and the alleles per variant
+rarefied and as called (`popgen2-populations.md`, "The result", and
+`docs/specs/charts/bars.md`). They draw the values of the rows of
+`diversityRows`, a population's `null` as the words "no value", and
+change nothing of the request, the key or the numbers.
 
 ### What differs
 

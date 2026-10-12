@@ -52,6 +52,13 @@ warnings, its link giving that warning the focus when it is the only
 one (`docs/specs/steps/popgen2-band.md`). The bar plots of the table
 come in the same round, in their own revision of this spec.
 
+Revised again on 12 October 2026, the same round of the owner: below
+the table, five bar plots, one for each of five of its columns, so that
+the populations are compared at a glance; each a bar per population in
+the colour of its line in the spectrum, with its own "Download…"
+("The result", the plots of the table). The plot is
+`docs/specs/charts/bars.md`.
+
 The tab is the diversity panel of the old page, `popgen.html`, which is
 built and which the owner tried and accepted on 1 October 2026: its
 screen spec is the second half of `docs/specs/analyses/diversity.md`,
@@ -118,9 +125,11 @@ And these:
 - The individuals of no population are left out of the table when some
   individuals have one, and the tab says how many; with none
   classified, the table has one row of every individual.
-- The table, the plot of the spectrum and the table of the spectrum
-  offer their data, the tables with "Download…" below them, the plot
-  above it.
+- Five bar plots below the table, one for each of five of its
+  columns, a bar per population (from 12 October 2026).
+- The table, each bar plot, the plot of the spectrum and the table of
+  the spectrum offer their data, the tables with "Download…" below
+  them, the plots above them.
 
 ## What it shows
 
@@ -360,6 +369,47 @@ of the panel"), with these differences:
   "Rarefied to 40 chromosomes." (on a line of its own since 11 October
   2026: beside the versions, it read as their end).
 - **No comparison with check numbers**: the page opens no project file.
+- **The plots of the table**, from 12 October 2026, the owner's first
+  round of trying the tab: under the line of the draw, a section with
+  the heading "Bar plots of the table" and the line "One bar per
+  population, in the order of the table, each population in the colour
+  of its line in the plot of the spectrum.", then five plots, one for
+  each of these columns of the table, in this order: "Expected
+  heterozygosity (unbiased)", "Observed heterozygosity", "Proportion of
+  polymorphic variants", "Alleles per variant, rarefied to 40
+  chromosomes", named with the draw of the result as the table names
+  it, and "Alleles per variant". F and the private alleles have none.
+  Each plot is drawn by `createBars` of `docs/specs/charts/bars.md`:
+  - its heading, one level under the section's, the label of its
+    column, and its "Download…" on a line of its own above the plot,
+    as the spectrum's plot has, with "Image as SVG", "Image as PNG" and
+    "Data as CSV";
+  - a bar across per population of the table, in its order, the first
+    at the top, its name at the left of its bar; the colour of the
+    population at place `i` of the result, `populationGroup(i)` of
+    `src/charts/marks.ts`, the colour of its line in the plot of the
+    spectrum; the axis of the values from 0, labelled with the label
+    of the column;
+  - a population with no value in that column, "no value" in the
+    table, has the words "no value" in its row in place of a bar, and
+    not a bar of 0;
+  - its text alternative: the title, the label of the column, and the
+    description, "3 bars, one per population: p0, 0.3519; p2, 0.3449;
+    p1, 0.3504.", each number as the table writes it, to four decimals,
+    and "no value" for none; for the one population, "1 bar, of
+    Unclassified: 0.3755.";
+  - its CSV, the population and the value of its column, under the
+    header of the table's own CSV, "Population" and the label of the
+    column, `Population,Expected heterozygosity (unbiased)`, a row per
+    population in the order of the table, the value as stored and an
+    empty field for none, as the table's "Table as CSV" writes them.
+
+  The plots stand side by side, as many to a row as the width holds at
+  20rem at least each, three at 1280 pixels, and one to a row at 320
+  pixels, so that the five do not make the tab five times longer. With
+  the one population each plot has one bar. A plot's element is as
+  high as `barsHeight` gives for the number of populations, 136 pixels
+  for three.
 - **The spectrum**, under its heading: its caption; from 12 October
   2026 one plot of lines, a line per population in the colour and the
   shape of its place in the result, with its legend, the lines of the
@@ -392,6 +442,7 @@ the stem of the variants file:
 | what | the files |
 |---|---|
 | the table of the diversity | `panel.diversity.csv` |
+| each plot of the table | `panel.diversity.‹column›.svg`, `.png` and `.csv`, the ‹column› named as in the header of the old page's CSV: `expected_heterozygosity_unbiased`, `observed_heterozygosity`, `proportion_polymorphic`, `alleles_per_variant_rarefied`, `alleles_per_variant` |
 | the plot of the spectrum | `panel.sfs.svg`, `panel.sfs.png`, `panel.sfs.proportions.csv` |
 | the table of the spectrum | `panel.sfs.csv` |
 
@@ -472,7 +523,8 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 | the status region, the end | "Diversity of panel.nei calculated."; a refusal or a failure, "The diversity of panel.nei could not be calculated: " and the words of its error |
 | the status region, the diversity held by a crash of the PCA | "The diversity did not start: it starts after the next change of the filters, of its options or of the populations, or when Run is pressed in the Populations tab." (`popgen2-pca.md`, "A failure that ends a live state") |
 | the status region, a Stop | "Diversity stopped. Press Run in the Populations tab to calculate it again."; with no Run to press, "Diversity stopped." |
-| the buttons of the downloads, for a screen reader | "Download the table of the diversity"; "Download the plot of the spectrum"; "Download the table of the spectrum" |
+| the buttons of the downloads, for a screen reader | "Download the table of the diversity"; "Download the bar plot of expected heterozygosity (unbiased)", of "observed heterozygosity", of "proportion of polymorphic variants", of "alleles per variant, rarefied to 40 chromosomes" and of "alleles per variant"; "Download the plot of the spectrum"; "Download the table of the spectrum" |
+| the plots of the table | the heading "Bar plots of the table", its line, the headings, the words of a missing value and the text alternatives of "The result", the plots of the table |
 | the spectrum's plot, its tab, its caption, its lines, its legend and its text alternative | `sfs.md`, "On popgen2.html", the plot |
 | the tab while its code downloads | "Loading the Populations tab…" |
 | the tab whose code could not be downloaded | "The Populations tab could not be loaded. Press Try again. If it fails again, the site may have been updated since this page was opened: reload the page and open panel.nei again; what the page has calculated is lost." with "Try again" (worded so on 11 October 2026: Try again first, the reload second with what it costs) |
@@ -499,7 +551,9 @@ fields and "Use the default" when it is there; Run, Stop or Stop
 recalculating, one stop in one place, and after a failure that leaves
 the diversity live, or while a crash of the PCA holds its start, Run and
 then Stop recalculating; the warnings; the
-table, when it scrolls; its "Download…"; then, in the spectrum, the
+table, when it scrolls; its "Download…"; the "Download…" of each
+plot of the table, in their order, the plots themselves taking no
+focus, since the table holds their numbers; then, in the spectrum, the
 tabs of the plot and the table, the plot's "Download…" before it, and
 the "Download…" of the table of the spectrum after it.
 
@@ -613,6 +667,18 @@ page has them, the missing data of the variants at 0.1, which keeps all
   "p0,1,0.975,38.07795856907602,0.03296202862168288", and its SVG; each
   "Download…" of a table below it, the plot's above it, at 1280 and at
   320 px.
+- **The plots of the table**, from 12 October 2026: five plots under
+  the table, in the order of "The result", each of three bars, p0, p2
+  and p1 down its left side, with its text alternative whole, the first
+  "Expected heterozygosity (unbiased) 3 bars, one per population: p0,
+  0.3519; p2, 0.3449; p1, 0.3504."; the minimum of individuals at 50,
+  where p0's 48 give it no value, "no value" in p0's row of each plot
+  and two bars; with no individuals file, one bar each, of
+  Unclassified; the "Data as CSV" of the first, read back,
+  `Population,Expected heterozygosity (unbiased)` and
+  `p0,0.35193160994408107`, and its SVG; its "Download…" above it; at
+  1280 px three plots in the first row, and at 320 px one to a row with
+  no sideways scroll.
 - **The plot of the spectrum**, from 12 October 2026: three lines, p0,
   p2 and p1 in the legend, at 1280 and at 320 px, where it fits the
   page with no sideways scroll; the caption's sentence of the variants
@@ -641,7 +707,10 @@ warning for them; (a refused individuals file and a column of more than
 longer the session's; the CSV
 of the table with the labels of its columns as header, as every table
 of the page, where the old page wrote the names of the Python script;
-one "Download…" for the plot of the spectrum, above it; Run that starts at once when nothing runs, even
+one "Download…" for the plot of the spectrum, above it; the heading
+and the line of the plots of the table, their bars across, their
+layout, and their number, five, which leaves out F and the private
+alleles; Run that starts at once when nothing runs, even
 while the PCA is about to start, which then waits after it; and the
 words.
 
