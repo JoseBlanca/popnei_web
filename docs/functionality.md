@@ -705,8 +705,11 @@ Each is given with the number of individuals of the population beside it.
 
 On `popgen2.html` the diversity and the spectrum of each population
 (below) are in the Populations tab, built on the branch
-`population-tab` on 11 and 12 October 2026 and not yet tried by the
-owner (`docs/specs/steps/popgen2-populations.md`). One Run gives both, since they come from the same call of
+`population-tab` on 11 and 12 October 2026, tried by the owner on 12
+October 2026, and changed the same day as they asked: the bar plots
+below, the spectrum as one plot of lines, and the band's link to the
+spectrum's warning, which they have not yet tried
+(`docs/specs/steps/popgen2-populations.md`). One Run gives both, since they come from the same call of
 popnei, and from then on the diversity is calculated again by itself a
 second after each change of what it reads, the filters of the Variants
 tab, its options, the individuals file and the column of the
@@ -729,6 +732,27 @@ one population and how to get several, and, when it stands for a file
 or a column the user opened, that if the individuals belong to several
 populations F comes out higher than within each, since pooling
 populations raises it (the Wahlund effect).
+
+Below the table, five bar plots draw five of its columns, so that the
+populations are compared at a glance, as the owner asked on 12 October
+2026: the expected heterozygosity (unbiased), the observed
+heterozygosity, the proportion of polymorphic variants, and the alleles
+per variant, in the draw of the rarefaction and as called, in that
+order. The inbreeding coefficient and the private alleles have no plot.
+Each plot has one bar per population, in the order of the table, and
+its axis of values starts at 0, so that the length of a bar is in
+proportion to its value. The bars lie across, each with the name of its
+population at its left, so that a long name stays level and can be
+read. A population with no value in the table has the words "no value"
+in place of its bar, since a bar of 0 would read as a value of 0. A
+population has the same colour in the five plots and in the plot of
+the spectrum (below), so that it can be followed from plot to plot, and
+its name stands beside each of its bars, and in the legend of the
+spectrum beside a piece of its line, so that no population is told by
+its colour alone. The plots stand two to a row
+in a window 1280 pixels wide and one to a row on a screen 320 pixels
+wide. Each has its own "Download…", as every table and plot of the page
+(section 9).
 
 While the diversity runs, what it reads is greyed with the reason, so
 that nothing it reads changes under it: the thresholds and the FILTER
@@ -764,6 +788,12 @@ at a minimum of 0, or of 1 in a haploid file, where a variant with one
 allele called has a value (`docs/specs/analyses/diversity.md`, "The
 warnings").
 
+The curve of the alleles per variant against the number of chromosomes
+drawn, one line per population, is asked of popnei, which would give
+every point of it from one pass over the file
+(https://github.com/JoseBlanca/popnei/issues/18, opened on the owner's
+order of 12 October 2026), and is not built until popnei has it.
+
 ### The site frequency spectrum
 
 The site frequency spectrum (SFS) of each population: how many variants
@@ -782,19 +812,57 @@ have their minor allele in 1, 2, ... of the sampled chromosomes.
   2026 (point 11 of
   `docs/specs/stage-5-open-points.md`). The option not taken was an
   analysis of its own, with a pass and a Run of its own.
-- The height of each bar is the share of the population's variants that
+- On `popgen.html` each population has a histogram of its own. The
+  height of each bar is the share of the population's variants that
   show both alleles in the draw, the variants with one allele only in
   the table and not drawn, so that populations with different numbers
   of variants compare by their shapes; the table gives popnei's expected
   numbers of variants as well (point 18 there, decided by the owner on
   30 September 2026). The option not taken was popnei's expected
   numbers as the heights.
+- On `popgen2.html` the spectra are one plot of lines, one line per
+  population, so that the populations are compared on one frame, as
+  the owner asked on 12 October 2026. Across is the frequency of the
+  commonest allele in the draw, 1 − j/n for j copies of the rarer
+  allele in a draw of n chromosomes, from 0.5 to just under 1: 0.975
+  for a draw of 40. Up is the proportion of the population's variants
+  with both alleles in the draw that have that frequency, each count
+  over the sum of the population's counts for j from 1 to n/2, the
+  same share as the histograms of the old page and as the table. A
+  proportion and not a count, because a population counts a variant
+  only where enough of its individuals have a called genotype to reach
+  the draw, so populations count different numbers of variants, and the
+  proportions compare the shapes of their spectra. The variants with no
+  copy of the rarer allele in the draw, j = 0, are left out of the plot
+  and of the sum: counted, they would raise or lower a whole line with
+  the share of the population's variants that show one allele in the
+  draw, which the bar plot of the proportion of polymorphic variants
+  already shows. The caption says what the axes are and what is left
+  out, and the table of the spectrum, in a tab beside the plot, holds
+  those variants and popnei's expected number of variants at each
+  frequency. A legend names each population beside a piece of its line
+  and its mark. Under the plot, a line gives the number of variants that
+  each population's proportions are over, and, for an even n, a line
+  says that the points at 0.5 stand about half as high as their
+  neighbours, since they hold one count of the rarer allele, n/2, where
+  every other point holds two, such as 1 and n − 1. A population with no
+  line, not calculated or with no variant that shows both alleles in
+  the draw, is named above the plot with the reason. The denominator
+  was chosen by the session on 12 October 2026 and explained to the
+  owner; the option not taken was the sum of every count, j = 0 among
+  them.
 - A MAF filter of the Variants step removes the variants whose rarer
   allele is rare over all the individuals, and so empties the first bins
   of the spectrum; the application warns of it and says to turn it off
   (point 17 there, decided by the owner on 30 September 2026). The
   option not taken was the spectrum reading every filter but the MAF,
-  with a pass of its own.
+  with a pass of its own. On `popgen2.html` the band at the top of the
+  page counts this warning with the other warnings of the diversity,
+  "Diversity: 1 warning, in the Populations tab", and its link opens the
+  Populations tab at the first of them, this one when it is the only
+  one, as the owner decided on 12 October 2026: a user who sets a MAF
+  threshold in the Variants tab learns there that the spectrum lacks
+  rare alleles.
 
 ### LD decay
 
