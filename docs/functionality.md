@@ -604,8 +604,10 @@ give the principal components that go into the GWAS as covariates.
   changing things: the second is counted from the last change, or from
   the moment the last control lets go, whichever is later, and no
   second is counted while a slider is held, a list or a menu is open,
-  a number is being typed or the dialog of the download is open. Meanwhile the PCA tab says "The PCA starts again
-  in a moment, once the filters and its options stop changing.";
+  a number is being typed or the dialog of the download is open. Meanwhile the PCA tab says "The PCA starts
+  in a moment, later if the filters or its options change." ("The PCA
+  starts again in a moment, once the filters and its options stop
+  changing." until 11 October 2026);
   a value set back is calculated again too, since the
   page keeps no result for values it no longer shows. A screen reader
   hears, as it starts, "Calculating the PCA again. To change the
@@ -628,6 +630,25 @@ give the principal components that go into the GWAS as covariates.
   (docs/specs/steps/popgen2-band.md). Built on the branch `pca-tab` on
   10 October 2026 (docs/plans/no-undo.md), and not yet tried by the
   owner.
+- The PCA was the one analysis of `popgen2.html` calculated again by
+  itself until 11 October 2026, when the diversity of the Populations
+  tab joined it (section 6, "Diversity",
+  `docs/designs/population-tab.md`). Each is calculated again by itself
+  only once its own Run has been pressed, and after a change that both
+  read, a threshold for one, the page calculates them one after the
+  other, the PCA first and then the diversity, in the order of the
+  tabs, since it runs one calculation at a time; the tab of the one
+  that waits says which analysis it waits for. The Stop of the PCA ends
+  the PCA's automatic runs alone, and a diversity that waited for it
+  starts a second later, so that a threshold changed at once after the
+  Stop is the one it is calculated with. The band names the analysis running
+  and those that wait after it, and, whenever two or more analyses are
+  calculated again by themselves and one of them runs, waits or is
+  about to start, offers "Stop all", which ends the automatic runs of
+  every analysis at once (Stop all: the owner's answer of 11 October
+  2026 to the design's first open point). Built on the branch
+  `population-tab` on 11 and 12 October 2026
+  (`docs/plans/population-tab.md`), and not yet tried by the owner.
 
 ## 6. Each population
 
@@ -661,6 +682,46 @@ For each population, over the variants:
   (`docs/specs/analyses/diversity.md`, "The populations").
 
 Each is given with the number of individuals of the population beside it.
+
+On `popgen2.html` the diversity and the spectrum of each population
+(below) are in the Populations tab, from 11 October 2026
+(`docs/specs/steps/popgen2-populations.md`, built on the branch
+`population-tab` on 11 and 12 October 2026, and not yet tried by the
+owner). One Run gives both, since they come from the same call of
+popnei, and from then on the diversity is calculated again by itself a
+second after each change of what it reads, the filters of the Variants
+tab, its options, the individuals file and the column of the
+populations, as the PCA is (section 5), until its Stop or its "Stop
+recalculating"; with the PCA calculated again by itself too, "Stop
+all" in the band at the top of the page ends both.
+
+The populations are those of the column chosen in the box
+Individuals, and the unclassified individuals kept are left out, with
+a line that says how many. When no individual has a population, with
+no individuals file, with "None" chosen as the column, with a column
+that gives none of them one, with a file that could not be read, or
+with a column of more than 20 different values, the table has one row
+of every individual kept, named "Unclassified", as the box Individuals
+names that row of its counts. So the diversity runs with any file, as
+every analysis of the page does, and the unclassified are one
+population only when no individual is classified, as the owner decided
+on 9 October 2026; the refused file and the column of too many values
+were added by the owner on 11 October 2026. A line says why there is
+one population and how to get several, and, when it stands for a file
+or a column the user opened, that if the individuals belong to several
+populations F comes out higher than within each, since pooling
+populations raises it (the Wahlund effect).
+
+While the diversity runs, what it reads is greyed with the reason, so
+that nothing it reads changes under it: the thresholds and the FILTER
+box of the Variants tab, its own options, and, in the box Individuals,
+the column of the populations, the opening of another individuals file
+and its Remove, with "Stop the diversity in the Populations tab to
+change the populations; then press Run there to calculate it again."
+While the PCA alone runs, the box Individuals stays open, since the PCA
+reads no populations. A change of the options of the PCA while the
+diversity runs is not greyed, and the PCA then waits for the diversity.
+The download of the filtered variants waits for either.
 
 ### Rarefaction
 
