@@ -116,8 +116,8 @@ export function pcaResult(method: PcaMethod, numVarsUsed: number): JobResult {
 export interface TestPage {
   /** The store of the page, over the fake worker. */
   readonly store: Popgen2PageStore<JobResult, Blob>;
-  /** The analyses the page starts by itself, the one pass and the PCA
-      live. */
+  /** The analyses the page starts by itself, the one pass and the live
+      analyses. */
   readonly auto: AutoRuns;
   /** The gate the screens pass, whose holds the test takes. */
   readonly gate: RunGate;

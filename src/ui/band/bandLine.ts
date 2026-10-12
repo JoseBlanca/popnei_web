@@ -134,7 +134,7 @@ export type BandLine =
   /** A Stop waits for the calculation worker to start again. */
   | { readonly kind: "stopping"; readonly what: Stopping }
   /** The live analyses `named`, one or more in their order, are about to
-      start again by themselves, once what they wait for, `waitsFor`, the
+      start by themselves, once what they wait for, `waitsFor`, the
       quiet second, the dialog of the download or the next change after a
       crash, is over. One alone offers its tab's Stop recalculating while
       another tab is shown, `withStop`; Stop all, while two or more are

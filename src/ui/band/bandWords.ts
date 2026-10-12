@@ -69,8 +69,8 @@ export interface BandStopAll {
 }
 
 /**
- * The words of `line`, with the clock of a PCA running at `seconds`;
- * `null` for a line that says nothing.
+ * The words of `line`, with the clock of a live analysis running at
+ * `seconds`; `null` for a line that says nothing.
  */
 export function lineWords(line: BandLine, seconds: number): LineWords | null {
   switch (line.kind) {

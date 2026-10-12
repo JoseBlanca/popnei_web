@@ -95,10 +95,11 @@ export interface BandWith {
   /** The store of the page, unwrapped by the gate: the band changes
       nothing in the project. */
   readonly store: PageStore;
-  /** The analyses the page starts by itself: the one pass and the PCA
-      live, whose Stops the band sends. */
+  /** The analyses the page starts by itself: the one pass and the live
+      analyses, whose Stops and Stop all the band sends. */
   readonly autoRuns: AutoRuns;
-  /** The tab shown, which the link to the PCA's warnings changes. */
+  /** The tab shown, which the link to the warnings or the error of a
+      live analysis changes. */
   readonly pageTab: PageTabStore;
   /** The announcer of the page's status region, which says the band's
       Stop of the one pass as the box's Stop is said. */
@@ -309,7 +310,8 @@ interface ActivityProps {
 }
 
 /** The line after "Popnei", worked out from the store, the live state of
-    the PCA, the tab shown and the time a Stop was first seen waiting. */
+    each live analysis, the tab shown and the time a Stop was first seen
+    waiting. */
 function Activity({
   page,
   narrow,
