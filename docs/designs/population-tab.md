@@ -670,7 +670,10 @@ The owner can stop reading here. What follows names the code.
    `aboutToStart` (lines 211 to 245) name the analysis and those waiting;
    the link of a result (lines 247 to 258) takes the first in the order
    of the tabs. `stoppingOf` (lines 277 to 292) already names any
-   analysis by its title.
+   analysis by its title. Noted on 12 October 2026, after work package
+   4 of `docs/plans/population-tab.md`: as built, the field is
+   `BandPage.live`, the live state of each analysis of `POPGEN2_LIVE`,
+   and `pcaLive` is gone.
 6. `announceLive` of `src/ui/variants/announceChanges.ts` (lines 139 to
    158) speaks of the PCA's method alone; it names the analyses of the
    round, once at its first start. `failureEndsLive` of
