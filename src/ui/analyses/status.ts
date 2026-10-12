@@ -124,11 +124,12 @@ export interface LiveAnalysisName {
       populations, the individuals file and how it is read wait while it
       runs (`populationsLockOf` of src/ui/variants/filtersLock.ts). */
   readonly readsPopulations: boolean;
-  /** Present for an analysis named in the plural, "the distances", which
-      the sentences that name it give a verb and a pronoun in the plural,
-      "the distances run", "stop them"; absent for one named in the
-      singular. */
-  readonly plural?: true;
+  /** Whether it is named in the plural, "the distances", which the
+      sentences that name it give a verb and a pronoun in the plural,
+      "the distances run", "stop them"; false for one named in the
+      singular. Required, so that an analysis added to the page does not
+      compile without saying it. */
+  readonly plural: boolean;
 }
 
 /** The PCA by its method, the same object for the same method,
@@ -143,12 +144,14 @@ const PCA_NAMES: Readonly<Record<PcaMethod, LiveAnalysisName>> = Object.freeze({
     name: `the ${methodName("pca")}`,
     tab: "PCA",
     readsPopulations: false,
+    plural: false,
   }),
   pcoa: Object.freeze({
     id: pcaOnPopgen2.id,
     name: `the ${methodName("pcoa")}`,
     tab: "PCA",
     readsPopulations: false,
+    plural: false,
   }),
 });
 
@@ -158,6 +161,7 @@ const DIVERSITY_NAMES: LiveAnalysisName = Object.freeze({
   name: "the diversity",
   tab: "Populations",
   readsPopulations: true,
+  plural: false,
 });
 
 /** The distances between populations of the Distances tab, which read

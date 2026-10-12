@@ -410,6 +410,7 @@ const PCA: LiveAnalysisName = {
   name: "the PCA",
   tab: "PCA",
   readsPopulations: false,
+  plural: false,
 };
 const PCOA: LiveAnalysisName = { ...PCA, name: "the PCoA" };
 /** A live analysis that reads the populations, as the distances between
@@ -419,12 +420,14 @@ const DISTANCES: LiveAnalysisName = {
   name: "the distances",
   tab: "Distances",
   readsPopulations: true,
+  plural: true,
 };
 const DIVERSITY: LiveAnalysisName = {
   id: "diversity",
   name: "the diversity",
   tab: "Populations",
   readsPopulations: true,
+  plural: false,
 };
 
 describe("PT1 D7 the words of the lock of the filters, with and without another analysis live", () => {

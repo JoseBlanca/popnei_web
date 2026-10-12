@@ -37,7 +37,13 @@ import type { LiveAnalysisName } from "../status.ts";
 /** An analysis that can be live, named `name` in the singular, as the
     lines of waiting are given it. */
 function named(name: string): LiveAnalysisName {
-  return { id: "pca", name, tab: "PCA", readsPopulations: false };
+  return {
+    id: "pca",
+    name,
+    tab: "PCA",
+    readsPopulations: false,
+    plural: false,
+  };
 }
 
 /** A project of popgen2.html, frozen deeply: `panel.nei` with the

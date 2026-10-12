@@ -593,7 +593,7 @@ function lockedText(
 /** The pronoun of the analysis `named`: "it", or "them" for one named
     in the plural, "the distances". */
 export function itOf(named: LiveAnalysisName): "it" | "them" {
-  return named.plural === true ? "them" : "it";
+  return named.plural ? "them" : "it";
 }
 
 /** The analysis `named` and a verb of the third person after it, in its
@@ -604,14 +604,14 @@ export function withVerb(
   singular: string,
   plural: string,
 ): string {
-  return `${named.name} ${named.plural === true ? plural : singular}`;
+  return `${named.name} ${named.plural ? plural : singular}`;
 }
 
 /** The analysis `named`, which runs, until it ends, in its number, as
     the lines of waiting name the one they wait for: "the PCA, which is
     running, ends", "the distances, which are running, end". */
 export function runningUntilEnd(named: LiveAnalysisName): string {
-  return named.plural === true
+  return named.plural
     ? `${named.name}, which are running, end`
     : `${named.name}, which is running, ends`;
 }
