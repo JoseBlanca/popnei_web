@@ -11,7 +11,8 @@
  * pixels, "Popnei", "PCoA · 0:0…", Stop and Stop all on one line with no
  * sideways scroll, and, the diversity about to start alone, "Popnei",
  * "Diversity soon" and Stop all alone, the band's Stop recalculating
- * neither read nor reached by Tab; and axe in each new state, light and
+ * neither read nor reached by Tab, and at 1280 pixels its words with
+ * Stop recalculating and Stop all; and axe in each new state, light and
  * dark.
  *
  * panel.nei holds 1,200 variants of 200 diploid individuals, and
@@ -248,6 +249,20 @@ async function expectAxeBothSchemes(
   await page.emulateMedia({ colorScheme: "light", reducedMotion: null });
 }
 
+/** Holds the start of every live analysis about to start, with the
+    clock of the page running again: a key typed in the box of the
+    missing data of the Variants tab, shown, and not yet given, is a
+    change under way, so that the state stays while axe reads the page,
+    which a paused clock of the page leaves waiting for ever. */
+async function holdWithAKeyTyped(page: Page): Promise<void> {
+  const box = missingBox(page);
+  const value = await box.inputValue();
+  await box.press("End");
+  await box.press("Backspace");
+  await box.press(value.slice(-1));
+  await page.clock.resume();
+}
+
 /**
  * Opens popgen2.html with the one pass held and released to its end,
  * panel.nei and panel_pops.csv, and runs the PCA, or the PCoA with
@@ -302,6 +317,8 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     test.setTimeout(120_000);
     await countJobs(page);
     await recordAnnouncements(page);
+    // A clock of the test, run past the quiet second after Stop all.
+    await page.clock.install();
     await bothLive(page);
     await release(page, "holdPcaAgain");
     await setMissing(page, "0.05");
@@ -323,9 +340,9 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
       .click();
     await expect(heading(page)).toBeFocused();
     await expect.poll(() => lineText(page), { timeout: 15_000 }).toBe("Popnei");
-    // More than the quiet second, in which the diversity would have
-    // started had it stayed live.
-    await page.waitForTimeout(1500);
+    // Past the quiet second, in which the diversity would have started
+    // had it stayed live.
+    await page.clock.runFor(2000);
     expect(await jobsOf(page, "diversity")).toBe(diversities);
     expect(
       (await announced(page)).filter((text) => text.includes(STOPPED_ALL)),
@@ -446,8 +463,9 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     await workersListening(page);
   });
 
-  test("PT4 D3 at 320 px, the diversity about to start alone beside the PCA live: Popnei, Diversity soon and Stop all alone on one line, the words whole, no sideways scroll; the band's Stop recalculating neither read by a screen reader nor reached by Tab", async ({
+  test("PT4 D3 at 320 px, the diversity about to start alone beside the PCA live: Popnei, Diversity soon and Stop all alone on one line, the words whole, no sideways scroll; the band's Stop recalculating neither read by a screen reader nor reached by Tab; axe light and dark", async ({
     page,
+    makeAxeBuilder,
   }) => {
     test.setTimeout(120_000);
     await page.setViewportSize({ width: 320, height: 800 });
@@ -524,6 +542,42 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
       }),
     ).toBeFocused();
     await expect(band(page)).toContainText("Diversity soon");
+
+    await holdWithAKeyTyped(page);
+    await expectAxeBothSchemes(page, makeAxeBuilder);
+    expect(await lineText(page)).toBe("Popnei Diversity soon Stop all");
+  });
+
+  test("PT4 D3 at 1280 px, the diversity about to start alone beside the PCA live: its words with Stop recalculating and Stop all; axe light and dark (the review of package 4, 12 October 2026)", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    test.setTimeout(120_000);
+    await page.clock.install();
+    await bothLive(page);
+    await tab(page, "Populations").click();
+    const minimum = shown(page).getByRole("textbox", {
+      name: /^Individuals with a called genotype needed in each population, per variant/u,
+    });
+    await page.clock.pauseAt(Date.now() + 1000);
+    await minimum.fill("10");
+    await minimum.press("Enter");
+    await tab(page, "Variants").click();
+    await holdWithAKeyTyped(page);
+
+    await expect
+      .poll(() => lineText(page))
+      .toBe(
+        "Popnei The diversity starts in a moment Stop recalculating Stop all",
+      );
+    expect(await bandButtons(page)).toEqual([
+      "Stop recalculating the diversity",
+      "Stop all: the PCA and the diversity",
+    ]);
+    await expectAxeBothSchemes(page, makeAxeBuilder);
+    expect(await lineText(page)).toBe(
+      "Popnei The diversity starts in a moment Stop recalculating Stop all",
+    );
   });
 
   for (const width of [1280, 320]) {
