@@ -104,7 +104,7 @@ Populations tab (`docs/plans/population-tab.md`, "Work package 7, round
 population, in place of a histogram per population. Across, the
 frequency of the commonest allele in the draw; up, the proportion of the
 population's variants with both alleles in the draw, each bin over the
-sum of bins 1 to n / 2, the table's share; bin 0 left out of the plot. The plot has one
+sum of bins 1 to n / 2, the table's proportion; bin 0 left out of the plot. The plot has one
 "Download…" of its own (below, "On popgen2.html"). So no file is named
 after a population any longer, and `populationSpectrumCsv` and
 `fileNameParts`, which named and filled the files of each histogram, are
@@ -208,18 +208,21 @@ drawn: the plot draws bins 1 to n / 2.
 
 The owner decided on 30 September 2026 that the heights are shares
 (below, "Open points"). The height of bin j of a population
-is its **share**: the value of bin
+is its **proportion**, called its share until 12 October 2026, a word
+the old page keeps in its table, its histograms and its CSV (the review
+of round 1 gave `popgen2.html` and the code one word, the owner's): the
+value of bin
 j over the sum of bins 1 to n / 2, the variants expected to show both
 alleles in the draw. popnei gives expected numbers of variants, and two
 populations have different numbers of them: on `panel.nei` at n = 40,
 p0 has 1,155.2 and p2 1,151.7, and in a dataset whose filters leave one
-population fewer variants the difference is larger. Shares compare the
+population fewer variants the difference is larger. Proportions compare the
 shape of the spectra, which is what a user reads in them: an excess of
 rare alleles, a lack of them. The table gives both the expected numbers,
-popnei's, and the shares. This division is arithmetic on popnei's
+popnei's, and the proportions. This division is arithmetic on popnei's
 numbers, which the application does (`docs/build-order.md`, section 4).
 A population whose bins 1 to n / 2 sum to 0, every variant expected to
-show one allele in the draw, has no shares, and its histogram is not
+show one allele in the draw, has no proportions, and its histogram is not
 drawn.
 
 When n is even, the last bin, n / 2, gathers one count, where every
@@ -355,21 +358,21 @@ export interface SpectrumOfPop {
   readonly population: string;
   /** False for a population not given to calcPopDiversity, under the minimum
       of individuals, or, from 1 October 2026, with populations that hold fewer
-      than 2 chromosomes: then variantsInDraw is 0, expected is empty and shares null. */
+      than 2 chromosomes: then variantsInDraw is 0, expected is empty and proportions null. */
   readonly calculated: boolean;
   /** The variants of the population in the draw, popnei's numVars.inDraw. */
   readonly variantsInDraw: number;
   /** popnei's values, bins 0 to floor(n / 2), expected numbers of variants. */
   readonly expected: Float64Array;
   /** Bins 1 to floor(n / 2) over their sum; null when that sum is 0. */
-  readonly shares: Float64Array | null;
+  readonly proportions: Float64Array | null;
 }
 
 export interface Spectra {
   readonly numCalledAlleles: number;
   readonly pops: readonly SpectrumOfPop[];  // in the order of the result
-  /** The largest share of any population, the top of every vertical axis; 0 when no population has shares. */
-  readonly largestShare: number;
+  /** The largest proportion of any population, the top of every vertical axis; 0 when no population has proportions. */
+  readonly largestProportion: number;
 }
 
 /** The spectra of a diversity result; the same object for the same result. */
@@ -446,13 +449,13 @@ With Vitest, at the highest functions that show each thing:
 
 - **`spectraOf` of a population not calculated**: a third population
   with `foldedSfs` `null` and `numVarsInDraw` 0 gives `calculated`
-  false, `expected` empty, `shares` `null`, and is left out of the CSV
+  false, `expected` empty, `proportions` `null`, and is left out of the CSV
   of `allSpectraCsv`.
 - **`spectraOf` on a worked example.** A diversity result of two
   populations with `numCalledAlleles` 4, `numVarsInDraw` `[5, 3]` and
   `foldedSfs` `[1, 2, 2]` and `[3, 0, 0]`: the first has the shares
   `[0.5, 0.5]` and `variantsInDraw` 5, the second no shares and
-  `variantsInDraw` 3; `largestShare` 0.5. The same object
+  `variantsInDraw` 3; `largestProportion` 0.5. The same object
   for the same result, compared with `===`. A `foldedSfs` array of 2
   values for n = 4 throws the defect.
 - **`noSpectrumLine`** of the block's words, for a population not
@@ -468,7 +471,7 @@ With Vitest, at the highest functions that show each thing:
 - **The numbers of popnei**, with a result written as literals from the
   run below: at n = 40 with no filter, `spectraOf` gives p0 a share at
   bin 1 of 0.03296202862168288 and at bin 20 of 0.026276898456079615,
-  p2 at bin 1 of 0.042616971066566346, and `largestShare`
+  p2 at bin 1 of 0.042616971066566346, and `largestProportion`
   0.05618145165329451, p1's at bin 15.
 - **The runner**, in its test under node over `panel.nei`
   (`docs/specs/worker/runner.md`): the diversity's result holds
@@ -552,8 +555,13 @@ same request, as on the old page. Four things differ, the plot since
     n = 40. The axis runs from 0.5 to 1. **Up**, the **proportion** of
     the population's variants with both alleles in the draw that show j
     copies of the rarer allele: bin j over the sum of bins 1 to n / 2,
-    the share of the table and of the histograms of the old page, so
-    that the plot and the table agree. A population counts a variant
+    the proportion of the table, the share of the old page's table and
+    histograms, so that the plot and the table agree. The axis is
+    labelled "Proportion of the variants with both alleles that have
+    this frequency", which says what a point's height is (from 12
+    October 2026, the review of round 1: "Proportion of the variants
+    with both alleles" read as the proportion of polymorphic variants,
+    0.93 on `panel.nei`, while the axis ran from 0 to 0.06). A population counts a variant
     only where it has the minimum of individuals called and reaches the
     draw, so populations count different numbers of variants, and the
     proportion compares the shapes of their spectra; the owner asked
@@ -656,6 +664,10 @@ same request, as on the old page. Four things differ, the plot since
   the numbers as `String` writes them and the name quoted as the
   diversity's CSV quotes it. The table of the spectrum has its
   "Download…" below it, "Table as CSV", from the values of its cells.
+  Its second column of each population is headed "p0, proportion", the
+  word of the plot, in the table and in that CSV, where the old page
+  says "p0, share" (from 12 October 2026, the review of round 1, which
+  found one number under two names).
   The old button "Download the spectrum as CSV", and `allSpectraCsv` as
   a download, serve the old page alone.
 - **The names of the files**: `downloadName(stem, "sfs", ext)` for the
@@ -673,7 +685,7 @@ export interface SpectrumLine {
   readonly index: number;
   /** The frequency of the commonest allele of each point, (n − j) / n, j from 1 to n / 2. */
   readonly frequency: Float64Array;
-  /** Bin j over the sum of bins 1 to n / 2 of the population, its share, in the same order. */
+  /** Bin j over the sum of bins 1 to n / 2 of the population, the table's proportion, in the same order. */
   readonly proportion: Float64Array;
   /** popnei's expected number of variants of each point, bin j. */
   readonly variants: Float64Array;
@@ -706,12 +718,12 @@ export function populationGroups(
 Checked with Vitest: `spectrumLinesOf` on the worked example of "How it
 is verified", n = 4 and the spectra `[1, 2, 2]` and `[3, 0, 0]`: one
 line, of the first population, index 0, the frequencies 0.75 and 0.5,
-the proportions 0.5 and 0.5, its shares, the largest 0.5; a population not
+the proportions 0.5 and 0.5, the table's, the largest 0.5; a population not
 calculated, and the second, no line; the same object for the same
 result. `spectrumLinesCsv` of it, to the letter. The numbers of popnei
 0.2.2 under node, 12 October 2026, `panel.nei` with `panel_pops.csv`,
 n = 40, the missing data filter at 0.1, which keeps all 1,200 variants:
-p0's proportion at j = 1 is 0.03296202862168288, its share, and at
+p0's proportion at j = 1 is 0.03296202862168288, the table's, and at
 j = 20 0.026276898456079615; the largest proportion is p1's,
 0.05618145165329451, at j = 15, a frequency of 0.625. `spectrumWarnings` with page "popgen2", the text above.
 
@@ -760,7 +772,7 @@ who reads the spectrum learns where it is set.
   "Copies of the rarer allele among 40 chromosomes", runs from 0.5 to
   n / 2 + 0.5, each bar one count wide and centred on it, with ticks at
   whole numbers; the vertical axis, "Share of the variants with both
-  alleles", runs from 0 to `largestShare` made round by the scale's
+  alleles", runs from 0 to `largestProportion` made round by the scale's
   `nice`, as the histogram's vertical axis is, the same in every
   histogram, so that heights compare across populations. No threshold,
   no legend.

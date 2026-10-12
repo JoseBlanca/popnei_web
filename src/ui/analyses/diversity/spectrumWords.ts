@@ -8,6 +8,7 @@
  * the columns and cells of its table, and the name of its download. Pure,
  * so that a test in node checks them; the block draws them.
  */
+import type { DiversityPage } from "../../../core/analyses/diversity.ts";
 import type {
   SpectrumLines,
   SpectrumOfPop,
@@ -75,7 +76,7 @@ export function noSpectrumLine(
   if (pop.variantsInDraw === 0) {
     return `${name} has no variant with ${grouped(numCalledAlleles)} called chromosomes, so it has no spectrum.`;
   }
-  if (pop.shares === null) {
+  if (pop.proportions === null) {
     return `Every variant of ${name} in the draw shows one allele only, so its spectrum has no ${drawn}.`;
   }
   return null;
@@ -93,27 +94,28 @@ export const SPECTRUM_Y_LABEL = "Share of the variants with both alleles";
 /** The description of a histogram, read after its title, "The spectrum
     of p0", which it does not repeat: "1,200 variants in the draw of 40
     chromosomes, about 1,155 with both alleles, in 20 bars from 1 to 20
-    copies of the rarer allele; the largest share, 0.0559, at 15." A
-    defect for a population with no shares, which draws no histogram. */
+    copies of the rarer allele; the largest share, 0.0559, at 15.", in
+    the old page's word for the proportion. A defect for a population
+    with no proportions, which draws no histogram. */
 export function spectrumDescription(
   pop: SpectrumOfPop,
   numCalledAlleles: number,
 ): string {
-  const shares = pop.shares;
-  if (shares === null) {
+  const proportions = pop.proportions;
+  if (proportions === null) {
     throw new Error(
-      `popnei_web defect: the spectrum of ${pop.population} is described with no shares.`,
+      `popnei_web defect: the spectrum of ${pop.population} is described with no proportions.`,
     );
   }
   let largest = 0;
   let at = 1;
-  shares.forEach((share, i) => {
-    if (share > largest) {
-      largest = share;
+  proportions.forEach((proportion, i) => {
+    if (proportion > largest) {
+      largest = proportion;
       at = i + 1;
     }
   });
-  return `${counted(pop.variantsInDraw, "variant")} in the draw of ${counted(numCalledAlleles, "chromosome")}, about ${grouped(Math.round(bothAllelesOf(pop)))} with both alleles, in ${counted(shares.length, "bar")} from 1 to ${grouped(shares.length)} copies of the rarer allele; the largest share, ${fourDecimals(largest)}, at ${grouped(at)}.`;
+  return `${counted(pop.variantsInDraw, "variant")} in the draw of ${counted(numCalledAlleles, "chromosome")}, about ${grouped(Math.round(bothAllelesOf(pop)))} with both alleles, in ${counted(proportions.length, "bar")} from 1 to ${grouped(proportions.length)} copies of the rarer allele; the largest share, ${fourDecimals(largest)}, at ${grouped(at)}.`;
 }
 
 /** The line under the histograms; its second sentence, of the last bar
@@ -149,12 +151,21 @@ export const SPECTRUM_TABLE_CAPTION =
     table. */
 export const COUNT_COLUMN = "Copies of the rarer allele";
 
-/** The two headers of a population: "p0, variants" and "p0, share". */
+/** The words of the proportion in the header of the table, by the
+    page: the old page keeps its "share"; on popgen2.html the table and
+    the plot both say "proportion" (the review of round 1, 12 October
+    2026). */
+const PROPORTION_HEADER: Readonly<Record<DiversityPage, string>> =
+  Object.freeze({ popgen: "share", popgen2: "proportion" });
+
+/** The two headers of a population on the page `page`: "p0, variants"
+    and "p0, proportion", "p0, share" on the old page. */
 export function populationColumns(
   population: string,
+  page: DiversityPage,
 ): readonly [string, string] {
   const name = escaped(population);
-  return [`${name}, variants`, `${name}, share`];
+  return [`${name}, variants`, `${name}, ${PROPORTION_HEADER[page]}`];
 }
 
 /** An expected number of variants to one decimal, with a comma between
@@ -165,9 +176,9 @@ const ONE_DECIMAL = new Intl.NumberFormat("en-US", {
 });
 
 /** The two cells of a population at the count `count`: the expected
-    number of variants to one decimal, and the share to four decimals,
-    "not drawn" for bin 0 and "no value" for a population with no
-    shares; both "no value" for a population not calculated, which keeps
+    number of variants to one decimal, and the proportion to four
+    decimals, "not drawn" for bin 0 and "no value" for a population with
+    no proportions; both "no value" for a population not calculated, which keeps
     its columns. */
 export function populationCells(
   pop: SpectrumOfPop,
@@ -178,14 +189,18 @@ export function populationCells(
   const variantsText =
     variants === undefined ? "no value" : ONE_DECIMAL.format(variants);
   if (count === 0) return [variantsText, "not drawn"];
-  const share = pop.shares?.[count - 1];
-  return [variantsText, share === undefined ? "no value" : fourDecimals(share)];
+  const proportion = pop.proportions?.[count - 1];
+  return [
+    variantsText,
+    proportion === undefined ? "no value" : fourDecimals(proportion),
+  ];
 }
 
 /** The values of the two cells of a population at the count `count` as
     stored, which the CSV of the table's "Download…" holds: the expected
-    number of variants and the share, `null`, an empty field, for the
-    share of bin 0, which is not drawn, for a population with no shares,
+    number of variants and the proportion, `null`, an empty field, for
+    the proportion of bin 0, which is not drawn, for a population with no
+    proportions,
     and for both of a population not calculated. */
 export function populationValues(
   pop: SpectrumOfPop,
@@ -193,8 +208,8 @@ export function populationValues(
 ): readonly [number | null, number | null] {
   if (!pop.calculated) return [null, null];
   const variants = pop.expected[count] ?? null;
-  const share = count === 0 ? undefined : pop.shares?.[count - 1];
-  return [variants, share ?? null];
+  const proportion = count === 0 ? undefined : pop.proportions?.[count - 1];
+  return [variants, proportion ?? null];
 }
 
 /** What the "Download…" of the table of the spectrum downloads. */
@@ -232,8 +247,12 @@ export const LINES_TITLE = "The spectrum of each population";
 /** The label of the horizontal axis of the plot as lines. */
 export const LINES_X_LABEL = "Frequency of the commonest allele in the draw";
 
-/** The label of the vertical axis of the plot as lines. */
-export const LINES_Y_LABEL = "Proportion of the variants with both alleles";
+/** The label of the vertical axis of the plot as lines: what a point's
+    height is, the proportion of the variants with both alleles at its
+    frequency, and not the proportion of all the variants that have both,
+    which the bar plot of polymorphic variants gives. */
+export const LINES_Y_LABEL =
+  "Proportion of the variants with both alleles that have this frequency";
 
 /**
  * The caption of the block of popgen2.html, whose plot draws a line per

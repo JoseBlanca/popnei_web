@@ -9,7 +9,7 @@
  * each in a group named by the heading of its population, one level
  * under the block's, or the line
  * that says why it has none, and the line under them while any population
- * has a histogram; and "Table", the expected numbers and the shares of
+ * has a histogram; and "Table", the expected numbers and the proportions of
  * every population; under them the download of the spectrum as CSV. A
  * draw of more bars than a histogram draws gives its line in place of the
  * histograms, and the lines of the populations with none under it. Which
@@ -131,7 +131,7 @@ export const SpectrumBlock = memo(function SpectrumBlock({
   const spectra = spectraOf(result);
   const draw = spectra.numCalledAlleles;
   const tooMany = Math.floor(draw / 2) > MAX_HISTOGRAM_BINS;
-  const anyShares = spectra.pops.some((pop) => pop.shares !== null);
+  const anyProportions = spectra.pops.some((pop) => pop.proportions !== null);
 
   const download = (): void => {
     downloadText(
@@ -161,14 +161,14 @@ export const SpectrumBlock = memo(function SpectrumBlock({
               <PopulationSpectrum
                 pop={pop}
                 numCalledAlleles={draw}
-                yMax={spectra.largestShare}
+                yMax={spectra.largestProportion}
                 noSpectrum={noSpectrum}
               />
             </ErrorBoundary>
           );
         })}
       </div>
-      {!tooMany && anyShares && (
+      {!tooMany && anyProportions && (
         <p className={classOf(styles, "muted")}>{underHistogramsLine(draw)}</p>
       )}
     </div>
@@ -224,6 +224,7 @@ export const SpectrumBlock = memo(function SpectrumBlock({
             content: (
               <SpectrumTable
                 result={result}
+                page={page}
                 fileName={
                   page === "popgen2" ? allSpectraCsvName(variantsName) : null
                 }
@@ -247,7 +248,7 @@ interface PopulationSpectrumProps {
   readonly pop: SpectrumOfPop;
   /** The size of the draw. */
   readonly numCalledAlleles: number;
-  /** The top of every vertical axis, the largest share of any
+  /** The top of every vertical axis, the largest proportion of any
       population. */
   readonly yMax: number;
   /** The line in place of its histogram, or `null` when it has one. */
@@ -263,7 +264,7 @@ function PopulationSpectrum({
   noSpectrum,
 }: PopulationSpectrumProps): React.JSX.Element {
   const headingId = useId();
-  const shares = pop.shares;
+  const proportions = pop.proportions;
   return (
     <div
       role="group"
@@ -273,12 +274,12 @@ function PopulationSpectrum({
       <h4 id={headingId} className={classOf(styles, "heading")}>
         {escaped(pop.population)}
       </h4>
-      {noSpectrum === null && shares !== null ? (
+      {noSpectrum === null && proportions !== null ? (
         <>
           <p className={classOf(styles, "muted")}>{drawLineOf(pop)}</p>
           <SpectrumHistogram
             pop={pop}
-            shares={shares}
+            proportions={proportions}
             numCalledAlleles={numCalledAlleles}
             yMax={yMax}
           />
@@ -294,27 +295,27 @@ function PopulationSpectrum({
 interface SpectrumHistogramProps {
   /** Its spectrum. */
   readonly pop: SpectrumOfPop;
-  /** Its shares, which a population with a histogram has. */
-  readonly shares: Float64Array;
+  /** Its proportions, which a population with a histogram has. */
+  readonly proportions: Float64Array;
   /** The size of the draw. */
   readonly numCalledAlleles: number;
   /** The top of every vertical axis. */
   readonly yMax: number;
 }
 
-/** The histogram of a population with shares, its data made once for
+/** The histogram of a population with proportions, its data made once for
     its spectrum and the shared top, so that it is not drawn again on
     every render (react.md, "Mounting a plot"). */
 function SpectrumHistogram({
   pop,
-  shares,
+  proportions,
   numCalledAlleles,
   yMax,
 }: SpectrumHistogramProps): React.JSX.Element {
   const data = useMemo((): HistogramData => {
     // Each bar one count wide and centred on it, from 0.5 to n / 2 + 0.5.
     const edges = Float64Array.from(
-      { length: shares.length + 1 },
+      { length: proportions.length + 1 },
       (_, i) => i + 0.5,
     );
     return {
@@ -323,12 +324,12 @@ function SpectrumHistogram({
       xLabel: xLabelOf(numCalledAlleles),
       yLabel: SPECTRUM_Y_LABEL,
       edges,
-      counts: shares,
+      counts: proportions,
       threshold: null,
       yMax,
       xWholeNumbers: true,
     };
-  }, [pop, shares, numCalledAlleles, yMax]);
+  }, [pop, proportions, numCalledAlleles, yMax]);
   return <HistogramPlot data={data} shape="tall" />;
 }
 
@@ -336,12 +337,15 @@ function SpectrumHistogram({
     n / 2, and two columns per population, "no value" in those of a
     population not calculated, made once for the result; with its
     "Download…" below it, "Table as CSV" of the values of its cells, saved
-    as `fileName`, on popgen2.html, and none with `fileName` `null`. */
+    as `fileName`, on popgen2.html, and none with `fileName` `null`; the
+    header of a population's proportions in the words of `page`. */
 function SpectrumTable({
   result,
+  page,
   fileName,
 }: {
   readonly result: DiversityResult;
+  readonly page: DiversityPage;
   readonly fileName: string | null;
 }): React.JSX.Element {
   const { columns, rows } = useMemo(() => {
@@ -349,11 +353,13 @@ function SpectrumTable({
     const tableColumns: TableColumn[] = [
       { id: "count", label: COUNT_COLUMN, isRowHeader: true, isNumeric: true },
       ...spectra.pops.flatMap((pop, i) =>
-        populationColumns(pop.population).map((label, j): TableColumn => ({
-          id: `pop${String(i)}_${String(j)}`,
-          label,
-          isNumeric: true,
-        })),
+        populationColumns(pop.population, page).map(
+          (label, j): TableColumn => ({
+            id: `pop${String(i)}_${String(j)}`,
+            label,
+            isNumeric: true,
+          }),
+        ),
       ),
     ];
     const tableRows = Array.from(
@@ -374,7 +380,7 @@ function SpectrumTable({
       }),
     );
     return { columns: tableColumns, rows: tableRows };
-  }, [result]);
+  }, [result, page]);
   return (
     <Table
       caption={SPECTRUM_TABLE_CAPTION}

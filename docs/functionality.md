@@ -829,7 +829,7 @@ have their minor allele in 1, 2, ... of the sampled chromosomes.
   for a draw of 40. Up is the proportion of the population's variants
   with both alleles in the draw that have that frequency, each count
   over the sum of the population's counts for j from 1 to n/2, the
-  same share as the histograms of the old page and as the table. A
+  proportion of the table, which the old page calls a share. A
   proportion and not a count, because a population counts a variant
   only where enough of its individuals have a called genotype to reach
   the draw, so populations count different numbers of variants, and the

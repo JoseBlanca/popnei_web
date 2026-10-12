@@ -6,8 +6,8 @@
  *
  * The expected numbers of variants are popnei's, `foldedSfs` of
  * `calcPopDiversity`, carried by the diversity's result; this module only
- * divides bins 1 to n / 2 of each population by their sum, the shares the
- * histograms draw. Its warning is in sfsWarnings.ts.
+ * divides bins 1 to n / 2 of each population by their sum, the proportions
+ * the histograms and the lines draw. Its warning is in sfsWarnings.ts.
  */
 
 import { csvField, defect } from "./words.ts";
@@ -22,15 +22,16 @@ export interface SpectrumOfPop {
   readonly numIndividuals: number;
   /** False for a population not given to calcPopDiversity, under the
       minimum of individuals: then variantsInDraw is 0, expected is empty
-      and shares null. */
+      and proportions null. */
   readonly calculated: boolean;
   /** The variants of the population in the draw, popnei's numVars.inDraw. */
   readonly variantsInDraw: number;
   /** popnei's values, bins 0 to floor(n / 2), expected numbers of
       variants. */
   readonly expected: Float64Array;
-  /** Bins 1 to floor(n / 2) over their sum; null when that sum is 0. */
-  readonly shares: Float64Array | null;
+  /** Bins 1 to floor(n / 2) over their sum, the proportions; null when
+      that sum is 0. */
+  readonly proportions: Float64Array | null;
 }
 
 /** The spectra of a diversity result. */
@@ -39,9 +40,9 @@ export interface Spectra {
   readonly numCalledAlleles: number;
   /** One spectrum per population, in the order of the result. */
   readonly pops: readonly SpectrumOfPop[];
-  /** The largest share of any population, the top of every vertical axis;
-      0 when no population has shares. */
-  readonly largestShare: number;
+  /** The largest proportion of any population, the top of every vertical
+      axis; 0 when no population has proportions. */
+  readonly largestProportion: number;
 }
 
 /** The spectra of each result, so that the block drawn again gets the
@@ -82,7 +83,7 @@ export function spectraOf(r: DiversityResult): Spectra {
         calculated: false,
         variantsInDraw: 0,
         expected: new Float64Array(0),
-        shares: null,
+        proportions: null,
       });
     }
     if (expected.length !== numBins) {
@@ -102,19 +103,19 @@ export function spectraOf(r: DiversityResult): Spectra {
       calculated: true,
       variantsInDraw,
       expected,
-      shares: sharesOf(expected),
+      proportions: proportionsOf(expected),
     });
   });
-  let largestShare = 0;
+  let largestProportion = 0;
   for (const pop of pops) {
-    for (const share of pop.shares ?? []) {
-      largestShare = Math.max(largestShare, share);
+    for (const proportion of pop.proportions ?? []) {
+      largestProportion = Math.max(largestProportion, proportion);
     }
   }
   const spectra = Object.freeze({
     numCalledAlleles: r.numCalledAlleles,
     pops: Object.freeze(pops),
-    largestShare,
+    largestProportion,
   });
   SPECTRA.set(r, spectra);
   return spectra;
@@ -122,7 +123,7 @@ export function spectraOf(r: DiversityResult): Spectra {
 
 /** Bins 1 to the last of a spectrum over their sum, the variants expected
     to show both alleles in the draw; null when that sum is 0. */
-function sharesOf(expected: Float64Array): Float64Array | null {
+function proportionsOf(expected: Float64Array): Float64Array | null {
   const bothAlleles = expected.subarray(1);
   let sum = 0;
   for (const value of bothAlleles) {
@@ -131,14 +132,15 @@ function sharesOf(expected: Float64Array): Float64Array | null {
   return sum > 0 ? bothAlleles.map((value) => value / sum) : null;
 }
 
-/** The header of the CSV of the spectra. */
+/** The header of the CSV of the spectra, the old page's download, whose
+    last column keeps that page's word for the proportion, "share". */
 const CSV_HEADER = "population,rarer_allele,variants,share";
 
 /**
  * The spectra as the text of a CSV file: a header row, then one row per
  * population and count of the rarer allele, 0 to floor(n / 2), in the
  * order of the result, the numbers as `String` writes them, an empty
- * share for bin 0 and for a population with no shares, a population not
+ * proportion for bin 0 and for a population with no proportions, a population not
  * calculated left out, the population's name quoted as RFC 4180 has it
  * when it holds a comma, a quote or a new line, and each line ended by a
  * new line.
@@ -150,12 +152,12 @@ export function allSpectraCsv(r: DiversityResult): string {
 /** The lines of the CSV of one population's spectrum, with no header. */
 function spectrumLines(pop: SpectrumOfPop): readonly string[] {
   return [...pop.expected].map((variants, count) => {
-    const share = count === 0 ? undefined : pop.shares?.[count - 1];
+    const proportion = count === 0 ? undefined : pop.proportions?.[count - 1];
     return [
       csvField(pop.population),
       String(count),
       String(variants),
-      share === undefined ? "" : String(share),
+      proportion === undefined ? "" : String(proportion),
     ].join(",");
   });
 }
@@ -178,7 +180,7 @@ export interface SpectrumLine {
       for j copies of the rarer allele from 1 to floor(n / 2). */
   readonly frequency: Float64Array;
   /** Bin j over the sum of bins 1 to floor(n / 2) of the population,
-      its share, at each point. */
+      its proportion, at each point. */
   readonly proportion: Float64Array;
   /** popnei's expected number of variants at each point, bin j. */
   readonly variants: Float64Array;
@@ -200,10 +202,10 @@ const LINES = new WeakMap<DiversityResult, SpectrumLines>();
 /**
  * The lines of the spectrum of `r`, of the plot of popgen2.html: one per
  * population calculated with some variant that shows both alleles in the
- * draw, those `spectraOf` gives shares, in the order of the result; the
+ * draw, those `spectraOf` gives proportions, in the order of the result; the
  * points from one copy of the rarer allele to floor(n / 2), each bin over
  * the sum of bins 1 to floor(n / 2), the population's variants with both
- * alleles in the draw: its shares, as the table gives them. The same object for the same
+ * alleles in the draw: its proportions, as the table gives them. The same object for the same
  * result. Throws the defects of `spectraOf`.
  */
 export function spectrumLinesOf(r: DiversityResult): SpectrumLines {
@@ -215,10 +217,10 @@ export function spectrumLinesOf(r: DiversityResult): SpectrumLines {
   const lines: SpectrumLine[] = [];
   let largestProportion = 0;
   for (const [index, pop] of spectraOf(r).pops.entries()) {
-    if (!pop.calculated || pop.shares === null) continue;
+    if (!pop.calculated || pop.proportions === null) continue;
     const variants = pop.expected.slice(1);
-    // The table's share, so that the plot and the table agree.
-    const proportion = pop.shares;
+    // The table's proportions, so that the plot and the table agree.
+    const proportion = pop.proportions;
     for (const value of proportion) {
       largestProportion = Math.max(largestProportion, value);
     }

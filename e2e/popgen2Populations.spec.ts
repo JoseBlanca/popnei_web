@@ -1700,7 +1700,7 @@ test.describe("PT2 D3 the downloads of the Populations tab", () => {
       expect(spectrumFile.suggestedFilename()).toBe("panel.sfs.csv");
       const spectrumLines = (await textOf(spectrumFile)).trimEnd().split("\n");
       expect(spectrumLines[0]).toBe(
-        'Copies of the rarer allele,"p0, variants","p0, share","p2, variants","p2, share","p1, variants","p1, share"',
+        'Copies of the rarer allele,"p0, variants","p0, proportion","p2, variants","p2, proportion","p1, variants","p1, proportion"',
       );
       expect(spectrumLines.slice(1, 3)).toEqual([
         "0,44.79323144486922,,48.34836722710054,,49.419228567305325,",

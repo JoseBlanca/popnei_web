@@ -34,7 +34,7 @@ const P0: SpectrumOfPop = {
   calculated: true,
   variantsInDraw: 5,
   expected: Float64Array.from([1, 2, 2]),
-  shares: Float64Array.from([0.5, 0.5]),
+  proportions: Float64Array.from([0.5, 0.5]),
 };
 const P1: SpectrumOfPop = {
   population: "p1",
@@ -42,7 +42,7 @@ const P1: SpectrumOfPop = {
   calculated: true,
   variantsInDraw: 3,
   expected: Float64Array.from([3, 0, 0]),
-  shares: null,
+  proportions: null,
 };
 const P3: SpectrumOfPop = {
   population: "p3",
@@ -50,7 +50,7 @@ const P3: SpectrumOfPop = {
   calculated: false,
   variantsInDraw: 0,
   expected: new Float64Array(0),
-  shares: null,
+  proportions: null,
 };
 const EMPTY: SpectrumOfPop = { ...P1, population: "p4", variantsInDraw: 0 };
 
@@ -74,7 +74,7 @@ describe("PA7 D2 the words of the block of the spectrum", () => {
     ).toBe("1,200 variants in the draw, about 1,155 of them with both alleles");
     expect(
       spectrumDescription(
-        { ...P0, shares: Float64Array.from([0.2, 0.5, 0.3]) },
+        { ...P0, proportions: Float64Array.from([0.2, 0.5, 0.3]) },
         6,
       ),
     ).toBe(
@@ -125,7 +125,16 @@ describe("PA7 D2 the words of the block of the spectrum", () => {
   });
 
   test("the columns and cells of the table, and the name of the download", () => {
-    expect(populationColumns("p0")).toEqual(["p0, variants", "p0, share"]);
+    expect(populationColumns("p0", "popgen")).toEqual([
+      "p0, variants",
+      "p0, share",
+    ]);
+    // On popgen2.html the table says "proportion", as its plot does (the
+    // review of round 1).
+    expect(populationColumns("p0", "popgen2")).toEqual([
+      "p0, variants",
+      "p0, proportion",
+    ]);
     expect(populationCells(P0, 0)).toEqual(["1.0", "not drawn"]);
     expect(populationCells(P0, 1)).toEqual(["2.0", "0.5000"]);
     expect(populationCells(P1, 2)).toEqual(["0.0", "no value"]);

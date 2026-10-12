@@ -83,7 +83,7 @@ describe("PA6 D6 the spectrum's module: spectraOf", () => {
     expect(p3?.calculated).toBe(false);
     expect(p3?.variantsInDraw).toBe(0);
     expect(p3?.expected).toEqual(new Float64Array(0));
-    expect(p3?.shares).toBeNull();
+    expect(p3?.proportions).toBeNull();
     expect(p3?.numIndividuals).toBe(50);
     expect(allSpectraCsv(r)).toBe(allSpectraCsv(workedExample()));
   });
@@ -106,12 +106,12 @@ describe("PA6 D6 the spectrum's module: spectraOf", () => {
     expect(first?.calculated).toBe(true);
     expect(first?.variantsInDraw).toBe(5);
     expect(first?.expected).toEqual(Float64Array.from([1, 2, 2]));
-    expect(first?.shares).toEqual(Float64Array.from([0.5, 0.5]));
+    expect(first?.proportions).toEqual(Float64Array.from([0.5, 0.5]));
     expect(second?.population).toBe("p1");
     expect(second?.calculated).toBe(true);
     expect(second?.variantsInDraw).toBe(3);
-    expect(second?.shares).toBeNull();
-    expect(spectra.largestShare).toBe(0.5);
+    expect(second?.proportions).toBeNull();
+    expect(spectra.largestProportion).toBe(0.5);
   });
 
   test("the same object for the same result", () => {
@@ -149,10 +149,10 @@ describe("PA6 D6 the spectrum's module: spectraOf", () => {
       numVarsInDraw: [4],
       foldedSfs: [[0, 1, 3]],
     });
-    expect(spectraOf(r).pops[0]?.shares).toEqual(
+    expect(spectraOf(r).pops[0]?.proportions).toEqual(
       Float64Array.from([0.25, 0.75]),
     );
-    expect(spectraOf(r).largestShare).toBe(0.75);
+    expect(spectraOf(r).largestProportion).toBe(0.75);
   });
 
   // The case "A population that no variant counted for, or that reached
@@ -171,8 +171,8 @@ describe("PA6 D6 the spectrum's module: spectraOf", () => {
     expect(p4?.calculated).toBe(true);
     expect(p4?.variantsInDraw).toBe(0);
     expect(p4?.expected).toEqual(Float64Array.from([0, 0, 0]));
-    expect(p4?.shares).toBeNull();
-    expect(spectraOf(r).largestShare).toBe(0.5);
+    expect(p4?.proportions).toBeNull();
+    expect(spectraOf(r).largestProportion).toBe(0.5);
     expect(allSpectraCsv(r)).toBe(
       "population,rarer_allele,variants,share\n" +
         "p0,0,1,\n" +
@@ -191,7 +191,7 @@ describe("PA6 D6 the spectrum's module: spectraOf", () => {
       numVarsInDraw: [0, 0],
       foldedSfs: [null, null],
     });
-    expect(spectraOf(r).largestShare).toBe(0);
+    expect(spectraOf(r).largestProportion).toBe(0);
     expect(allSpectraCsv(r)).toBe("population,rarer_allele,variants,share\n");
   });
 });
@@ -335,11 +335,11 @@ describe("PA6 D6 the spectrum's module: the numbers of popnei", () => {
 
   test("panel.nei at a draw of 40 with no filter", () => {
     const [p0, p2, p1] = spectraOf(PANEL).pops;
-    expect(p0?.shares?.[0]).toBe(0.03296202862168288);
-    expect(p0?.shares?.[19]).toBe(0.026276898456079615);
-    expect(p2?.shares?.[0]).toBe(0.042616971066566346);
-    expect(p1?.shares?.[14]).toBe(0.05618145165329451);
-    expect(spectraOf(PANEL).largestShare).toBe(0.05618145165329451);
+    expect(p0?.proportions?.[0]).toBe(0.03296202862168288);
+    expect(p0?.proportions?.[19]).toBe(0.026276898456079615);
+    expect(p2?.proportions?.[0]).toBe(0.042616971066566346);
+    expect(p1?.proportions?.[14]).toBe(0.05618145165329451);
+    expect(spectraOf(PANEL).largestProportion).toBe(0.05618145165329451);
   });
 
   test("PT7 R1.2 the lines of panel.nei at a draw of 40: p0's proportion at one copy of the rarer allele and at 20, p1's the largest, at 0.625", () => {
