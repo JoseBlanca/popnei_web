@@ -20,6 +20,7 @@ import { defectsRootOptions } from "../defects.ts";
 import { createPageTab } from "../pageTab.ts";
 import type { PageTabStore } from "../pageTab.ts";
 import { tabContentId } from "../pageTab.ts";
+import { LIVE_QUIET_MS } from "../autoRuns.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 import type { PageStore } from "../store.tsx";
 import { createAnnouncer } from "../shell/status.ts";
@@ -413,6 +414,41 @@ describe("NU5 D2 the band drawn", () => {
     expect(pause).toHaveBeenCalledWith("pca");
     expect(container.textContent).toBe("Popnei");
     expect(document.activeElement).toBe(heading());
+  });
+
+  test("the band's Stop recalculating the PCA focused when the PCA starts: the focus stays on the band's Stop, now Stop the PCA, since both end it (the second review of package 4, 12 October 2026)", async () => {
+    const testPage = await pcaDone(SUMMARY, "pca", 548);
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const pause = vi.spyOn(testPage.auto, "pause");
+      await drawBand(testPage);
+      await act(async () => {
+        testPage.store.apply("the missing data filter changed", (p) =>
+          setVariantFilter(p, {
+            kind: "missing_data",
+            maxAllowedMissingRate: 0.05,
+          }),
+        );
+        await flush();
+      });
+      const recalculating = button("Stop recalculating the PCA");
+      act(() => {
+        recalculating.focus();
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(LIVE_QUIET_MS);
+        await flush();
+      });
+
+      expect(container.textContent).toContain("PCA running");
+      const stop = button("Stop the PCA");
+      expect(document.activeElement).toBe(stop);
+      await press(stop);
+      expect(pause).toHaveBeenCalledWith("pca");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("a defect while the band works out its line empties that line alone: the heading stays, and the defect, and an error after it, are in the line of an error", async () => {

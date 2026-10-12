@@ -595,10 +595,16 @@ read, since the focus is not on it, so the Stop is not said twice. The
 same when a control goes by itself while it has the focus: the link
 when the line now says something else, the Stop of the one pass when
 the pass ends, the Stop of a PCA when its run ends. A Stop of
-another analysis, or of another kind, is another control, so that the
+another analysis is another control, so that the
 focus never passes by itself from the Stop of one analysis to that of
 the next, which Enter would then stop unasked: when the PCA ends with
-its Stop focused and the diversity starts, the focus goes to "Popnei";
+its Stop focused and the diversity starts, the focus goes to "Popnei".
+A Stop recalculating that becomes the Stop of the same analysis keeps
+the focus, since both end it: Stop recalculating the PCA focused when
+the PCA starts is then "Stop the PCA", focused (the second review of
+work package 4, 12 October 2026; until then it went to "Popnei", and a
+user of the keyboard who reached it in the quiet second had to press
+the Tab key again);
 and so does the focus of a Stop recalculating the band leaves out once
 the window is narrowed under 45 rem (the review of work package 4, 12
 October 2026). After "Close"

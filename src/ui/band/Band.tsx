@@ -381,14 +381,13 @@ function Line({
   const control = (
     <>
       {stop !== null && (
-        // A Stop of another analysis, or of another kind, is another
-        // button: a Stop with the focus that would turn into the Stop of
-        // the analysis after it leaves the page instead, and the focus
-        // goes to the heading (popgen2-band.md, "Keys and focus").
-        <span
-          key={`${stop.stops}:${stop.label}`}
-          className={classOf(styles, "control")}
-        >
+        // A Stop of another analysis is another button: a Stop with the
+        // focus that would turn into the Stop of the analysis after it
+        // leaves the page instead, and the focus goes to the heading. A
+        // Stop recalculating that becomes the Stop of the same analysis
+        // stays, with its focus, since both end it (popgen2-band.md,
+        // "Keys and focus").
+        <span key={stop.stops} className={classOf(styles, "control")}>
           <Button
             label={stop.label}
             ariaLabel={stop.name}
