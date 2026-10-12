@@ -626,8 +626,10 @@ would have to be kept out of the PCA's key by hand (the design, choice
 ### Several analyses calculated again by themselves
 
 From 11 October 2026, for `docs/designs/population-tab.md`, the PCA and
-the diversity of the Populations tab are each live on their own, and
-later the LD decay and the distances between populations will be too.
+the diversity of the Populations tab are each live on their own; from
+12 October 2026 the LD decay of the same tab is too
+(`docs/plans/ld-decay-tab.md`), and the distances between populations
+will be.
 What this section says holds for every live analysis; what the section
 above says of the PCA, its live state, its quiet second, its changes
 under way, its Stop and its failures, holds for each, with its own key,
@@ -817,8 +819,9 @@ a second after its dialog closes, in the order above.
 **For the implementer** (the design, "For the session that builds it",
 points 1 to 7). `POPGEN2_AUTO_GROUPS` of `src/ui/popgen2Store.ts` is
 the one pass, `POPGEN2_CHAIN`, then a group for each live analysis, the
-PCA and then the diversity; `POPGEN2_LIVE` of `src/core/apps.ts`
-lists the live ones in that order, the one list the page reads. In
+PCA, the diversity and, from 12 October 2026, the LD decay;
+`POPGEN2_LIVE` of `src/core/apps.ts` lists the live ones in that order,
+the one list the page reads. In
 `src/ui/autoRuns.ts`:
 
 - `holderOf` holds a live analysis back behind no live analysis, only
