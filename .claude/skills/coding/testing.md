@@ -617,6 +617,15 @@ and each flow runs it at every state it reaches and expects no
 violations. A rule is excluded only on one element and with the reason
 in a comment.
 
+axe does not finish while Playwright's clock holds the page still
+(`page.clock.pauseAt`), probably because it waits on the page's timers,
+which was not checked: it timed out at 120 s
+in Chromium and WebKit, and a flow of the band at 320 px was left with
+no axe run because of it (the review of work package 4 of
+`docs/plans/population-tab.md`, 12 October 2026). A state that must not
+change under axe is held another way, a calculation held by the test
+worker, and axe runs with the clock going.
+
 ## Seeing the screens
 
 The owner cannot tell from the code whether a screen is right, and

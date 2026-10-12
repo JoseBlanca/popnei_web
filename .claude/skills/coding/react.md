@@ -461,13 +461,26 @@ ends, results removed, is heard only through a live region.
   (`docs/specs/steps/popgen2-pca.md`, "While a PCA runs"); the owner
   kept this lock on 10 October 2026, after WebKit was measured keeping
   a stopped PCA's 2 GB for 40 s and more. Once the user's Run has made
-  the PCA live, `src/ui/autoRuns.ts` starts it again by itself a second
-  after the last change, when no control holds a change under way: a
+  an analysis live, `src/ui/autoRuns.ts` starts it again by itself a
+  second after the last change, when no control holds a change under way: a
   drag, an open list, a box with text not yet given, a run of the arrow
   keys (the gate of `src/ui/variants/thresholdRun.ts`, which the widgets
   hold through `RunGateProvider`). A widget added to that page takes the
   same hold, from the press to the commit, or the PCA starts under the
-  user's hand. Stop ends the live state until the next Run. The traps
+  user's hand. Stop ends the live state until the next Run. Since 11
+  October 2026 the PCA and the diversity are both live, the list of them
+  is `POPGEN2_LIVE` of `src/core/apps.ts`, and the calculation worker runs
+  one at a time, in the order of the tabs: the second waits, and the band
+  and its tab say so. Every table keyed by a live analysis, its tab, its
+  words, its end said in the status region, is a `Record` over
+  `Popgen2LiveId`, so that a third does not compile without them; a list
+  of the live analyses written again by hand, an `if` on `"pca"` and
+  `"diversity"`, compiled with a third and threw in the band (the review of
+  work package 4 of `docs/plans/population-tab.md`, 12 October 2026). The
+  diversity locks what it reads too, the column of the populations and
+  the individuals file among them. The waiting analysis is told apart
+  from one held after a crash, which starts only at the next change and
+  must never be said to start once the one running ends. The traps
   the reviews of `docs/plans/no-undo.md` found, on 10 October 2026:
   React Aria's `Slider` calls no `onChange` for a thumb pressed and held
   still, so the hold starts at the press, not at the first change; a
@@ -481,8 +494,20 @@ ends, results removed, is heard only through a live region.
   the top of the window: the heading "Popnei", what runs with its Stop,
   and the errors of the application in the place of the error bar
   (`docs/specs/steps/popgen2-band.md`). It reads the store and the
-  live state of `autoRuns.ts` through one subscription each, and its
-  Stop of the PCA ends the live state, as the tab's does.
+  live state of each live analysis through one subscription each; its
+  Stop of an analysis ends that one's live state, as the tab's does, and
+  Stop all, shown while two or more are live and one runs, waits or is
+  about to start, ends them all. A button of the band whose action can
+  change while it has the focus, the PCA's Stop that would become the
+  diversity's when the PCA ends, is keyed by what it does, so that React
+  draws a new element and the focus goes to the heading; with no key
+  React kept the button, changed its label, and Enter stopped the
+  analysis the user had not chosen. A control left out on a narrow
+  window is not drawn, and not hidden with CSS: a focused button hidden
+  by `display: none` after the window narrowed left the focus on nothing
+  (the review of work package 4 of `docs/plans/population-tab.md`, 12
+  October 2026). The band decides its narrow form in one place,
+  `src/ui/band/narrow.ts`.
 - **Errors of a run** are shown in the panel of the analysis with the
   message and are announced as the end of the run is; `role="alert"` is
   kept for what interrupts, which here is only the bar of an error of the
@@ -511,7 +536,8 @@ spec (`writing-specs` skill): empty, locked with its reason, ready,
 running with its progress, done, results removed with the notice, error;
 on `popgen2.html`, which has no notice, the PCA has no state of results
 removed, and has one more, about to start by itself
-(`docs/specs/steps/popgen2-pca.md`, "The states"). Core gives the
+(`docs/specs/steps/popgen2-pca.md`, "The states"), as every live analysis
+of that page does. Core gives the
 status as a discriminated union, and a shared component,
 `src/ui/analyses/AnalysisPanel.tsx`, draws the frame of each state and
 switches over it with every case named, so that a new state is a type
@@ -605,7 +631,8 @@ src/ui/
                             hooks of each page's store
   popgen2Store.ts           the store of popgen2.html, with no Undo
   autoRuns.ts               what popgen2.html starts by itself: the one
-                            pass, and the PCA once live
+                            pass, and each analysis of POPGEN2_LIVE
+                            once live, one at a time
   pageTab.ts                the tab shown on popgen2.html, which the row
                             of tabs and the band both change
   band/                     the band of popgen2.html, at the top
