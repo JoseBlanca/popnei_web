@@ -80,7 +80,7 @@ approved by the owner that day: on `popgen2.html` the spectrum is in
 the Populations tab, with the words of that page in its warning, a
 "Download…" on each histogram and below its table, and the names of
 those files (below, "On popgen2.html"). The old page changes in
-nothing. Approved by the owner on 11 October 2026; not yet built; its plan is `docs/plans/population-tab.md`.
+nothing. Approved by the owner on 11 October 2026; built on the branch `population-tab` on 11 and 12 October 2026, by `docs/plans/population-tab.md`.
 
 Renamed on 11 October 2026 after the review of work package 1 of that
 plan, so that the names say one population or all: `spectraCsv` is

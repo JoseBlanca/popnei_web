@@ -3032,7 +3032,13 @@ for the smallest part of it.
   stopping; the analysis running with those that wait after it, "PCA
   running · 1:20 · then the diversity"; the analyses about to start
   together; and the link to the warnings or the error of the first
-  analysis, in the order of the tabs, whose tab is not shown. It reads
+  analysis, in the order of the tabs, whose tab is not shown; from 12
+  October 2026 the diversity's count holds the warning of its spectrum,
+  said in the spectrum's caption, which the link takes the focus to when
+  it is the only one, and which the list of the result's warnings names
+  with a link of its own, so that the heading the band's link lands on
+  says the band's count (`spectrumWarnings` of
+  `src/core/analyses/sfsWarnings.ts`). It reads
   the live state of each analysis of `POPGEN2_LIVE` through the one
   subscription of `autoRuns.ts` (`BandPage.live` of
   `src/ui/band/bandLine.ts`), so that between the end of one analysis
@@ -3157,7 +3163,10 @@ the band gains the diversity, Stop all, its Stop of each analysis and
 its narrow form. `popgen2.html` gains the Populations tab, the
 diversity of each population and its spectrum, drawn by the old page's
 table and block of the spectrum given the new page's definition, with
-the "Download…" of each table and of each histogram of the spectrum;
+the "Download…" of each table and of each histogram of the spectrum,
+which gave way on 12 October 2026, the owner's first round of trying
+the tab, to one plot of lines and its menu, with five bar plots of the
+table, each with its menu;
 its whole code, but its name, its heading and the store's definition,
 is downloaded when the tab is first shown, as the result of the PCA tab
 is (`docs/specs/steps/popgen2-populations.md`). Every file of such a
@@ -3613,7 +3622,9 @@ src/ui/
                     live state of each analysis of POPGEN2_LIVE, Stop
                     all and a Stop keyed by what it stops, and from 12
                     October 2026 its narrow form decided in one place,
-                    the window under 45 em (narrow.ts)
+                    the window under 45 em (narrow.ts), and the warning
+                    of the diversity's spectrum counted with the
+                    result's (spectrumWarnings of core)
   pageTab.ts        from 10 October 2026, the tab shown on popgen2.html,
                     a small store of the screen that the page and the
                     band both read and change
@@ -3856,7 +3867,11 @@ file was named after a population any longer. `codeFiles.ts` reads
 October 2026 (`vite.config.ts`; `docs/technology.md`, section 4). No
 rule of the imports changes: `band/` imports, beyond the list of 10
 October 2026, `apps.ts` of core, for `POPGEN2_LIVE`, and, of
-`analyses/`, `status.ts`, for the names of the live analyses;
+`analyses/`, `status.ts`, for the names of the live analyses; from the
+owner's first round of trying the tab, 12 October 2026,
+`analyses/sfsWarnings.ts` of core (`spectrumWarnings`), for the
+warning of the spectrum it counts, and the attribute of that warning
+of `Warnings.tsx`, which its link gives the focus to;
 `analyses/` imports `autoRuns.ts` and `autoRunsContext.ts`, as
 `variants/` does.
 
