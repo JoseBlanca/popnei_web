@@ -21,8 +21,11 @@
  * property `--band-room` of the page, which the room before the
  * application's root takes and the padding of the scroll of base.css
  * reads, so that a control the Tab key reaches is scrolled clear of it
- * (WCAG 2.4.11). Its height is the same whatever its line says, so that
- * nothing under it moves when it starts or stops saying something. While
+ * (WCAG 2.4.11). At the browser's usual size of text its line is one row
+ * at every width from 320 px, whatever it says, the name of a long file
+ * cut, so that nothing under it moves when it starts or stops saying
+ * something; with larger text its buttons may take a second row, and
+ * the room the page keeps under it grows with it. While
  * an error of the application is shown it scrolls with the page, at its
  * top, and the room is 0: fixed, its error covered half the window at
  * 200% zoom and all of it at 400%, Close out of reach. When the error
@@ -463,7 +466,9 @@ function Clocked({
 
 /** The words of a line, whole, and while `narrow`, under 44 rem, in
     their short form, the whole words then still read by a screen
-    reader. */
+    reader. Whole words that hold the name of a file are drawn in three
+    parts, so that the name alone is cut when the line has no room for
+    it. */
 function Words({
   words,
   narrow,
@@ -472,6 +477,16 @@ function Words({
   readonly narrow: boolean;
 }): React.JSX.Element | null {
   if (words === null) return null;
+  const parts = words.aroundName;
+  if (!narrow && parts !== null) {
+    return (
+      <span className={classOf(styles, "wordsAroundName")}>
+        <span className={classOf(styles, "wordsPart")}>{parts.before}</span>
+        <span className={classOf(styles, "fileName")}>{parts.name}</span>
+        <span className={classOf(styles, "wordsPart")}>{parts.after}</span>
+      </span>
+    );
+  }
   return (
     <span className={classOf(styles, "words")}>
       {narrow ? (

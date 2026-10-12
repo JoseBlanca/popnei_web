@@ -71,7 +71,8 @@
 /* The words take the room they need, on one line, and are not shrunk
    below it: with too little room beside the heading they go to a row of
    their own, and are cut with "…" at their end only when they are wider
-   than the whole line, as the name of a long file makes them. The
+   than the whole line, which no words without a file's name are at
+   100% text from 320 px. The
    padding, taken back by the margins, holds the ring of the focus of the
    link, 2px wide and 2px away from it, which the hidden overflow would
    cut otherwise. */
@@ -85,6 +86,37 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+/* Whole words that hold the name of a file, "Statistics of ", the name,
+   " · 45%": on the heading's row, the parts before and after the name
+   whole, and the name cut with "…" at its end when the row has no room
+   for it, so that the line wraps only when the parts that are never cut
+   do not fit. As wide as the whole words at most, so that the control
+   stays 1 rem after them; in the grid, the name's column is 0 wide when
+   the line works out what the words need at least, and as wide as the
+   name at most. With the name of 74 characters the words were not cut
+   but took a row of their own, the band 113 px tall in place of 51, and
+   the ellipsis fell on the percentage, at 704 and 1280 px in Chromium
+   153 and WebKit 26.6 (the second review of work package 4, 12 October
+   2026). */
+.wordsAroundName {
+  display: grid;
+  flex: 1 1 0;
+  grid-template-columns: max-content minmax(0, max-content) max-content;
+  max-inline-size: max-content;
+  font-variant-numeric: tabular-nums;
+}
+
+.wordsPart {
+  white-space: pre;
+}
+
+.fileName {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre;
 }
 
 .control {

@@ -29,6 +29,7 @@
  * with the LD pruning off has 2 warnings, the pruning off and Lingoes'
  * correction (popnei 0.2.2 under node).
  */
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { Locator, Page } from "@playwright/test";
@@ -51,6 +52,11 @@ const PCA_STOPPED =
   "PCA stopped. Press Run in the PCA tab to calculate it again.";
 const PASS_STOPPED =
   "The count of the variants and the statistics were stopped. Start again calculates them from the start.";
+
+/** The name of a variants file of 74 characters, longer than the line
+    of the band at its widest. */
+const LONG_NAME =
+  "Solanum_lycopersicum_landraces_and_wild_relatives_genotyped_panel_2026.nei";
 
 /** The words of an error of the application on this page. */
 const ERROR_TEXT =
@@ -820,6 +826,80 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       page.getByRole("alert").filter({ hasText: ERROR_TEXT }),
     ).toHaveCount(1);
   });
+
+  for (const width of [704, 1280]) {
+    test(`NU5 D3 at ${String(width)} px the one pass of a file with a name of 74 characters: the band one row, as tall as with Popnei alone, the name cut with "…" and the percentage whole, the whole name for a screen reader (the second review of package 4, 12 October 2026)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await holdSummary(page);
+      await page.goto("popgen2.html");
+      await expect.poll(() => lineText(page)).toBe("Popnei");
+      const alone = (await band(page).boundingBox())?.height;
+      const chooser = page.waitForEvent("filechooser");
+      await page
+        .getByRole("button", { name: /^Open (another )?variants file…$/u })
+        .click();
+      await (
+        await chooser
+      ).setFiles({
+        name: LONG_NAME,
+        mimeType: "application/octet-stream",
+        buffer: readFileSync(join(FIXTURES, "panel.nei")),
+      });
+      await release(page, "oneSoFar");
+      await expect
+        .poll(() => lineText(page))
+        .toMatch(/^Popnei Statistics of Solanum.* · \d+% Stop$/u);
+      const fit = await heading(page).evaluate((h1, name) => {
+        const line = h1.parentElement;
+        const words = h1.nextElementSibling;
+        if (line === null || !(words instanceof HTMLElement)) return null;
+        const wordsBox = words.getBoundingClientRect();
+        // The text node that holds the share, and the one that holds
+        // the name, which may be the same.
+        const walker = document.createTreeWalker(words, NodeFilter.SHOW_TEXT);
+        let share: Range | null = null;
+        let nameElement: HTMLElement | null = null;
+        for (
+          let node = walker.nextNode();
+          node !== null;
+          node = walker.nextNode()
+        ) {
+          const text = node.textContent ?? "";
+          const dot = text.lastIndexOf("·");
+          if (dot >= 0) {
+            share = document.createRange();
+            share.setStart(node, dot);
+            share.setEnd(node, text.length);
+          }
+          if (text.includes(name)) nameElement = node.parentElement;
+        }
+        if (share === null || nameElement === null) return null;
+        const shareBox = share.getBoundingClientRect();
+        return {
+          shareWhole:
+            shareBox.left >= wordsBox.left - 0.5 &&
+            shareBox.right <= wordsBox.right + 0.5,
+          nameCut: nameElement.scrollWidth > nameElement.clientWidth,
+          wordsInLine:
+            wordsBox.right <= line.getBoundingClientRect().right + 0.5,
+        };
+      }, LONG_NAME);
+      expect(fit).toEqual({
+        shareWhole: true,
+        nameCut: true,
+        wordsInLine: true,
+      });
+      expect((await band(page).boundingBox())?.height).toBe(alone);
+      expect(await band(page).ariaSnapshot()).toContain(
+        `Statistics of ${LONG_NAME}`,
+      );
+      await release(page, "allSoFar");
+      await release(page, "result");
+      await workersListening(page);
+    });
+  }
 
   for (const width of [1280, 320]) {
     test(`NU5 D3 at ${String(width)} px the band's height is the same with Popnei alone, with a line and with a Stop, and the boxes stay; ${width === 320 ? "each short form with its button on one line, no sideways scroll, " : ""}the whole words for a screen reader, and the one h1 in the band`, async ({

@@ -718,9 +718,14 @@ When the parts do not fit on one line, with the text at 200% or a
 clock past an hour at 320 px ("Diversity · 1:59:59" with its buttons
 takes 294 px), the buttons, and the words if they must, go to a row
 under them, and the band, and the room the page keeps under it, grow
-by that row; the words are never shrunk below their whole width, and
-are cut at their end only when they are wider than the whole line, as
-the name of a long file makes them. Until 12 October 2026 the line did
+by that row; the words are never shrunk below their whole width, but
+for the name of a file: it is cut with "…" at its end when the row
+beside the heading has no room for it, the words before and after it
+whole, and the line wraps only when what is never cut does not fit
+(the second review of work package 4, 12 October 2026: before it, the
+words with a name of 74 characters took a row of their own, the band
+113 px tall in place of 51 at 704 to 1280 px, and the "…" fell on the
+percentage, in Chromium 153 and WebKit 26.6). Until 12 October 2026 the line did
 not wrap, and at 200% text at 320 px Stop all stood 109 px past the
 window, out of reach, and the words shrank to nothing (the review of
 work package 4). At 100% text every line is on one row from 320 px up.

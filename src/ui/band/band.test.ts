@@ -100,6 +100,12 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     });
     expect(words(testPage.band())).toBe("Statistics of panel.nei · 12%");
     expect(lineWords(testPage.band().line, 0)?.short).toBe("Statistics · 12%");
+    // The name apart, which the band cuts when the line is too narrow.
+    expect(lineWords(testPage.band().line, 0)?.aroundName).toEqual({
+      before: "Statistics of ",
+      name: "panel.nei",
+      after: " · 12%",
+    });
 
     pass?.progress({
       bytesRead: 9999,
@@ -120,6 +126,11 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       "Stopping the statistics of panel.nei…",
     );
     expect(lineWords(testPage.band().line, 0)?.short).toBe("Stopping…");
+    expect(lineWords(testPage.band().line, 0)?.aroundName).toEqual({
+      before: "Stopping the statistics of ",
+      name: "panel.nei",
+      after: "…",
+    });
     expect(stopOf(testPage.band().line)).toBeNull();
 
     testPage.store.popneiReady("0.2.2");
@@ -247,6 +258,11 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
 
     expect(words(testPage.band())).toBe("Writing panel.filtered.nei · 45%");
     expect(lineWords(testPage.band().line, 0)?.short).toBe("Writing · 45%");
+    expect(lineWords(testPage.band().line, 0)?.aroundName).toEqual({
+      before: "Writing ",
+      name: "panel.filtered.nei",
+      after: " · 45%",
+    });
     expect(stopOf(testPage.band().line)).toBeNull();
   });
 
@@ -494,6 +510,7 @@ describe("PT1 the band while a crash holds the PCA", () => {
     ).toEqual({
       full: "The PCA starts after the next change",
       short: "PCA later",
+      aroundName: null,
     });
   });
 });

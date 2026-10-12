@@ -38,6 +38,21 @@ export interface LineWords {
   readonly full: string;
   /** The short form under 44 rem: "Statistics · 45%". */
   readonly short: string;
+  /** The whole words split around the name of the file they hold, which
+      the band cuts with "…" when the line has no room for it, the rest
+      kept whole: "Statistics of ", "panel.vcf.gz", " · 45%"; `null` for
+      words that hold no file's name. */
+  readonly aroundName: AroundName | null;
+}
+
+/** The whole words of a line split around the name of a file. */
+export interface AroundName {
+  /** The words before the name: "Statistics of ". */
+  readonly before: string;
+  /** The name: "panel.vcf.gz". */
+  readonly name: string;
+  /** The words after it: " · 45%", or "…". */
+  readonly after: string;
 }
 
 /** The Stop that follows the words of a line. */
@@ -79,10 +94,12 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
     case "reading":
       // The one pass, named as the box names it, "Calculating the
       // statistics of panel.nei…".
-      return {
-        full: withShare(`Statistics of ${escaped(line.name)}`, line.share),
-        short: withShare("Statistics", line.share),
-      };
+      return namedWords(
+        "Statistics of ",
+        escaped(line.name),
+        withShare("", line.share),
+        withShare("Statistics", line.share),
+      );
     case "running": {
       const title = titleOf(line.named);
       const clock = clockText(seconds);
@@ -93,15 +110,18 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
       return {
         full: `${title} running · ${clock}${then}`,
         short: `${title} · ${clock}`,
+        aroundName: null,
       };
     }
     case "writing":
-      return {
-        full: withShare(`Writing ${escaped(line.name)}`, line.share),
-        short: withShare("Writing", line.share),
-      };
+      return namedWords(
+        "Writing ",
+        escaped(line.name),
+        withShare("", line.share),
+        withShare("Writing", line.share),
+      );
     case "stopping":
-      return { full: stoppingWords(line.what), short: "Stopping…" };
+      return stoppingWords(line.what);
     case "aboutToStart":
       return aboutToStartWords(line.named, line.waitsFor);
     case "result":
@@ -214,17 +234,23 @@ function aboutToStartWords(
       return {
         full: `${subject} ${verb} after the download`,
         short: `${who} later`,
+        aroundName: null,
       };
     case "afterCrash":
       return {
         full: `${subject} ${verb} after the next change`,
         short: `${who} later`,
+        aroundName: null,
       };
     // Behind another calculation the line names the one running; the
     // band says so only when that one is not live, as the one pass.
     case "behind":
     case "changes":
-      return { full: `${subject} ${verb} in a moment`, short: `${who} soon` };
+      return {
+        full: `${subject} ${verb} in a moment`,
+        short: `${who} soon`,
+        aroundName: null,
+      };
   }
 }
 
@@ -242,22 +268,48 @@ function resultWords(
   return {
     full: `${title}: ${what}, in the ${named.tab} tab`,
     short: warnings === null ? `${title}: failed` : `${title}: ${what}`,
+    aroundName: null,
   };
 }
 
-/** The whole words of a Stop under way of `what`. */
-function stoppingWords(what: Stopping): string {
+/** The words of a Stop under way of `what`. */
+function stoppingWords(what: Stopping): LineWords {
+  const short = "Stopping…";
   switch (what.kind) {
     case "pca":
-      return `Stopping the ${methodName(what.method)}…`;
+      return {
+        full: `Stopping the ${methodName(what.method)}…`,
+        short,
+        aroundName: null,
+      };
     case "reading":
-      return `Stopping the statistics of ${escaped(what.name)}…`;
+      return namedWords(
+        "Stopping the statistics of ",
+        escaped(what.name),
+        "…",
+        short,
+      );
     case "analysis":
-      return `Stopping ${what.name}…`;
+      return { full: `Stopping ${what.name}…`, short, aroundName: null };
   }
 }
 
-/** `words` followed by the share, "· 45%", when there is one. */
+/** The words `before`, the name of a file `name` and the words `after`,
+    whole, with `short`, their short form. */
+function namedWords(
+  before: string,
+  name: string,
+  after: string,
+  short: string,
+): LineWords {
+  return {
+    full: `${before}${name}${after}`,
+    short,
+    aroundName: { before, name, after },
+  };
+}
+
+/** `words` followed by the share, " · 45%", when there is one. */
 function withShare(words: string, share: number | null): string {
   return share === null ? words : `${words} · ${String(share)}%`;
 }
