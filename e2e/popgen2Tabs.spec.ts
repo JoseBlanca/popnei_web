@@ -54,9 +54,10 @@ const NO_VARIANTS = {
 const NO_INDIVIDUALS =
   "The distances between populations need at least two populations. Open an individuals file that assigns the individuals to them.";
 
-/** The line of the Distances tab once it opens. */
-const DISTANCES_NOT_BUILT =
-  "Not built yet: the distances between the populations, Hudson's Fst or Jost's D, come in a later version of the page.";
+/** The heading of the Distances tab once it opens, since 12 October
+    2026 (docs/specs/steps/popgen2-distances.md); "Not built yet: …"
+    until then. */
+const DISTANCES_HEADING = "Distances between populations";
 
 /** The row of tabs. */
 function row(page: Page): Locator {
@@ -361,7 +362,12 @@ test("AP1 D4 panel.nei open: PCA and Populations open and Distances asks for an 
     await tab(page, name).click();
     await expect(tab(page, name)).toHaveAttribute("aria-selected", "true");
     if (name === "Distances") {
-      await expect(shownPanel(page)).toHaveText(DISTANCES_NOT_BUILT);
+      await expect(
+        shownPanel(page).getByRole("heading", {
+          level: 2,
+          name: DISTANCES_HEADING,
+        }),
+      ).toBeVisible({ timeout: 20_000 });
     }
     await expectAxeBothSchemes(page, makeAxeBuilder);
   }
@@ -597,7 +603,12 @@ test("AP1 D4 the filters of the individuals keeping one population grey Distance
   await page.keyboard.press("End");
   await expect(tab(page, "Distances")).toBeFocused();
   await expect(tab(page, "Distances")).toHaveAttribute("aria-selected", "true");
-  await expectShown(page, DISTANCES_NOT_BUILT);
+  await expect(
+    shownPanel(page).getByRole("heading", {
+      level: 2,
+      name: DISTANCES_HEADING,
+    }),
+  ).toBeVisible({ timeout: 20_000 });
   await tab(page, "Variants").click();
 
   // Only s005, of p2, has an observed heterozygosity of 0.322 or less

@@ -34,7 +34,9 @@
  *
  * Asked to, it holds the diversity as the PCA, for the Populations tab
  * of popgen2.html: its result kept back until a release of "diversity",
- * which lets it through and holds no diversity after it.
+ * which lets it through and holds no diversity after it. And the
+ * distances between populations the same, for the Distances tab, until
+ * a release of "popDists".
  *
  * A release sent before the worker's script has made its channel would
  * be lost, as right after a file is picked, while the page makes the
@@ -64,7 +66,8 @@ export type Release =
   | "write"
   | "pca"
   | "diversity"
-  | "holdPcaAgain";
+  | "holdPcaAgain"
+  | "popDists";
 
 /** What a worker says on the channel once it listens. */
 const LISTENING = "listening";
@@ -102,14 +105,16 @@ const front = (
   holdWrite: boolean,
   holdPca: boolean,
   holdDiversity: boolean,
+  holdPopDists: boolean,
 ): string => `{
   const realNow = performance.now.bind(performance);
   performance.now = () => realNow() * 1e6;
   const realPost = self.postMessage.bind(self);
   const held = { soFar: [], result: [] };
-  const holding = { soFar: true, result: true, write: ${JSON.stringify(holdWrite)}, pca: ${JSON.stringify(holdPca)}, diversity: ${JSON.stringify(holdDiversity)} };
+  const holding = { soFar: true, result: true, write: ${JSON.stringify(holdWrite)}, pca: ${JSON.stringify(holdPca)}, diversity: ${JSON.stringify(holdDiversity)}, popDists: ${JSON.stringify(holdPopDists)} };
   const heldPca = [];
   const heldDiversity = [];
+  const heldPopDists = [];
   const writes = new Set();
   const heldWrite = [];
   const reported = new Set();
@@ -123,6 +128,9 @@ const front = (
   const ofDiversity = (m) =>
     m !== null && typeof m === "object" && m.kind === "result" &&
     m.result !== null && typeof m.result === "object" && m.result.analysis === "diversity";
+  const ofPopDists = (m) =>
+    m !== null && typeof m === "object" && m.kind === "result" &&
+    m.result !== null && typeof m.result === "object" && m.result.analysis === "popDists";
   const ofSummary = (m) =>
     m !== null && typeof m === "object" && m.result !== null &&
     typeof m.result === "object" && m.result.analysis === "variantsSummary";
@@ -145,6 +153,11 @@ const front = (
     if (release === "diversity") {
       holding.diversity = false;
       for (const [m, t] of heldDiversity.splice(0)) realPost(m, t);
+      return;
+    }
+    if (release === "popDists") {
+      holding.popDists = false;
+      for (const [m, t] of heldPopDists.splice(0)) realPost(m, t);
       return;
     }
     if (release === "write") {
@@ -182,6 +195,10 @@ const front = (
       heldDiversity.push([m, t]);
       return;
     }
+    if (holding.popDists && ofPopDists(m)) {
+      heldPopDists.push([m, t]);
+      return;
+    }
     if (ofSummary(m) && (m.kind === "soFar" || m.kind === "result") && holding[m.kind]) {
       held[m.kind].push([m, t]);
       return;
@@ -194,7 +211,8 @@ const front = (
 /** Serves every calculation worker of the page with the results of the
     summary held, and, with `holdWrite`, each write held after its first
     report of progress, with `holdPca` the result of each PCA, and with
-    `holdDiversity` that of each diversity; to call before the page is
+    `holdDiversity` that of each diversity, and with `holdPopDists` that
+    of each calculation of the distances; to call before the page is
     opened. */
 export async function holdSummary(
   page: Page,
@@ -202,10 +220,12 @@ export async function holdSummary(
     holdWrite = false,
     holdPca = false,
     holdDiversity = false,
+    holdPopDists = false,
   }: {
     readonly holdWrite?: boolean;
     readonly holdPca?: boolean;
     readonly holdDiversity?: boolean;
+    readonly holdPopDists?: boolean;
   } = {},
 ): Promise<void> {
   await page.addInitScript(countWorkers, [CHANNEL, LISTENING, COUNTS] as const);
@@ -214,7 +234,7 @@ export async function holdSummary(
     const script = await response.text();
     await route.fulfill({
       response,
-      body: front(holdWrite, holdPca, holdDiversity) + script,
+      body: front(holdWrite, holdPca, holdDiversity, holdPopDists) + script,
     });
   });
 }
