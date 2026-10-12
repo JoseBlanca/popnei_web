@@ -12,16 +12,19 @@ import { crashText, refusalText } from "../../../core/analyses/ldDecay.ts";
 import { statisticsFailedWords } from "../../../core/analyses/individualChecks.ts";
 import type { Failure } from "../../../core/analyses/individualChecks.ts";
 import { passRefusalText } from "../../../core/analyses/fileRefusals.ts";
-import { escaped } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
 import type { AnalysisError, AppState } from "../../../core/store.ts";
 import type { JobResult } from "../../../worker/protocol.ts";
-import { statusOf } from "../status.ts";
-import { failedText, failedWordsOf, popgen2FailureText } from "../words.ts";
+import {
+  endAnnouncement,
+  heldAfterCrashText,
+  startedByItselfText,
+  stoppedText,
+} from "../liveLines.ts";
+import type { LiveLines } from "../liveLines.ts";
+import { LD_DECAY_NAMES } from "../status.ts";
+import { popgen2FailureText } from "../words.ts";
 import type { PanelErrorWords } from "../words.ts";
-
-/** The id of the LD decay. */
-const LD_DECAY = "ldDecay";
 
 /** The words the tab gives the errors of the LD decay, as `AnalysisUi`
     takes them: those of the definition of this page, its own words of a
@@ -51,60 +54,38 @@ export const LD_DECAY_TAB_ERRORS: PanelErrorWords = Object.freeze({
   failureText: popgen2FailureText,
 });
 
+/** How the lines of a live analysis name the LD decay
+    (`liveLines.ts`). */
+export const LD_DECAY_LINES: LiveLines = Object.freeze({
+  named: LD_DECAY_NAMES,
+  longName: "the LD decay",
+  ofFile: "the LD decay of",
+  errors: LD_DECAY_TAB_ERRORS,
+});
+
 /** What the status region says when the LD decay starts again by itself,
     alone in its round, with the tab where it is stopped and what it
     locks, the filters and the populations. */
-export const LD_DECAY_STARTED_BY_ITSELF =
-  "Calculating the LD decay again. To change the filters or the populations, stop it in the Populations tab.";
+export const LD_DECAY_STARTED_BY_ITSELF = startedByItselfText(LD_DECAY_LINES);
 
 /** What the status region says when a crash of the worker that ended
     another live state holds the LD decay, about to start, until the next
     change or its Run. */
-export const LD_DECAY_HELD_AFTER_CRASH =
-  "The LD decay did not start: it starts after the next change of the filters, of its options or of the populations, or when Run is pressed in the Populations tab.";
+export const LD_DECAY_HELD_AFTER_CRASH = heldAfterCrashText(LD_DECAY_NAMES);
 
-/** What the status region says at a Stop of the LD decay, in its tab or
-    in the band: with Run to press when the tab then offers it,
-    `runOffered`, and alone when it does not. */
+/** What the status region says at a Stop of the LD decay, with Run to
+    press when the tab then offers it, `runOffered`. */
 export function ldDecayStoppedText(runOffered: boolean): string {
-  return runOffered
-    ? "LD decay stopped. Press Run in the Populations tab to calculate it again."
-    : "LD decay stopped.";
+  return stoppedText(LD_DECAY_NAMES, runOffered);
 }
 
-/**
- * What the status region says as the store goes from `before` to
- * `after`, when a run of the LD decay ends, whichever tab is shown: "LD
- * decay of ld.nei calculated."; "The LD decay of ld.nei could not be
- * calculated: " and the words of its error, as the tab draws them.
- * `null` for any other change: a run stopped, or left behind by a
- * change, ends with no result and no error, and its Stop is said apart.
- */
+/** What the status region says as the store goes from `before` to
+    `after`, when a run of the LD decay ends: "LD decay of ld.nei
+    calculated."; "The LD decay of ld.nei could not be calculated: " and
+    the words of its error; `null` for any other change. */
 export function ldDecayEndAnnouncement(
   before: AppState<JobResult, unknown>,
   after: AppState<JobResult, unknown>,
 ): string | null {
-  const then = statusOf(before, LD_DECAY);
-  const now = statusOf(after, LD_DECAY);
-  const variants = after.project.variants;
-  if (then.kind !== "running" || variants === null) return null;
-  const name = escaped(variants.name);
-  switch (now.kind) {
-    case "done":
-      return `LD decay of ${name} calculated.`;
-    case "error":
-      return `The LD decay of ${name} could not be calculated: ${failedText(
-        now.error,
-        after.project,
-        "the LD decay",
-        // Live: a run on this page is one, and a refusal that would end
-        // it, for memory, does not read it.
-        failedWordsOf(LD_DECAY_TAB_ERRORS, now, after.individualsKept, true),
-      )}`;
-    case "locked":
-    case "ready":
-    case "removed":
-    case "running":
-      return null;
-  }
+  return endAnnouncement(LD_DECAY_LINES, before, after);
 }

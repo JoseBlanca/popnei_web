@@ -10,17 +10,22 @@
  * that a test in node checks them.
  */
 import {
-  diversityOnPopgen2,
   refusalText,
   statisticsFailedText,
 } from "../../../core/analyses/diversity.ts";
 import type { Failure } from "../../../core/analyses/individualChecks.ts";
-import { escaped } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
 import type { AnalysisError, AppState } from "../../../core/store.ts";
 import type { JobResult } from "../../../worker/protocol.ts";
-import { statusOf } from "../status.ts";
-import { failedText, failedWordsOf, popgen2FailureText } from "../words.ts";
+import {
+  endAnnouncement,
+  heldAfterCrashText,
+  startedByItselfText,
+  stoppedText,
+} from "../liveLines.ts";
+import type { LiveLines } from "../liveLines.ts";
+import { DIVERSITY_NAMES } from "../status.ts";
+import { popgen2FailureText } from "../words.ts";
 import type { PanelErrorWords } from "../words.ts";
 
 /** The words the tab gives its errors, as `AnalysisUi` takes them: those
@@ -39,64 +44,39 @@ export const DIVERSITY_TAB_ERRORS: PanelErrorWords = Object.freeze({
   failureText: popgen2FailureText,
 });
 
+/** How the lines of a live analysis name the diversity
+    (`liveLines.ts`). */
+export const DIVERSITY_LINES: LiveLines = Object.freeze({
+  named: DIVERSITY_NAMES,
+  longName: "the diversity",
+  ofFile: "the diversity of",
+  errors: DIVERSITY_TAB_ERRORS,
+});
+
 /** What the status region says when the diversity starts again by
     itself, alone in its round, with the tab where it is stopped and what
     it locks, the filters and the populations. */
-export const DIVERSITY_STARTED_BY_ITSELF =
-  "Calculating the diversity again. To change the filters or the populations, stop it in the Populations tab.";
+export const DIVERSITY_STARTED_BY_ITSELF = startedByItselfText(DIVERSITY_LINES);
 
 /** What the status region says when a crash of the worker that ended
     the PCA's live state holds the diversity, about to start, until the
     next change or its Run (docs/specs/steps/popgen2-pca.md, "A failure
     that ends a live state"). */
-export const DIVERSITY_HELD_AFTER_CRASH =
-  "The diversity did not start: it starts after the next change of the filters, of its options or of the populations, or when Run is pressed in the Populations tab.";
+export const DIVERSITY_HELD_AFTER_CRASH = heldAfterCrashText(DIVERSITY_NAMES);
 
-/** What the status region says at a Stop of the diversity, in its tab or
-    in the band, which may leave the tab out of sight: "Diversity
-    stopped. Press Run in the Populations tab to calculate it again."
-    when the tab then offers Run, `runOffered`; "Diversity stopped."
-    alone when it does not, Run disabled by a lock or the result shown
-    with no button. */
+/** What the status region says at a Stop of the diversity, with Run to
+    press when the tab then offers it, `runOffered`. */
 export function diversityStoppedText(runOffered: boolean): string {
-  return runOffered
-    ? "Diversity stopped. Press Run in the Populations tab to calculate it again."
-    : "Diversity stopped.";
+  return stoppedText(DIVERSITY_NAMES, runOffered);
 }
 
-/**
- * What the status region says as the store goes from `before` to
- * `after`, when a run of the diversity ends, whichever tab is shown:
- * "Diversity of panel.nei calculated."; "The diversity of panel.nei could
- * not be calculated: " and the words of its error, as the tab draws
- * them. `null` for any other change: a run stopped, or left behind by a
- * change, ends with no result and no error, and its Stop is said apart.
- */
+/** What the status region says as the store goes from `before` to
+    `after`, when a run of the diversity ends: "Diversity of panel.nei
+    calculated."; "The diversity of panel.nei could not be calculated: "
+    and the words of its error; `null` for any other change. */
 export function diversityEndAnnouncement(
   before: AppState<JobResult, unknown>,
   after: AppState<JobResult, unknown>,
 ): string | null {
-  const then = statusOf(before, diversityOnPopgen2.id);
-  const now = statusOf(after, diversityOnPopgen2.id);
-  const variants = after.project.variants;
-  if (then.kind !== "running" || variants === null) return null;
-  const name = escaped(variants.name);
-  switch (now.kind) {
-    case "done":
-      return `Diversity of ${name} calculated.`;
-    case "error":
-      return `The diversity of ${name} could not be calculated: ${failedText(
-        now.error,
-        after.project,
-        "the diversity",
-        // Live: a run on this page is one, and a refusal that would end
-        // it, for memory, does not read it.
-        failedWordsOf(DIVERSITY_TAB_ERRORS, now, after.individualsKept, true),
-      )}`;
-    case "locked":
-    case "ready":
-    case "removed":
-    case "running":
-      return null;
-  }
+  return endAnnouncement(DIVERSITY_LINES, before, after);
 }

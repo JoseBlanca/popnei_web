@@ -23,12 +23,20 @@ import {
 import type { Project } from "../../../core/project.ts";
 import type { AboutToStart, LiveState } from "../../autoRuns.ts";
 import type { PanelLive } from "../AnalysisPanel.tsx";
+import {
+  afterCrashLine,
+  failureEndedLine,
+  panelLive,
+  stoppedLine,
+  waitingLine,
+} from "../liveLines.ts";
+import { LD_DECAY_NAMES } from "../status.ts";
 import type { LiveAnalysisName, RunWithheld } from "../status.ts";
 import type { LastRun } from "./lastRun.ts";
 import { emptiedLine, unclassifiedLine } from "../diversity/tabWords.ts";
 import { passLockText } from "../pca/passLock.ts";
 import type { PassLock } from "../pca/passLock.ts";
-import { clockText, populationsText, runningUntilEnd } from "../words.ts";
+import { clockText, populationsText } from "../words.ts";
 
 /** The analysis in the middle of a sentence. */
 export const LD_DECAY_TAB_NAME = "the LD decay";
@@ -40,49 +48,30 @@ export const LD_DECAY_TAB_TITLE = "LD decay";
     place of the bar; with no Run until a change, `noRunYet`, the result
     shown or popnei's refusal, the Run of after the next change. */
 export function ldDecayStoppedLine(noRunYet: boolean): string {
-  const stopped =
-    "Stopped: the LD decay no longer starts by itself after a change.";
-  return noRunYet
-    ? `${stopped} After the next change, Run calculates it and starts it again after each change.`
-    : `${stopped} Run calculates it and starts it again after each change.`;
+  return stoppedLine(LD_DECAY_NAMES, noRunYet);
 }
 
 /** The line in the place of the bar while a crash of the worker, which
     ended another live state, holds the LD decay until the next change
     or a Run, which the tab then offers beside Stop recalculating. */
-export const LD_DECAY_AFTER_CRASH_LINE =
-  "The LD decay starts after the next change of the filters, of its options or of the populations, or when Run is pressed.";
-
-/** The start of the line after a failure that ended the live state. */
-const FAILURE_ENDED =
-  "The LD decay no longer starts by itself after a change, since its calculation failed.";
-
-/** The end of a line that names the Run the tab offers. */
-const RUN_STARTS_IT =
-  "Run calculates it and starts it again after each change.";
+export const LD_DECAY_AFTER_CRASH_LINE = afterCrashLine(LD_DECAY_NAMES);
 
 /** The line after a failure that ended the live state, under the
     failure's words, until Run or another variants file, while the tab
     offers Run. */
-export const LD_DECAY_FAILURE_ENDED_LINE = `${FAILURE_ENDED} ${RUN_STARTS_IT}`;
+export const LD_DECAY_FAILURE_ENDED_LINE = failureEndedLine(
+  LD_DECAY_NAMES,
+  null,
+);
 
 /** The line after a failure that ended the live state, as
-    `LD_DECAY_FAILURE_ENDED_LINE`, when the tab offers no Run, `withheld`:
-    after popnei's refusal for memory, the changes the refusal asks for;
-    after the variants file could no longer be read, its opening again;
-    with a result shown, the next change (the review of the LD decay, 12
-    October 2026: the line named a Run that was not there). */
+    `failureEndedLine` of liveLines.ts, but for popnei's refusal for
+    memory, which ends it, and after which the changes the refusal asks
+    for bring Run back (the review of the LD decay, 12 October 2026). */
 export function ldDecayFailureEndedLine(withheld: RunWithheld): string {
-  switch (withheld) {
-    case null:
-      return LD_DECAY_FAILURE_ENDED_LINE;
-    case "refused":
-      return "The LD decay no longer starts by itself after a change, since popnei refused it for lack of memory. Once a smaller largest distance is typed, or fewer individuals are kept, Run comes back: it calculates the LD decay and starts it again after each change.";
-    case "unreadable":
-      return `${FAILURE_ENDED} Once the variants file is opened again in the box Variants, ${RUN_STARTS_IT}`;
-    case "result":
-      return `${FAILURE_ENDED} After the next change, ${RUN_STARTS_IT}`;
-  }
+  return withheld === "refused"
+    ? "The LD decay no longer starts by itself after a change, since popnei refused it for lack of memory. Once a smaller largest distance is typed, or fewer individuals are kept, Run comes back: it calculates the LD decay and starts it again after each change."
+    : failureEndedLine(LD_DECAY_NAMES, withheld);
 }
 
 /**
@@ -144,58 +133,31 @@ export function ldDecayTabLock(
 
 /** The line in the place of the bar while the LD decay is live, does
     not run, and is about to start, waiting for `waits`, with `before`
-    the live analysis its line names, "the PCA", "the diversity", `null`
-    for none: the diversity's lines with "The LD decay". */
+    the live analysis its line names, `null` for none (`waitingLine` of
+    liveLines.ts). */
 export function ldDecayWaitingLine(
   waits: AboutToStart,
   before: LiveAnalysisName | null,
 ): string {
-  const inAMoment =
-    "The LD decay starts in a moment, later if the filters, its options or the populations change.";
-  switch (waits) {
-    case "behind":
-      return before === null
-        ? inAMoment
-        : `The LD decay starts once ${runningUntilEnd(before)}.`;
-    case "changes":
-      return before === null
-        ? inAMoment
-        : `The LD decay starts after ${before.name}, once the filters, the options and the populations stop changing.`;
-    case "download":
-      return "The LD decay starts again when the download is written or closed.";
-    case "afterCrash":
-      return LD_DECAY_AFTER_CRASH_LINE;
-  }
+  return waitingLine(LD_DECAY_NAMES, waits, before);
 }
 
 /** The live state `state` of the LD decay as its panel draws it, with
     `before`, the live analysis its line of waiting names, and why its
-    state offers no Run, `withheld`, `runWithheldOf` of its status. */
+    state offers no Run, `withheld`, its line of a failure that ended it
+    its own (`ldDecayFailureEndedLine`). */
 export function ldDecayPanelLive(
   state: LiveState,
   before: LiveAnalysisName | null,
   withheld: RunWithheld,
 ): PanelLive {
-  switch (state.kind) {
-    case "off":
-      return { kind: "off" };
-    case "stopped":
-      return {
-        kind: "stopped",
-        line: ldDecayStoppedLine(withheld !== null),
-      };
-    case "endedByFailure":
-      return { kind: "stopped", line: ldDecayFailureEndedLine(withheld) };
-    case "live":
-      return {
-        kind: "live",
-        aboutToStartLine:
-          state.aboutToStart === null
-            ? null
-            : ldDecayWaitingLine(state.aboutToStart, before),
-        runBeside: state.aboutToStart === "afterCrash",
-      };
-  }
+  return panelLive(
+    LD_DECAY_NAMES,
+    state,
+    before,
+    withheld,
+    ldDecayFailureEndedLine,
+  );
 }
 
 /** The time of the last run of the LD decay that ended with a result or

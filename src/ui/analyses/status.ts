@@ -183,7 +183,7 @@ const PCA_NAMES: Readonly<Record<PcaMethod, LiveAnalysisName>> = Object.freeze({
 });
 
 /** The diversity of the Populations tab, which reads the populations. */
-const DIVERSITY_NAMES: LiveAnalysisName = Object.freeze({
+export const DIVERSITY_NAMES: LiveAnalysisName = Object.freeze({
   id: diversityOnPopgen2.id,
   name: "the diversity",
   tab: "Populations",
@@ -193,7 +193,7 @@ const DIVERSITY_NAMES: LiveAnalysisName = Object.freeze({
 
 /** The distances between populations of the Distances tab, which read
     the populations and are named in the plural. */
-const DISTANCES_NAMES: LiveAnalysisName = Object.freeze({
+export const DISTANCES_NAMES: LiveAnalysisName = Object.freeze({
   id: popDistsOnPopgen2.id,
   name: "the distances",
   tab: "Distances",
@@ -203,7 +203,7 @@ const DISTANCES_NAMES: LiveAnalysisName = Object.freeze({
 
 /** The LD decay of the Populations tab, which reads the populations
     (from 12 October 2026). */
-const LD_DECAY_NAMES: LiveAnalysisName = Object.freeze({
+export const LD_DECAY_NAMES: LiveAnalysisName = Object.freeze({
   id: ldDecayOnPopgen2.id,
   name: "the LD decay",
   tab: "Populations",

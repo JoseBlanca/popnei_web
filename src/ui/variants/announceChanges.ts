@@ -14,29 +14,21 @@ import type { Popgen2LiveId } from "../../core/apps.ts";
 import type { AnalysisId } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult, PcaMethod } from "../../worker/protocol.ts";
+import { DIVERSITY_LINES } from "../analyses/diversity/liveWords.ts";
+import { LD_DECAY_LINES } from "../analyses/ldDecay/liveWords.ts";
 import {
-  DIVERSITY_HELD_AFTER_CRASH,
-  DIVERSITY_STARTED_BY_ITSELF,
-  diversityEndAnnouncement,
-  diversityStoppedText,
-} from "../analyses/diversity/liveWords.ts";
-import {
-  LD_DECAY_HELD_AFTER_CRASH,
-  LD_DECAY_STARTED_BY_ITSELF,
-  ldDecayEndAnnouncement,
-  ldDecayStoppedText,
-} from "../analyses/ldDecay/liveWords.ts";
+  endAnnouncement,
+  heldAfterCrashText,
+  startedByItselfText,
+  stoppedText,
+} from "../analyses/liveLines.ts";
+import type { LiveLines } from "../analyses/liveLines.ts";
 import {
   roundText,
   runWaitedText,
   stopAllText,
 } from "../analyses/liveWords.ts";
-import {
-  DISTANCES_HELD_AFTER_CRASH,
-  DISTANCES_STARTED_BY_ITSELF,
-  distancesEndAnnouncement,
-  distancesStoppedText,
-} from "../analyses/popDists/liveWords.ts";
+import { DISTANCES_LINES } from "../analyses/popDists/liveWords.ts";
 import {
   pcaEndAnnouncement,
   pcaHeldAfterCrashText,
@@ -77,6 +69,23 @@ interface LiveSaid {
   ) => string;
 }
 
+/** The words of a live analysis that reads the populations, written
+    once from its `lines` (liveLines.ts), with `runKind` the kind of its
+    words of a run. */
+function saidOf(lines: LiveLines, runKind: string): LiveSaid {
+  return Object.freeze({
+    runKind,
+    end: (
+      before: AppState<JobResult, Blob>,
+      after: AppState<JobResult, Blob>,
+    ) => endAnnouncement(lines, before, after),
+    startedAlone: () => startedByItselfText(lines),
+    heldAfterCrash: () => heldAfterCrashText(lines.named),
+    stopped: (_s: AppState<JobResult, Blob>, runOffered: boolean) =>
+      stoppedText(lines.named, runOffered),
+  });
+}
+
 /** The words of each live analysis of the page, keyed by `POPGEN2_LIVE`
     of src/core/apps.ts, so that one added to it without its words does
     not compile. */
@@ -91,30 +100,9 @@ const LIVE_SAID: Readonly<Record<Popgen2LiveId, LiveSaid>> = Object.freeze({
     stopped: (s: AppState<JobResult, Blob>, runOffered: boolean) =>
       pcaStoppedText(methodOf(s), runOffered),
   }),
-  diversity: Object.freeze({
-    runKind: "diversityRun",
-    end: diversityEndAnnouncement,
-    startedAlone: () => DIVERSITY_STARTED_BY_ITSELF,
-    heldAfterCrash: () => DIVERSITY_HELD_AFTER_CRASH,
-    stopped: (_s: AppState<JobResult, Blob>, runOffered: boolean) =>
-      diversityStoppedText(runOffered),
-  }),
-  popDists: Object.freeze({
-    runKind: "popDistsRun",
-    end: distancesEndAnnouncement,
-    startedAlone: () => DISTANCES_STARTED_BY_ITSELF,
-    heldAfterCrash: () => DISTANCES_HELD_AFTER_CRASH,
-    stopped: (_s: AppState<JobResult, Blob>, runOffered: boolean) =>
-      distancesStoppedText(runOffered),
-  }),
-  ldDecay: Object.freeze({
-    runKind: "ldDecayRun",
-    end: ldDecayEndAnnouncement,
-    startedAlone: () => LD_DECAY_STARTED_BY_ITSELF,
-    heldAfterCrash: () => LD_DECAY_HELD_AFTER_CRASH,
-    stopped: (_s: AppState<JobResult, Blob>, runOffered: boolean) =>
-      ldDecayStoppedText(runOffered),
-  }),
+  diversity: saidOf(DIVERSITY_LINES, "diversityRun"),
+  popDists: saidOf(DISTANCES_LINES, "popDistsRun"),
+  ldDecay: saidOf(LD_DECAY_LINES, "ldDecayRun"),
 });
 
 /** The words of the live analysis `id`; a defect for an analysis that

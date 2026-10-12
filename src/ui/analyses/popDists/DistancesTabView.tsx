@@ -21,27 +21,13 @@
  * own, downloaded when the tab is first shown.
  */
 import { popDistsOnPopgen2 } from "../../../core/analyses/popDists.ts";
-import type { LiveState } from "../../autoRuns.ts";
-import type { PanelLive } from "../AnalysisPanel.tsx";
 import { LivePart } from "../LivePart.tsx";
-import type { LiveAnalysisName, RunWithheld } from "../status.ts";
 import { DISTANCES_TAB_PANEL } from "./distancesTabPanel.ts";
 import {
   distancesPanelLive,
   distancesTabLock,
   distancesWaitingLine,
 } from "./tabWords.ts";
-
-/** The live state of the distances as their panel draws it, their line
-    of a Stop naming the Run of after the next change while their result
-    is shown. */
-function panelLive(
-  state: LiveState,
-  before: LiveAnalysisName | null,
-  withheld: RunWithheld,
-): PanelLive {
-  return distancesPanelLive(state, before, withheld === "result");
-}
 
 /** The Distances tab: the heading of the distances, their options, the
     lines of the populations, Run or Stop with its lock, the run under
@@ -52,7 +38,7 @@ export function DistancesTabView(): React.JSX.Element {
       id={popDistsOnPopgen2.id}
       ui={DISTANCES_TAB_PANEL}
       tabLock={distancesTabLock}
-      panelLive={panelLive}
+      panelLive={distancesPanelLive}
       waitingLine={distancesWaitingLine}
     />
   );

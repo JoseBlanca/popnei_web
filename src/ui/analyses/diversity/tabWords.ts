@@ -31,63 +31,40 @@ import { passLockText } from "../pca/passLock.ts";
 import type { PassLock } from "../pca/passLock.ts";
 import type { AboutToStart, LiveState } from "../../autoRuns.ts";
 import type { PanelLive } from "../AnalysisPanel.tsx";
+import {
+  afterCrashLine,
+  failureEndedLine,
+  panelLive,
+  stoppedLine,
+  waitingLine,
+} from "../liveLines.ts";
+import { DIVERSITY_NAMES } from "../status.ts";
 import type { LiveAnalysisName, RunWithheld } from "../status.ts";
-import { populationsText, runningUntilEnd } from "../words.ts";
+import { populationsText } from "../words.ts";
 import { minimumAndDrawLines } from "./words.ts";
 
 /** The analysis in the middle of a sentence. */
 export const DIVERSITY_TAB_NAME = "the diversity";
 
 /** The line after a Stop, until Run or another variants file, in the
-    place of the bar: "Stopped: the diversity no longer starts by itself
-    after a change. Run calculates it and starts it again after each
-    change."; with no Run until a change, `noRunYet`, the result shown or
-    popnei's refusal, "… After the next change, Run calculates it and
-    starts it again after each change." */
+    place of the bar, the Run of after the next change while the state
+    offers none, `noRunYet` (`stoppedLine` of liveLines.ts). */
 export function diversityStoppedLine(noRunYet: boolean): string {
-  const stopped =
-    "Stopped: the diversity no longer starts by itself after a change.";
-  return noRunYet
-    ? `${stopped} After the next change, Run calculates it and starts it again after each change.`
-    : `${stopped} Run calculates it and starts it again after each change.`;
+  return stoppedLine(DIVERSITY_NAMES, noRunYet);
 }
 
 /** The line in the place of the bar while a crash of the worker, which
     ended another live state, holds the diversity until the next change
     or a Run, which the tab then offers beside Stop recalculating. */
-export const DIVERSITY_AFTER_CRASH_LINE =
-  "The diversity starts after the next change of the filters, of its options or of the populations, or when Run is pressed.";
-
-/** The start of the line after a failure that ended the live state. */
-const FAILURE_ENDED =
-  "The diversity no longer starts by itself after a change, since its calculation failed.";
-
-/** The end of a line that names the Run the tab offers. */
-const RUN_STARTS_IT =
-  "Run calculates it and starts it again after each change.";
+export const DIVERSITY_AFTER_CRASH_LINE = afterCrashLine(DIVERSITY_NAMES);
 
 /** The line after a failure that ended the live state, under the
     failure's words, until Run or another variants file, in the place of
     the bar, while the tab offers Run; the user pressed no Stop. */
-export const DIVERSITY_FAILURE_ENDED_LINE = `${FAILURE_ENDED} ${RUN_STARTS_IT}`;
-
-/** The line after a failure that ended the live state, as
-    `DIVERSITY_FAILURE_ENDED_LINE`, when the tab offers no Run, `withheld`:
-    after the variants file could no longer be read, its opening again;
-    with a result shown or popnei's refusal, the next change (the review
-    of the LD decay, 12 October 2026: the line named a Run that was not
-    there). */
-function failureEndedLine(withheld: RunWithheld): string {
-  switch (withheld) {
-    case null:
-      return DIVERSITY_FAILURE_ENDED_LINE;
-    case "unreadable":
-      return `${FAILURE_ENDED} Once the variants file is opened again in the box Variants, ${RUN_STARTS_IT}`;
-    case "result":
-    case "refused":
-      return `${FAILURE_ENDED} After the next change, ${RUN_STARTS_IT}`;
-  }
-}
+export const DIVERSITY_FAILURE_ENDED_LINE = failureEndedLine(
+  DIVERSITY_NAMES,
+  null,
+);
 
 /** The populations of `p` a run will take with the individuals kept
     `kept`: with their list when it is known, and before the thresholds,
@@ -193,72 +170,25 @@ export function diversityTabLock(
     : passLockText(lock, p.variants.name, DIVERSITY_TAB_NAME);
 }
 
-/**
- * The line in the place of the bar while the diversity is live, does not
- * run, and is about to start, waiting for `waits`, with `before` the
- * live analysis its line names, "the PCA" or "the PCoA", `null` for none
- * (docs/specs/steps/popgen2-populations.md, "Run and Stop", the line in
- * the place of the bar): "behind", the analysis that runs, "The
- * diversity starts once the PCA, which is running, ends."; "changes",
- * the quiet second, "The diversity starts after the PCA, once the
- * filters, the options and the populations stop changing." with one
- * about to start before it, or "The diversity starts in a moment, later
- * if the filters, its options or the populations change.", true also in
- * the quiet second after a Stop of the PCA it waited for, when nothing
- * changed; "download", "The diversity starts again when the download is
- * written or closed."; "afterCrash", `DIVERSITY_AFTER_CRASH_LINE`.
- */
+/** The line in the place of the bar while the diversity is live, does
+    not run, and is about to start, waiting for `waits`, with `before`
+    the live analysis its line names, "the PCA" or "the PCoA", `null` for
+    none (docs/specs/steps/popgen2-populations.md, "Run and Stop", the
+    line in the place of the bar; `waitingLine` of liveLines.ts). */
 export function diversityWaitingLine(
   waits: AboutToStart,
   before: LiveAnalysisName | null,
 ): string {
-  const inAMoment =
-    "The diversity starts in a moment, later if the filters, its options or the populations change.";
-  switch (waits) {
-    case "behind":
-      return before === null
-        ? inAMoment
-        : `The diversity starts once ${runningUntilEnd(before)}.`;
-    case "changes":
-      return before === null
-        ? inAMoment
-        : `The diversity starts after ${before.name}, once the filters, the options and the populations stop changing.`;
-    case "download":
-      return "The diversity starts again when the download is written or closed.";
-    case "afterCrash":
-      return DIVERSITY_AFTER_CRASH_LINE;
-  }
+  return waitingLine(DIVERSITY_NAMES, waits, before);
 }
 
 /** The live state `state` of the diversity as its panel draws it, with
-    `before`, the live analysis its line of waiting names, "the PCA",
-    or `null`, and why its state offers no Run, `withheld`,
-    `runWithheldOf` of its status: the line of a Stop, of a failure that
-    ended it, or of what it waits for while it is about to start; the
-    first two name a Run only while the state offers it. */
+    `before`, the live analysis its line of waiting names, and why its
+    state offers no Run, `withheld` (`panelLive` of liveLines.ts). */
 export function diversityPanelLive(
   state: LiveState,
   before: LiveAnalysisName | null,
   withheld: RunWithheld,
 ): PanelLive {
-  switch (state.kind) {
-    case "off":
-      return { kind: "off" };
-    case "stopped":
-      return {
-        kind: "stopped",
-        line: diversityStoppedLine(withheld !== null),
-      };
-    case "endedByFailure":
-      return { kind: "stopped", line: failureEndedLine(withheld) };
-    case "live":
-      return {
-        kind: "live",
-        aboutToStartLine:
-          state.aboutToStart === null
-            ? null
-            : diversityWaitingLine(state.aboutToStart, before),
-        runBeside: state.aboutToStart === "afterCrash",
-      };
-  }
+  return panelLive(DIVERSITY_NAMES, state, before, withheld);
 }

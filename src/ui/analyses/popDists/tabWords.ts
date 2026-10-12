@@ -38,8 +38,10 @@ import type { AboutToStart, LiveState } from "../../autoRuns.ts";
 import type { PanelLive } from "../AnalysisPanel.tsx";
 import { passLockText } from "../pca/passLock.ts";
 import type { PassLock } from "../pca/passLock.ts";
-import type { LiveAnalysisName } from "../status.ts";
-import { populationsText, runningUntilEnd } from "../words.ts";
+import { panelLive, stoppedLine, waitingLine } from "../liveLines.ts";
+import { DISTANCES_NAMES } from "../status.ts";
+import type { LiveAnalysisName, RunWithheld } from "../status.ts";
+import { populationsText } from "../words.ts";
 import { captionText } from "./words.ts";
 
 /** The analysis in the middle of a sentence of the tab's lock. */
@@ -175,85 +177,35 @@ export function distancesTabLock(
     : passLockText(lock, p.variants.name, DISTANCES_TAB_NAME);
 }
 
-/** The line in the place of the bar while a crash of the worker, which
-    ended another live state, holds the distances until the next change
-    or a Run, which the tab then offers beside Stop recalculating. */
-const AFTER_CRASH_LINE =
-  "The distances start after the next change of the filters, of their options or of the populations, or when Run is pressed.";
-
-/** The line after a failure that ended the live state, under the
-    failure's words; the user pressed no Stop. */
-const FAILURE_ENDED_LINE =
-  "The distances no longer start by themselves after a change, since their calculation failed. Run calculates them and starts them again after each change.";
-
 /** The line after a Stop, until Run or another variants file, in the
-    place of the bar; with the result shown, `resultShown`, which offers
-    no Run until a change takes it away, "… After the next change, Run
-    calculates them …". */
-export function distancesStoppedLine(resultShown: boolean): string {
-  const stopped =
-    "Stopped: the distances no longer start by themselves after a change.";
-  return resultShown
-    ? `${stopped} After the next change, Run calculates them and starts them again after each change.`
-    : `${stopped} Run calculates them and starts them again after each change.`;
+    place of the bar; with no Run until a change, `noRunYet`, the result
+    shown or popnei's refusal, "… After the next change, Run calculates
+    them …" (`stoppedLine` of liveLines.ts). */
+export function distancesStoppedLine(noRunYet: boolean): string {
+  return stoppedLine(DISTANCES_NAMES, noRunYet);
 }
 
-/**
- * The line in the place of the bar while the distances are live, do not
- * run, and are about to start, waiting for `waits`, with `before` the
- * live analysis the line names, "the PCA", "the diversity", `null` for
- * none: "behind", the analysis that runs; "changes", the quiet second,
- * with one about to start before them or none; "download", the dialog
- * of the download or its write; "afterCrash", until the next change or
- * Run.
- */
+/** The line in the place of the bar while the distances are live, do
+    not run, and are about to start, waiting for `waits`, with `before`
+    the live analysis the line names, `null` for none (`waitingLine` of
+    liveLines.ts). */
 export function distancesWaitingLine(
   waits: AboutToStart,
   before: LiveAnalysisName | null,
 ): string {
-  const inAMoment =
-    "The distances start in a moment, later if the filters, their options or the populations change.";
-  switch (waits) {
-    case "behind":
-      return before === null
-        ? inAMoment
-        : `The distances start once ${runningUntilEnd(before)}.`;
-    case "changes":
-      return before === null
-        ? inAMoment
-        : `The distances start after ${before.name}, once the filters, the options and the populations stop changing.`;
-    case "download":
-      return "The distances start again when the download is written or closed.";
-    case "afterCrash":
-      return AFTER_CRASH_LINE;
-  }
+  return waitingLine(DISTANCES_NAMES, waits, before);
 }
 
-/** The live state `state` of the distances as their panel draws it, with
-    `before`, the live analysis its line of waiting names, or `null`, and
-    whether their result is shown, `resultShown`. */
+/** The live state `state` of the distances as their panel draws it,
+    with `before`, the live analysis its line of waiting names, or
+    `null`, and why their state offers no Run, `withheld`, `runWithheldOf`
+    of their status (`panelLive` of liveLines.ts). */
 export function distancesPanelLive(
   state: LiveState,
   before: LiveAnalysisName | null,
-  resultShown: boolean,
+  withheld: RunWithheld,
 ): PanelLive {
-  switch (state.kind) {
-    case "off":
-      return { kind: "off" };
-    case "stopped":
-      return { kind: "stopped", line: distancesStoppedLine(resultShown) };
-    case "endedByFailure":
-      return { kind: "stopped", line: FAILURE_ENDED_LINE };
-    case "live":
-      return {
-        kind: "live",
-        aboutToStartLine:
-          state.aboutToStart === null
-            ? null
-            : distancesWaitingLine(state.aboutToStart, before),
-        runBeside: state.aboutToStart === "afterCrash",
-      };
-  }
+  return panelLive(DISTANCES_NAMES, state, before, withheld);
 }
 
 /** The line under the heatmap while its cells are too small to hold

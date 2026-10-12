@@ -249,15 +249,13 @@ describe("DT1 D3 the words of the Distances tab", () => {
     expect(distancesStoppedLine(true)).toBe(
       "Stopped: the distances no longer start by themselves after a change. After the next change, Run calculates them and starts them again after each change.",
     );
-    expect(distancesPanelLive({ kind: "off" }, null, false)).toEqual({
+    expect(distancesPanelLive({ kind: "off" }, null, null)).toEqual({
       kind: "off",
     });
-    expect(distancesPanelLive({ kind: "endedByFailure" }, null, false)).toEqual(
-      {
-        kind: "stopped",
-        line: "The distances no longer start by themselves after a change, since their calculation failed. Run calculates them and starts them again after each change.",
-      },
-    );
+    expect(distancesPanelLive({ kind: "endedByFailure" }, null, null)).toEqual({
+      kind: "stopped",
+      line: "The distances no longer start by themselves after a change, since their calculation failed. Run calculates them and starts them again after each change.",
+    });
     expect(
       distancesPanelLive(
         {
@@ -267,13 +265,26 @@ describe("DT1 D3 the words of the Distances tab", () => {
           after: null,
         },
         null,
-        false,
+        null,
       ),
     ).toEqual({
       kind: "live",
       aboutToStartLine:
         "The distances start after the next change of the filters, of their options or of the populations, or when Run is pressed.",
       runBeside: true,
+    });
+    // With no Run offered, the line names what brings it back (the merge
+    // of the LD decay and the distances, 13 October 2026, as the LD
+    // decay's review found for the diversity).
+    expect(
+      distancesPanelLive({ kind: "endedByFailure" }, null, "unreadable"),
+    ).toEqual({
+      kind: "stopped",
+      line: "The distances no longer start by themselves after a change, since their calculation failed. Once the variants file is opened again in the box Variants, Run calculates them and starts them again after each change.",
+    });
+    expect(distancesPanelLive({ kind: "stopped" }, null, "refused")).toEqual({
+      kind: "stopped",
+      line: "Stopped: the distances no longer start by themselves after a change. After the next change, Run calculates them and starts them again after each change.",
     });
   });
 
