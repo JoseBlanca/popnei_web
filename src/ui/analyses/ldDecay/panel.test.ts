@@ -289,7 +289,10 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
       document.getElementById(frequency.getAttribute("aria-describedby") ?? "")
         ?.textContent,
     ).toBe(
-      "A variant is left out of a population where its commonest allele is more frequent than this, since the r² of a variant that hardly varies rests on one or two individuals.",
+      // One term for the option and its help, and whose it is, beside the
+      // diversity's threshold of the commonest allele (the review of the
+      // LD decay, 12 October 2026).
+      "A variant is left out of a population where its major allele frequency, the frequency of its commonest allele there, is above this, since the r² of a variant that hardly varies rests on one or two individuals. This maximum is for the LD decay alone.",
     );
   });
 

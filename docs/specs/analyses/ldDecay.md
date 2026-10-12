@@ -1137,8 +1137,13 @@ and the one changed:
   does, since a comma typed is refused (C9).
 - "Maximum major allele frequency in each population, from 0.5 to 1",
   0.95. Under it: "A variant is left out of a population where its
-  commonest allele is more frequent than this, since the r² of a
-  variant that hardly varies rests on one or two individuals." The
+  major allele frequency, the frequency of its commonest allele there,
+  is above this, since the r² of a variant that hardly varies rests on
+  one or two individuals. This maximum is for the LD decay alone." (from
+  12 October 2026, the review of the LD decay: its help named the
+  quantity by the commonest allele, as the diversity's threshold beside
+  it in the Populations tab does, and its label by the major allele
+  frequency, two names for one quantity on one tab). The
   field takes two decimals, and an arrow key moves it by 0.01, as the
   MAF filter of the Variants step: 0.975 typed is refused with the
   words of that step for a number of too many decimals. popnei and a

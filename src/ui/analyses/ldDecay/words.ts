@@ -54,9 +54,13 @@ export const MAX_DIST_DESCRIPTION =
     its range. */
 export const MAX_MAF_LABEL = `Maximum major allele frequency in each population, from ${String(MIN_MAX_ALLOWED_MAF)} to ${String(MAX_MAX_ALLOWED_MAF)}`;
 
-/** The line under the field of the maximum major allele frequency. */
+/** The line under the field of the maximum major allele frequency: in
+    the term of its label, which it defines by the commonest allele, the
+    words of the diversity's threshold beside it in the Populations tab
+    of popgen2.html, and that the maximum is the LD decay's own (the
+    review of the LD decay, 12 October 2026). */
 export const MAX_MAF_LINE =
-  "A variant is left out of a population where its commonest allele is more frequent than this, since the r² of a variant that hardly varies rests on one or two individuals.";
+  "A variant is left out of a population where its major allele frequency, the frequency of its commonest allele there, is above this, since the r² of a variant that hardly varies rests on one or two individuals. This maximum is for the LD decay alone.";
 
 /** The words that end the notice of a change of the maximum major allele
     frequency, and name the header's Undo. */
