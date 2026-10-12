@@ -50,8 +50,8 @@ import type { JobResult } from "../../worker/protocol.ts";
 import { DiversityOptionsPart } from "./diversity/DiversityOptionsPart.tsx";
 import { DiversityResults } from "./diversity/DiversityResults.tsx";
 import { readyLines } from "./diversity/words.ts";
-import { LdDecayOptionsPart } from "./ldDecay/LdDecayOptionsPart.tsx";
-import { LdDecayResults } from "./ldDecay/LdDecayResults.tsx";
+import { LdDecayOptionsOfPopgen } from "./ldDecay/LdDecayOptionsPart.tsx";
+import { LdDecayResultsOfPopgen } from "./ldDecay/LdDecayResults.tsx";
 import { fitLine } from "./ldDecay/words.ts";
 import { PcaOptionsPart } from "./pca/PcaOptionsPart.tsx";
 import { PcaResults } from "./pca/PcaResults.tsx";
@@ -306,11 +306,11 @@ const LD_DECAY: AnalysisUi = Object.freeze({
       failureText,
       waited ? "the LD decay was not run" : "the LD decay cannot run",
     ),
-  Results: LdDecayResults,
-  Options: LdDecayOptionsPart,
+  Results: LdDecayResultsOfPopgen,
+  Options: LdDecayOptionsOfPopgen,
   runningLine: (p: Project): string | null =>
     p.variants === null ? null : fitLine(p.variants.name),
-  workerFailedText: (p: Project): string => ldDecayCrashText(p),
+  workerFailedText: (p: Project): string => ldDecayCrashText(p, "popgen"),
   // The words of popgen.html, which name the Variants step.
   failureText: null,
 });

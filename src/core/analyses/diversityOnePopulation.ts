@@ -34,7 +34,7 @@ import { defect } from "./words.ts";
 export function popgen2OnePopulationLine(
   p: Project,
   numIndividuals: number,
-  words: OnePopulationWords = DIVERSITY_ONE_POPULATION,
+  words: OnePopulationWords,
 ): string {
   const cause = popgen2OnePopulationCause(p);
   if (cause === null) {
@@ -65,7 +65,7 @@ export interface OnePopulationWords {
 }
 
 /** The diversity's: the Wahlund effect, F pooled above F within each. */
-const DIVERSITY_ONE_POPULATION: OnePopulationWords = Object.freeze({
+export const DIVERSITY_ONE_POPULATION: OnePopulationWords = Object.freeze({
   name: "the diversity",
   mixed: `the values of ${UNCLASSIFIED_POPULATION} are those of all the individuals taken as one population, and F comes out higher than within each population`,
 });

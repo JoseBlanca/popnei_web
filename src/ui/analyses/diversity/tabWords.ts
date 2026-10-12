@@ -14,7 +14,10 @@
  */
 
 import { diversityOptions, drawOf } from "../../../core/analyses/diversity.ts";
-import { popgen2OnePopulationLine } from "../../../core/analyses/diversityOnePopulation.ts";
+import {
+  DIVERSITY_ONE_POPULATION,
+  popgen2OnePopulationLine,
+} from "../../../core/analyses/diversityOnePopulation.ts";
 import type { IndividualsKept } from "../../../core/individualsKept.ts";
 import {
   counted,
@@ -150,7 +153,11 @@ export function diversityTabReadyLines(
       ? []
       : [
           onePopulation
-            ? popgen2OnePopulationLine(p, first[1].length)
+            ? popgen2OnePopulationLine(
+                p,
+                first[1].length,
+                DIVERSITY_ONE_POPULATION,
+              )
             : populationsText(pops.pops),
         ]),
     ...(pops.unclassifiedLeftOut > 0

@@ -35,8 +35,8 @@ import { Table } from "../../widgets/Table.tsx";
 import type * as TableModule from "../../widgets/Table.tsx";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
 import { panelOf } from "../panels.ts";
-import { LdDecayOptionsPart } from "./LdDecayOptionsPart.tsx";
-import { LdDecayResults } from "./LdDecayResults.tsx";
+import { LdDecayOptionsOfPopgen } from "./LdDecayOptionsPart.tsx";
+import { LdDecayResultsOfPopgen } from "./LdDecayResults.tsx";
 import {
   ChangeHoldsProvider,
   HOLDS_NOTHING,
@@ -260,7 +260,7 @@ const PRUNING =
 
 describe("PA8 the options of the LD decay, drawn by React", () => {
   test("the distance is empty until typed, with why it has to be typed beside it, PA10 as a line of help with no mark of a problem, which describes the field before the line under it; the frequency shows 0.95", () => {
-    draw(createElement(LdDecayOptionsPart));
+    draw(createElement(LdDecayOptionsOfPopgen));
     const [distance, frequency] = fields();
     const [reasonId] = (distance.getAttribute("aria-describedby") ?? "").split(
       " ",
@@ -294,7 +294,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
   });
 
   test("no key sends anything while the distance is empty: the arrows, Page Up and Down, Home, End, Enter and the Tab key leave it empty and the project as it was", () => {
-    draw(createElement(LdDecayOptionsPart));
+    draw(createElement(LdDecayOptionsOfPopgen));
     const [distance] = fields();
     select(distance);
     for (const key of [
@@ -320,7 +320,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
   });
 
   test("review of PA8: Escape and Ctrl+Z over digits typed in the empty distance leave it empty, and not with the text NaN, and send nothing", () => {
-    draw(createElement(LdDecayOptionsPart));
+    draw(createElement(LdDecayOptionsOfPopgen));
     const [distance] = fields();
     for (const back of [
       (): void => {
@@ -345,7 +345,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
   test("review of PA8: a distance typed above what the memory allows the two populations is committed, and its reason stands beside the field, describes it before the line under it, and is announced; a distance the memory allows takes the reason away with no word", () => {
     const reason =
       "With 2 populations, the largest distance can be at most 12,500,000 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.";
-    draw(createElement(LdDecayOptionsPart));
+    draw(createElement(LdDecayOptionsOfPopgen));
     const [distance] = fields();
     select(distance);
     typeKeys(distance, "12500001");
@@ -376,7 +376,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
   });
 
   test("review of PA8, second pass: the reason of the memory is announced when the lock turns on, once, and not at each distance committed while it holds; under the limit and above it again, it is announced again", () => {
-    draw(createElement(LdDecayOptionsPart));
+    draw(createElement(LdDecayOptionsOfPopgen));
     const [distance] = fields();
     select(distance);
     typeKeys(distance, "12500001");
@@ -408,7 +408,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
   });
 
   test("review of PA8: 12345 is taken as typed; the Up arrow moves 100000 to 100001 and 0.8 to 0.81, a command each; 9007199254740993 is refused as it was typed", () => {
-    draw(createElement(LdDecayOptionsPart));
+    draw(createElement(LdDecayOptionsOfPopgen));
     const [distance, frequency] = fields();
     select(distance);
     typeKeys(distance, "12345");
@@ -447,7 +447,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
       maxDist: null,
       maxAllowedMaf: 0.8,
     });
-    draw(createElement(LdDecayOptionsPart));
+    draw(createElement(LdDecayOptionsOfPopgen));
     const [distance] = fields();
     select(distance);
     typeKeys(distance, "100000");
@@ -463,7 +463,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
   });
 
   test("a comma typed key by key in the empty distance is caught, said under the field and announced, and nothing is sent", () => {
-    draw(createElement(LdDecayOptionsPart));
+    draw(createElement(LdDecayOptionsOfPopgen));
     const [distance] = fields();
     select(distance);
     typeKeys(distance, "10,000");
@@ -482,7 +482,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
       maxDist: 100_000,
       maxAllowedMaf: 0.95,
     });
-    draw(createElement(LdDecayOptionsPart));
+    draw(createElement(LdDecayOptionsOfPopgen));
     const [distance] = fields();
     select(distance);
     typeKeys(distance, "49");
@@ -509,7 +509,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
       maxDist: 100_000,
       maxAllowedMaf: 0.95,
     });
-    draw(createElement(LdDecayOptionsPart));
+    draw(createElement(LdDecayOptionsOfPopgen));
     const [, frequency] = fields();
     const refused: readonly (readonly [string, string])[] = [
       [
@@ -542,7 +542,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
   });
 
   test("the line of the LD pruning stands under the options while the pruning of the Variants step is on, with or without its distance, and not otherwise", () => {
-    draw(createElement(LdDecayOptionsPart));
+    draw(createElement(LdDecayOptionsOfPopgen));
     expect(container.textContent).not.toContain(PRUNING);
     for (const maxDist of [50_000, null]) {
       project = {
@@ -552,7 +552,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
           { kind: "ld", maxAllowedR2: 0.1, maxDist },
         ],
       };
-      draw(createElement(LdDecayOptionsPart));
+      draw(createElement(LdDecayOptionsOfPopgen));
       expect(container.lastElementChild?.lastElementChild?.textContent).toBe(
         PRUNING,
       );
@@ -678,7 +678,9 @@ function drawResult(
   pops: readonly string[] = r.pops,
 ): Store<JobResult, Blob> {
   project = projectOf(pops);
-  return draw(createElement(LdDecayResults, { result: r, check: null }));
+  return draw(
+    createElement(LdDecayResultsOfPopgen, { result: r, check: null }),
+  );
 }
 
 /** The texts of the cells of the table drawn, row by row. */
@@ -862,7 +864,7 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
   test("the comparison with the check numbers of a project file is drawn under the table of the populations", () => {
     project = projectOf(TWO.pops);
     draw(
-      createElement(LdDecayResults, {
+      createElement(LdDecayResultsOfPopgen, {
         result: TWO,
         check: "The numbers are those of the project file.",
       }),
@@ -1006,7 +1008,7 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
     expect(() =>
-      draw(createElement(LdDecayResults, { result: TWO, check: null })),
+      draw(createElement(LdDecayResultsOfPopgen, { result: TWO, check: null })),
     ).toThrow(/popnei_web defect: a result of the LD decay is shown with no/);
     error.mockRestore();
   });

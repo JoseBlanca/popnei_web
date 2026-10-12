@@ -68,17 +68,23 @@ const FREQUENCY_DECIMALS = 2;
 export interface LdDecayOptionsPartProps {
   /** The definition of the LD decay the store of the page runs,
       `ldDecay` or `ldDecayOnPopgen2`, whose page the reason beside the
-      distance follows; the old page's when absent. */
-  readonly analysis?: AnalysisDef<Job, JobResult>;
-  /** The reason every option waits, or `null` while none does; `null`
-      when absent, as on popgen.html. */
-  readonly waiting?: string | null;
+      distance follows. Required, so that a page that forgot it does not
+      get the other page's reasons. */
+  readonly analysis: AnalysisDef<Job, JobResult>;
+  /** The reason every option waits, or `null` while none does, as on
+      popgen.html. */
+  readonly waiting: string | null;
+}
+
+/** The options of the LD decay of popgen.html, which never wait. */
+export function LdDecayOptionsOfPopgen(): React.JSX.Element {
+  return <LdDecayOptionsPart analysis={ldDecay} waiting={null} />;
 }
 
 /** The options of the LD decay. */
 export function LdDecayOptionsPart({
-  analysis = ldDecay,
-  waiting = null,
+  analysis,
+  waiting,
 }: LdDecayOptionsPartProps): React.JSX.Element {
   const page = ldDecayPageOf(analysis);
   const store = useStore();

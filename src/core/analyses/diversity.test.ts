@@ -13,7 +13,10 @@ import {
   refusalText,
   statisticsFailedText,
 } from "./diversity.ts";
-import { popgen2OnePopulationLine } from "./diversityOnePopulation.ts";
+import {
+  DIVERSITY_ONE_POPULATION,
+  popgen2OnePopulationLine,
+} from "./diversityOnePopulation.ts";
 import { pcaOnPopgen2 } from "./pca.ts";
 import {
   POPGEN2_ANALYSES,
@@ -3694,12 +3697,15 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       popgen2OnePopulationLine(
         deepFreeze<Project>({ ...project(), individuals: null }),
         200,
+        DIVERSITY_ONE_POPULATION,
       ),
     ).toBe(`1 population, Unclassified: 200 individuals. ${first}`);
-    expect(popgen2OnePopulationLine(noneProject(), 1)).toBe(
-      `1 population, Unclassified: 1 individual. ${first}`,
-    );
-    expect(popgen2OnePopulationLine(refusedProject(), 4)).toBe(
+    expect(
+      popgen2OnePopulationLine(noneProject(), 1, DIVERSITY_ONE_POPULATION),
+    ).toBe(`1 population, Unclassified: 1 individual. ${first}`);
+    expect(
+      popgen2OnePopulationLine(refusedProject(), 4, DIVERSITY_ONE_POPULATION),
+    ).toBe(
       `1 population, Unclassified: 4 individuals. ${first} pops.csv could not be read, as the box Individuals says; open it again, or another file, there to get populations. ${mixed}`,
     );
     expect(
@@ -3709,31 +3715,41 @@ describe("PT1 D1 the definition of popgen2.html", () => {
           grouping: { kind: "populations", column: "country" },
         }),
         4,
+        DIVERSITY_ONE_POPULATION,
       ),
     ).toBe(
       `1 population, Unclassified: 4 individuals. ${first} pops.csv has no column country; choose a column of the populations in the box Individuals. ${mixed}`,
     );
-    expect(popgen2OnePopulationLine(tooManyProject(), 21)).toBe(
+    expect(
+      popgen2OnePopulationLine(tooManyProject(), 21, DIVERSITY_ONE_POPULATION),
+    ).toBe(
       `1 population, Unclassified: 21 individuals. ${first} pop has 21 values, more than the 20 a column of populations can have; choose another column in the box Individuals to get populations. ${mixed}`,
     );
-    expect(() => popgen2OnePopulationLine(project(), 3)).toThrow(
-      "popnei_web defect",
-    );
+    expect(() =>
+      popgen2OnePopulationLine(project(), 3, DIVERSITY_ONE_POPULATION),
+    ).toThrow("popnei_web defect");
   });
 
   test("the line of the one population of a column that classifies nobody says the numbers may mix populations; with no file and with None it does not", () => {
     const first =
       "No individual is assigned to a population, so the diversity is of every individual kept as one population.";
-    expect(popgen2OnePopulationLine(noneClassifiedProject(), 4)).toBe(
+    expect(
+      popgen2OnePopulationLine(
+        noneClassifiedProject(),
+        4,
+        DIVERSITY_ONE_POPULATION,
+      ),
+    ).toBe(
       `1 population, Unclassified: 4 individuals. ${first} ${MIXED_GET_EACH}`,
     );
-    expect(popgen2OnePopulationLine(noneProject(), 4)).not.toContain(
-      "If the individuals belong",
-    );
+    expect(
+      popgen2OnePopulationLine(noneProject(), 4, DIVERSITY_ONE_POPULATION),
+    ).not.toContain("If the individuals belong");
     expect(
       popgen2OnePopulationLine(
         deepFreeze<Project>({ ...project(), individuals: null }),
         4,
+        DIVERSITY_ONE_POPULATION,
       ),
     ).not.toContain("If the individuals belong");
   });

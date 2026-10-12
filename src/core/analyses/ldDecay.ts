@@ -284,10 +284,7 @@ export function ldDecayFilters(
  * populations, and the panel shows it beside the field of the distance
  * whenever it holds (ldDecay.md, "Why it cannot run").
  */
-export function maxDistReason(
-  p: Project,
-  page: LdDecayPage = "popgen",
-): string | null {
+export function maxDistReason(p: Project, page: LdDecayPage): string | null {
   const maxDist = ldDecayOptions(p).maxDist;
   if (maxDist === null) {
     // Why it has to be typed; `needs` says only where.
@@ -820,7 +817,7 @@ export function refusalText(
  * take many minutes and end the same way. Throws a defect on a project
  * with no variants file.
  */
-export function crashText(p: Project, page: LdDecayPage = "popgen"): string {
+export function crashText(p: Project, page: LdDecayPage): string {
   if (p.variants === null) {
     throw defect("crashText was given a project with no variants file.");
   }
@@ -973,7 +970,7 @@ function needs(p: Project): string | null {
   }
   return ldDecayOptions(p).maxDist === null
     ? NO_DISTANCE_RUN
-    : maxDistReason(p);
+    : maxDistReason(p, "popgen");
 }
 
 /** The first reason the LD decay of popgen2.html cannot run beyond

@@ -121,9 +121,14 @@ const BIN_COLUMNS = columnsOf(LD_BIN_COLUMNS);
 /** What the result of the LD decay is drawn with. */
 export interface LdDecayResultsProps extends ResultsProps {
   /** The definition of the LD decay the store of the page runs, `ldDecay`
-      or `ldDecayOnPopgen2`, whose page the parts follow; the old page's
-      when absent, as its panel draws it. */
-  readonly analysis?: AnalysisDef<Job, JobResult>;
+      or `ldDecayOnPopgen2`, whose page the parts follow. Required, so
+      that a page that forgot it does not get the other page's parts. */
+  readonly analysis: AnalysisDef<Job, JobResult>;
+}
+
+/** The result of the LD decay of popgen.html, as its panel draws it. */
+export function LdDecayResultsOfPopgen(props: ResultsProps): React.JSX.Element {
+  return <LdDecayResults {...props} analysis={ldDecay} />;
 }
 
 /** The table of the populations, the plot and the table of its bins in
@@ -131,7 +136,7 @@ export interface LdDecayResultsProps extends ResultsProps {
 export function LdDecayResults({
   result,
   check,
-  analysis = ldDecay,
+  analysis,
 }: LdDecayResultsProps): React.JSX.Element {
   const onPage2 = ldDecayPageOf(analysis) === "popgen2";
   // The result is shown under the key of the populations and the

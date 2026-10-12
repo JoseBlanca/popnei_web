@@ -1530,45 +1530,54 @@ describe("PA2 D6 the key of the LD decay", () => {
 
 describe("PA10 crashText, the words of a calculation that stopped with no answer", () => {
   test("names the memory, a smaller distance and fewer individuals, and the variants file to load again", () => {
-    expect(crashText(project())).toBe(
+    expect(crashText(project(), "popgen")).toBe(
       "The calculation stopped unexpectedly, perhaps because the LD decay needed more memory than the browser tab could give. Type a smaller largest distance, or keep fewer individuals with the filters of individuals in the Variants step, and run it again; or calculate it with popnei in Python, outside the browser. If it stops again at a small distance, load ld.nei again in the Variants step.",
     );
   });
 
   test("of a project with no variants file throws a defect", () => {
-    expect(() => crashText(changed(project(), { variants: null }))).toThrow(
-      /^popnei_web defect: /u,
-    );
+    expect(() =>
+      crashText(changed(project(), { variants: null }), "popgen"),
+    ).toThrow(/^popnei_web defect: /u);
   });
 });
 
 describe("PA2 D5 maxDistReason, the reason beside the field of the distance", () => {
   test("gives the reason of the largest distance not typed, whatever else locks, and null once it is typed", () => {
-    expect(maxDistReason(project({ ld: null }))).toBe(NO_DISTANCE);
-    expect(maxDistReason(project({ column: null, ld: null }))).toBe(
+    expect(maxDistReason(project({ ld: null }), "popgen")).toBe(NO_DISTANCE);
+    expect(maxDistReason(project({ column: null, ld: null }), "popgen")).toBe(
       NO_DISTANCE,
     );
-    expect(maxDistReason(project())).toBeNull();
+    expect(maxDistReason(project(), "popgen")).toBeNull();
   });
 
   test("review of PA8: gives the reason of the memory for a distance typed above what the populations allow, the words of the lock, and null at the most they allow or while the populations cannot be made", () => {
     expect(
-      maxDistReason(project({ table: THREE_POPS, ld: { maxDist: 8_333_334 } })),
+      maxDistReason(
+        project({ table: THREE_POPS, ld: { maxDist: 8_333_334 } }),
+        "popgen",
+      ),
     ).toBe(
       "With 3 populations, the largest distance can be at most 8,333,333 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.",
     );
     expect(
-      maxDistReason(project({ table: THREE_POPS, ld: { maxDist: 8_333_333 } })),
+      maxDistReason(
+        project({ table: THREE_POPS, ld: { maxDist: 8_333_333 } }),
+        "popgen",
+      ),
     ).toBeNull();
     expect(
-      maxDistReason(project({ column: null, ld: { maxDist: 99_000_000 } })),
+      maxDistReason(
+        project({ column: null, ld: { maxDist: 99_000_000 } }),
+        "popgen",
+      ),
     ).toBeNull();
     const locked = project({ table: THREE_POPS, ld: { maxDist: 8_333_334 } });
-    expect(ldDecay.needs(locked)).toBe(maxDistReason(locked));
+    expect(ldDecay.needs(locked)).toBe(maxDistReason(locked, "popgen"));
     // Not so the distance not typed: the field says why, and Run where.
     const empty = project({ ld: null });
     expect(ldDecay.needs(empty)).toBe(NO_DISTANCE_RUN);
-    expect(maxDistReason(empty)).toBe(NO_DISTANCE);
+    expect(maxDistReason(empty, "popgen")).toBe(NO_DISTANCE);
   });
 });
 
@@ -1958,7 +1967,7 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
     expect(maxDistReason(none, "popgen2")).toBe(
       "The largest distance can be at most 25,000,000 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.",
     );
-    expect(maxDistReason(none)).toBeNull();
+    expect(maxDistReason(none, "popgen")).toBeNull();
     expect(
       maxDistReason(
         page2({ column: null, ld: { maxDist: 25_000_000 } }),
