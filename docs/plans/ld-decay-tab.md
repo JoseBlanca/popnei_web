@@ -125,3 +125,43 @@ The distances (the branch `distances-tab`); the rarefaction curve
 Each phase adds its entry here: its commits, the counts of its checks,
 its review with the findings not taken, and the decisions made along
 the way.
+
+### Phase 1, 12 October 2026
+
+Built in 6c9b1842 to 2d667eef (the specs first; the definition
+`ldDecayOnPopgen2` with this page's populations, as the diversity's; the
+LD decay the third live analysis; its section in the tab; flows; screens).
+Differences from the plan: `keyInputs`, `needs` and `run` take this page's
+populations, not the old page's; the lock of no population kept moved to
+`src/core/populations.ts`. Checks at 2d667eef: typecheck, lint, format
+clean; Vitest at a load average of about 150 from other work, 5,492
+passed and 35 timed out, each of their files passing alone; Chromium and
+WebKit, `popgen2LdDecay` 10, `popgen2Populations` 92, `popgen2Live` and
+`popgen2Band` 70, `popgen2BandLive` 26; screens 124.
+
+The review, all eleven categories, 12 October 2026. The spec reviewer
+recomputed every number with popnei under node (pop_a 7,548 bp, pop_b
+7,340 bp, r² at distance 0 0.4694 for both, popnei's own since it depends
+on the number of individuals alone, 50 in each); no wrong or stale number
+was found. 29 findings held, in the session's `scratchpad/fix-ld.md`. The
+ones a user would meet: after popnei refused the LD decay, the tab named a
+Run it did not show, and after a Stop two of its sentences contradicted
+each other (the diversity's too); with the LD decay alone running and its
+tab shown, the band offered no Stop and the tab's was 16 Tab presses down
+(the band now keeps the Stop of an analysis that is not the first of its
+tab); the two fitted curves and half marks differed only by colour; "half
+distance" was not defined; the time of the last run named no distance and
+counted the wait for the worker; one quantity had two names on the tab;
+the legend cut names that start alike to the same words. The bundle: the
+first load of `popgen2.html` 0.86 KB more; the LD decay's 3.78 KB come
+with the tab.
+
+Found for the merge with `distances-tab` (the session's
+`scratchpad/merge-notes.md`): with the order "PCA, diversity, LD decay,
+distances" the distances would wait for every LD decay (222 s at 2 Mb)
+and then for the worker started again after it, against the owner's
+reason for (a); the order of calculation becomes PCA, diversity,
+distances, LD decay, the tabs keeping theirs. A change of another
+analysis's own options while a long LD decay runs waits for it, which the
+owner was not shown with (a): put to them in the report.
+
