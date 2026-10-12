@@ -82,6 +82,13 @@ stay open while the PCA runs and are greyed while the diversity runs;
 of the PCA's tab while it waits for the diversity are in "About to
 start". Approved by the owner on 11 October 2026; not yet built; its plan is `docs/plans/population-tab.md`.
 
+Revised on 12 October 2026 for the LD decay of the Populations tab, a
+third live analysis (`docs/plans/ld-decay-tab.md`), in "Several
+analyses calculated again by themselves": its place in the order, last;
+its rule of `endsLive`, which popnei's refusal for memory joins; and
+the words of the round and of Stop all, which name the analyses of one
+tab with that tab once.
+
 Corrected on 11 October 2026 after the review of work package 1 of that
 plan, in "Several analyses calculated again by themselves": `run`
 answers "kept" when the store starts nothing for its analysis, done,
@@ -629,6 +636,14 @@ calculated again does not get a PCA of minutes they never asked for:
 each analysis is live once its own Run is pressed (the design, choice
 4).
 
+From 12 October 2026 the LD decay of the Populations tab is the third
+live analysis, last in the order, after the diversity in the same tab
+(`docs/specs/steps/popgen2-populations.md`, "The LD decay";
+`docs/plans/ld-decay-tab.md`). Nothing below changes for it: it follows
+every rule of this section, with its own words. What it adds is said
+where it applies: its rule of `endsLive`, the round of three, and the
+words of the analyses of one tab.
+
 **The order.** The calculation worker runs one calculation at a time.
 When several live analyses are about to start after one change, a
 threshold of the Variants tab for instance, they run one after the
@@ -732,7 +747,10 @@ add Stop all: "Stop the PCA in the PCA tab to change the filters, or
 press Stop all beside the heading Popnei to stop the diversity too;
 then press Run in each tab to calculate them again." ("the PCoA" by the
 method), since a Stop of the PCA alone lets the diversity start a
-second after the next change and grey the filters again.
+second after the next change and grey the filters again. The LD
+decay's, from 12 October 2026, are in `popgen2-populations.md`, "The LD
+decay", "While it runs": it reads the filters and the populations, as
+the diversity.
 These are the words since work package 4 of
 `docs/plans/population-tab.md` gave the band Stop all, on 11 October
 2026. Before it, from the review of work package 1 of that plan the
@@ -750,7 +768,15 @@ beside the heading Popnei, or stop each in its tab; to change the
 populations, stop the diversity in the Populations tab." ("the PCoA" by
 the method), the populations named with the analyses of the round that
 read them (since 11 October 2026, after the review of work packages 2
-and 3); with one, its own words, as above. The later starts of the
+and 3); with one, its own words, as above. With the LD decay, from 12
+October 2026, the analyses of one tab are named with that tab once:
+"Calculating the PCA, the diversity and then the LD decay again. To
+change the filters, press Stop all beside the heading Popnei, or stop
+each in its tab; to change the populations, stop the diversity and the
+LD decay in the Populations tab."; the words of Stop all name them so
+too, "Press Run for the PCA in the PCA tab and the LD decay in the
+Populations tab to calculate them again.", where each analysis named
+its tab before. The later starts of the
 same round say nothing; each end is said as the end of any run, "PCA
 of panel.nei calculated.", "Diversity of panel.nei calculated.". Only
 the end of the last analysis of the round drops the round's words
@@ -823,7 +849,15 @@ lists the live ones in that order, the one list the page reads. In
   the PCA's; the diversity's crash has no words of the memory to tell
   one from another, so every crash ends it, and a crash is not tried
   again at each change, with the memory a stopped worker leaves in
-  WebKit. A failure that ends the live state starts the quiet second
+  WebKit. For the LD decay, from 12 October 2026, the diversity's rule
+  and popnei's refusal for memory, "this machine has not the memory
+  for …", after which a run at the same settings would take as long, up
+  to 25 minutes on a dense file, and be refused again after each
+  change; its other refusals leave it live. Its rule is in a module of
+  `src/ui/analyses/ldDecay/`, and `ENDS_LIVE` of
+  `src/ui/popgen2Store.ts` names it. A refusal for memory is no crash:
+  the others start a quiet second after it, in the new worker the
+  client starts after every LD decay. A failure that ends the live state starts the quiet second
   again, `quietAgain`, for the others about to start; a crash of the
   worker holds them instead until the next change of the project, which
   starts the second.
@@ -1726,7 +1760,13 @@ focus is on a threshold of the Variants tab.
   start, and the diversity's start of the same round with an empty
   `round`; a crash of the memory of the PCA ends its live state and
   not the diversity's; a crash of the diversity, of any kind, ends its
-  live state and leaves the PCA's live.
+  live state and leaves the PCA's live. From 12 October 2026, with the
+  LD decay live as well: a change of a threshold starts the three one
+  at a time, the PCA, the diversity and the LD decay, the worker's
+  requests counted; `liveState("ldDecay")` is `behind` with `after`
+  "diversity" while the diversity runs; a refusal of the LD decay for
+  memory ends its live state, another refusal does not; the round is
+  told once with the three.
 - No Undo: the page's store has no `undo` nor `redo` in its type; a
   press of Ctrl+Z on the page sends no command.
 - The CSV of each table and plot, in `docs/specs/widgets/downloads.md`.

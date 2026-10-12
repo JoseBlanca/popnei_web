@@ -43,6 +43,12 @@ filter, the two are the same array, so nothing a user sees changes. The
 filter of the FILTER column comes through `ldDecayFilters`, which leaves
 out the LD pruning alone.
 
+Revised on 12 October 2026 for the LD decay in the Populations tab of
+`popgen2.html` (`docs/plans/ld-decay-tab.md`): a second definition of
+the same id for that page, with its populations, its locks and its
+words, in the new section "On popgen2.html"; nothing of the old page
+changes.
+
 The words of the documents used here, as `docs/specs/analyses/diversity.md`
 defines them: the **key** of a result, a hash of everything it was
 calculated from, under which the store shows it; the **load** of the
@@ -930,6 +936,169 @@ as popnei's reference script does, are not committed. The plan writes
 them with a script in node, as `e2e/bigVcf.ts` writes its VCF, whose
 genotypes are drawn with no LD and serve for the memory and the time
 alone.
+
+## On popgen2.html
+
+From 12 October 2026, phase 1 of `docs/plans/ld-decay-tab.md`. The
+Populations tab of `popgen2.html`
+(`docs/specs/steps/popgen2-populations.md`, "The LD decay") runs the
+analysis of this module through a second definition,
+`ldDecayOnPopgen2`, made by the same code with what differs given as a
+page, as the diversity has `diversityOnPopgen2`
+(`docs/specs/analyses/diversity.md`, "On popgen2.html"); the old page
+changes in nothing a user sees. The request, the runner, the numbers,
+the bins, the curve, the lock of the memory and the result are the old
+ones. A user of the new page would see three things go wrong with the
+old definition, the diversity's three: an LD decay locked because some
+individual of the variants file is not in the individuals file, which
+that page calls unclassified and not an error; an LD decay locked with
+"None" chosen in the list of the column, where the owner decided on 9
+October 2026 that the unclassified are then one population; and words
+that send the user to "the Variants step", "the metadata file" and "the
+filters of individuals", which that page does not have.
+
+### What differs
+
+- **The populations** are the diversity's of that page: the key holds
+  `popgen2Populations(p)`, and `run` sends `popgen2PopulationsKept(p,
+  c.individuals).pops`, the unclassified left out, or the one
+  population, "Unclassified", of every individual kept. The warnings,
+  the lock of the memory and the check numbers count the same ones.
+- **`needs`**, without `individualsNeeds` and `populationsNeeds` of
+  `docs/specs/core/project.md`, in this order: the individuals file being
+  read, "The LD decay waits for ld_pops.csv to be read."; no distance,
+  "Type the largest distance, above."; a distance above what the memory
+  allows for the populations of `popgen2PopulationsToRun(p)`, the
+  populations of every individual of the variants file before the
+  thresholds of the individuals, in the old words. `maxDistReason`
+  counts the same populations on this page, and none before the
+  variants file is read, when the one pass locks the Run anyway.
+  `keptNeeds` is the diversity's of this page, the individuals kept
+  leaving no population of the column, in the words of the Variants
+  tab, which moves from `diversity.ts` to `src/core/populations.ts` so
+  that this module does not import the diversity's.
+- **The warnings**: `individualsWithoutPopulation` is not raised, an
+  unclassified individual being no fault on that page;
+  `populationNotInResult` is raised as on the old page, but not for the
+  one population; `fewIndividuals` of the one population reads
+  "Unclassified has 12 individuals. …", as the old page's one
+  population reads with its name. The others are the old ones, which
+  name no place of the page.
+- **The words of its failures**, where the old ones name a place of
+  `popgen.html`:
+  - popnei's refusal for memory: "The LD decay needed more memory than
+    the browser tab could give. Type a smaller largest distance, keep
+    fewer individuals with the thresholds of the individuals in the
+    Variants tab, or calculate it with popnei in Python, outside the
+    browser.";
+  - a crash of the worker, `workerFailed`: "The calculation stopped
+    unexpectedly, perhaps because the LD decay needed more memory than
+    the browser tab could give. Type a smaller largest distance, or keep
+    fewer individuals with the thresholds of the individuals in the
+    Variants tab, and run it again; or calculate it with popnei in
+    Python, outside the browser. If it stops again at a small distance,
+    open ld.nei again in the box Variants.";
+  - the other refusals of popnei, as the diversity's of that page: the
+    refusals of the variants file itself in the words of the box
+    Variants, `fileRefusalText`; the filters keeping no variant, "The
+    thresholds of the Variants tab kept none of the variants of ld.nei,
+    so there is no variant to calculate the LD decay over. Loosen
+    them."; the others by `refusalWords` with "Change the settings, or
+    open the variants file again in the box Variants"; each ended by
+    "The LD decay is then calculated again by itself.", since such a
+    refusal leaves it live;
+  - the other failures, in the words of `popgen2FailureText`, as the
+    PCA tab and the diversity have them.
+- **The key** is the old one with the populations of this page. It
+  holds no names of the individuals file or of the column, which the
+  diversity's of that page holds for the words of its warnings: no
+  warning or refusal of the LD decay names them, and the one population
+  and its cause are known from the populations of the key and the load
+  of the variants file. The definitions share the id "ldDecay" and the
+  key version 1; each page has its own store and cache.
+- **The check numbers and the script** are the old ones; the page
+  compares none and shows no script.
+- **The CSV of the two tables** is the table component's, from the
+  values of its cells, the header the labels of its columns, as every
+  table of the page (`docs/specs/widgets/downloads.md`, "A table"), so
+  `ldDecayCsv` and `ldBinsCsv` serve the old page alone. The plot's
+  "Data as CSV" is `ldDecayPointsCsv(r, maxDist)`, `population,
+  distance_bp,mean_r2,fitted_r2`, a row for each population and bin in
+  the order of the result, the middle of the bin, its mean r² or empty
+  with no pair, and `fittedR2` at that distance or empty with no curve
+  (`popgen2-populations.md`, "The LD decay", "The result").
+
+### The TypeScript interface
+
+```ts
+export type LdDecayPage = "popgen" | "popgen2";
+
+/** The two definitions, both of the id "ldDecay": `ldDecay`, listed by POPGEN_ANALYSES, and
+    `ldDecayOnPopgen2`, listed by POPGEN2_ANALYSES of src/core/apps.ts after
+    diversityOnPopgen2. */
+export const ldDecay: AnalysisDef<Job, JobResult>;
+export const ldDecayOnPopgen2: AnalysisDef<Job, JobResult>;
+
+/** The page of the definition a store runs; a defect for another. */
+export function ldDecayPageOf(def: AnalysisDef<Job, JobResult>): LdDecayPage;
+
+/** What stands beside the field of the largest distance, on the page `page`. */
+export function maxDistReason(p: Project, page: LdDecayPage): string | null;
+
+/** The words of a refusal and of a crash, by the page. */
+export function refusalText(message: string, p: Project, page: LdDecayPage): string;
+export function crashText(p: Project, page: LdDecayPage): string;
+
+/** Whether popnei's refusal `message` is for lack of memory. */
+export function isMemoryRefusal(message: string): boolean;
+
+/** The CSV of the points of the plot and of the curve at each. */
+export function ldDecayPointsCsv(r: LdDecayResult, maxDist: number): string;
+```
+
+And in `src/core/populations.ts`, moved from `diversity.ts`:
+
+```ts
+/** The individuals kept, once known, leaving none of the populations of the column on
+    popgen2.html, in the words of the Variants tab; null for the one population. */
+export function popgen2PopulationsKeptNeeds(p: Project, kept: IndividualsKept): string | null;
+```
+
+### How it is verified
+
+With Vitest, at the definition, on frozen projects of `popgen2.html`
+made in the test, beside the old page's cases, which stay:
+
+- `run` with a fake client: `ld_pops.csv` gives `pop_a` and `pop_b`;
+  an individual of the variants file not in the file is left out, with
+  no lock; no individuals file and "None", `[["Unclassified", every
+  individual kept]]`; the old page's `run` still sends "All
+  individuals".
+- `needs`: the individuals file pending, its words; no distance; the
+  lock of the memory at 12,500,001 bp with two populations, `null` at
+  12,500,000; a refused file and an individual missing from the file,
+  `null`.
+- `keptNeeds`: only unclassified individuals kept while the column
+  classifies some, the diversity's words of that page.
+- The warnings: `individualsWithoutPopulation` absent with an
+  unclassified individual; `fewIndividuals` of the one population of
+  12, "Unclassified has 12 individuals. …".
+- The words: the refusal for memory, the crash, the filters keeping no
+  variant, each whole; the old page's words unchanged.
+- The key: no individuals file and "None" the same key, `"all"`; a
+  column of the same populations the same key; a change of the
+  populations another key; the old page's key unchanged.
+- `ldDecayPointsCsv` of the literals of the module's tests: its header,
+  a bin with no pair, a population with no curve.
+
+The numbers in the browser, popnei 0.2.2 under node on 12 October 2026,
+`ld.nei` with the missing data at 0.1 and a largest distance of
+100,000 bp: with `ld_pops.csv`, the old ones, `pop_a` 7548.08187836982
+and `pop_b` 7339.709512618931, 432 variants and 29,367 pairs each; at
+0.05, 7639.382672516462 and 7416.431965140492; with no individuals file,
+the one population of the 100, `Unclassified`, 432 variants, 29,367
+pairs, a half distance of 7150.803607577506 bp, an r² at 0 of
+0.46198347107438015 and ρ per base pair 0.0003021777279638267.
 
 ## The panel
 

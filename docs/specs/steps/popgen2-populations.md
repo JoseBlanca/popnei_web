@@ -59,6 +59,21 @@ the colour of its line in the spectrum, with its own "Download…"
 ("The result", the plots of the table). The plot is
 `docs/specs/charts/bars.md`.
 
+Revised on 12 October 2026 for the LD decay, piece 2 of case 4
+(`docs/plans/ld-decay-tab.md`, phase 1): the tab gains, after the
+diversity and its spectrum, the LD decay of each population under its
+own `<h2>`, calculated again by itself after its first Run as the
+diversity is, last in the order of the page. Its part is the section
+"The LD decay", below, which gives in full what it shows, its states,
+its words and how it is checked; the owner's decisions it takes are the
+plan's "Decisions already made". The specs that change with it the
+same day: `docs/specs/analyses/ldDecay.md`, "On popgen2.html";
+`popgen2-pca.md`, "Several analyses calculated again by themselves";
+`popgen2-band.md`, "Several live analyses". Written by the session
+before the code, which the owner decided on 12 October 2026 to build
+without stopping for the approval of the spec, and to check in the
+running page.
+
 The tab is the diversity panel of the old page, `popgen.html`, which is
 built and which the owner tried and accepted on 1 October 2026: its
 screen spec is the second half of `docs/specs/analyses/diversity.md`,
@@ -142,7 +157,7 @@ the bar; and, once calculated, the result: the warnings, the table,
 its "Download…", the line of the versions, and the block of the
 spectrum under its `<h3>`, "Site frequency spectrum". The LD decay,
 piece 2 of case 4, comes after it in the same tab, under an `<h2>` of
-its own.
+its own, "LD decay" (below, "The LD decay", from 12 October 2026).
 
 ### The options
 
@@ -732,7 +747,377 @@ greyed zone; the owner, whether the wait after each change with the
 PCA and the diversity live is too long (the design, "What would send
 each choice back").
 
+## The LD decay
+
+From 12 October 2026, phase 1 of `docs/plans/ld-decay-tab.md`. Under
+the diversity and its spectrum, under its own `<h2>`, "LD decay", the
+tab shows for each population how the r² of Rogers and Huff between two
+variants falls with the distance between them, the mean of each bin,
+the curve popnei fits and the distance at which it falls to half. It is
+the LD decay panel of the old page, which the owner tried and accepted
+on 1 October 2026 (`docs/specs/analyses/ldDecay.md`, "The panel"), with
+the words and the populations of this page, run by one Run and from
+then on calculated again by itself after each change of what it reads,
+as the diversity is. The owner's decisions it takes, of 12 October
+2026 (the plan, "Decisions already made"):
+
+- **Live, like the others.** After its first Run it is calculated again
+  by itself after each change of what it reads, last in the order of
+  the page, after the PCA and the diversity, so that they never wait
+  for it. While it runs, what it reads is greyed with the reason. With
+  a long distance on a dense file a run lasts minutes, 222 s at
+  2,000,000 bp on 1,000 individuals with a variant every 100 bp in
+  Chromium 153 on the owner's Mac (`ldDecay.md`, "In the browsers"), and
+  a change of a threshold greys the thresholds that long, until it ends
+  or the user presses Stop; the owner accepted that cost.
+- **The time of its last run** stands beside its button, so that the
+  user knows what a change will cost them.
+- **No default distance**: until a distance is typed it is locked, with
+  the reason, and never started by itself.
+
+Everything else is the old panel's: its options and their bounds, the
+50 bins from 1 bp, the maximum major allele frequency of 0.95, from 0.5
+to 1, the lock above 1 GB of counts, the warning below 20 individuals,
+the 16 populations drawn at most, and what it reads, every threshold of
+the Variants tab and the FILTER box, the thresholds of the individuals
+and the populations. This page has no LD pruning among its filters,
+only the PCA's own, so the line of the old panel that says the LD
+pruning is not applied here is never drawn.
+
+### Its order
+
+The `<h2>` "LD decay"; the two options; the line of the populations it
+runs on; Run, Stop or Stop recalculating, with the lock beside it and,
+after it, the time of the last run; the line in the place of the bar;
+and, once calculated: the warnings, with their count on their heading;
+the table of the populations and its "Download…" below it; the line of
+the versions; and the two tabs of the old panel, "Plot", selected when
+the result is drawn, and "Table", the table of the bins. The plot has
+its "Download…" on a line of its own above it, the table of the bins
+its own below it.
+
+### The options
+
+The two fields of the old panel (`ldDecay.md`, "What it shows", the
+options), with their labels, their lines, the reason beside the field
+of the distance and their refusals: "Largest distance between the two
+variants of a pair, in base pairs, from 50", empty until typed, and
+"Maximum major allele frequency in each population, from 0.5 to 1",
+0.95. Each is a command of `setAnalysisOptions` sent with `store.apply`,
+with the old descriptions. A change of either while the LD decay is
+live starts it again a second later; while it runs both are greyed with
+the words of the lock of the filters (below, "While it runs").
+
+Beside the field of the distance, while no distance is typed, the line
+of help of the old panel says why it has to be typed: "The LD decay
+needs the largest distance between the two variants of a pair. It has
+no default, because it depends on how far linkage disequilibrium
+extends in the genome of your species. Type a distance in base pairs.";
+and for a distance the memory does not allow, the reason of that lock,
+drawn as an error. The populations it counts are those of this page,
+below.
+
+### The populations it runs on
+
+Those of the diversity (above, "The populations it runs on"), by the
+same function of core, `popgen2PopulationsKept`, so that the two parts
+of the tab never count other populations: the populations of the column
+chosen in the box Individuals, the unclassified left out; or, with none
+classified, the one population, "Unclassified", every individual kept.
+
+The line under the options says what Run will take, as the
+diversity's: "2 populations: pop_a, 50 individuals; pop_b, 50
+individuals"; "7 unclassified individuals kept are left out, as the box
+Individuals says."; the populations the thresholds of the individuals
+empty; and, while a threshold of the individuals waits for the one
+pass, "The thresholds of the individuals may take individuals from them
+once ld.nei is read to the end." For the one population: "1 population,
+Unclassified: 100 individuals. No individual is assigned to a
+population, so the LD decay is of every individual kept as one
+population.", then the diversity's sentence of why, for a refused file,
+a column absent or a column of too many values; and, when the one
+population stands for an individuals file or a column the user opened,
+"If the individuals belong to several populations, the r² of
+Unclassified is that of all the individuals taken as one population,
+and comes out higher than within each population at every distance",
+ended by "." when a sentence before it says how to get populations, and
+otherwise by "; choose a column of populations in the box Individuals
+to get each one's." Individuals of populations whose allele frequencies
+differ are in LD at any distance when they are taken together, so the
+curve of the mixture lies higher than those of the populations; the
+diversity's sentence says the same of F. The lines of the minimum and
+of the draw are the diversity's own, and the LD decay has neither.
+
+### Run, Stop and the time of the last run
+
+One button in one place, as the diversity's (above, "Run and Stop"):
+Run makes the LD decay live and starts it at once when no calculation
+runs nor a write, and otherwise makes it live and waiting; Stop, while
+it runs, ends the run and the live state; Stop recalculating, while it
+is live and does not run, ends the live state; and after a failure that
+leaves it live, or while a crash of another analysis holds its start,
+Run stands before Stop recalculating.
+
+**The time of the last run**, "The last run took 3:42.", stands after
+the button, on its line, in the muted text of the line of the versions,
+from the first run of the open variants file that ended with a result
+or with an error, until another variants file is opened; in minutes
+and seconds as the clock of the bar writes them, "1:02:05" past an hour,
+and "The last run took less than a second." under one. It is the time
+from the request sent to its answer, of the last run that ended so; a
+run stopped, or left behind by a change, which ends with neither, does
+not change it. It stands beside Run, Stop and Stop recalculating alike,
+and alone where the state offers no button, the result shown after a
+Stop. It is no description of the button, which a screen reader would
+then read at each visit, and the status region does not say it: the
+end of a run is said already. While a run is under way the bar's clock
+counts the new run, and this line says what the last one took.
+
+After a Stop or a Stop recalculating, until Run or another variants
+file, the line in the place of the bar: "Stopped: the LD decay no
+longer starts by itself after a change. Run calculates it and starts it
+again after each change."; with the result shown, which offers no Run
+until a change takes it away, "Stopped: the LD decay no longer starts
+by itself after a change. After the next change, Run calculates it and
+starts it again after each change." After a failure that ended the live
+state: "The LD decay no longer starts by itself after a change, since
+its calculation failed. Run calculates it and starts it again after
+each change."
+
+**The line in the place of the bar**, while it is live and does not
+run:
+
+| what it waits for | the line |
+|---|---|
+| the quiet second, or a change under way, with no live analysis before it about to start; also the quiet second after a Stop of one it waited for | "The LD decay starts in a moment, later if the filters, its options or the populations change." |
+| the same, with a live analysis before it about to start, the first of them in the order named | "The LD decay starts after the PCA, once the filters, the options and the populations stop changing." ("the PCoA", "the diversity") |
+| another analysis, which runs | "The LD decay starts once the diversity, which is running, ends." ("the PCA", "the PCoA") |
+| the dialog of the download, or its write | "The LD decay starts again when the download is written or closed." |
+| a crash of the worker that ended another live state, until the next change or its Run | "The LD decay starts after the next change of the filters, of its options or of the populations, or when Run is pressed." |
+
+**The locks**, the first that holds, as text beside Run, which is then
+disabled, or beside Stop recalculating while it is live:
+
+| the lock | the words |
+|---|---|
+| the one pass running or about to start, stopped, or refused | the three of the diversity's table with "the LD decay": "Run once ld.nei is read to the end: the reading under way in the box Variants and the LD decay cannot run at once." and the two others |
+| the individuals file being read | "The LD decay waits for ld_pops.csv to be read." |
+| no distance typed | "Type the largest distance, above.", with the line of help beside the field |
+| a distance whose counts would take more than 1 GB for the populations of the variants file | "With 2 populations, the largest distance can be at most 12,500,000 base pairs: the pairs are counted at every distance up to it, …", the old words, also beside the field; "The largest distance can be at most 25,000,000 base pairs: …" for one |
+| the thresholds of the individuals keep no individual at all | the store's words of `keptNoneReason`, as for the diversity |
+| the thresholds of the individuals keep no individual of any population | the diversity's words of this page, "… Loosen the thresholds of the individuals in the Variants tab to keep them." |
+
+The populations of the lock of the memory are counted on every
+individual of the variants file, before the thresholds of the
+individuals, which can only lower their number, as the old panel counts
+them before the filters of individuals: the lock is known before the
+one pass ends, and never lets through a distance the populations kept
+cannot hold.
+
+### While it runs
+
+What it reads is greyed, as while the diversity runs (above, "While
+the diversity runs"), with its own words:
+
+- the five thresholds of the Variants tab and the FILTER box, and its
+  two options: "Stop the LD decay in the Populations tab to change the
+  filters; then press Run there to calculate it again.";
+- the list "Column of the populations", the zone that opens another
+  individuals file, its Remove and the three lists of how a text file
+  is read: "Stop the LD decay in the Populations tab to change the
+  populations; then press Run there to calculate it again.";
+- with another analysis live beside it, the words of Stop all, "Stop
+  the LD decay in the Populations tab to change the filters, or press
+  Stop all beside the heading Popnei to stop the PCA and the diversity
+  too; then press Run in each tab to calculate them again.", the
+  populations naming only the diversity among the others, which reads
+  them, as `popgen2-pca.md` has it ("The lock").
+
+Not greyed: the options of the PCA and of the diversity, a change of
+which makes that analysis about to start, waiting after the LD decay;
+"Colour the points by"; the row of tabs; and the opening of another
+variants file, which stops every calculation.
+
+Under the bar, the old panel's line of a run under way: "The bar shows
+the reading of ld.nei. The curves are fitted once it is read. With a
+large distance on a file whose variants are close together, the reading
+may take tens of minutes and may end with the LD decay refused for lack
+of memory."
+
+### The result
+
+The old panel's (`ldDecay.md`, "What it shows"), with these
+differences:
+
+- **The table of the populations**, its seven columns and its caption,
+  "The LD decay of each population, over the 500 variants of ld.nei the
+  filters kept, pairs up to 100,000 base pairs apart. The r² at
+  distance 0 is where the fitted curve starts, which depends on the
+  number of individuals of the population alone."; with unclassified
+  individuals left out, the caption adds "7 unclassified individuals
+  kept are not in it.", as the diversity's. Its "Download…" stands below
+  it, with "Table as CSV", the header the labels of its columns and the
+  numbers as stored, every digit, in the place of the old button.
+- **The line of the versions** under that "Download…", "Calculated with
+  popnei 0.2.2, in version 0.1.0 of the application."
+- **The plot**, in the tab "Plot": the old plot, a population's colour
+  and mark its place among the populations of the project, as in the
+  diversity's plots and the PCA (`populationGroups` of
+  `src/ui/analyses/populationGroups.ts`). Its "Download…", on a line of
+  its own above it, has "Image as SVG", "Image as PNG" and "Data as
+  CSV". The CSV holds what the plot draws a point at and the curve
+  there: a row for each population and bin, every population in the
+  order of the table, also those past the 16 the plot draws, with the
+  header `population,distance_bp,mean_r2,fitted_r2`: the name, the
+  middle of the bin, 1000.5 for the bin from 1 to 2,000, the mean r² of
+  its pairs, empty for a bin with none, and the fitted curve at that
+  distance, empty for a population with no curve.
+- **The table of the bins**, in the tab "Table", its frame of limited
+  height, with its "Download…" below it, "Table as CSV", in the place
+  of the old button.
+- **No comparison with check numbers**: the page opens no project file.
+
+The files, named as `docs/specs/widgets/downloads.md` names them, from
+the stem of the variants file:
+
+| what | the files |
+|---|---|
+| the table of the populations | `ld.ld_decay.csv` |
+| the plot | `ld.ld_decay.svg`, `ld.ld_decay.png`, `ld.ld_decay.points.csv` |
+| the table of the bins | `ld.ld_decay_bins.csv` |
+
+The warnings, above the table, are the module's with this page's words
+(`ldDecay.md`, "On popgen2.html").
+
+### Its states
+
+| state | what the user sees | what they can do |
+|---|---|---|
+| empty | the tab greyed, as for the diversity | open a variants file |
+| locked | the options, the line of the populations, Run disabled with the first lock of the table beside it; while live, the lock beside Stop recalculating, and it starts by itself when the lock lifts, as the diversity does | type the distance; what the lock names; Stop recalculating |
+| ready | the options, the line of the populations, Run, the time of the last run when there is one; after a Stop, the line of a Stop | change the options; Run |
+| about to start | live, in the quiet second: the options, the line, Stop recalculating, the time of the last run, the line of the table above | go on changing things; Stop recalculating |
+| waiting | live, another analysis running: as about to start, with "The LD decay starts once the diversity, which is running, ends." | change its options or the populations; Stop recalculating; Stop all in the band |
+| running | Stop, the time of the last run, the bar and the clock, the line under the bar; its options greyed; the filters and the box Individuals greyed, with their reasons | Stop; turn to another tab; open another variants file, which stops it |
+| done | the warnings, the table and its "Download…", the line of the versions, the tabs of the plot and the bins with their "Download…"; above them, while live, Stop recalculating and the time of the last run | download; change the options; Stop recalculating |
+| error | the words of the failure (`ldDecay.md`, "On popgen2.html"); while the failure leaves it live, Stop recalculating under them, with Run before it when Run may mend it; after a failure that ends it, Run with the line of that failure | Run again, or change the distance after a refusal for memory |
+
+A failure ends its live state when it is a crash of the calculation
+worker, any crash, whose words name the memory; a failure only a reload
+mends; or popnei's refusal for memory, after which a run at the same
+settings would take as long and be refused again after each change. Any
+other refusal of popnei leaves it live (`popgen2-pca.md`, "Several
+analyses calculated again by themselves").
+
+A change of the populations, another column or another individuals
+file, takes its result off the screen as a change of a threshold does,
+and starts it again a second later while it is live, as the diversity.
+The loading of the tab's code is the tab's (above): the LD decay's code
+comes with it.
+
+### Its words
+
+| where | the words |
+|---|---|
+| the heading | "LD decay" |
+| the line of the populations | as above, "The populations it runs on" |
+| the locks, the line in the place of the bar, the lines of a Stop and of a failure that ended it | as above, "Run, Stop and the time of the last run" |
+| the time of the last run | "The last run took 3:42."; "The last run took less than a second." |
+| the filters and its options while it runs, as tooltip and description | "Stop the LD decay in the Populations tab to change the filters; then press Run there to calculate it again." |
+| the column, the zone, Remove and the lists of the reader while it runs | "Stop the LD decay in the Populations tab to change the populations; then press Run there to calculate it again." |
+| the caption of the table of the populations | the old one; with unclassified left out, "… 7 unclassified individuals kept are not in it." |
+| the status region, a start by itself | "Calculating the LD decay again. To change the filters or the populations, stop it in the Populations tab."; the first start of a round of several, the words of the round of `popgen2-pca.md` |
+| the status region, the start of a Run that waited | "Calculating the LD decay of ld.nei." |
+| the status region, a Run that waits | "The LD decay starts once the diversity, which is running, ends." |
+| the status region, the end | "LD decay of ld.nei calculated."; a failure, "The LD decay of ld.nei could not be calculated: " and its words |
+| the status region, held by a crash of another analysis | "The LD decay did not start: it starts after the next change of the filters, of its options or of the populations, or when Run is pressed in the Populations tab." |
+| the status region, a Stop | "LD decay stopped. Press Run in the Populations tab to calculate it again."; with no Run to press, "LD decay stopped." |
+| the buttons of the downloads, for a screen reader | "Download the table of the populations of the LD decay"; "Download the plot of the LD decay"; "Download the table of the bins of the LD decay" |
+
+### Accessibility
+
+As the old panel's (`ldDecay.md`, "Accessibility") and the
+diversity's above. The order of the Tab key in its section: the two
+fields; Run, Stop or Stop recalculating, one stop in one place, Run then
+Stop recalculating when both stand; the warnings; the table of the
+populations, when it scrolls, and its "Download…"; the tabs Plot and
+Table; in Plot, its "Download…" and the frame of the plot when it
+scrolls sideways; in Table, the frame of the table of the bins while it
+is higher than its frame, and its "Download…". The time of the last run
+takes no focus. The focus at a Stop and at the end, as the diversity's:
+the button keeps it while it changes name; when it goes, the heading
+"LD decay" takes it; when it becomes a disabled Run, the lock beside it.
+The band's link to its warnings gives the focus to the heading of the
+LD decay's warnings, and to its heading for an error, never to the
+diversity's in the same tab.
+
+### How it is checked
+
+**In Vitest, in node**: the definition of this page, each case of
+`ldDecay.md`, "On popgen2.html", "How it is verified"; the words of the
+section, the line of the populations with the unclassified and with the
+one population of no file and of a column that classifies nobody, each
+lock, each line of waiting and of a Stop, the time of the last run at
+0.4 s, 59 s, 61 s and 3,725 s; the round of the PCA, the diversity and
+the LD decay, "Calculating the PCA, the diversity and then the LD decay
+again. To change the filters, press Stop all beside the heading Popnei,
+or stop each in its tab; to change the populations, stop the diversity
+and the LD decay in the Populations tab."; the failures that end its
+live state, a crash, a refusal for memory, and not another refusal; and
+at `createAutoRuns` with the real store, the three live, a change of a
+threshold: the PCA, the diversity and the LD decay, one at a time, in
+that order, the worker's requests counted.
+
+**In jsdom**: Run through `autoRuns.run("ldDecay")`, Stop and Stop
+recalculating through `autoRuns.pause("ldDecay")`; the time of the last
+run after a run that ended done, kept over a run stopped, and gone with
+another variants file.
+
+**In Playwright, on the built site, in Chromium and WebKit**, on
+`e2e/fixtures/ld.nei` and `ld_pops.csv`, the thresholds as a new page
+has them, the missing data at 0.1, which keeps all 500 variants:
+
+- **The numbers**: 100000 typed and Run: the rows pop_a and pop_b, 50
+  individuals, 432 variants, 29,367 pairs and half distances "7,548"
+  and "7,340"; no warning; "The last run took less than a second."; the
+  missing data moved to 0.05 with the LD decay live: "7,639" and
+  "7,416", with no Run pressed. With no individuals file, the one row
+  Unclassified, 100 individuals, 432 variants, 29,367 pairs, "7,151"
+  (7150.803607577506, popnei 0.2.2 under node on 12 October 2026).
+- **The locks**: before a distance, Run disabled with "Type the largest
+  distance, above." and the line of help beside the field; 30000000
+  typed, the lock of the memory with "With 2 populations, the largest
+  distance can be at most 12,500,000 base pairs".
+- **Live with the others**: the diversity and the LD decay live, a
+  threshold moved: one request of the diversity, then one of the LD
+  decay after its result, counted at the worker; meanwhile the LD
+  decay's line "The LD decay starts once the diversity, which is
+  running, ends.". The LD decay held running: the thresholds, its
+  options, the column and the zone greyed with its words; the
+  diversity's options open.
+- **The downloads**: the table of the populations' CSV read back, its
+  row of pop_a `pop_a,50,432,29367,7548.08187836982,…`; the plot's
+  "Data as CSV", its first row of pop_a; each "Download…" of a table
+  below it, the plot's above it.
+- **The band**: the LD decay held running, the Variants tab shown:
+  "LD decay running · 0:0…" with Stop; with the diversity live too,
+  Stop all.
+- axe with the LD decay ready, running and done, light and dark.
+
+**The screens**, `--project=screens`, at 1280 and 320 px, light and
+dark: `popgen2-ld-decay-locked` (no distance typed), `-ready`,
+`-running`, `-waiting` (the diversity running), `-done`, `-stopped`.
+
 ## Choices made by the session
+
+Of the LD decay, from 12 October 2026, open to the owner's change once
+they try it: the place and the words of the time of the last run, and
+that it counts runs that ended with an error; the sentence of the one
+population, "the r² of Unclassified … comes out higher than within each
+population at every distance"; the CSV of the plot, its rows and its
+columns; the lines of waiting and of a Stop, the diversity's with "the
+LD decay"; and the round's words, which name the analyses of one tab
+once, "stop the diversity and the LD decay in the Populations tab".
 
 Open to the owner's change once they try the page: the heading
 "Diversity" in the tab and "Site frequency spectrum" under it; the
@@ -783,6 +1168,8 @@ choice 8, which said otherwise, corrected the same day).
 - The band: `popgen2-band.md`. The box Individuals greyed:
   `popgen2-input.md`. The download of the filtered variants:
   `popgen2-download.md`.
-- The LD decay and the distances between populations, pieces 2 and 3
-  of case 4.
+- The distances between populations, piece 3 of case 4. The LD decay,
+  piece 2, is in this spec from 12 October 2026 ("The LD decay").
+- The definition of the LD decay of this page, its key and its words:
+  `docs/specs/analyses/ldDecay.md`, "On popgen2.html".
 - The saving of a project on this page, and the help drawer.

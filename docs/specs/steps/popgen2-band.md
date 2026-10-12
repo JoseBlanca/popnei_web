@@ -44,6 +44,12 @@ counts the warning of the spectrum of the diversity with the warnings
 of its result, and its link gives that warning the focus when it is
 the only one ("Several live analyses"; "Open points").
 
+Revised on 12 October 2026 for the LD decay of the Populations tab, a
+third live analysis (`docs/plans/ld-decay-tab.md`): the band names it
+as it names the diversity, and its link to the LD decay's warnings or
+error gives the focus to the LD decay's own, in the tab that holds the
+diversity's too ("Several live analyses", "The LD decay").
+
 Revised on 11 October 2026 for `docs/designs/population-tab.md`,
 approved by the owner that day with the recommendations of its two open
 points, which brings the diversity of the Populations tab as a second
@@ -326,6 +332,24 @@ PCA name any live analysis, in the words of its tab, "PCA", "PCoA",
 | a Stop of the diversity under way | "Stopping the diversity…" | none |
 | results with warnings, or failed, in tabs not shown | the first in the order of the tabs: "Diversity: 2 warnings, in the Populations tab"; "Diversity: could not be calculated, in the Populations tab" | none |
 
+**The LD decay**, from 12 October 2026 (`docs/plans/ld-decay-tab.md`),
+is a third live analysis, in the Populations tab after the diversity,
+and the band names it as it names the diversity: "LD decay running ·
+0:12", "Diversity running · 0:12 · then the LD decay", "The PCA, the
+diversity and the LD decay start in a moment", "The LD decay starts in
+a moment", "Stopping the LD decay…", "LD decay: 2 warnings, in the
+Populations tab", "LD decay: could not be calculated, in the
+Populations tab"; and the short forms "LD decay · 0:12", "LD decay
+soon", "LD decay later", "LD decay: 2 warnings", "LD decay: failed".
+While the Populations tab is shown the band drops the Stop and the Stop
+recalculating of both its analyses. The link to the LD decay's
+warnings gives the focus to the heading of the LD decay's own warnings,
+and for an error to the heading "LD decay", not to the diversity's
+above them in the same tab; when both have warnings, the link is the
+diversity's, the first in the order. "LD decay · 59:59" is shorter than
+"Diversity · 59:59", so the line of an analysis running with Stop and
+Stop all fits at 320 px as the diversity's does.
+
 **Stop all** is shown whenever two or more analyses are live and one
 of them runs, waits or is about to start, as the design's choices 5
 and 6 and the owner's answer 1a of 11 October 2026 have it: that is
@@ -590,7 +614,8 @@ change; it is still the screen's, not the project's
 | the link to an error | "PCA: could not be calculated, in the PCA tab"; "PCoA: could not be calculated, in the PCA tab" |
 | the short forms, under 45 em wide, the whole words given to a screen reader ("Its place") | "Statistics · 45%"; "PCA · 1:20"; "Diversity · 0:12"; "Writing · 45%"; "Stopping…"; "PCA soon"; "Diversity soon"; "Analyses soon"; "PCA later"; "Diversity later"; "Analyses later"; "PCA: 2 warnings"; "Diversity: 2 warnings"; "PCA: failed"; "Diversity: failed"; "PCoA" in place of "PCA" under the PCoA (listed here on 12 October 2026, the review of work package 4) |
 | the buttons | "Stop"; "Stop recalculating"; "Stop all"; "Details"; "Close"; "Copy the details" |
-| the name of the Stop for a screen reader | "Stop the statistics of panel.vcf.gz"; "Stop the PCA"; "Stop the PCoA"; "Stop recalculating the PCA"; "Stop recalculating the PCoA"; "Stop the diversity"; "Stop recalculating the diversity"; "Stop all: the PCA and the diversity" |
+| the name of the Stop for a screen reader | "Stop the statistics of panel.vcf.gz"; "Stop the PCA"; "Stop the PCoA"; "Stop recalculating the PCA"; "Stop recalculating the PCoA"; "Stop the diversity"; "Stop recalculating the diversity"; "Stop all: the PCA and the diversity"; from 12 October 2026, "Stop the LD decay", "Stop recalculating the LD decay", "Stop all: the PCA, the diversity and the LD decay" |
+| the LD decay, from 12 October 2026 | "LD decay running · 0:12"; "The LD decay starts in a moment"; "Stopping the LD decay…"; "LD decay: 1 warning, in the Populations tab"; the short forms "LD decay · 0:12", "LD decay soon", "LD decay later", "LD decay: 1 warning", "LD decay: failed" |
 | an error of the application | the three sentences of `barText` on this page, "An error of the application", with the message in each |
 | its details | "1 more error followed it."; "3 more errors followed it." |
 | the band's own status region | "The details were copied."; "The details could not be copied. Select them in the box below and copy them." |
@@ -827,6 +852,15 @@ the diversity…"; from 12 October 2026, the warning of the spectrum
 counted with the result's, 1 warning alone, 3 with two of the result,
 none without a MAF threshold, the link's target the spectrum's warning
 alone in the first case and the heading of the warnings in the second.
+
+From 12 October 2026, at `bandOf`, with the LD decay live as well: the
+LD decay running with the diversity live, "LD decay running · 0:12"
+with Stop and Stop all; the diversity running and the LD decay
+waiting, "Diversity running · 0:12 · then the LD decay"; the three
+about to start, "The PCA, the diversity and the LD decay start in a
+moment" with Stop all; the link of the LD decay's warnings while the
+diversity has none, and the diversity's when both have them; the
+Populations tab shown with the LD decay running, no Stop.
 
 **In jsdom**, the band drawn: the Stop of the one pass calls
 `autoRuns.stop` with the page's group, and the Stop of the PCA and
