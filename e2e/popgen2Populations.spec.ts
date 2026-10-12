@@ -1815,7 +1815,7 @@ test.describe("PT7 R1.1 the bar plots of the table", () => {
       expect(await isBelow(section, table(page, CAPTION))).toBe(true);
       await expect(
         section.getByText(
-          'One bar per population, in the order of the table. Each population has the colour of its line in the plot of the spectrum, so that it can be followed from plot to plot. A population with no value in the table has the words "no value" in place of its bar.',
+          'One bar per population, in the order of the table. Each population has the colour and the mark of its line in the plot of the spectrum, so that it can be followed from plot to plot. A population with no value in the table has the words "no value" in place of its bar.',
           { exact: true },
         ),
       ).toBeVisible();
@@ -2167,6 +2167,44 @@ test.describe("review of round 1: the label up the plot of the spectrum", () => 
 });
 
 test.describe("review of round 1: long names of populations", () => {
+  test("twenty populations: in each bar plot the mark beside a population's name is the mark of its line in the legend of the spectrum, its symbol and its colour, twenty marks apart", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await runTwenty(page);
+    const legend = await shown(page)
+      .locator("svg.chart-line g.chart-legend-row path.chart-points")
+      .evaluateAll((paths) =>
+        paths.map(
+          (path) =>
+            `${path.getAttribute("d") ?? ""} ${
+              [...path.classList].find((name) =>
+                name.startsWith("chart-colour-"),
+              ) ?? ""
+            }`,
+        ),
+      );
+    expect(legend).toHaveLength(20);
+    expect(new Set(legend).size).toBe(20);
+    const plots = shown(page).locator("svg.chart-bars");
+    for (let index = 0; index < 5; index += 1) {
+      const marks = await plots
+        .nth(index)
+        .locator("path.chart-bars-mark")
+        .evaluateAll((paths) =>
+          paths.map(
+            (path) =>
+              `${path.getAttribute("d") ?? ""} ${
+                [...path.classList].find((name) =>
+                  name.startsWith("chart-colour-"),
+                ) ?? ""
+              }`,
+          ),
+        );
+      expect(marks).toEqual(legend);
+    }
+  });
+
   test("twenty populations at 320 px: Landrace_Valencia_coast and Landrace_Valencia_inland cut in the middle, their starts and their ends, two names apart in each bar plot", async ({
     page,
   }) => {

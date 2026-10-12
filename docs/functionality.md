@@ -746,9 +746,10 @@ proportion to its value. The bars lie across, each with the name of its
 population at its left, so that a long name stays level and can be
 read. A population with no value in the table has the words "no value"
 in place of its bar, since a bar of 0 would read as a value of 0. A
-population has the same colour in the five plots and in the plot of
-the spectrum (below), so that it can be followed from plot to plot, and
-its name stands beside each of its bars, and in the legend of the
+population has the same colour and the same mark, a small symbol
+beside its name, in the five plots and in the plot of the spectrum
+(below), so that it can be followed from plot to plot among as many as
+20 populations, and its name stands beside each of its bars, and in the legend of the
 spectrum beside a piece of its line, so that no population is told by
 its colour alone. The plots stand two to a row
 in a window 1280 pixels wide and one to a row on a screen 320 pixels

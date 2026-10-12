@@ -5,7 +5,8 @@
  * 12 October 2026, each headed by the label of its column in the table;
  * the data of each plot, a bar per row of the table in its order, in the
  * group of its population, `populationGroups`, its place among the
- * populations of the project, so that a population has the colour of its
+ * populations of the project, so that a population has the colour and
+ * the mark of its
  * line in the plot of the spectrum and of its points in the principal
  * components, and NaN where the table says "no value"; its description, its CSV and the
  * words of its menu. Pure, so that a test in node checks it.
@@ -22,9 +23,14 @@ import { numberHeaders } from "./resultWords.ts";
 /** The heading of the section of the plots. */
 export const BAR_PLOTS_HEADING = "Bar plots of the table";
 
-/** The line under the heading of the section. */
-export const BAR_PLOTS_LINE =
-  'One bar per population, in the order of the table. Each population has the colour of its line in the plot of the spectrum, so that it can be followed from plot to plot. A population with no value in the table has the words "no value" in place of its bar.';
+/** The line under the heading of the section: what follows a population
+    from plot to plot, its colour and its mark, which the line of the
+    spectrum has too; with `numPopulations` 1, nothing to follow. */
+export function barPlotsLine(numPopulations: number): string {
+  return numPopulations === 1
+    ? 'One bar, of the one population. Where the table has no value, the words "no value" stand in place of the bar.'
+    : 'One bar per population, in the order of the table. Each population has the colour and the mark of its line in the plot of the spectrum, so that it can be followed from plot to plot. A population with no value in the table has the words "no value" in place of its bar.';
+}
 
 /** The words in the row of a population with no value, as the table's. */
 const NO_VALUE = "no value";

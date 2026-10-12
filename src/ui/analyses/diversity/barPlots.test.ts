@@ -12,6 +12,7 @@ import type { Pops } from "../../../worker/protocol.ts";
 import {
   BAR_PLOTS,
   barPlotWhat,
+  barPlotsLine,
   barsCsv,
   barsDataOf,
   barsDescription,
@@ -202,5 +203,16 @@ describe("PT7 R1.1 the bar plots of the table of the diversity", () => {
       "the bar plot of alleles per variant, rarefied to 40 chromosomes",
       "the bar plot of alleles per variant",
     ]);
+  });
+});
+
+describe("review of round 1: the line under the heading of the bar plots", () => {
+  test("with several populations it promises the colour and the mark of each population's line; with one it promises nothing to follow", () => {
+    expect(barPlotsLine(3)).toBe(
+      'One bar per population, in the order of the table. Each population has the colour and the mark of its line in the plot of the spectrum, so that it can be followed from plot to plot. A population with no value in the table has the words "no value" in place of its bar.',
+    );
+    expect(barPlotsLine(1)).toBe(
+      'One bar, of the one population. Where the table has no value, the words "no value" stand in place of the bar.',
+    );
   });
 });

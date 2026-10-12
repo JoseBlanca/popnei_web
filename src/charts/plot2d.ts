@@ -83,6 +83,11 @@ export interface AxesOptions {
    */
   readonly nameFormat?: (name: string) => string;
   /**
+   * The pixels between an axis of names and its names, 8 when absent;
+   * the bar plot leaves room there for the mark of each name.
+   */
+  readonly namePadding?: number;
+  /**
    * Whether a tick of either axis of numbers is drawn, of those its scale
    * gives; all are when absent. The scatter leaves out a tick whose label
    * would not be a finite number. An axis of names draws every name.
@@ -267,6 +272,8 @@ interface AxisDrawing {
   readonly shown: (value: number) => boolean;
   /** The label of a name of an axis of names. */
   readonly nameFormat: (name: string) => string;
+  /** From an axis of names to its names. */
+  readonly namePadding: number;
 }
 
 /**
@@ -284,7 +291,7 @@ function drawAxis(
     group.call(
       make<string>(scale)
         .tickSize(0)
-        .tickPadding(NAME_PADDING)
+        .tickPadding(drawing.namePadding)
         .tickFormat(drawing.nameFormat),
     );
     // d3-axis draws a line at each tick, of no length here; an axis of
@@ -672,12 +679,14 @@ export function createPlot2d<Data extends PlotText>(
         const yCount = Math.max(1, Math.round(innerHeight / Y_TICK_SPACING));
         const shown = options.tickShown ?? (() => true);
         const nameFormat = options.nameFormat ?? ((name: string) => name);
+        const namePadding = options.namePadding ?? NAME_PADDING;
         drawAxis(xAxisGroup, axisBottom, x, {
           count: xCount,
           wholeNumbers: options.xWholeNumbers === true,
           format: options.xFormat,
           shown,
           nameFormat,
+          namePadding,
         });
         drawAxis(yAxisGroup, axisLeft, y, {
           count: yCount,
@@ -685,11 +694,12 @@ export function createPlot2d<Data extends PlotText>(
           format: options.yFormat,
           shown,
           nameFormat,
+          namePadding,
         });
         slantLabels(
           xAxisGroup,
           options.xLabelAngle ?? 0,
-          isBand(x) ? NAME_PADDING : NUMBER_LABEL_OFFSET,
+          isBand(x) ? namePadding : NUMBER_LABEL_OFFSET,
         );
       },
     };

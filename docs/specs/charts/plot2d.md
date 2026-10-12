@@ -197,7 +197,10 @@ and turned along the vertical one, in the margins:
   be drawn from a band scale of `d3-scale`, `ScaleBand<string>`, whose
   labels are the names, each written as the plot's `nameFormat` gives
   it, cut by the plot and never by the base, the scale keeping the whole
-  names, with no tick marks; and the labels of the
+  names, with no tick marks, 8 pixels from the axis, or the
+  `namePadding` the plot asks for, 20 for the bar plot, which draws a
+  mark of each name between the name and the frame (from 12 October
+  2026); and the labels of the
   horizontal axis slanted by `xLabelAngle` degrees, −45 for the
   heatmap, anchored at their end so that a long name runs down and to
   the left of its column;
@@ -457,6 +460,9 @@ export interface AxesOptions {
       scale keeps the whole names, so that two names alike in their
       first characters stay two rows. */
   readonly nameFormat?: (name: string) => string;
+  /** From 12 October 2026, the pixels between an axis of names and its
+      names; 8 when absent. */
+  readonly namePadding?: number;
   /** Whether a tick of either axis is drawn, of those its scale gives;
       all are when absent. */
   readonly tickShown?: (value: number) => boolean;

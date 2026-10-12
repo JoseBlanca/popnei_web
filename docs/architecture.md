@@ -3442,7 +3442,7 @@ src/charts/
                     names, the plots of the table of the diversity in
                     the Populations tab (docs/specs/charts/bars.md)
   textWidth.ts      from 12 October 2026, the width of a text of a plot,
-                    measured on a canvas in the font of the plots, and a
+                    measured in a hidden SVG in the font of the plots, and a
                     text cut to a width, for the names of bars.ts and the
                     legend of line.ts
   marks.ts          the colour and the symbol of each group of points, and

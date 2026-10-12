@@ -6,8 +6,8 @@
  * with its heading, the label of its column, its "Download…" on a line
  * of its own above it, "Image as SVG", "Image as PNG" and "Data as CSV",
  * and the plot, `createBars` of src/charts/bars.ts mounted by `usePlot`,
- * a bar per population in the colour of its line in the plot of the
- * spectrum and of its points in the principal components.
+ * a bar per population in the colour and with the mark of its line in
+ * the plot of the spectrum and of its points in the principal components.
  *
  * The plots stand side by side, as many to a row as the width holds at
  * 20rem at least each, one to a row at the width of a phone; each
@@ -33,7 +33,7 @@ import styles from "./DiversityBars.module.css";
 import {
   BAR_PLOTS,
   BAR_PLOTS_HEADING,
-  BAR_PLOTS_LINE,
+  barPlotsLine,
   barPlotWhat,
   barsCsv,
   barsDataOf,
@@ -64,7 +64,9 @@ export function DiversityBars({
       <h3 id={headingId} className={classOf(styles, "heading")}>
         {BAR_PLOTS_HEADING}
       </h3>
-      <p className={classOf(styles, "line")}>{BAR_PLOTS_LINE}</p>
+      <p className={classOf(styles, "line")}>
+        {barPlotsLine(diversityRows(result).length)}
+      </p>
       <div className={classOf(styles, "plots")}>
         {BAR_PLOTS.map((plot) => (
           <ErrorBoundary

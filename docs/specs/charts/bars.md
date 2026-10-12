@@ -34,10 +34,19 @@ and the names of the populations are at most 20 on `popgen2.html`
   orange, sky blue and yellow, below 3:1 on the light background, has
   an outline of 1 pixel in `--chart-axis`, as the marks of those
   colours have; the four others have none.
-- **The names**, down the left side, each level and ending 8 pixels
-  before the frame, as the base writes an axis of names. A name is not
-  told by its colour alone: it is written beside its bar (WCAG 2.2,
-  1.4.1).
+- **The names**, down the left side, each level and ending 20 pixels
+  before the frame. A name is not told by its colour alone: it is
+  written beside its bar (WCAG 2.2, 1.4.1).
+- **The mark of each name**, between the name and the frame: the symbol
+  of its group, of the area of a point of the scatter, 64 square
+  pixels, in the colour of its group and with the outline every point
+  has, `symbolPath` of `marks.ts`, its centre 10 pixels left of the
+  frame, on the middle of its row; the same mark as the group's points
+  and line in the line plot, so that a population is followed from plot
+  to plot by its colour and its shape, which repeat only after 49
+  groups, and not by its colour alone, which repeats after 7. (From 12
+  October 2026, the review of round 1: with colour alone, populations 0,
+  7 and 14 of the tab were alike.)
 - **A name with no value**, NaN: no bar, and the words the data give,
   "no value", written in its row from 4 pixels right of the axis, so
   that a missing value is not read as a value of 0.
@@ -52,23 +61,23 @@ and the names of the populations are at most 20 on `popgen2.html`
 
 ### The room of the names
 
-The left margin holds the longest name as written, measured, with 8
-pixels between the name and the frame and 4 before the left edge of the
-SVG. A name keeps at most 20 characters, and at most what 40% of the
-width of the element holds once those 12 pixels are taken, 0.4 × width
-− 12 pixels; a longer name is cut in the middle, to as many of its
+The left margin holds the longest name as written, measured, with 20
+pixels between the name and the frame, 4 to the mark, 12 for it and 4
+more, and 4 before the left edge of the SVG. A name keeps at most 20
+characters, and at most what 40% of the width of the element holds once
+those 24 pixels are taken, 0.4 × width − 24 pixels; a longer name is cut in the middle, to as many of its
 first and last characters as fit about an ellipsis, the first half one
-more for an odd number, "Landr…coast", and 3 and the ellipsis at the
+more for an odd number, "Landr…oast", and 3 and the ellipsis at the
 fewest, so that the names of one collection, alike in their starts,
 stay apart. When two rows or more would still write the same, each
 writes its name cut to the room its number leaves and the number of its
 row in brackets, from 1, which is its row in the screen's table,
-"Lan…A_1 (2)" and "Lan…A_1 (3)"; two names alike whole, as two
+"Lan…_1 (2)" and "Lan…_1 (3)" at 288 pixels; two names alike whole, as two
 populations alike once escaped, are numbered so too. (From 12 October
 2026, the review of round 1: cut at their ends, "Landrace_Valencia_coast"
 and "Landrace_Valencia_inland" both read "Landrace_Va…" at 288 pixels,
 and nothing told the two bars apart but the order of the table.) A name is measured in the font of the plots at its 12
-pixels, on a canvas, by `textWidth` of `src/charts/textWidth.ts`; where
+pixels, by `textWidth` of `src/charts/textWidth.ts`; where
 nothing measures, under jsdom, a character counts 9 pixels, as the
 heatmap counts its names (`docs/specs/charts/heatmap.md`, "The names on
 the axes"). (Changed on 12 October 2026, the review of round 1: the names
@@ -105,7 +114,8 @@ export interface BarsData extends PlotText {
 export interface Bar {
   /** The name written beside the bar, as text. */
   readonly name: string;
-  /** Its group for the colour, a whole number from 0, as the scatter's. */
+  /** Its group for the colour and the mark, a whole number from 0, as
+      the scatter's. */
   readonly group: number;
   /** Its value, finite and 0 or above; NaN for none. */
   readonly value: number;
@@ -134,7 +144,9 @@ The base makes the skeleton with the class `chart chart-bars`, and no
 `chart-overlay`. In `chart-marks`, one `rect.chart-bars-bar
 chart-colour-‹group % 7›` per name with a value, keyed by its place,
 with the class `chart-bars-outlined` too for a light colour. In
-`chart-annotations`, one `text.chart-bars-none` per name with no value.
+`chart-annotations`, one `text.chart-bars-none` per name with no value,
+and one `path.chart-points chart-bars-mark chart-colour-‹group % 7›`
+per name, its mark, translated to its place left of the frame.
 The kind is `bars`, not `bar`, since `chart-bar` is the class of a bar
 of the histogram, whose fill would reach every element of the SVG.
 
@@ -181,28 +193,33 @@ element stubbed at 400 by 136:
 - the names on the axis, "p0", "p2", "p1", from the top down;
 - the axis from 0 to 0.3: its last tick 0.3; with every value NaN, from
   0 to 1;
-- where nothing measures, the left margin of names of 2 characters, 30
-  pixels, 4, 18 and 8; a name of 30 characters at 400 pixels, where 16
-  characters fit, written as its first 8 and last 7 about an ellipsis,
-  with a left margin of 156; at 1,000 pixels, as its first 10 and last
-  9, with a margin of 192;
-- at 288 pixels, where 11 characters fit, "Landrace_Valencia_coast" and
-  "Landrace_Valencia_inland" written "Landr…coast" and "Landr…nland";
+- where nothing measures, the left margin of names of 2 characters, 42
+  pixels, 4, 18 and 20; a name of 30 characters at 400 pixels, where 15
+  characters fit, written as its first 7 and last 7 about an ellipsis,
+  with a left margin of 159; at 1,000 pixels, as its first 10 and last
+  9, with a margin of 204;
+- at 288 pixels, where 10 characters fit, "Landrace_Valencia_coast" and
+  "Landrace_Valencia_inland" written "Landr…oast" and "Landr…land";
   "Landrace_Valencia_set_A_1" and "Landrace_Mallorca_set_A_1" in the
-  rows 2 and 3, alike once cut, written "Lan…A_1 (2)" and "Lan…A_1
-  (3)", and "p0" in row 1 whole;
-- measured by a canvas of the test that gives a W 11 pixels and any
-  other character 6: ten Ws whole at 1,000 pixels, in a left margin of
-  122; twenty Ws at 400 pixels cut to six, the ellipsis and six, the
-  138 pixels that fit 148, in a margin of 150;
+  rows 2 and 3, alike once cut, written "Lan…_1 (2)" and "Lan…_1 (3)",
+  and "p0" in row 1 whole, in a left margin of 114;
+- measured by a fake measure of the test that gives a W 11 pixels and
+  any other character 6: ten Ws whole at 1,000 pixels, in a left margin
+  of 134; twenty Ws at 400 pixels cut to six, the ellipsis and five,
+  the 127 pixels that fit 136, in a margin of 151;
+- the marks: three names of groups 0, 2 and 1, three
+  `path.chart-points.chart-bars-mark` of `chart-colour-0`, `-2` and
+  `-1`, the symbols of those groups, each translated to x −10 and the
+  middle of its row;
 - `barsHeight(3)` 152 and `barsHeight(1)` 96;
 - two bars of one name, `a\nb` twice: two rows, each with its bar,
   written "a\nb (1)" and "a\nb (2)";
 - from the review of round 1, 12 October 2026: a value of 0, one bar of
   no width; a largest value of 0.3567, the axis to 0.4; words of no
   value other than "no value", written as given, at `dy` 0.35em;
-  exactly 200 bars drawn; a name exactly as long as its room, whole;
-  at 100 pixels a name keeps 4 characters, "ab…p";
+  exactly 200 bars drawn; a name exactly as long as its room, 15
+  characters at 400 pixels, whole;
+  at 100 pixels a name keeps 4 characters, "ab…o";
 - `check` throws for 201 bars, a group of 1.5, a value of −0.1 and one
   of Infinity.
 

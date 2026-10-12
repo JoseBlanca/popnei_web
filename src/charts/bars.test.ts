@@ -4,18 +4,20 @@
  * no ResizeObserver, so the tests give the size of the element with stubs
  * of clientWidth and clientHeight, 400 by 136, which the base reads when
  * the plot is made: with the margins of 8 at the top, 44 at the bottom,
- * 20 at the right and, at the left, 30 for names of two characters, a
- * frame of 350 by 84, three rows of 28 pixels.
+ * 20 at the right and, at the left, 42 for names of two characters, a
+ * frame of 338 by 84, three rows of 28 pixels.
  */
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { barsHeight, createBars } from "./bars.ts";
 import type { Bar, BarsData } from "./bars.ts";
 import { MAX_BARS } from "./limits.ts";
+import { symbolPath } from "./marks.ts";
 import { fakeWidth, measureWithFake, stopFakeMeasure } from "./testSupport.ts";
 
-/** The frame of an element of 400 by 136 with names of two characters. */
-const INNER_WIDTH = 400 - 30 - 20;
+/** The frame of an element of 400 by 136 with names of two characters,
+    their 18 pixels with 4 before them and 20 after, for their marks. */
+const INNER_WIDTH = 400 - 42 - 20;
 
 function barsOf(bars: readonly Bar[]): BarsData {
   return {
@@ -153,21 +155,21 @@ describe("PT7 R1.1 the bar plot under jsdom, its SVG", () => {
     expect(ticks(element, "x").at(-1)).toBe("1.0");
   });
 
-  test("the left margin holds the names at 9 pixels a character: 30 for two; a name of 30 characters cut to 15, its first 8 and last 7 about an ellipsis, at 400 pixels, and to 19 at 1,000", () => {
+  test("the left margin holds the names at 9 pixels a character and 24 around them: 42 for two; a name of 30 characters cut to 14, its first 7 and last 7 about an ellipsis, at 400 pixels, and to 19 at 1,000", () => {
     const element = sizedElement();
     createBars(element, barsOf(THREE));
-    expect(leftMargin(element)).toBe(30);
+    expect(leftMargin(element)).toBe(42);
 
     const long = "abcdefghijklmnopqrstuvwxyz0123";
     const narrow = sizedElement();
     createBars(narrow, barsOf([{ name: long, group: 0, value: 0.3 }]));
-    expect(ticks(narrow, "y")).toEqual(["abcdefgh…xyz0123"]);
-    expect(leftMargin(narrow)).toBe(4 + 16 * 9 + 8);
+    expect(ticks(narrow, "y")).toEqual(["abcdefg…xyz0123"]);
+    expect(leftMargin(narrow)).toBe(4 + 15 * 9 + 20);
 
     const wide = sizedElement(1000, 136);
     createBars(wide, barsOf([{ name: long, group: 0, value: 0.3 }]));
     expect(ticks(wide, "y")).toEqual(["abcdefghij…vwxyz0123"]);
-    expect(leftMargin(wide)).toBe(4 + 20 * 9 + 8);
+    expect(leftMargin(wide)).toBe(4 + 20 * 9 + 20);
   });
 
   test("a name with markup is written as text", () => {
@@ -270,16 +272,16 @@ describe("review of round 1 the bar plot's cases the tests missed", () => {
   });
 
   test("a name exactly as long as its room is whole; in a narrow element a name keeps 4 characters, 3 about an ellipsis", () => {
-    // At 400 pixels the room is 16 characters.
-    const sixteen = "abcdefghijklmnop";
+    // At 400 pixels the room is 15 characters.
+    const sixteen = "abcdefghijklmno";
     const element = sizedElement();
     createBars(element, barsOf([{ name: sixteen, group: 0, value: 0.3 }]));
     expect(ticks(element, "y")).toEqual([sixteen]);
 
-    // At 100 pixels (0.4 × 100 − 12) / 9 is 3, below the least, 4.
+    // At 100 pixels (0.4 × 100 − 24) / 9 is 1, below the least, 4.
     const narrow = sizedElement(100, 136);
     createBars(narrow, barsOf([{ name: sixteen, group: 0, value: 0.3 }]));
-    expect(ticks(narrow, "y")).toEqual(["ab…p"]);
+    expect(ticks(narrow, "y")).toEqual(["ab…o"]);
   });
 });
 
@@ -288,27 +290,27 @@ describe("review of round 1: the names measured, not counted", () => {
     stopFakeMeasure();
   });
 
-  test("names of wide letters, measured at 11 pixels a W and 6 another: ten Ws whole at 1,000 pixels in a margin of 122; twenty cut at 400 pixels to the twelve Ws that fit 148 pixels with the ellipsis, in a margin of 150", () => {
+  test("names of wide letters, measured at 11 pixels a W and 6 another: ten Ws whole at 1,000 pixels in a margin of 134; twenty cut at 400 pixels to the eleven Ws that fit 136 pixels about the ellipsis, in a margin of 151", () => {
     measureWithFake();
     const wide = sizedElement(1000, 136);
     createBars(wide, barsOf([{ name: "W".repeat(10), group: 0, value: 0.3 }]));
     expect(ticks(wide, "y")).toEqual(["W".repeat(10)]);
-    expect(leftMargin(wide)).toBe(4 + 110 + 8);
+    expect(leftMargin(wide)).toBe(4 + 110 + 20);
 
     const narrow = sizedElement(400, 136);
     createBars(
       narrow,
       barsOf([{ name: "W".repeat(20), group: 0, value: 0.3 }]),
     );
-    const cut = `${"W".repeat(6)}…${"W".repeat(6)}`;
-    expect(fakeWidth(cut)).toBe(138);
+    const cut = `${"W".repeat(6)}…${"W".repeat(5)}`;
+    expect(fakeWidth(cut)).toBe(127);
     expect(ticks(narrow, "y")).toEqual([cut]);
-    expect(leftMargin(narrow)).toBe(4 + 138 + 8);
+    expect(leftMargin(narrow)).toBe(4 + 127 + 20);
   });
 });
 
 describe("review of round 1: names cut in the middle, and numbered when still alike", () => {
-  test("at 288 pixels, where 11 characters fit, Landrace_Valencia_coast and Landrace_Valencia_inland keep their first 5 and last 5 about an ellipsis, Landr…coast and Landr…nland", () => {
+  test("at 288 pixels, where 10 characters fit, Landrace_Valencia_coast and Landrace_Valencia_inland keep their first 5 and last 4 about an ellipsis, Landr…oast and Landr…land", () => {
     const element = sizedElement(288, 136);
     createBars(
       element,
@@ -317,7 +319,7 @@ describe("review of round 1: names cut in the middle, and numbered when still al
         { name: "Landrace_Valencia_inland", group: 1, value: 0.2 },
       ]),
     );
-    expect(ticks(element, "y")).toEqual(["Landr…coast", "Landr…nland"]);
+    expect(ticks(element, "y")).toEqual(["Landr…oast", "Landr…land"]);
   });
 
   test("two names alike once cut get their rows' numbers, 2 and 3, cut to the room left beside them; a third name, unlike, has none", () => {
@@ -330,9 +332,39 @@ describe("review of round 1: names cut in the middle, and numbered when still al
         { name: "Landrace_Mallorca_set_A_1", group: 2, value: 0.1 },
       ]),
     );
-    // 103.2 pixels less " (2)", 36, leave 67.2: 7 characters, 3 and 3
+    // 91.2 pixels less " (2)", 36, leave 55.2: 6 characters, 3 and 2
     // about the ellipsis.
-    expect(ticks(element, "y")).toEqual(["p0", "Lan…A_1 (2)", "Lan…A_1 (3)"]);
-    expect(leftMargin(element)).toBe(4 + 11 * 9 + 8);
+    expect(ticks(element, "y")).toEqual(["p0", "Lan…_1 (2)", "Lan…_1 (3)"]);
+    expect(leftMargin(element)).toBe(4 + 10 * 9 + 20);
+  });
+});
+
+describe("review of round 1: the mark of each name", () => {
+  test("each name has the mark of its group between it and the frame, the symbol of the line plot's series in its colour, its centre 10 pixels left of the frame on the middle of its row", () => {
+    const element = sizedElement();
+    createBars(element, barsOf(THREE));
+    const marks = [
+      ...element.querySelectorAll("g.chart-annotations path.chart-bars-mark"),
+    ];
+    expect(marks.map((mark) => mark.getAttribute("class"))).toEqual([
+      "chart-points chart-bars-mark chart-colour-0",
+      "chart-points chart-bars-mark chart-colour-2",
+      "chart-points chart-bars-mark chart-colour-1",
+    ]);
+    expect(marks.map((mark) => mark.getAttribute("d"))).toEqual([
+      symbolPath(0),
+      symbolPath(2),
+      symbolPath(1),
+    ]);
+    // Rows of 28 pixels from 0, their middles at 14, 42 and 70.
+    expect(marks.map((mark) => mark.getAttribute("transform"))).toEqual([
+      "translate(-10,14)",
+      "translate(-10,42)",
+      "translate(-10,70)",
+    ]);
+    // The names stand 20 pixels left of the frame, clear of the marks.
+    expect(
+      element.querySelector("g.chart-axis-y g.tick text")?.getAttribute("x"),
+    ).toBe("-20");
   });
 });

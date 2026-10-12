@@ -1,9 +1,10 @@
 /**
  * The bar plot of named values (docs/specs/charts/bars.md): one bar
  * across per name, in the order given, the first at the top, from 0 to
- * its value, in the colour of its group; the names down the left side
- * and the axis of the values along the bottom. A name with no value has
- * the words the data give in its row, and no bar. The Populations tab of
+ * its value, in the colour of its group; the names down the left side,
+ * each with the mark of its group, and the axis of the values along the
+ * bottom. A name with no value has the words the data give in its row,
+ * and no bar. The Populations tab of
  * popgen2.html draws one per column of the table of the diversity; the
  * plot knows nothing of populations. It is drawn on the base of the 2D
  * plots, plot2d.ts, and takes no pointer.
@@ -11,7 +12,12 @@
 
 import { scaleBand, scaleLinear } from "d3-scale";
 import { MAX_BARS } from "./limits.ts";
-import { groupColourClass, groupMark, isOutlined } from "./marks.ts";
+import {
+  groupColourClass,
+  groupMark,
+  isOutlined,
+  symbolPath,
+} from "./marks.ts";
 import type { ExportSize } from "./export.ts";
 import { createPlot2d } from "./plot2d.ts";
 import type { Frame, Margin, Plot2dDefinition, PlotText } from "./plot2d.ts";
@@ -31,7 +37,8 @@ export interface BarsData extends PlotText {
 export interface Bar {
   /** The name written beside the bar, as text. */
   readonly name: string;
-  /** Its group for the colour, a whole number from 0, as the scatter's. */
+  /** Its group for the colour and the mark, a whole number from 0, as
+      the scatter's. */
   readonly group: number;
   /** Its value, finite and 0 or above; NaN for none. */
   readonly value: number;
@@ -49,9 +56,17 @@ const ROW = 28;
 const PADDING_INNER = 0.25;
 /** Above the first bar and below the last, half the gap between two. */
 const PADDING_OUTER = PADDING_INNER / 2;
-/** Between a name and the frame, the base's own 8 pixels of an axis of
-    names. */
-const NAME_PADDING = 8;
+/** Between the frame and the mark of a name. */
+const MARK_GAP = 4;
+/** The width given the mark of a name, a symbol of SYMBOL_AREA, 64
+    square pixels, whose widest, the cross and the star, are about 12. */
+const MARK_WIDTH = 12;
+/** Between the mark of a name and the end of the name. */
+const MARK_TO_NAME = 4;
+/** Between a name and the frame: the mark and the room around it. */
+const NAME_PADDING = MARK_GAP + MARK_WIDTH + MARK_TO_NAME;
+/** The x of the centre of a mark, left of the frame. */
+const MARK_X = -(MARK_GAP + MARK_WIDTH / 2);
 /** Between the left edge of the SVG and the start of the longest name. */
 const NAME_EDGE = 4;
 /**
@@ -85,7 +100,7 @@ export function barsHeight(numBars: number): number {
 }
 
 /** The pixels a name may take in an element `width` pixels wide: 40%
-    of it, less the 12 pixels around the names. */
+    of it, less the 24 pixels around the names and their marks. */
 function nameRoom(width: number): number {
   return NAME_SHARE * width - NAME_EDGE - NAME_PADDING;
 }
@@ -124,7 +139,8 @@ function rowNames(data: BarsData, width: number): readonly string[] {
 }
 
 /** The margins for `data` in an element of `size`: at the left, the
-    longest name as written, measured, and 12 pixels around it. */
+    longest name as written, measured, 4 pixels before it and 20 after
+    it, for its mark. */
 function barsMargin(data: BarsData, size: ExportSize): Margin {
   let longest = 0;
   for (const name of rowNames(data, size.width)) {
@@ -242,6 +258,24 @@ function drawBars(frame: Frame, data: BarsData): void {
     frame.margin.left + frame.innerWidth + frame.margin.right,
   );
   const nameOf = new Map(rows.map(({ row }, place) => [row, names[place]]));
+  // The mark of each name, as the line plot draws its series: the
+  // symbol of its group in its colour, between the name and the frame.
+  frame.annotations
+    .selectAll<SVGPathElement, RowBar>("path.chart-bars-mark")
+    .data(rows, ({ row }) => row)
+    .join("path")
+    .attr(
+      "class",
+      ({ bar }) =>
+        `chart-points chart-bars-mark ${groupColourClass(bar.group)}`,
+    )
+    .attr("d", ({ bar }) => symbolPath(bar.group))
+    .attr(
+      "transform",
+      ({ row }) =>
+        `translate(${String(MARK_X)},${String(rowOf(y(row), row) + y.bandwidth() / 2)})`,
+    );
+
   frame.axes(x, y, {
     nameFormat: (row) => {
       const name = nameOf.get(row);
@@ -250,6 +284,7 @@ function drawBars(frame: Frame, data: BarsData): void {
       }
       return name;
     },
+    namePadding: NAME_PADDING,
   });
 }
 

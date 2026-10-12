@@ -387,10 +387,15 @@ of the panel"), with these differences:
   round of trying the tab: under the line of the draw, a section with
   the heading "Bar plots of the table" and the line "One bar per
   population, in the order of the table. Each population has the colour
-  of its line in the plot of the spectrum, so that it can be followed
-  from plot to plot. A population with no value in the table has the
-  words "no value" in place of its bar." (worded so after the first
-  reader, who asked why the colours and whether a missing bar was 0),
+  and the mark of its line in the plot of the spectrum, so that it can
+  be followed from plot to plot. A population with no value in the table
+  has the words "no value" in place of its bar." (worded so after the
+  first reader, who asked why the colours and whether a missing bar was
+  0; "and the mark" from 12 October 2026, the review of round 1, when
+  each name got its mark, since 7 colours alone repeat at the eighth
+  population); with one population, the line "One bar, of the one
+  population. Where the table has no value, the words "no value" stand
+  in place of the bar.", since there is nothing to follow,
   then five plots, one for
   each of these columns of the table, in this order: "Expected
   heterozygosity (unbiased)", "Observed heterozygosity", "Proportion of
@@ -403,7 +408,9 @@ of the panel"), with these differences:
     as the spectrum's plot has, with "Image as SVG", "Image as PNG" and
     "Data as CSV";
   - a bar across per population of the table, in its order, the first
-    at the top, its name at the left of its bar, cut in the middle when
+    at the top, its name at the left of its bar and, between the name
+    and the bar, the mark of its line in the plot of the spectrum, its
+    symbol in its colour, cut in the middle when
     it is longer than its room, and with its row's number in brackets
     when two names cut still read the same (`bars.md`, "The room of
     the names", from 12 October 2026, the review of round 1); the colour of the

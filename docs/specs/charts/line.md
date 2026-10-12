@@ -359,7 +359,7 @@ element stubbed at 600 by 375:
   margin of 60, a frame of 300 and the 226, `narrowHeight` 44 and
   `narrowWidth` 226; a series more makes the right margin no larger
   and `narrowHeight` 18 larger; with no series, a right margin of 28;
-- from the review of round 1, measured by a canvas of the test that
+- from the review of round 1, measured by a fake measure of the test that
   gives a W 11 pixels and any other character 6, a label of 25 Ws: a
   right margin of 321 at 1,000 pixels, 12, 24, 6, 275 and 4, and
   `narrowUnder` 681; at 320 pixels, above the plot, the label cut to 12

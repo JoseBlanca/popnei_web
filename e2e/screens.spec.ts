@@ -6157,6 +6157,64 @@ for (const theme of ["light", "dark"] as const) {
         });
       }
 
+      test("the Populations tab done with ten populations of panel.nei, twenty individuals each, of long names and names alike in their starts: the bar plots, each name with the mark of its line in the plot of the spectrum", async ({
+        page,
+      }) => {
+        const names = [
+          "Landrace_Valencia_coast",
+          "Landrace_Valencia_inland",
+          "WILD_ANCESTOR_ECUADOR",
+          "Cultivar Group Alpha",
+          "Heirloom_Peru",
+          "short",
+          "Pop7",
+          "Breeding_line_10",
+          "Accessions_Galapagos",
+          "Pop10",
+        ];
+        const [header, ...rows] = (
+          await readFile(join(FIXTURES, "panel_pops.csv"), "utf8")
+        )
+          .trimEnd()
+          .split("\n");
+        await pickOnNewPage(page, "panel.nei");
+        await pickIndividualsOnNewPage(page, {
+          name: "panel_ten.csv",
+          text: `${[
+            header,
+            ...rows.map(
+              (line, index) =>
+                `${line.split(",")[0] ?? ""},${names[Math.floor(index / 20)] ?? ""}`,
+            ),
+          ].join("\n")}\n`,
+        });
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "Populations", exact: true })
+          .click();
+        const panel = page.getByRole("tabpanel");
+        const minimum = panel.getByRole("textbox", {
+          name: /^Individuals with a called genotype needed in each population, per variant/u,
+        });
+        await expect(minimum).toBeVisible({ timeout: 20_000 });
+        await minimum.fill("16");
+        await minimum.press("Enter");
+        const run = panel.getByRole("button", { name: "Run", exact: true });
+        await expect(run).toBeEnabled({ timeout: 20_000 });
+        await run.click();
+        await expect(panel.locator("svg.chart-bars")).toHaveCount(5, {
+          timeout: 20_000,
+        });
+        await expect(
+          panel
+            .locator("svg.chart-bars")
+            .first()
+            .locator("path.chart-bars-mark"),
+        ).toHaveCount(10);
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-populations-ten-done${at}-${theme}`);
+      });
+
       test("the Populations tab locked while the one pass reads panel.nei: Run disabled with its words", async ({
         page,
       }) => {

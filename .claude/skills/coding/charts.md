@@ -335,12 +335,16 @@ of each kind of plot are a named constant in its file. They are fixed,
 not measured from the labels, while the labels fit. Where a text of the
 user's file sets a margin, the names of the bar plot and the labels of
 the legend of the line plot, it is measured with `textWidth` of
-`src/charts/textWidth.ts`, on a canvas in the font of the plots, which
-needs no layout and so measures in a hidden tab too; under jsdom, which
-has no canvas, it counts a width per character, so the unit tests keep
-their numbers, and `src/charts/testSupport.ts` gives them a fake canvas
-to test the measure (from 12 October 2026: counted, names of capital Ws
-passed the edge of the SVG).
+`src/charts/textWidth.ts`, by `getComputedTextLength` of a text in a
+hidden SVG of its own at the top of the body, in the font of the plots,
+so that it measures while the plot's tab is hidden; under jsdom, which
+lays nothing out, it counts a width per character, so the unit tests
+keep their numbers, and `src/charts/testSupport.ts` gives them a fake
+measure to test it. The base measures the numbers of the vertical axis
+the same way, so that its label keeps 6 pixels from them (from 12
+October 2026: counted, names of capital Ws passed the edge of the SVG).
+A web font, should the plots get one, has to be loaded before a plot is
+drawn.
 
 ## Accessibility
 
