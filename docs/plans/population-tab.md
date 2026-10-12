@@ -843,7 +843,16 @@ fail). The owner chose on 12 October 2026: (a), on a narrow screen the
 band shows in that case "Stop all" alone, without the diversity's
 "Stop recalculating", which the Populations tab always offers.
 
-Left: (a) built, spec first; the review of package 4 (`api`, `react`,
+Choice (a) built in fc4770cf (the spec) and 590caf53: under 30 rem,
+when Stop all is shown, an analysis about to start loses its "Stop
+recalculating" in the band, hidden from the screen, the Tab order and
+a screen reader; a Stop of an analysis that runs stays. The line now
+uses 238 px of 288 in Chromium and WebKit; its flow passes in both.
+Checks at 590caf53: typecheck, lint, format clean; Vitest 173 files,
+5,434 tests; Chromium and WebKit, `popgen2BandLive`, `popgen2Band`,
+`popgen2Populations`, `popgen2Live`, 128; the screens of the band, 56.
+
+Left: the review of package 4 (`api`, `react`,
 `accessibility`, `ux`, `browser` at 320 px, `bundle`, and the four that
 always run); package 5, the documents, with what the fix lists left
 for it; package 6; package 7, the owner's try.
