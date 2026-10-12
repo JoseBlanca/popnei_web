@@ -100,3 +100,46 @@ distances.
 Each phase adds its entry here: its commits, the counts of its checks,
 its review with the findings not taken, and the decisions made along
 the way.
+
+### Phase 1, 12 October 2026
+
+Built in c6ea1622 to 125ba06d (the specs first, among them the new screen
+spec `docs/specs/steps/popgen2-distances.md`; `popDistsOnPopgen2`; the
+distances the fourth live analysis, named in the plural; the tab, its
+code loaded apart; flows; screens of 14 states). The builder's choices,
+in the spec: "the distances" in the plural (`LiveAnalysisName` gains
+`plural`); the measure's radios not greyed while they run, since the
+measure is out of the key; the heatmap's CSV the square matrix; the
+table's CSV with "First population" and "Second population". Checks at
+125ba06d: typecheck, lint, format clean; Vitest 182 files, 5,544 tests;
+Chromium and WebKit, `popgen2Distances` and `popgen2Tabs` 44,
+`popgen2Live`, `popgen2BandLive` and `popgen2Band` 96; screens 56.
+
+The review, all eleven categories, 12 October 2026. The spec reviewer
+recomputed every distance and the heatmap's order with popnei under node
+(p0 and p2: Hudson's Fst 0.1027, Jost's D 0.0613, 1,200 variants; the
+negative pair of panel_split.csv, −0.0113); none differs. The errors,
+browser and bundle reviewers found nothing to fix (80 states measured in
+both engines; the first load of `popgen2.html` 0.94 KB more, the tab's
+code 9.08 KB at its first show after another tab's). 24 findings held,
+in the session's `scratchpad/fix-dist.md`. The ones a user would meet:
+"The PCA starts once the distances, which is running, ends"; a change of
+the measure, which calculates nothing, restarted the quiet second and
+lifted the hold after a crash, as did a change of a threshold switched
+off (the live analyses now react to a change of what they are calculated
+from); at 320 px the heatmap wrote no values in its cells with nothing
+saying where they are; a negative distance painted the legend's 0 with
+no word; once drawn, the result no longer said each population's
+individuals; nothing helped choose between Hudson's Fst and Jost's D;
+the minimum had three names. And tests that could not fail: the
+populations dropped from the key would have left old distances on
+screen after a file of the same name and column.
+
+Found for the merge with `ld-decay-tab` (the session's
+`scratchpad/merge-notes.md`): the helper of no population kept moves to
+`src/core/populations.ts`, as the other branch does; the order of
+calculation becomes PCA, diversity, distances, LD decay, so that the
+distances never wait for a long LD decay; the tab's loader and the lines
+of a live analysis, written two and three times across both branches,
+are shared after the merge.
+
