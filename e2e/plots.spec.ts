@@ -2395,3 +2395,70 @@ for (const kind of ["ld", "capitals"] as const) {
     ).toBeGreaterThanOrEqual(300);
   });
 }
+
+/** The fonts the exported SVG names, FONT_STACK of src/charts/export.ts. */
+const EXPORT_FONTS = 'system-ui, "Helvetica", "Arial", sans-serif';
+
+test("second review of round 1: a name is measured at the larger of its width in the page's font and its width in the exported file's fonts by a canvas, as the PNG draws it, with nothing more, and a name of 20 characters in a room of exactly that width is not cut", async ({
+  page,
+}) => {
+  await openPlots(page);
+  const names = [
+    "M".repeat(20),
+    "W".repeat(20),
+    "Landrace_Valencia_co",
+    "short",
+  ];
+  const found = await page.evaluate(
+    ([all, exportFonts]) => {
+      const plots = window.plotsPage;
+      if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+      /** The width of `text` at 12 pixels in the page's font, measured
+          apart from the page's own measure. */
+      const onPage = (text: string): number => {
+        const svg = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "svg",
+        );
+        svg.setAttribute(
+          "style",
+          "position: fixed; font-family: var(--font-body)",
+        );
+        const written = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "text",
+        );
+        written.setAttribute("font-size", "12");
+        written.textContent = text;
+        svg.append(written);
+        document.body.append(svg);
+        const width = written.getComputedTextLength();
+        svg.remove();
+        return width;
+      };
+      const canvas = document.createElement("canvas").getContext("2d");
+      if (canvas === null) throw new Error("No 2D context.");
+      canvas.font = `12px ${exportFonts}`;
+      return all.map((name) => {
+        const larger = Math.max(onPage(name), canvas.measureText(name).width);
+        const measured = plots.measuredWidth(name, 12);
+        return {
+          name,
+          expected: Math.round(larger * 100) / 100,
+          measured,
+          cut: plots.cutText(name, measured ?? 0, {
+            fontSize: 12,
+            perCharacter: 9,
+            most: 20,
+            least: 4,
+          }),
+        };
+      });
+    },
+    [names, EXPORT_FONTS] as const,
+  );
+  for (const { name, expected, measured, cut } of found) {
+    expect(measured, name).toBe(expected);
+    expect(cut).toBe(name);
+  }
+});

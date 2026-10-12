@@ -5,9 +5,15 @@
  * names", and line.md, "The room of the legend", from the review of
  * round 1, 12 October 2026). The text is written in an SVG of its own,
  * in the font of the plots, `--font-body`, as charts.css gives a plot,
- * at the size given, with no class, so that no selector of a plot finds it,
- * hidden at the top of the body, where it is laid out even while the
- * plot's tab is hidden, and measured by `getComputedTextLength`. Where
+ * at the size given, with no class, so that no selector of a plot finds
+ * it, hidden at the top of the body, where it is laid out even while the
+ * plot's tab is hidden, and measured by `getComputedTextLength`; it is
+ * measured again in the fonts the exported file names, FONT_STACK, by a
+ * canvas, and the larger width is its width, so that it fits the screen
+ * and the PNG, which WebKit draws 3.4 to 7.2% wider than its screen (the
+ * second review of round 1, 12 October 2026, in place of a tenth more
+ * for every text, which cut the names in Chromium, whose screen and PNG
+ * measure alike, a tenth too soon). Where
  * nothing measures, under jsdom, which lays nothing out, the width is
  * counted, the characters times the width the caller gives each, as
  * every plot counted before. A web font, should the plots get one, is
@@ -21,18 +27,19 @@ export const ELLIPSIS = "…";
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
 /**
- * What a measured width is taken times: WebKit draws an exported SVG,
- * the PNG, in a wider font than the page's, and a name that fit the
- * screen started 10 pixels or so left of the image, "MMMMMM…MMMMM"; a
- * tenth more holds it (the review of round 1, 12 October 2026).
+ * The fonts the exported SVG names while the applications use the fonts
+ * of the system: a generic stack, and no font embedded (charts.md,
+ * "Fonts").
  */
-const MEASURE_SLACK = 1.1;
+export const FONT_STACK = 'system-ui, "Helvetica", "Arial", sans-serif';
 
-/** The text that measures, in its SVG in the body; null before the
-    first measure, and made again when a page or a test emptied the body. */
+/** The text that measures in the page's font, in its SVG in the body;
+    null before the first measure, and made again when a page or a test
+    emptied the body. */
 let measuring: SVGTextElement | null = null;
 
-/** The text that measures; null where nothing measures. */
+/** The text that measures in the page's font; null where nothing
+    measures. */
 function measuringText(): SVGTextElement | null {
   if (!("document" in globalThis)) return null;
   if (measuring?.isConnected !== true) {
@@ -53,10 +60,32 @@ function measuringText(): SVGTextElement | null {
     : null;
 }
 
+/** What measures in the export's fonts, the 2D context of a canvas that
+    is in no page; undefined before the first measure, null where the
+    browser gives none. */
+let exportMeasure: CanvasRenderingContext2D | null | undefined;
+
 /**
- * The width in CSS pixels of `text` at `fontSize` pixels in the font of
- * the plots, measured; where nothing measures, its characters times
- * `perCharacter`.
+ * The width of `text` at `fontSize` pixels in the export's fonts, as the
+ * browser draws the exported file into the PNG; null where nothing
+ * measures it. It is measured by the canvas and not by an SVG text of
+ * the page: WebKit lays the page's SVG text out narrower, 202 pixels for
+ * twenty Ms at 12 pixels in the system font of the Mac, than it draws the
+ * file as an image, 209, and so does its canvas, 209.8, as Chromium's
+ * canvas, its page and its image do (the second review of round 1, 12
+ * October 2026).
+ */
+function exportWidth(text: string, fontSize: number): number | null {
+  exportMeasure ??= document.createElement("canvas").getContext("2d");
+  if (exportMeasure === null) return null;
+  exportMeasure.font = `${String(fontSize)}px ${FONT_STACK}`;
+  return exportMeasure.measureText(text).width;
+}
+
+/**
+ * The width in CSS pixels of `text` at `fontSize` pixels, the larger of
+ * its widths in the font of the plots and in the export's, measured;
+ * where nothing measures, its characters times `perCharacter`.
  */
 export function textWidth(
   text: string,
@@ -69,20 +98,23 @@ export function textWidth(
 }
 
 /**
- * The width in CSS pixels of `text` at `fontSize` pixels in the font of
- * the plots, measured; null where nothing measures, for a layout that is
- * only corrected where the text is measured.
+ * The width in CSS pixels of `text` at `fontSize` pixels, the larger of
+ * its widths in the font of the plots and in the export's, measured;
+ * null where nothing measures, for a layout that is only corrected where
+ * the text is measured.
  */
 export function measuredWidth(text: string, fontSize: number): number | null {
   const measure = measuringText();
   if (measure === null) return null;
   measure.setAttribute("font-size", String(fontSize));
   measure.textContent = text;
+  const width = Math.max(
+    measure.getComputedTextLength(),
+    exportWidth(text, fontSize) ?? 0,
+  );
   // To a hundredth of a pixel, so that a sum of widths is the same in
   // every engine and a test can give it exactly.
-  return (
-    Math.round(measure.getComputedTextLength() * MEASURE_SLACK * 100) / 100
-  );
+  return Math.round(width * 100) / 100;
 }
 
 /** How a text is cut to a width. */

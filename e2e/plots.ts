@@ -38,6 +38,7 @@ import {
   scatterScales,
 } from "../src/charts/scatter.ts";
 import type { ScatterData } from "../src/charts/scatter.ts";
+import { cutText, measuredWidth } from "../src/charts/textWidth.ts";
 import type { ChartHandle } from "../src/charts/types.ts";
 import type {
   HeatmapKind,
@@ -1075,6 +1076,8 @@ const page: PlotsPage = {
   handle: () => last().handle,
   pca3d: () => lastPca3d().handle,
   pngErrorKind: (error) => (error instanceof PngError ? error.kind : null),
+  measuredWidth,
+  cutText,
 };
 
 window.plotsPage = page;

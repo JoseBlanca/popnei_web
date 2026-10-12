@@ -336,8 +336,13 @@ not measured from the labels, while the labels fit. Where a text of the
 user's file sets a margin, the names of the bar plot and the labels of
 the legend of the line plot, it is measured with `textWidth` of
 `src/charts/textWidth.ts`, by `getComputedTextLength` of a text in a
-hidden SVG of its own at the top of the body, in the font of the plots,
-so that it measures while the plot's tab is hidden; under jsdom, which
+hidden SVG of its own at the top of the body, so that it measures while
+the plot's tab is hidden, in the font of the plots, and again by
+`measureText` of a canvas in the fonts the exported file names, and the
+larger width is taken, since WebKit draws the PNG 3.4 to 7.2% wider
+than the page's SVG text, as its canvas measures it (from 12 October 2026, the second review of round 1, in place of a
+tenth more for every text, which cut the names in Chromium, whose
+screen and PNG measure alike, a tenth too soon); under jsdom, which
 lays nothing out, it counts a width per character, so the unit tests
 keep their numbers, and `src/charts/testSupport.ts` gives them a fake
 measure to test it. The base measures the numbers of the vertical axis

@@ -102,7 +102,9 @@ SVG to be reached by the keyboard, and this legend has no control.
 **The room of the legend** holds its labels measured, in the font of
 the plots at the 12 pixels of the text of a legend, by `textWidth` of
 `src/charts/textWidth.ts`, the measure of the bar plot's names
-(`bars.md`, "The room of the names"), and a tenth wider, as there; where nothing measures, under
+(`bars.md`, "The room of the names"), the larger of its widths in the
+page's font and in the exported file's, as there (from 12 October 2026,
+the second review of round 1, in place of a tenth wider); where nothing measures, under
 jsdom, a character counts 7.5 pixels, which held the labels of two
 populations named in 16 capitals, "MESOAMERICA_WILD", in the system
 font of macOS and in DejaVu Sans, the font of the Linux of the checks.
@@ -360,8 +362,8 @@ element stubbed at 600 by 375:
   `narrowWidth` 226; a series more makes the right margin no larger
   and `narrowHeight` 18 larger; with no series, a right margin of 28;
 - from the review of round 1, measured by a fake measure of the test that
-  gives a W 11 pixels and any other character 5.5, the tenth more
-  included, a label of 25 Ws: a
+  gives a W 11 pixels and any other character 5.5 at 12 pixels, in
+  both fonts, a label of 25 Ws: a
   right margin of 321 at 1,000 pixels, 12, 24, 6, 275 and 4, and
   `narrowUnder` 681; at 320 pixels, above the plot, the label cut to 12
   Ws, the ellipsis and 12 Ws, the 269.5 pixels that fit 274;

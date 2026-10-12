@@ -2259,3 +2259,72 @@ test.describe("review of round 1: long names of populations", () => {
     expect((await plot.boundingBox())?.width).toBe(288);
   });
 });
+
+/** Of the PNG at `file`, the pixels of its 2 leftmost and 2 rightmost
+    columns that are not the colour of its top-left corner, the
+    background: a name or a label that passes an edge of the image. */
+async function inkAtEdges(page: Page, file: string): Promise<string[]> {
+  const base64 = (await readFile(file)).toString("base64");
+  return page.evaluate(async (data) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${data}`;
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d");
+    if (context === null) throw new Error("No 2D context.");
+    context.drawImage(image, 0, 0);
+    const pixels = context.getImageData(0, 0, image.width, image.height).data;
+    const colourAt = (x: number, y: number): string =>
+      [
+        ...pixels.subarray(
+          (y * image.width + x) * 4,
+          (y * image.width + x) * 4 + 4,
+        ),
+      ].join(",");
+    const background = colourAt(0, 0);
+    const found: string[] = [];
+    for (const x of [0, 1, image.width - 2, image.width - 1]) {
+      for (let y = 0; y < image.height; y += 1) {
+        if (colourAt(x, y) !== background) {
+          found.push(
+            `(${String(x)}, ${String(y)}) of ${String(image.width)} by ${String(image.height)}`,
+          );
+        }
+      }
+    }
+    return found;
+  }, base64);
+}
+
+test.describe("second review of round 1: the names and the legend inside the PNG", () => {
+  for (const width of [1280, 320] as const) {
+    test(`twenty populations of long and wide names at ${String(width)} px: the PNG of a bar plot and of the plot of the spectrum have nothing but the background in their 2 leftmost and 2 rightmost columns`, async ({
+      page,
+    }) => {
+      test.setTimeout(180_000);
+      await page.setViewportSize({ width, height: 900 });
+      await runTwenty(page);
+      const buttons = shown(page).getByRole("button", {
+        name: /^Download the (bar plot of|plot of the spectrum)/u,
+      });
+      const names = await buttons.evaluateAll((all) =>
+        all.map((one) => one.getAttribute("aria-label") ?? ""),
+      );
+      const picked = [
+        names.findIndex((name) => name.startsWith("Download the bar plot of")),
+        names.indexOf("Download the plot of the spectrum"),
+      ];
+      expect(picked).not.toContain(-1);
+      for (const index of picked) {
+        await buttons.nth(index).scrollIntoViewIfNeeded();
+        await buttons.nth(index).click();
+        const download = page.waitForEvent("download");
+        await page.getByRole("menuitem", { name: "Image as PNG" }).click();
+        const file = await (await download).path();
+        expect(await inkAtEdges(page, file), names[index]).toEqual([]);
+      }
+    });
+  }
+});

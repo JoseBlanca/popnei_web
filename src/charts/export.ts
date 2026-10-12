@@ -10,6 +10,7 @@
  */
 
 import { MAX_CANVAS_SIDE } from "./limits.ts";
+import { FONT_STACK } from "./textWidth.ts";
 import type { PngScale } from "./types.ts";
 
 /** The size of a plot at its last draw, in CSS pixels. */
@@ -68,13 +69,6 @@ const INLINED_PROPERTIES = [
   "text-anchor",
   "dominant-baseline",
 ] as const;
-
-/**
- * The fonts the exported SVG names while the applications use the fonts
- * of the system: a generic stack, and no font embedded (charts.md,
- * "Fonts").
- */
-const FONT_STACK = 'system-ui, "Helvetica", "Arial", sans-serif';
 
 /** The class of the rectangle of the background, the first thing drawn. */
 const BACKGROUND_CLASS = "chart-background";

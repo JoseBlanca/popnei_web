@@ -80,13 +80,18 @@ and nothing told the two bars apart but the order of the table.) A name is measu
 pixels, by `textWidth` of `src/charts/textWidth.ts`; where
 nothing measures, under jsdom, a character counts 9 pixels, as the
 heatmap counts its names (`docs/specs/charts/heatmap.md`, "The names on
-the axes"). A width measured is taken a tenth wider, to a hundredth of
-a pixel: WebKit draws the exported image, the PNG, in a wider font than
-the page's, and a name that fit the screen started about 10 pixels left
-of the image. (Changed on 12 October 2026, the review of round 1: the names
+the axes"). A name is measured twice, as the screen draws it and, by a
+canvas, in the fonts the exported file names, `system-ui, "Helvetica",
+"Arial", sans-serif`, as the browser draws the file into the PNG, and
+its width is the larger, to a hundredth of a pixel: WebKit draws the
+PNG 3.4 to 7.2% wider than its screen, and a name that fit the screen
+started left of the image. (Changed on 12 October 2026, the review of round 1: the names
 were counted at 9 pixels a character, and a name of capital Ws, 11
 pixels each in the system font of the Mac, started 13.5 pixels left of
-the SVG and was cut on the screen and in the files.)
+the SVG and was cut on the screen and in the files. Changed again on 12
+October 2026, the second review of round 1: a width measured was taken
+a tenth wider for the PNG of WebKit, which cut every name in Chromium,
+whose screen and PNG measure alike, a tenth too soon.)
 
 ### The height
 
@@ -207,7 +212,7 @@ element stubbed at 400 by 136:
   rows 2 and 3, alike once cut, written "Lan…_1 (2)" and "Lan…_1 (3)",
   and "p0" in row 1 whole, in a left margin of 114;
 - measured by a fake measure of the test that gives a W 11 pixels and
-  any other character 5.5, the tenth more included: ten Ws whole at 1,000 pixels, in a left margin
+  any other character 5.5 at 12 pixels, in both fonts: ten Ws whole at 1,000 pixels, in a left margin
   of 134; twenty Ws at 400 pixels cut to six, the ellipsis and five,
   the 126.5 pixels that fit 136, in a margin of 151;
 - the marks: three names of groups 0, 2 and 1, three

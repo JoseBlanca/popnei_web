@@ -12,6 +12,7 @@ import type { HistogramData } from "../src/charts/histogram.ts";
 import type { LineData } from "../src/charts/line.ts";
 import type { Pca3dData, Pca3dHandle, ViewName } from "../src/charts/pca3d.ts";
 import type { ScatterData } from "../src/charts/scatter.ts";
+import type { CutOptions } from "../src/charts/textWidth.ts";
 import type { ChartHandle } from "../src/charts/types.ts";
 
 /** A point of the page, in CSS pixels from the corner of the viewport. */
@@ -202,6 +203,10 @@ export interface PlotsPage {
   pca3d(): Pca3dHandle;
   /** The `kind` of `error` when it is a PngError, and null when it is not. */
   pngErrorKind(error: unknown): PngErrorKind | null;
+  /** `measuredWidth` of src/charts/textWidth.ts, as the plots measure. */
+  measuredWidth(text: string, fontSize: number): number | null;
+  /** `cutText` of src/charts/textWidth.ts, as the plots cut a text. */
+  cutText(text: string, room: number, options: CutOptions): string;
 }
 
 declare global {
