@@ -396,7 +396,7 @@ describe("PT1 D1 the spectrum on popgen2.html", () => {
 });
 
 describe("PT7 R1.2 the lines of the spectrum on popgen2.html: spectrumLinesOf and spectrumLinesCsv", () => {
-  test("the worked example: one line, of p0, its frequencies 0.75 and 0.5 and its proportions 0.5 and 0.5, its shares over its 4 variants with both alleles; p1, every variant with one allele, no line", () => {
+  test("the worked example: one line, of p0, its frequencies 0.75 and 0.5 and its proportions 0.5 and 0.5, the table's, over its 4 variants with both alleles; p1, every variant with one allele, no line", () => {
     const lines = spectrumLinesOf(workedExample());
     expect(lines.numCalledAlleles).toBe(4);
     expect(lines.lines).toHaveLength(1);
@@ -407,6 +407,14 @@ describe("PT7 R1.2 the lines of the spectrum on popgen2.html: spectrumLinesOf an
     expect([...(p0?.proportion ?? [])]).toEqual([0.5, 0.5]);
     expect([...(p0?.variants ?? [])]).toEqual([2, 2]);
     expect(lines.largestProportion).toBe(0.5);
+  });
+
+  test("review of round 1: a line's proportions are the spectra's own array, and its largest the spectra's", () => {
+    const r = workedExample();
+    const lines = spectrumLinesOf(r);
+    const spectra = spectraOf(r);
+    expect(lines.lines[0]?.proportion).toBe(spectra.pops[0]?.proportions);
+    expect(lines.largestProportion).toBe(spectra.largestProportion);
   });
 
   test("a population not calculated has no line, and the next keeps its place in the result as its index", () => {

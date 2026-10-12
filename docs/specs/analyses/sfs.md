@@ -685,7 +685,7 @@ export interface SpectrumLine {
   readonly index: number;
   /** The frequency of the commonest allele of each point, (n − j) / n, j from 1 to n / 2. */
   readonly frequency: Float64Array;
-  /** Bin j over the sum of bins 1 to n / 2 of the population, the table's proportion, in the same order. */
+  /** Bin j over the sum of bins 1 to n / 2 of the population, the table's proportion, in the same order: the array of `spectraOf`, shared. */
   readonly proportion: Float64Array;
   /** popnei's expected number of variants of each point, bin j. */
   readonly variants: Float64Array;
@@ -696,7 +696,7 @@ export interface SpectrumLines {
   /** The populations with a line, in the order of the result: calculated, with variants in
       the draw, and with some variant that shows both alleles in it. */
   readonly lines: readonly SpectrumLine[];
-  /** The largest proportion of any line; 0 when there is none. */
+  /** The largest proportion of any line, the spectra's `largestProportion`; 0 when there is none. */
   readonly largestProportion: number;
 }
 

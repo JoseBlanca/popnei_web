@@ -180,7 +180,9 @@ export interface SpectrumLine {
       for j copies of the rarer allele from 1 to floor(n / 2). */
   readonly frequency: Float64Array;
   /** Bin j over the sum of bins 1 to floor(n / 2) of the population,
-      its proportion, at each point. */
+      its proportion, at each point: the same array as the population's
+      `proportions` of `spectraOf`, shared and not copied, which nothing
+      writes into (Object.freeze does not freeze a typed array). */
   readonly proportion: Float64Array;
   /** popnei's expected number of variants at each point, bin j. */
   readonly variants: Float64Array;
@@ -192,7 +194,8 @@ export interface SpectrumLines {
   readonly numCalledAlleles: number;
   /** The populations with a line, in the order of the result. */
   readonly lines: readonly SpectrumLine[];
-  /** The largest proportion of any line; 0 when there is none. */
+  /** The largest proportion of any line, that of `spectraOf`; 0 when
+      there is none. */
   readonly largestProportion: number;
 }
 
@@ -205,8 +208,9 @@ const LINES = new WeakMap<DiversityResult, SpectrumLines>();
  * draw, those `spectraOf` gives proportions, in the order of the result; the
  * points from one copy of the rarer allele to floor(n / 2), each bin over
  * the sum of bins 1 to floor(n / 2), the population's variants with both
- * alleles in the draw: its proportions, as the table gives them. The same object for the same
- * result. Throws the defects of `spectraOf`.
+ * alleles in the draw: its proportions, as the table gives them, the
+ * same arrays as `spectraOf`'s; the largest of them, `spectraOf`'s. The
+ * same object for the same result. Throws the defects of `spectraOf`.
  */
 export function spectrumLinesOf(r: DiversityResult): SpectrumLines {
   const kept = LINES.get(r);
@@ -215,15 +219,12 @@ export function spectrumLinesOf(r: DiversityResult): SpectrumLines {
   }
   const n = r.numCalledAlleles;
   const lines: SpectrumLine[] = [];
-  let largestProportion = 0;
-  for (const [index, pop] of spectraOf(r).pops.entries()) {
+  const spectra = spectraOf(r);
+  for (const [index, pop] of spectra.pops.entries()) {
     if (!pop.calculated || pop.proportions === null) continue;
     const variants = pop.expected.slice(1);
     // The table's proportions, so that the plot and the table agree.
     const proportion = pop.proportions;
-    for (const value of proportion) {
-      largestProportion = Math.max(largestProportion, value);
-    }
     lines.push(
       Object.freeze({
         population: pop.population,
@@ -240,7 +241,9 @@ export function spectrumLinesOf(r: DiversityResult): SpectrumLines {
   const answer = Object.freeze({
     numCalledAlleles: n,
     lines: Object.freeze(lines),
-    largestProportion,
+    // Every population with proportions has a line, so the largest of
+    // the lines is the largest of the spectra.
+    largestProportion: spectra.largestProportion,
   });
   LINES.set(r, answer);
   return answer;
