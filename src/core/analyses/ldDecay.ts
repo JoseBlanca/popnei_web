@@ -54,6 +54,7 @@ import type { Result } from "../result.ts";
 import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
 import { fileRefusalText } from "./fileRefusals.ts";
 import {
+  isMemoryRefusal,
   CHANGE_SETTINGS,
   csvField,
   csvNumber,
@@ -218,22 +219,10 @@ const NO_DISTANCE_RUN = "Type the largest distance, above.";
     legend, beside the plot, leaves the plot its room. */
 export const LD_LEGEND_NAME_LENGTH = 16;
 
-/** The start of popnei's refusal for the memory of the counts or of the
-    variants within the largest distance. */
-const NO_MEMORY = "this machine has not the memory for";
-
 /** The words of that refusal, with how fewer individuals are kept on
     the page. */
 function noMemoryText(fewerIndividuals: string): string {
   return `The LD decay needed more memory than the browser tab could give. Type a smaller largest distance, keep fewer individuals ${fewerIndividuals}, or calculate it with popnei in Python, outside the browser.`;
-}
-
-/** Whether popnei's refusal `message` is for lack of memory, of the
-    counts or of the variants within the largest distance: after it a run
-    at the same settings would take as long and be refused again, so on
-    popgen2.html it ends the live state of the LD decay. */
-export function isMemoryRefusal(message: string): boolean {
-  return message.startsWith(NO_MEMORY);
 }
 
 /** The options of the project for the LD decay, or `LD_DECAY_DEFAULTS`.

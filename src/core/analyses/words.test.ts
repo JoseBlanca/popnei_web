@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  isMemoryRefusal,
   csvField,
   csvNumber,
   fourDecimals,
@@ -323,5 +324,22 @@ describe("the Python call that opens the variants file", () => {
         readOptions: { ploidy: null, onlyPassed: true },
       }),
     ).toBe('popnei.open_vcf("tetraploid.vcf.gz", only_passed=True)');
+  });
+});
+
+describe("isMemoryRefusal, popnei's refusal for memory (the review of the LD decay, 12 October 2026)", () => {
+  test("popnei's Error::Memory, as its message is written, and no other refusal, not one that names the memory", () => {
+    expect(
+      isMemoryRefusal(
+        "this machine has not the memory for the pairs counted at every distance, 250000000 values of 16 bytes",
+      ),
+    ).toBe(true);
+    expect(isMemoryRefusal("`numBins` is 0.")).toBe(false);
+    expect(isMemoryRefusal("the memory of the tab ran out.")).toBe(false);
+    expect(
+      isMemoryRefusal(
+        "a block needs more memory than this machine has not the memory for",
+      ),
+    ).toBe(false);
   });
 });

@@ -14,7 +14,6 @@ import {
   ldDecayRows,
   ldHalfMark,
   crashText,
-  isMemoryRefusal,
   ldDecayOnPopgen2,
   ldDecayPageOf,
   ldDecayPointsCsv,
@@ -2030,8 +2029,6 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
   test("the words of a refusal for memory, of a crash and of the filters keeping no variant, in the words of the page; the old page's unchanged", () => {
     const memory =
       "this machine has not the memory for the pairs counted at every distance, 250000000 values of 16 bytes";
-    expect(isMemoryRefusal(memory)).toBe(true);
-    expect(isMemoryRefusal("`numBins` is 0.")).toBe(false);
     expect(refusalText(memory, page2(), "popgen2", true)).toBe(
       "The LD decay needed more memory than the browser tab could give. Type a smaller largest distance, keep fewer individuals with the thresholds of the individuals in the Variants tab, or calculate it with popnei in Python, outside the browser.",
     );

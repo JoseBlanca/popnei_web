@@ -53,6 +53,22 @@ const OTHER_PLOIDY =
     short. */
 export const BGZIP_REFUSAL = "the VCF was written by bgzip";
 
+/** The start of popnei's refusal for memory, `Error::Memory`: "this
+    machine has not the memory for {what}, {values} values of {bytes}
+    bytes" (popnei's crates/popnei/src/error.rs). */
+const NO_MEMORY = "this machine has not the memory for";
+
+/** Whether popnei's refusal `message` is its refusal for lack of memory,
+    `Error::Memory`, which the LD decay raises for its counts or the
+    variants within its largest distance and the distances between
+    populations can raise too: after it a run at the same settings would
+    take as long and be refused again, so on popgen2.html it ends the
+    live state of the LD decay. Another refusal that names the memory is
+    not it. */
+export function isMemoryRefusal(message: string): boolean {
+  return message.startsWith(NO_MEMORY);
+}
+
 /** Whether popnei's refusal `message` is of a line of the VCF it cannot
     read, or of a gzipped VCF damaged or cut short that bgzip wrote: a
     fault of the file, which the words of a refusal say to correct or

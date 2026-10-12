@@ -10,7 +10,7 @@
  * live. Pure, so that a test in node checks it; the page gives it to
  * `createAutoRuns` through `popgen2EndsLive` of popgen2Store.ts.
  */
-import { isMemoryRefusal } from "../../../core/analyses/ldDecay.ts";
+import { isMemoryRefusal } from "../../../core/analyses/words.ts";
 import type { AnalysisId } from "../../../core/project.ts";
 import type { AppState } from "../../../core/store.ts";
 import { diversityFailureEndsLive } from "../diversity/liveEnd.ts";
