@@ -18,6 +18,7 @@
  * 7416.431965140492, 401 variants and 25,293 pairs; the one population
  * of the 100, 7150.803607577506.
  */
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -127,15 +128,31 @@ async function pick(page: Page, name: string): Promise<void> {
   await (await chooser).setFiles(join(FIXTURES, name));
 }
 
-/** Opens the individuals file `name`, a fixture, with the button of its
-    box. */
-async function pickIndividuals(page: Page, name: string): Promise<void> {
+/** An individuals file made by the flow: its name and its text. */
+interface Made {
+  readonly name: string;
+  readonly text: string;
+}
+
+/** Opens the individuals file `file`, a fixture by its name or one made
+    by the flow, with the button of its box. */
+async function pickIndividuals(page: Page, file: string | Made): Promise<void> {
   const chooser = page.waitForEvent("filechooser");
   await page
     .getByRole("region", { name: "Individuals", exact: true })
     .getByRole("button", { name: /^Open (another )?individuals file…$/u })
     .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await (
+    await chooser
+  ).setFiles(
+    typeof file === "string"
+      ? join(FIXTURES, file)
+      : {
+          name: file.name,
+          mimeType: "text/csv",
+          buffer: Buffer.from(file.text, "utf8"),
+        },
+  );
 }
 
 /** The tab of the row named `name`. */
@@ -450,6 +467,49 @@ test.describe("LT1 D5 the LD decay in the Populations tab", () => {
       "run ldDecay",
       "result ldDecay",
     ]);
+  });
+});
+
+test.describe("LT1 D5 the LD decay with unclassified individuals", () => {
+  test("LT1 D5 panel.nei with 7 individuals of no population: the line of the populations leaves them out, and the caption of the table says they are not in it (the review of the LD decay, 12 October 2026)", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await openPage(page);
+    await pick(page, "panel.nei");
+    const [header, ...rows] = readFileSync(
+      join(FIXTURES, "panel_pops.csv"),
+      "utf8",
+    )
+      .trimEnd()
+      .split("\n");
+    // The first four rows removed, s000 to s003 of p0, and the population
+    // of the next three emptied, s004 to s006 of p2: 7 individuals of
+    // panel.nei with no population, as the diversity's flow has them.
+    const made = rows
+      .slice(4)
+      .map((line, i) => (i < 3 ? `${line.split(",")[0] ?? ""},` : line));
+    await pickIndividuals(page, {
+      name: "panel_some.csv",
+      text: [header ?? "", ...made, ""].join("\n"),
+    });
+    await tab(page, "Populations").click();
+    await expect(
+      ldDecay(page).getByText(
+        "7 unclassified individuals kept are left out, as the box Individuals says.",
+        { exact: true },
+      ),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(button(diversity(page), "Run")).toBeEnabled({
+      timeout: RESULT_TIMEOUT,
+    });
+    await typeDistance(page, "100000");
+    await button(ldDecay(page), "Run").click();
+    await expect(
+      ldDecay(page).getByRole("table", {
+        name: /^The LD decay of each population, over the [\d,]+ variants of panel\.nei .* 7 unclassified individuals kept are not in it\.$/u,
+      }),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
   });
 });
 
