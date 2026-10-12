@@ -269,8 +269,9 @@ the left edge of the SVG, the first 8 pixels below its top, and the
 frame starts 12 pixels under the last. `chart-legend` has `data-place`,
 "right" or "above". Above the plot, a label longer than the SVG leaves
 it, from the start of its text to 8 pixels before the right edge, is
-cut to as many of its first characters as fit with an ellipsis, 3 and
-the ellipsis at the fewest, measured as above (from 12 October 2026).
+cut in the middle, to as many of its first and last characters as fit
+about an ellipsis, 3 and the ellipsis at the fewest, measured as above,
+as the bar plot cuts its names (from 12 October 2026).
 
 The classes the plot adds to `charts.css`, colours from the tokens:
 
@@ -361,8 +362,8 @@ element stubbed at 600 by 375:
 - from the review of round 1, measured by a canvas of the test that
   gives a W 11 pixels and any other character 6, a label of 25 Ws: a
   right margin of 321 at 1,000 pixels, 12, 24, 6, 275 and 4, and
-  `narrowUnder` 681; at 320 pixels, above the plot, the label cut to 24
-  Ws and the ellipsis, the 270 pixels that fit 274;
+  `narrowUnder` 681; at 320 pixels, above the plot, the label cut to 12
+  Ws, the ellipsis and 12 Ws, the 270 pixels that fit 274;
 - the order in `chart-marks`: every line before every set of points;
 - a NaN in `points.y` leaves that point out of the path; a NaN in
   `line.y` breaks the path into two parts, two `M` commands;

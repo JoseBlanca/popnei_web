@@ -2167,6 +2167,21 @@ test.describe("review of round 1: the label up the plot of the spectrum", () => 
 });
 
 test.describe("review of round 1: long names of populations", () => {
+  test("twenty populations at 320 px: Landrace_Valencia_coast and Landrace_Valencia_inland cut in the middle, their starts and their ends, two names apart in each bar plot", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 320, height: 900 });
+    await runTwenty(page);
+    const plots = shown(page).locator("svg.chart-bars");
+    for (let index = 0; index < 5; index += 1) {
+      const names = plots.nth(index).locator("g.chart-axis-y g.tick text");
+      await expect(names).toHaveCount(20);
+      await expect(names.nth(17)).toHaveText(/^Landr\S*…\S*coast$/u);
+      await expect(names.nth(18)).toHaveText(/^Landr\S*…\S*nland$/u);
+    }
+  });
+
   for (const width of [1280, 720, 320] as const) {
     test(`twenty populations of long and wide names at ${String(width)} px: every name of the bar plots and every label of the legend of the spectrum within its SVG`, async ({
       page,

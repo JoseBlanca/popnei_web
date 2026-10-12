@@ -15,7 +15,7 @@
  * that stands in for it.
  */
 
-/** The ellipsis that ends a text cut. */
+/** The ellipsis that stands for the middle of a text cut. */
 export const ELLIPSIS = "…";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
@@ -86,10 +86,22 @@ export interface CutOptions {
   readonly least: number;
 }
 
+/** `characters` cut to `kept` of them about an ellipsis: the first
+    half, one more for an odd number, the ellipsis, and the last half. */
+function cutAbout(characters: readonly string[], kept: number): string {
+  const head = Math.ceil(kept / 2);
+  const tail = kept - head;
+  return `${characters.slice(0, head).join("")}${ELLIPSIS}${
+    tail === 0 ? "" : characters.slice(-tail).join("")
+  }`;
+}
+
 /**
  * `text` as a plot writes it in `room` pixels: whole when it has at most
- * `most` characters and fits; otherwise its first characters and an
- * ellipsis, as many as fit, `least` − 1 at the fewest.
+ * `most` characters and fits; otherwise cut in the middle, its first and
+ * its last characters about an ellipsis, "Landr…coast", as many as fit,
+ * `least` − 1 at the fewest, so that two names alike in their starts,
+ * as the populations of one collection often are, stay apart.
  */
 export function cutText(
   text: string,
@@ -102,8 +114,8 @@ export function cutText(
   if (characters.length <= options.most && fits(text)) return text;
   const most = Math.min(characters.length, options.most) - 1;
   for (let kept = most; kept >= options.least; kept -= 1) {
-    const written = `${characters.slice(0, kept).join("")}${ELLIPSIS}`;
+    const written = cutAbout(characters, kept);
     if (fits(written)) return written;
   }
-  return `${characters.slice(0, options.least - 1).join("")}${ELLIPSIS}`;
+  return cutAbout(characters, options.least - 1);
 }

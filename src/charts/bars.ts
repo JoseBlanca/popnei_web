@@ -90,12 +90,11 @@ function nameRoom(width: number): number {
   return NAME_SHARE * width - NAME_EDGE - NAME_PADDING;
 }
 
-/** `name` as the axis writes it in an element `width` pixels wide:
-    whole when it has at most 20 characters and fits its room, measured;
-    otherwise as many of its first characters as fit and an ellipsis,
-    from 3 and the ellipsis. */
-function cutName(name: string, width: number): string {
-  return cutText(name, nameRoom(width), {
+/** `name` cut to `room` pixels: whole when it has at most 20
+    characters and fits, measured; otherwise as many of its first and
+    last characters as fit about an ellipsis, from 3 and the ellipsis. */
+function cutName(name: string, room: number): string {
+  return cutText(name, room, {
     fontSize: NAME_FONT_SIZE,
     perCharacter: NAME_CHARACTER_WIDTH,
     most: NAME_MOST,
@@ -103,18 +102,35 @@ function cutName(name: string, width: number): string {
   });
 }
 
+/**
+ * The name each row writes in an element `width` pixels wide, in the
+ * order of the bars: its name cut to its room; and when two or more rows
+ * would write the same, each of them its name cut to the room its
+ * number leaves and the number of its row, from 1, in brackets,
+ * "Landr…A_1 (3)", the row of the table it draws.
+ */
+function rowNames(data: BarsData, width: number): readonly string[] {
+  const room = nameRoom(width);
+  const cut = data.bars.map((bar) => cutName(bar.name, room));
+  const counts = new Map<string, number>();
+  for (const name of cut) counts.set(name, (counts.get(name) ?? 0) + 1);
+  return data.bars.map((bar, place) => {
+    const name = cut[place] ?? bar.name;
+    if ((counts.get(name) ?? 0) < 2) return name;
+    const number = ` (${String(place + 1)})`;
+    const numberWidth = textWidth(number, NAME_FONT_SIZE, NAME_CHARACTER_WIDTH);
+    return `${cutName(bar.name, room - numberWidth)}${number}`;
+  });
+}
+
 /** The margins for `data` in an element of `size`: at the left, the
     longest name as written, measured, and 12 pixels around it. */
 function barsMargin(data: BarsData, size: ExportSize): Margin {
   let longest = 0;
-  for (const bar of data.bars) {
+  for (const name of rowNames(data, size.width)) {
     longest = Math.max(
       longest,
-      textWidth(
-        cutName(bar.name, size.width),
-        NAME_FONT_SIZE,
-        NAME_CHARACTER_WIDTH,
-      ),
+      textWidth(name, NAME_FONT_SIZE, NAME_CHARACTER_WIDTH),
     );
   }
   return {
@@ -186,7 +202,6 @@ function drawBars(frame: Frame, data: BarsData): void {
     row: String(place),
     bar,
   }));
-  const nameOf = new Map(rows.map(({ row, bar }) => [row, bar.name]));
   const x = scaleLinear()
     .domain([0, valuesTop(data)])
     .range([0, frame.innerWidth]);
@@ -222,14 +237,18 @@ function drawBars(frame: Frame, data: BarsData): void {
     .attr("dy", "0.35em")
     .text(data.noValue);
 
-  const width = frame.margin.left + frame.innerWidth + frame.margin.right;
+  const names = rowNames(
+    data,
+    frame.margin.left + frame.innerWidth + frame.margin.right,
+  );
+  const nameOf = new Map(rows.map(({ row }, place) => [row, names[place]]));
   frame.axes(x, y, {
     nameFormat: (row) => {
       const name = nameOf.get(row);
       if (name === undefined) {
         throw new Error(`popnei_web defect: the bar plot has no row ${row}.`);
       }
-      return cutName(name, width);
+      return name;
     },
   });
 }

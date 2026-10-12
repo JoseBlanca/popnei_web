@@ -56,9 +56,18 @@ The left margin holds the longest name as written, measured, with 8
 pixels between the name and the frame and 4 before the left edge of the
 SVG. A name keeps at most 20 characters, and at most what 40% of the
 width of the element holds once those 12 pixels are taken, 0.4 × width
-− 12 pixels; a longer name is cut to as many of its first characters as
-fit with an ellipsis, "population_number_…", and 3 and the ellipsis at
-the fewest. A name is measured in the font of the plots at its 12
+− 12 pixels; a longer name is cut in the middle, to as many of its
+first and last characters as fit about an ellipsis, the first half one
+more for an odd number, "Landr…coast", and 3 and the ellipsis at the
+fewest, so that the names of one collection, alike in their starts,
+stay apart. When two rows or more would still write the same, each
+writes its name cut to the room its number leaves and the number of its
+row in brackets, from 1, which is its row in the screen's table,
+"Lan…A_1 (2)" and "Lan…A_1 (3)"; two names alike whole, as two
+populations alike once escaped, are numbered so too. (From 12 October
+2026, the review of round 1: cut at their ends, "Landrace_Valencia_coast"
+and "Landrace_Valencia_inland" both read "Landrace_Va…" at 288 pixels,
+and nothing told the two bars apart but the order of the table.) A name is measured in the font of the plots at its 12
 pixels, on a canvas, by `textWidth` of `src/charts/textWidth.ts`; where
 nothing measures, under jsdom, a character counts 9 pixels, as the
 heatmap counts its names (`docs/specs/charts/heatmap.md`, "The names on
@@ -174,20 +183,26 @@ element stubbed at 400 by 136:
   0 to 1;
 - where nothing measures, the left margin of names of 2 characters, 30
   pixels, 4, 18 and 8; a name of 30 characters at 400 pixels, where 16
-  characters fit, written as its first 15 and an ellipsis, with a left
-  margin of 156; at 1,000 pixels, as its first 19 and an ellipsis, with
-  a margin of 192;
+  characters fit, written as its first 8 and last 7 about an ellipsis,
+  with a left margin of 156; at 1,000 pixels, as its first 10 and last
+  9, with a margin of 192;
+- at 288 pixels, where 11 characters fit, "Landrace_Valencia_coast" and
+  "Landrace_Valencia_inland" written "Landr…coast" and "Landr…nland";
+  "Landrace_Valencia_set_A_1" and "Landrace_Mallorca_set_A_1" in the
+  rows 2 and 3, alike once cut, written "Lan…A_1 (2)" and "Lan…A_1
+  (3)", and "p0" in row 1 whole;
 - measured by a canvas of the test that gives a W 11 pixels and any
   other character 6: ten Ws whole at 1,000 pixels, in a left margin of
-  122; twenty Ws at 400 pixels cut to twelve and the ellipsis, the 138
-  pixels that fit 148, in a margin of 150;
+  122; twenty Ws at 400 pixels cut to six, the ellipsis and six, the
+  138 pixels that fit 148, in a margin of 150;
 - `barsHeight(3)` 152 and `barsHeight(1)` 96;
-- two bars of one name, `a\nb` twice: two rows, each with its bar;
+- two bars of one name, `a\nb` twice: two rows, each with its bar,
+  written "a\nb (1)" and "a\nb (2)";
 - from the review of round 1, 12 October 2026: a value of 0, one bar of
   no width; a largest value of 0.3567, the axis to 0.4; words of no
   value other than "no value", written as given, at `dy` 0.35em;
   exactly 200 bars drawn; a name exactly as long as its room, whole;
-  at 100 pixels a name keeps 4 characters, "abc…";
+  at 100 pixels a name keeps 4 characters, "ab…p";
 - `check` throws for 201 bars, a group of 1.5, a value of −0.1 and one
   of Infinity.
 

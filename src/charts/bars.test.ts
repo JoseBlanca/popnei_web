@@ -153,7 +153,7 @@ describe("PT7 R1.1 the bar plot under jsdom, its SVG", () => {
     expect(ticks(element, "x").at(-1)).toBe("1.0");
   });
 
-  test("the left margin holds the names at 9 pixels a character: 30 for two; a name of 30 characters cut to 15 and an ellipsis at 400 pixels, and to 19 at 1,000", () => {
+  test("the left margin holds the names at 9 pixels a character: 30 for two; a name of 30 characters cut to 15, its first 8 and last 7 about an ellipsis, at 400 pixels, and to 19 at 1,000", () => {
     const element = sizedElement();
     createBars(element, barsOf(THREE));
     expect(leftMargin(element)).toBe(30);
@@ -161,12 +161,12 @@ describe("PT7 R1.1 the bar plot under jsdom, its SVG", () => {
     const long = "abcdefghijklmnopqrstuvwxyz0123";
     const narrow = sizedElement();
     createBars(narrow, barsOf([{ name: long, group: 0, value: 0.3 }]));
-    expect(ticks(narrow, "y")).toEqual(["abcdefghijklmno…"]);
+    expect(ticks(narrow, "y")).toEqual(["abcdefgh…xyz0123"]);
     expect(leftMargin(narrow)).toBe(4 + 16 * 9 + 8);
 
     const wide = sizedElement(1000, 136);
     createBars(wide, barsOf([{ name: long, group: 0, value: 0.3 }]));
-    expect(ticks(wide, "y")).toEqual(["abcdefghijklmnopqrs…"]);
+    expect(ticks(wide, "y")).toEqual(["abcdefghij…vwxyz0123"]);
     expect(leftMargin(wide)).toBe(4 + 20 * 9 + 8);
   });
 
@@ -187,7 +187,8 @@ describe("PT7 R1.1 the bar plot under jsdom, its SVG", () => {
         { name: "p1", group: 1, value: Number.NaN },
       ]),
     );
-    expect(ticks(element, "y")).toEqual(["a\\nb", "a\\nb", "p1"]);
+    // Alike, each has its row's number.
+    expect(ticks(element, "y")).toEqual(["a\\nb (1)", "a\\nb (2)", "p1"]);
     const bars = [...element.querySelectorAll("g.chart-marks > rect")];
     expect(bars.map((bar) => bar.getAttribute("class"))).toEqual([
       "chart-bars-bar chart-colour-0 chart-bars-outlined",
@@ -268,7 +269,7 @@ describe("review of round 1 the bar plot's cases the tests missed", () => {
     );
   });
 
-  test("a name exactly as long as its room is whole; in a narrow element a name keeps 4 characters, 3 and an ellipsis", () => {
+  test("a name exactly as long as its room is whole; in a narrow element a name keeps 4 characters, 3 about an ellipsis", () => {
     // At 400 pixels the room is 16 characters.
     const sixteen = "abcdefghijklmnop";
     const element = sizedElement();
@@ -278,7 +279,7 @@ describe("review of round 1 the bar plot's cases the tests missed", () => {
     // At 100 pixels (0.4 × 100 − 12) / 9 is 3, below the least, 4.
     const narrow = sizedElement(100, 136);
     createBars(narrow, barsOf([{ name: sixteen, group: 0, value: 0.3 }]));
-    expect(ticks(narrow, "y")).toEqual(["abc…"]);
+    expect(ticks(narrow, "y")).toEqual(["ab…p"]);
   });
 });
 
@@ -299,9 +300,39 @@ describe("review of round 1: the names measured, not counted", () => {
       narrow,
       barsOf([{ name: "W".repeat(20), group: 0, value: 0.3 }]),
     );
-    const cut = `${"W".repeat(12)}…`;
+    const cut = `${"W".repeat(6)}…${"W".repeat(6)}`;
     expect(fakeWidth(cut)).toBe(138);
     expect(ticks(narrow, "y")).toEqual([cut]);
     expect(leftMargin(narrow)).toBe(4 + 138 + 8);
+  });
+});
+
+describe("review of round 1: names cut in the middle, and numbered when still alike", () => {
+  test("at 288 pixels, where 11 characters fit, Landrace_Valencia_coast and Landrace_Valencia_inland keep their first 5 and last 5 about an ellipsis, Landr…coast and Landr…nland", () => {
+    const element = sizedElement(288, 136);
+    createBars(
+      element,
+      barsOf([
+        { name: "Landrace_Valencia_coast", group: 0, value: 0.3 },
+        { name: "Landrace_Valencia_inland", group: 1, value: 0.2 },
+      ]),
+    );
+    expect(ticks(element, "y")).toEqual(["Landr…coast", "Landr…nland"]);
+  });
+
+  test("two names alike once cut get their rows' numbers, 2 and 3, cut to the room left beside them; a third name, unlike, has none", () => {
+    const element = sizedElement(288, 136);
+    createBars(
+      element,
+      barsOf([
+        { name: "p0", group: 0, value: 0.3 },
+        { name: "Landrace_Valencia_set_A_1", group: 1, value: 0.2 },
+        { name: "Landrace_Mallorca_set_A_1", group: 2, value: 0.1 },
+      ]),
+    );
+    // 103.2 pixels less " (2)", 36, leave 67.2: 7 characters, 3 and 3
+    // about the ellipsis.
+    expect(ticks(element, "y")).toEqual(["p0", "Lan…A_1 (2)", "Lan…A_1 (3)"]);
+    expect(leftMargin(element)).toBe(4 + 11 * 9 + 8);
   });
 });

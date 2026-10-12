@@ -732,7 +732,7 @@ describe("review of round 1: the labels of the legend measured, not counted", ()
   const wide = (): LineData =>
     lineOf([seriesOf(0, "W".repeat(25)), seriesOf(1)]);
 
-  test("a label of 25 Ws, measured at 275 pixels: at 1,000 pixels the legend at the right in a right margin of 321, 12, 24, 6, 275 and 4, and narrowUnder 681; at 320 above the plot, cut to the 24 Ws that fit 274 pixels with the ellipsis", () => {
+  test("a label of 25 Ws, measured at 275 pixels: at 1,000 pixels the legend at the right in a right margin of 321, 12, 24, 6, 275 and 4, and narrowUnder 681; at 320 above the plot, cut to the 24 Ws that fit 274 pixels about the ellipsis", () => {
     measureWithFake();
     expect(lineLegendRoom(wide())).toEqual({
       narrowUnder: 60 + 300 + 321,
@@ -754,7 +754,7 @@ describe("review of round 1: the labels of the legend measured, not counted", ()
     expect(
       above.querySelector("g.chart-legend")?.getAttribute("data-place"),
     ).toBe("above");
-    const cut = `${"W".repeat(24)}…`;
+    const cut = `${"W".repeat(12)}…${"W".repeat(12)}`;
     expect(fakeWidth(cut)).toBe(270);
     expect(legendTexts(above)).toEqual([cut, "pop1"]);
   });

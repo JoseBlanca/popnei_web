@@ -403,7 +403,10 @@ of the panel"), with these differences:
     as the spectrum's plot has, with "Image as SVG", "Image as PNG" and
     "Data as CSV";
   - a bar across per population of the table, in its order, the first
-    at the top, its name at the left of its bar; the colour of the
+    at the top, its name at the left of its bar, cut in the middle when
+    it is longer than its room, and with its row's number in brackets
+    when two names cut still read the same (`bars.md`, "The room of
+    the names", from 12 October 2026, the review of round 1); the colour of the
     population's group, `populationGroups` of
     `src/ui/analyses/populationGroups.ts`, its place among the
     populations of the project, as the principal components and the LD
