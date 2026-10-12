@@ -10,8 +10,8 @@
  * shown; and, under it, the line of an error of the application, in the
  * words of the error bar of popgen.html.
  *
- * The PCA and the diversity, each live once its Run is pressed, are named
- * alike ("Several live analyses"): the one running, with those that
+ * The live analyses of `POPGEN2_LIVE`, each live once its Run is pressed,
+ * are named alike ("Several live analyses"): the one running, with those that
  * wait after it; those about to start together; the first result of the
  * order of the tabs with warnings or an error, in a tab not shown. While
  * one is about to start alone, the band offers its "Stop recalculating"

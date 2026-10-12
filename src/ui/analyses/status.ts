@@ -204,7 +204,7 @@ export function liveAnalysisOf(
 }
 
 /** The live analysis of popgen2.html running in `s`, which locks what it
-    reads while it runs, the PCA or the diversity, the calculation worker
+    reads while it runs, one of `POPGEN2_LIVE`, the calculation worker
     running one at a time; `null` while none runs. Read on popgen2.html
     alone, whose store runs the analyses of `POPGEN2_LIVE`. */
 export function runningAnalysisOf(

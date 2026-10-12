@@ -4,20 +4,23 @@
  * analyses calculated again by themselves", "The lock";
  * docs/specs/steps/popgen2-populations.md, "While the diversity runs";
  * the owner's answer 2 to docs/plans/analyses-pca.md, 9 October 2026):
- * while the PCA or the diversity runs, the thresholds and the FILTER box
+ * while a live analysis runs, one of `POPGEN2_LIVE`, the thresholds and the FILTER box
  * of the Variants tab wait, and the options of the analysis running, not
  * those of another, with the words "Stop the PCA in the PCA tab to change
  * the filters; then press Run there to calculate it again.", by the
  * analysis and its tab, and with Stop all when another analysis is live
  * beside it, so that no change leaves the running analysis behind.
  *
- * While an analysis that reads the populations runs, the diversity, the
- * column of the populations, the individuals file, its Remove and the
+ * While an analysis that reads the populations runs, the diversity or the
+ * distances between populations (`readsPopulations` of
+ * src/ui/analyses/status.ts), the column of the populations, the individuals file, its Remove and the
  * lists of how a text file of it is read wait too, with the words "Stop
  * the diversity in the Populations tab to change the populations; then
  * press Run there to calculate it again."
- * (docs/specs/steps/popgen2-input.md, "While the diversity runs"); while
- * the PCA alone runs they stay open, as the owner decided on 10 October
+ * (docs/specs/steps/popgen2-input.md, "While the diversity runs";
+ * docs/specs/steps/popgen2-distances.md, "While the distances run"),
+ * with their own words for the distances; while the PCA alone runs they
+ * stay open, as the owner decided on 10 October
  * 2026.
  *
  * Which analyses are live, and which wait after the one running, is
@@ -96,14 +99,15 @@ export function useOptionsLock(id: AnalysisId): string | null {
 }
 
 /** The reason the column of the populations, the individuals file and
-    how it is read wait while the diversity runs, or `null`; the
+    how it is read wait while an analysis that reads the populations
+    runs, the diversity or the distances, or `null`; the
     component is drawn again only when it changes. */
 export function usePopulationsLock(): string | null {
   return useLive(populationsLockOf);
 }
 
-/** The live analysis running that reads the populations, the diversity,
-    whose run locks them; `null` while none runs; the component is drawn
+/** The live analysis running that reads the populations, the diversity
+    or the distances, whose run locks them; `null` while none runs; the component is drawn
     again only when it changes. */
 export function usePopulationsRunning(): LiveAnalysisName | null {
   return useLive((s) => {

@@ -127,8 +127,9 @@ function startApplication(defects: Defects, drawBar: DrawBar<BandWith>): void {
 
 /** The summary of the variants file, the one pass of the count and the
     statistics of the open file, started once the file is read
-    (docs/plans/live-stats.md); and the PCA, started again by itself a
-    quiet second after a change once the user's Run made it live, its
+    (docs/plans/live-stats.md); and each live analysis of `POPGEN2_LIVE`,
+    started again by itself a quiet second after a change once the
+    user's Run made it live, its
     Run passing the gate `gate` through the screens' store `gated`
     (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by
     itself"). A change of the store starts them after the listeners of
