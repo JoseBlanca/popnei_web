@@ -1044,4 +1044,34 @@ downloads. The review after: `spec`, `tests`, `stale`, `errors`, `api`,
 `react`, `accessibility`, `ux`, `browser`, `bundle` (a chart module in
 the tab's code).
 
-Left: round 1 built and reviewed; the owner tries it again.
+Built, 12 October 2026: R1.2 and R1.3 in a0a64d07 to 94fe3a89 (the
+lines over the table's denominator, the sum of bins 1 to g/2, the
+session's decision so that the plot and the table's share agree), R1.1
+in fbbad624 to 69ca4df7 (`src/charts/bars.ts`, horizontal bars, two to a
+row at 1280 px, one at 320 px; its tests written with the code, not
+seen failing first), `docs/functionality.md` in 67642d0d and 293f3fb4.
+
+The review of round 1, ten categories over ac8cdb3c..293f3fb4: the
+spec reviewer recomputed the lines from popnei under node (p0 at 0.975,
+0.03296, over 1,155.2 variants with both alleles) and found no defect;
+25 findings held, in `scratchpad/fix-r1.md` of the session. The ones a
+user would meet: a population's colour in the new plots differed from
+the PCA's when a population before it was emptied by the filters; past
+seven populations the bars' colours repeat, so "followed from plot to
+plot" was false (each bar's name gets its population's mark); long
+names cut to 13 characters read alike, and names of wide capitals ran
+off the plot and its PNG; a 46-character name made the page scroll
+sideways at 320 px; the spectrum's up axis read as the polymorphic
+fraction; one number called "share" in the table and "proportion" in
+the plot; a draw of 2 got a false line; a failure of the spectrum's
+plot would have taken the whole tab; with both warnings the band said
+2 and its link landed on "1 warning". Also: tests that could not fail
+(a bar of 0, the axis's rounding, three of five plots' values). Not
+taken: a plot drawn one frame at its old height (unreachable: a new
+result mounts the plots afresh); the old page's first load 3.17 KB
+larger with plot code it never draws (the page is to be deleted).
+`popgen2.html`'s first load 332.37 KB, 0.43 KB more, the spectrum's
+warning for the band. For the owner: the alleles per variant on an
+axis from 0 show 1.97 and 1.98 as equal.
+
+Left: the fixes, in two parts; the owner tries it again.
