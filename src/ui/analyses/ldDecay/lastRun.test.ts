@@ -98,4 +98,35 @@ describe("LT1 D4 the time of the last run of the LD decay", () => {
     await flush();
     expect(clock.seconds()).toBeCloseTo(6.5, 6);
   });
+
+  test("a change of the store during the run does not restart its time, and one after its end does not lengthen it (the review of the LD decay, 12 October 2026)", async () => {
+    const testPage = page(SUMMARY);
+    await testPage.endPass();
+    let now = 0;
+    const clock = createLastRunClock(
+      testPage.store,
+      "ldDecay",
+      () => now,
+      () => null,
+    );
+    testPage.auto.run("ldDecay");
+    await flush();
+    now += 1000;
+    // The PCA's options, which the LD decay does not read.
+    testPage.setPca({
+      ld: { follow: false, maxAllowedR2: 0.2, maxDist: 50_000 },
+    });
+    await flush();
+    now += 2000;
+    const run = testPage.lastLdDecay();
+    run.end({ kind: "done", key: run.key, result: ldDecayResult() });
+    await flush();
+    expect(clock.seconds()).toBeCloseTo(3, 6);
+    now += 5000;
+    testPage.setPca({
+      ld: { follow: false, maxAllowedR2: 0.3, maxDist: 50_000 },
+    });
+    await flush();
+    expect(clock.seconds()).toBeCloseTo(3, 6);
+  });
 });
