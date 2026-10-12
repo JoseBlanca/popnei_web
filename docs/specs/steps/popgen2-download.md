@@ -45,10 +45,14 @@ Populations tab as a second analysis calculated again by itself
 (`docs/specs/steps/popgen2-populations.md`): the button waits while any
 analysis of the page runs, the diversity as the PCA, and for those
 waiting after it, with words that name them (below, "While an analysis
-runs", and "Its words"). The rest is unchanged. Approved by the owner on 11 October 2026; not yet built; its plan
+runs", and "Its words"). The rest is unchanged. Approved by the owner on 11 October 2026; its plan
 is `docs/plans/population-tab.md`. Corrected the same day after the
-review of its work package 1: until the band offers Stop all, the words
-of the wait name the Stop of each tab in its place.
+review of its work package 1: until the band offered Stop all, which it
+does from work package 4, built the same day, the words of the wait
+named the Stop of each tab in its place. Built on the branch
+`population-tab` on 11 and 12 October 2026, task 1.6 and work package
+4 of that plan, and not yet tried by the owner; the rounds of review
+changed nothing here but those words.
 
 The module specs it reads, revised for it the same day: the write
 itself, its request, its file name, the check of a filtering that keeps
@@ -214,12 +218,12 @@ others wait to start after it, for them too, since each starts when the
 one before ends: "Waits for the diversity to end; or stop it in the
 Populations tab."; with the diversity waiting after the PCA, "Waits for
 the PCA, and the diversity after it, to end; or press Stop all beside
-the heading Popnei." Until the band offers Stop all, which work package
-4 of `docs/plans/population-tab.md` builds, the words name the Stop of
-each tab in its place: "Waits for the PCA, and the diversity after it,
-to end; or stop the PCA in the PCA tab and the diversity in the
-Populations tab." (corrected on 11 October 2026 after the review of
-work package 1 of that plan). A download pressed during the quiet second goes
+the heading Popnei." These are the words since work package 4 of
+`docs/plans/population-tab.md` gave the band Stop all, on 11 October
+2026. Before it, from the review of work package 1 of that plan the
+same day, they named the Stop of each tab in its place: "Waits for the
+PCA, and the diversity after it, to end; or stop the PCA in the PCA tab
+and the diversity in the Populations tab." A download pressed during the quiet second goes
 first, and every live analysis starts a second after its dialog closes,
 in the order of the tabs. The button reads the running analysis from
 `runningAnalysisOf` of `src/ui/analyses/status.ts` and those waiting
@@ -552,7 +556,7 @@ store works out the individuals kept from the finished one pass
 | beside it, disabled, after a failure of the opening or of the one pass | "The download needs the statistics of the file, which could not be calculated." |
 | beside it, disabled, while a PCA runs | "Waits for the PCA to end; or stop it in the PCA tab."; under the PCoA, "Waits for the PCoA to end; or stop it in the PCA tab." |
 | beside it, disabled, while the diversity runs | "Waits for the diversity to end; or stop it in the Populations tab." |
-| beside it, disabled, while an analysis runs and another waits after it | "Waits for the PCA, and the diversity after it, to end; or press Stop all beside the heading Popnei."; "Waits for the diversity, and the PCA after it, to end; …"; until the band offers Stop all, "Waits for the PCA, and the diversity after it, to end; or stop the PCA in the PCA tab and the diversity in the Populations tab." |
+| beside it, disabled, while an analysis runs and another waits after it | "Waits for the PCA, and the diversity after it, to end; or press Stop all beside the heading Popnei."; "Waits for the diversity, and the PCA after it, to end; …" (before the band offered Stop all, on 11 October 2026, "Waits for the PCA, and the diversity after it, to end; or stop the PCA in the PCA tab and the diversity in the Populations tab.") |
 | in its place, the filters of the individuals keep none | "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them."; with one individual, "The filters of individuals do not keep the one individual of one.vcf. Loosen them." |
 | in its place, no variant kept, before or after the write | "None of the 1,200 variants of low_qual.vcf.gz pass the filters, so there is nothing to download." |
 | the heading of the dialog | "Download filtered variants" |
@@ -725,8 +729,9 @@ column, as the old page's flow of the write does:
   tab."; the PCA held running and the diversity live with a new key
   after a threshold moved: "Waits for the PCA, and the diversity after
   it, to end; or press Stop all beside the heading Popnei.", and Stop
-  all in the band enables it, once the band offers it (until then the
-  words of the Stop of each tab, "While an analysis runs"); these flows are in the plan
+  all in the band enables it (before the band offered Stop all, on 11
+  October 2026, the words of the Stop of each tab, "While an analysis
+  runs"); these flows are in the plan
   `docs/plans/population-tab.md`;
 - the dialog, the button with its reason, and the text after the
   download, checked with axe (`e2e/axe.ts`), in light and in dark.
