@@ -74,7 +74,9 @@ describe("DT1 D2 the distances, a live analysis of popgen2.html", () => {
     });
   });
 
-  test("a crash ends their live state, as the diversity's; nothing else in a state that is not an error", () => {
+  // That a crash ends it is DistancesTabView.test.ts's, "a crash of the
+  // distances ends their live state", which causes one.
+  test("a state of the distances that is not an error ends nothing of their live state", () => {
     expect(popgen2EndsLive(page().getState(), "popDists")).toBe(false);
   });
 
