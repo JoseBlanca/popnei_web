@@ -571,11 +571,18 @@ same request, as on the old page. Four things differ, the plot since
     (above, "What it shows of each bin"). The caption says so, and the
     table holds it.
   - **The colour and the shape** of a population are those of its
-    place in the order of the result, `populationGroup(i)` of
-    `src/charts/marks.ts`, i itself, the group of the rule of the scatter
-    (`docs/specs/charts/scatter.md`, "The marks of the groups"): the
-    bar plots of the diversity's table give a population the same
-    colour. Each point is drawn with the mark of its population, and
+    group, `populationGroups` of `src/ui/analyses/populationGroups.ts`,
+    its place among the populations of the project, `populationsOf(p)`,
+    whether or not the filters emptied those before it, as the
+    principal components and the LD decay number their groups, by the
+    rule of the scatter (`docs/specs/charts/scatter.md`, "The marks of
+    the groups"); the one population, "Unclassified", which the project
+    does not list, and every population when the project has more than
+    49, have their place among those drawn. The bar plots of the
+    diversity's table give a population the same colour. From 12
+    October 2026, the review of round 1, where it was the place in the
+    result, so that p2 had another colour than in the PCA when the
+    filters emptied p1. Each point is drawn with the mark of its population, and
     the legend, in the plot, names each population beside a piece of its
     line and its mark, so that no line is told by its colour alone
     (WCAG 2.2, 1.4.1). The line plot of `docs/specs/charts/line.md`
@@ -652,7 +659,7 @@ same request, as on the old page. Four things differ, the plot since
 /** The line of one population in the plot of the spectrum. */
 export interface SpectrumLine {
   readonly population: string;
-  /** Its place in the order of the result, which gives its colour and its shape. */
+  /** Its place in the order of the result. */
   readonly index: number;
   /** The frequency of the commonest allele of each point, (n − j) / n, j from 1 to n / 2. */
   readonly frequency: Float64Array;
@@ -678,8 +685,12 @@ export function spectrumLinesCsv(r: DiversityResult): string;
 /** sfsWarnings.ts */
 export function spectrumWarnings(r: DiversityResult, p: Project, page: DiversityPage): Warning[];
 
-/** src/charts/marks.ts: the group of the population at `index` in the order of a result. */
-export function populationGroup(index: number): number;
+/** src/ui/analyses/populationGroups.ts: the group of each population `drawn`, its place
+    among `pops`, the populations of the project, `populationsOf(p)`. */
+export function populationGroups(
+  drawn: readonly string[],
+  pops: Pops | "all" | null,
+): readonly number[];
 ```
 
 Checked with Vitest: `spectrumLinesOf` on the worked example of "How it

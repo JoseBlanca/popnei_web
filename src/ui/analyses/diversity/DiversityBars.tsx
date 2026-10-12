@@ -7,7 +7,7 @@
  * of its own above it, "Image as SVG", "Image as PNG" and "Data as CSV",
  * and the plot, `createBars` of src/charts/bars.ts mounted by `usePlot`,
  * a bar per population in the colour of its line in the plot of the
- * spectrum.
+ * spectrum and of its points in the principal components.
  *
  * The plots stand side by side, as many to a row as the width holds at
  * 20rem at least each, one to a row at the width of a phone; each
@@ -21,11 +21,13 @@ import { useId, useMemo } from "react";
 import { barsHeight, createBars } from "../../../charts/bars.ts";
 import { diversityRows } from "../../../core/analyses/diversity.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
+import { populationsOf } from "../../../core/project.ts";
 import type { DiversityResult } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
 import { plotItems } from "../../widgets/downloadItems.ts";
 import { DownloadMenu } from "../../widgets/DownloadMenu.tsx";
+import { useAppState } from "../../store.tsx";
 import { usePlot } from "../../widgets/usePlot.ts";
 import styles from "./DiversityBars.module.css";
 import {
@@ -95,9 +97,11 @@ function OneBarPlot({
 }): React.JSX.Element {
   const headingId = useId();
   const draw = result.numCalledAlleles;
+  // The result is shown under the key of the populations of the project.
+  const pops = useAppState((s) => populationsOf(s.project));
   const data = useMemo(
-    () => barsDataOf(diversityRows(result), plot, draw),
-    [result, plot, draw],
+    () => barsDataOf(diversityRows(result), plot, draw, pops),
+    [result, plot, draw, pops],
   );
   const { ref, handle } = usePlot(createBars, data);
   const what = barPlotWhat(plot, draw);

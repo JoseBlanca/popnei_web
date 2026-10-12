@@ -4,17 +4,19 @@
  * the table): the five columns drawn, in the order the owner gave on
  * 12 October 2026, each headed by the label of its column in the table;
  * the data of each plot, a bar per row of the table in its order, in the
- * group of its place in the result, `populationGroup`, so that a
- * population has the colour of its line in the plot of the spectrum, and
- * NaN where the table says "no value"; its description, its CSV and the
+ * group of its population, `populationGroups`, its place among the
+ * populations of the project, so that a population has the colour of its
+ * line in the plot of the spectrum and of its points in the principal
+ * components, and NaN where the table says "no value"; its description, its CSV and the
  * words of its menu. Pure, so that a test in node checks it.
  */
 import type { BarsData } from "../../../charts/bars.ts";
-import { populationGroup } from "../../../charts/marks.ts";
 import type { DiversityRow } from "../../../core/analyses/diversity.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
 import { tableCsv } from "../../../core/csv.ts";
 import { counted, escaped } from "../../../core/project.ts";
+import type { Pops } from "../../../worker/protocol.ts";
+import { populationGroups } from "../populationGroups.ts";
 import { numberHeaders } from "./resultWords.ts";
 
 /** The heading of the section of the plots. */
@@ -108,23 +110,37 @@ export function barsDescription(
   return `${counted(rows.length, "bar")}, one per population: ${each}.`;
 }
 
-/** The data of `plot` of `rows`, the rows of a result in its order. */
+/** The data of `plot` of `rows`, the rows of a result in its order, in
+    a project whose populations are `pops`, `populationsOf(p)`. */
 export function barsDataOf(
   rows: readonly DiversityRow[],
   plot: BarPlot,
   numCalledAlleles: number,
+  pops: Pops | "all" | null,
 ): BarsData {
   const heading = barsHeading(plot, numCalledAlleles);
+  const groups = populationGroups(
+    rows.map((row) => row.population),
+    pops,
+  );
   return {
     title: heading,
     description: barsDescription(rows, plot),
     xLabel: heading,
     yLabel: "",
-    bars: rows.map((row, index) => ({
-      name: escaped(row.population),
-      group: populationGroup(index),
-      value: plot.value(row) ?? Number.NaN,
-    })),
+    bars: rows.map((row, index) => {
+      const group = groups[index];
+      if (group === undefined) {
+        throw new Error(
+          `popnei_web defect: the bar of ${row.population} has no group.`,
+        );
+      }
+      return {
+        name: escaped(row.population),
+        group,
+        value: plot.value(row) ?? Number.NaN,
+      };
+    }),
     noValue: NO_VALUE,
   };
 }

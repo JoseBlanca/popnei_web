@@ -14,7 +14,8 @@ import { LD_PLOT_MAX_POPS } from "../../../core/analyses/ldDecay.ts";
 import { MAX_LINE_SERIES } from "../../../charts/limits.ts";
 import type { LineData } from "../../../charts/line.ts";
 import type { LdDecayResult, Pops } from "../../../worker/protocol.ts";
-import { ldDecayPlotData, ldGroups, ldYTop } from "./plotData.ts";
+import { populationGroups } from "../populationGroups.ts";
+import { ldDecayPlotData, ldYTop } from "./plotData.ts";
 
 const NAN = Number.NaN;
 
@@ -147,17 +148,17 @@ describe("PA8 D1 the data of the plot of the LD decay", () => {
       "pop_a",
       "pop_b",
     ]);
-    expect(ldGroups(["pop_b"], project)).toEqual([3]);
+    expect(populationGroups(["pop_b"], project)).toEqual([3]);
   });
 
   test("review of PA8: with 49 populations in the project the 49th keeps the group 48, and with 50 the groups are the places among those drawn, so that no two share a mark; the one population has the group 0", () => {
     const names = (count: number): string[] =>
       Array.from({ length: count }, (_, i) => `q${String(i)}`);
     expect(MAX_LINE_SERIES).toBe(49);
-    expect(ldGroups(["q48", "q3"], popsOf(names(49)))).toEqual([48, 3]);
-    expect(ldGroups(["q48", "q49"], popsOf(names(50)))).toEqual([0, 1]);
-    expect(ldGroups(["All individuals"], "all")).toEqual([0]);
-    expect(() => ldGroups(["q7"], popsOf(names(3)))).toThrow(
+    expect(populationGroups(["q48", "q3"], popsOf(names(49)))).toEqual([48, 3]);
+    expect(populationGroups(["q48", "q49"], popsOf(names(50)))).toEqual([0, 1]);
+    expect(populationGroups(["All individuals"], "all")).toEqual([0]);
+    expect(() => populationGroups(["q7"], popsOf(names(3)))).toThrow(
       /^popnei_web defect: /u,
     );
   });

@@ -8,6 +8,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { DiversityRow } from "../../../core/analyses/diversity.ts";
+import type { Pops } from "../../../worker/protocol.ts";
 import {
   BAR_PLOTS,
   barPlotWhat,
@@ -65,6 +66,14 @@ const ROWS: readonly DiversityRow[] = [
   ),
 ];
 
+/** The populations of the project of ROWS, `populationsOf(p)`: p0, p2
+    and p1, in the order of the individuals file. */
+const POPS: Pops = [
+  ["p0", ["s000"]],
+  ["p2", ["s001"]],
+  ["p1", ["s002"]],
+];
+
 describe("PT7 R1.1 the bar plots of the table of the diversity", () => {
   test("five plots, in the order of the owner, headed by the labels of the table's columns, the rarefied one naming the draw", () => {
     expect(BAR_PLOTS.map((plot) => barsHeading(plot, 40))).toEqual([
@@ -86,7 +95,7 @@ describe("PT7 R1.1 the bar plots of the table of the diversity", () => {
   test("the data of a plot: a bar per row in its order, in the group of its place, NaN for no value; the texts of the column", () => {
     const [first, , , rarefied] = BAR_PLOTS;
     if (first === undefined || rarefied === undefined) throw new Error("no");
-    const data = barsDataOf(ROWS, first, 40);
+    const data = barsDataOf(ROWS, first, 40, POPS);
     expect(data.bars.map((bar) => bar.name)).toEqual(["p0", "p2", "p1"]);
     expect(data.bars.map((bar) => bar.group)).toEqual([0, 1, 2]);
     expect(data.bars[0]?.value).toBeNaN();
@@ -98,9 +107,30 @@ describe("PT7 R1.1 the bar plots of the table of the diversity", () => {
     expect(data.description).toBe(
       "3 bars, one per population: p0, no value; p2, 0.3449; p1, 0.3504.",
     );
-    expect(barsDataOf(ROWS, rarefied, 40).bars[2]?.value).toBe(
+    expect(barsDataOf(ROWS, rarefied, 40, POPS).bars[2]?.value).toBe(
       1.9588173095272452,
     );
+  });
+
+  test("review of round 1: a population has the group of its place among the populations of the project, as in the principal components, when the filters emptied one before it", () => {
+    const [first] = BAR_PLOTS;
+    if (first === undefined) throw new Error("no plot");
+    // The project has p0, p1 and p2; the filters emptied p1, so the
+    // result has p0 and p2 alone, and p2 keeps the PCA's group 2.
+    const project: Pops = [
+      ["p0", ["s000"]],
+      ["p1", ["s001"]],
+      ["p2", ["s002"]],
+    ];
+    const rows = [
+      rowOf("p0", [0.35, 0.36, 0.91, 1.96, 1.98]),
+      rowOf("p2", [0.34, 0.35, 0.9, 1.95, 1.97]),
+    ];
+    const data = barsDataOf(rows, first, 40, project);
+    expect(data.bars.map((bar) => [bar.name, bar.group])).toEqual([
+      ["p0", 0],
+      ["p2", 2],
+    ]);
   });
 
   test("the description of one population, and a name as a text shows it", () => {
@@ -112,7 +142,12 @@ describe("PT7 R1.1 the bar plots of the table of the diversity", () => {
         first,
       ),
     ).toBe("1 bar, of Unclassified: 0.3755.");
-    const data = barsDataOf([rowOf("a​b", [0.1, 0, 0, 0, 0])], first, 40);
+    const data = barsDataOf(
+      [rowOf("a​b", [0.1, 0, 0, 0, 0])],
+      first,
+      40,
+      "all",
+    );
     expect(data.bars[0]?.name).not.toBe("a​b");
   });
 

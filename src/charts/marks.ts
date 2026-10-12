@@ -98,20 +98,6 @@ export function groupMark(group: number): GroupMark {
 }
 
 /**
- * The group of the population at `index` in the order of a result, which
- * gives it its colour and its shape in every plot of that result: the
- * lines of the spectrum and the bar plots of the Populations tab of
- * popgen2.html (docs/specs/analyses/sfs.md, "On popgen2.html"). Throws an
- * `Error`, a defect of the caller, for an index that is not a whole
- * number from 0.
- */
-export function populationGroup(index: number): number {
-  // The group itself checks it, and is the index.
-  groupMark(index);
-  return index;
-}
-
-/**
  * The symbol of `group` of d3-shape: one of the seven of symbolsFill, and
  * the circle of the ring for NO_GROUP, which its class draws with no fill.
  * Throws an `Error`, a defect of the caller, as groupMark does.

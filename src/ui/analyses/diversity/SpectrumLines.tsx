@@ -5,8 +5,9 @@
  * "Download…" on a line of its own above the plot, "Image as SVG",
  * "Image as PNG" and "Data as CSV", the CSV of `spectrumLinesCsv`; the
  * plot, `createLine` of src/charts/line.ts mounted by `usePlot`, a line
- * per population in the colour and the shape of its place in the
- * result, with its legend; and under it the variants of each population
+ * per population in the colour and the shape of its place among the
+ * populations of the project, as in the principal components, with its
+ * legend; and under it the variants of each population
  * with both alleles in the draw, which its proportions are over, and, for
  * an even draw, the line of the points at 0.5.
  * A draw whose lines hold more points than the plot draws gives its line
@@ -27,10 +28,12 @@ import {
   spectrumLinesOf,
 } from "../../../core/analyses/sfs.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
+import { populationsOf } from "../../../core/project.ts";
 import type { DiversityResult } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { plotItems } from "../../widgets/downloadItems.ts";
 import { DownloadMenu } from "../../widgets/DownloadMenu.tsx";
+import { useAppState } from "../../store.tsx";
 import { usePlot } from "../../widgets/usePlot.ts";
 import styles from "./SpectrumLines.module.css";
 import { spectrumPlotData, tooManyPoints } from "./spectrumPlotData.ts";
@@ -131,10 +134,12 @@ function LinesPlot({
   readonly result: DiversityResult;
   readonly variantsName: string;
 }): React.JSX.Element {
+  // The result is shown under the key of the populations of the project.
+  const pops = useAppState((s) => populationsOf(s.project));
   const data = useMemo(() => {
     const spectrum = spectrumLinesOf(result);
-    return spectrumPlotData(spectrum, linesDescription(spectrum));
-  }, [result]);
+    return spectrumPlotData(spectrum, linesDescription(spectrum), pops);
+  }, [result, pops]);
   const { ref, handle } = usePlot(createLine, data);
   const legend = useMemo((): LegendLengths => {
     const room = lineLegendRoom(data);

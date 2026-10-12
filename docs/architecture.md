@@ -3434,10 +3434,7 @@ src/charts/
                     the Populations tab (docs/specs/charts/bars.md)
   marks.ts          the colour and the symbol of each group of points, and
                     the colours of a column of numbers, for the 2D and 3D
-                    plots of the PCA (docs/specs/charts/scatter.md); from
-                    12 October 2026 the group of a population by its
-                    place in a result, populationGroup, which the plots
-                    of the Populations tab colour it by
+                    plots of the PCA (docs/specs/charts/scatter.md)
   legend.ts         the entries of the legend of those plots, and the
                     legend drawn into an exported SVG
   hover.ts          the point nearest the pointer, and its tooltip

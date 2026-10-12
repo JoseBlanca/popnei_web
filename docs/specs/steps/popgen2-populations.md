@@ -390,9 +390,14 @@ of the panel"), with these differences:
     "Data as CSV";
   - a bar across per population of the table, in its order, the first
     at the top, its name at the left of its bar; the colour of the
-    population at place `i` of the result, `populationGroup(i)` of
-    `src/charts/marks.ts`, the colour of its line in the plot of the
-    spectrum; the axis of the values from 0, labelled with the label
+    population's group, `populationGroups` of
+    `src/ui/analyses/populationGroups.ts`, its place among the
+    populations of the project, as the principal components and the LD
+    decay number them, whether or not the filters emptied those before
+    it, the colour of its line in the plot of the spectrum (from 12
+    October 2026, the review of round 1: its place in the result, the
+    rule before, gave p2 another colour than in the PCA when the filters
+    emptied p1); the axis of the values from 0, labelled with the label
     of the column;
   - a population with no value in that column, "no value" in the
     table, has the words "no value" in its row in place of a bar, and

@@ -1,17 +1,20 @@
 /**
  * The data of the plot of the spectrum as lines on popgen2.html
  * (docs/specs/analyses/sfs.md, "On popgen2.html"): one series per line of
- * `spectrumLinesOf`, named by its population as a text shows it, in the group of its place
- * in the result, `populationGroup`, so that a population has one colour
- * and one shape in every plot of the Populations tab; its points and its
+ * `spectrumLinesOf`, named by its population as a text shows it, in the
+ * group of its population, `populationGroups`, its place among the
+ * populations of the project, so that a population has one colour and
+ * one shape in every plot of the Populations tab and in the principal
+ * components; its points and its
  * line the same positions, the proportion against the frequency of the
  * commonest allele; no marks. Pure, so that a test in node checks it.
  */
 import { MAX_SVG_POINTS } from "../../../charts/limits.ts";
 import type { LineData, LineSeries } from "../../../charts/line.ts";
-import { populationGroup } from "../../../charts/marks.ts";
 import type { SpectrumLines } from "../../../core/analyses/sfs.ts";
 import { escaped } from "../../../core/project.ts";
+import type { Pops } from "../../../worker/protocol.ts";
+import { populationGroups } from "../populationGroups.ts";
 import { LINES_TITLE, LINES_X_LABEL, LINES_Y_LABEL } from "./spectrumWords.ts";
 
 /** The horizontal axis: the frequency of the commonest allele, from 0.5
@@ -49,21 +52,33 @@ export function tooManyPoints(
 }
 
 /** The data of the plot of `spectrum`, with the description the screen
-    writes, `linesDescription`. */
+    writes, `linesDescription`, in a project whose populations are
+    `pops`, `populationsOf(p)`. */
 export function spectrumPlotData(
   spectrum: SpectrumLines,
   description: string,
+  pops: Pops | "all" | null,
 ): LineData {
+  const groups = populationGroups(
+    spectrum.lines.map((line) => line.population),
+    pops,
+  );
   return {
     title: LINES_TITLE,
     description,
     xLabel: LINES_X_LABEL,
     yLabel: LINES_Y_LABEL,
-    series: spectrum.lines.map((line): LineSeries => {
+    series: spectrum.lines.map((line, i): LineSeries => {
+      const group = groups[i];
+      if (group === undefined) {
+        throw new Error(
+          `popnei_web defect: the line of ${line.population} has no group.`,
+        );
+      }
       const xy = { x: line.frequency, y: line.proportion };
       return {
         label: escaped(line.population),
-        group: populationGroup(line.index),
+        group,
         points: xy,
         line: xy,
         marks: [],
