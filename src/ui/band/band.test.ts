@@ -826,6 +826,62 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
     });
   });
 
+  test("after Stop all it names the one that ran: Stopping the PCA while the PCA ran, Stopping the diversity while the diversity ran (the review of package 4, 12 October 2026)", async () => {
+    const pcaRan = page(SUMMARY);
+    await pcaRan.endPass();
+    expect(pcaRan.auto.run("pca")).toBe("started");
+    await flush();
+    expect(pcaRan.auto.run("diversity")).toBe("waiting");
+    pcaRan.auto.pauseAll();
+    pcaRan.stoppingSince = 0;
+    await flush();
+    expect(words(pcaRan.band())).toBe("Stopping the PCA…");
+    expect(buttons(pcaRan.band())).toEqual([null, null]);
+
+    const diversityRan = await bothDone();
+    diversityRan.setDiversity({ minNumIndividuals: 1 });
+    await flush();
+    await quietSecond();
+    expect(words(diversityRan.band(), 12)).toBe("Diversity running · 0:12");
+    diversityRan.auto.pauseAll();
+    diversityRan.stoppingSince = 0;
+    await flush();
+    expect(words(diversityRan.band())).toBe("Stopping the diversity…");
+    expect(buttons(diversityRan.band())).toEqual([null, null]);
+  });
+
+  test("the diversity held after a crash of the PCA that ended the PCA's live state: The diversity starts after the next change, with its Stop recalculating and no Stop all (the review of package 4, 12 October 2026)", async () => {
+    // A PCA of 2,264 individuals or more that crashes ends its live
+    // state, and holds the diversity until the next change.
+    const individuals = Array.from(
+      { length: 2264 },
+      (_, i) => `s${String(i).padStart(4, "0")}`,
+    );
+    const testPage = page(
+      summaryResult(["1"], [1200], individuals),
+      individuals,
+    );
+    await testPage.endPass();
+    expect(testPage.auto.run("pca")).toBe("started");
+    await flush();
+    expect(testPage.auto.run("diversity")).toBe("waiting");
+    testPage.lastPca().end({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    await flush();
+
+    expect(testPage.auto.aboutToStart("diversity")).toBe("afterCrash");
+    expect(words(testPage.band())).toBe(
+      "The diversity starts after the next change",
+    );
+    expect(short(testPage.band())).toBe("Diversity later");
+    expect(buttons(testPage.band())).toEqual([
+      "Stop recalculating the diversity",
+      null,
+    ]);
+  });
+
   test("Stopping the diversity while the store waits for the worker after its Stop", async () => {
     const testPage = page(SUMMARY);
     await testPage.endPass();

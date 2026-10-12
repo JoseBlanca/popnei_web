@@ -154,8 +154,12 @@ export interface TestPage {
   readonly setDiversity: (options: Partial<DiversityOptions>) => void;
 }
 
-/** Makes the test page, whose one pass ends with `summary`. */
-export function page(summary: JobResult): TestPage {
+/** Makes the test page, whose one pass ends with `summary`, the
+    variants file of `individuals`, s000 and s001 when absent. */
+export function page(
+  summary: JobResult,
+  individuals: readonly string[] = ["s000", "s001"],
+): TestPage {
   const requests: Request[] = [];
   const writes: WriteRequest[] = [];
   let lastId = 0;
@@ -200,7 +204,7 @@ export function page(summary: JobResult): TestPage {
   });
   store.variantsRead(FILE, {
     kind: "read",
-    individuals: ["s000", "s001"],
+    individuals,
     ploidy: 2,
     numVars: null,
     keepsPassed: false,
