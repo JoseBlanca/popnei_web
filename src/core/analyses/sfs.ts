@@ -177,8 +177,8 @@ export interface SpectrumLine {
   /** The frequency of the commonest allele at each point, (n − j) / n,
       for j copies of the rarer allele from 1 to floor(n / 2). */
   readonly frequency: Float64Array;
-  /** Bin j over the sum of every bin of the population, bin 0 among
-      them, at each point. */
+  /** Bin j over the sum of bins 1 to floor(n / 2) of the population,
+      its share, at each point. */
   readonly proportion: Float64Array;
   /** popnei's expected number of variants at each point, bin j. */
   readonly variants: Float64Array;
@@ -202,7 +202,8 @@ const LINES = new WeakMap<DiversityResult, SpectrumLines>();
  * population calculated with some variant that shows both alleles in the
  * draw, those `spectraOf` gives shares, in the order of the result; the
  * points from one copy of the rarer allele to floor(n / 2), each bin over
- * the sum of every bin of the population. The same object for the same
+ * the sum of bins 1 to floor(n / 2), the population's variants with both
+ * alleles in the draw: its shares, as the table gives them. The same object for the same
  * result. Throws the defects of `spectraOf`.
  */
 export function spectrumLinesOf(r: DiversityResult): SpectrumLines {
@@ -215,12 +216,9 @@ export function spectrumLinesOf(r: DiversityResult): SpectrumLines {
   let largestProportion = 0;
   for (const [index, pop] of spectraOf(r).pops.entries()) {
     if (!pop.calculated || pop.shares === null) continue;
-    let sum = 0;
-    for (const value of pop.expected) {
-      sum += value;
-    }
     const variants = pop.expected.slice(1);
-    const proportion = variants.map((value) => value / sum);
+    // The table's share, so that the plot and the table agree.
+    const proportion = pop.shares;
     for (const value of proportion) {
       largestProportion = Math.max(largestProportion, value);
     }

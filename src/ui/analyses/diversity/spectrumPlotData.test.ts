@@ -54,9 +54,7 @@ describe("PT7 R1.2 the data of the plot of the spectrum", () => {
     expect(data.title).toBe("The spectrum of each population");
     expect(data.description).toBe("The description.");
     expect(data.xLabel).toBe("Frequency of the commonest allele in the draw");
-    expect(data.yLabel).toBe(
-      "Proportion of the population's variants in the draw",
-    );
+    expect(data.yLabel).toBe("Proportion of the variants with both alleles");
     expect(data.xWholeNumbers).toBe(false);
     expect(data.yWholeNumbers).toBe(false);
   });

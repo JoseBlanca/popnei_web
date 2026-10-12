@@ -6,8 +6,9 @@
  * "Image as PNG" and "Data as CSV", the CSV of `spectrumLinesCsv`; the
  * plot, `createLine` of src/charts/line.ts mounted by `usePlot`, a line
  * per population in the colour and the shape of its place in the
- * result, with its legend; and under it the variants in the draw of
- * each population and, for an even draw, the line of the points at 0.5.
+ * result, with its legend; and under it the variants of each population
+ * with both alleles in the draw, which its proportions are over, and, for
+ * an even draw, the line of the points at 0.5.
  * A draw whose lines hold more points than the plot draws gives its line
  * in place of the plot, the menu and the lines under it.
  *
@@ -35,6 +36,7 @@ import styles from "./SpectrumLines.module.css";
 import { spectrumPlotData, tooManyPoints } from "./spectrumPlotData.ts";
 import {
   LINES_WHAT,
+  bothAllelesOf,
   halfPointsLine,
   linesDescription,
   noSpectrumLine,
@@ -92,7 +94,7 @@ export function SpectrumLines({
         `popnei_web defect: the line of ${line.population} has no spectrum.`,
       );
     }
-    return pop;
+    return { population: pop.population, bothAlleles: bothAllelesOf(pop) };
   });
 
   return (

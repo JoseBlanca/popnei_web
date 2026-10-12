@@ -224,8 +224,7 @@ export const LINES_TITLE = "The spectrum of each population";
 export const LINES_X_LABEL = "Frequency of the commonest allele in the draw";
 
 /** The label of the vertical axis of the plot as lines. */
-export const LINES_Y_LABEL =
-  "Proportion of the population's variants in the draw";
+export const LINES_Y_LABEL = "Proportion of the variants with both alleles";
 
 /**
  * The caption of the block of popgen2.html, whose plot draws a line per
@@ -239,22 +238,26 @@ export function linesCaption(
   variantsName: string,
 ): string {
   const draw = grouped(numCalledAlleles);
-  return `The folded site frequency spectrum of each population, in a draw of ${draw} of its chromosomes at each variant, over the ${counted(numVars, "variant")} of ${escaped(variantsName)} the filters kept. Each line is a population: across, the frequency of the commonest allele in the draw, 1 \u2212 j/${draw} for j copies of the rarer allele; up, the proportion of that population's variants in the draw with that frequency. Variants with no copy of the rarer allele in the draw are left out of the plot; the table holds them. The number of chromosomes is set above the table, with the rarefaction.`;
+  return `The folded site frequency spectrum of each population, in a draw of ${draw} of its chromosomes at each variant, over the ${counted(numVars, "variant")} of ${escaped(variantsName)} the filters kept. Each line is a population: across, the frequency of the commonest allele in the draw, 1 \u2212 j/${draw} for j copies of the rarer allele; up, the proportion of the population's variants with both alleles in the draw that have that frequency. Variants with no copy of the rarer allele in the draw are left out of the plot and of the proportions; the table holds them. The number of chromosomes is set above the table, with the rarefaction.`;
 }
 
-/** The line under the plot of the variants in the draw of each
-    population with a line, which its proportions are over: "Each
-    proportion is over …: p0, 1,200; p2, 1,151." */
+/** The line under the plot of the variants of each population with a
+    line that show both alleles in the draw, the sum of its bins 1 to
+    n / 2, which its proportions are over, rounded: "Each proportion is
+    over …: p0, about 1,155; p2, about 1,152." */
 export function variantsInDrawLine(
   pops: readonly {
     readonly population: string;
-    readonly variantsInDraw: number;
+    readonly bothAlleles: number;
   }[],
 ): string {
   const each = pops
-    .map((pop) => `${escaped(pop.population)}, ${grouped(pop.variantsInDraw)}`)
+    .map(
+      (pop) =>
+        `${escaped(pop.population)}, about ${grouped(Math.round(pop.bothAlleles))}`,
+    )
     .join("; ");
-  return `Each proportion is over the population's variants in the draw, those with no copy of the rarer allele among them: ${each}.`;
+  return `Each proportion is over the population's variants with both alleles in the draw: ${each}.`;
 }
 
 /** The line under the plot of the points at 0.5, which hold one count

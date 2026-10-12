@@ -1571,11 +1571,11 @@ test.describe("PT2 D3 the Populations tab while the diversity waits, and what th
 /** The row of p0 at one copy of the rarer allele of the CSV of the plot
     of the spectrum: the frequency of the commonest allele, 39 / 40, the
     expected number of variants, and the proportion, that number over the
-    sum of p0's 21 bins, 1199.9999999999998: popnei 0.2.2 under node,
+    sum of p0's bins 1 to 20, its share: popnei 0.2.2 under node,
     12 October 2026, `calcPopDiversity` with `numCalledAlleles` 40,
     `minNumIndividuals` 20 and `folded_sfs`, the missing data at 0.1,
     which keeps the 1,200 variants of panel.nei. */
-const P0_LINE_1 = "p0,1,0.975,38.07795856907602,0.031731632140896686";
+const P0_LINE_1 = "p0,1,0.975,38.07795856907602,0.03296202862168288";
 
 /** The button "Download…" of `what` in the tab shown. */
 function menuButton(page: Page, what: string): Locator {
@@ -1738,16 +1738,16 @@ test.describe("PT2 D3 the downloads of the Populations tab", () => {
         "p1",
       ]);
       await expect(plot).toHaveAccessibleName(
-        "The spectrum of each population 3 lines, one per population, p0, p2 and p1, of 20 points each, from 0.5 to 0.975 of the commonest allele; the largest proportion, 0.0539, of p1 at 0.625.",
+        "The spectrum of each population 3 lines, one per population, p0, p2 and p1, of 20 points each, from 0.5 to 0.975 of the commonest allele; the largest proportion, 0.0562, of p1 at 0.625.",
       );
       await expect(
         shown(page).getByText(
-          /Variants with no copy of the rarer allele in the draw are left out of the plot; the table holds them\./u,
+          /Variants with no copy of the rarer allele in the draw are left out of the plot and of the proportions; the table holds them\./u,
         ),
       ).toBeVisible();
       await expect(
         shown(page).getByText(
-          "Each proportion is over the population's variants in the draw, those with no copy of the rarer allele among them: p0, 1,200; p2, 1,200; p1, 1,200.",
+          "Each proportion is over the population's variants with both alleles in the draw: p0, about 1,155; p2, about 1,152; p1, about 1,151.",
           { exact: true },
         ),
       ).toBeVisible();

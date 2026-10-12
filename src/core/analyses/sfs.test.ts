@@ -343,18 +343,17 @@ describe("PA6 D6 the spectrum's module: the numbers of popnei", () => {
   });
 
   test("PT7 R1.2 the lines of panel.nei at a draw of 40: p0's proportion at one copy of the rarer allele and at 20, p1's the largest, at 0.625", () => {
-    // popnei 0.2.2 under node, 12 October 2026, the same call with the
-    // missing data filter at 0.1, which keeps all 1,200 variants and
-    // gives these spectra: bin j over the sum of the 21 bins.
+    // The shares of the spectra above: bin j over the sum of bins 1 to
+    // 20, the variants with both alleles in the draw.
     const { lines, largestProportion } = spectrumLinesOf(PANEL);
     const [p0, p2, p1] = lines;
-    expect(p0?.proportion[0]).toBe(0.031731632140896686);
-    expect(p0?.proportion[19]).toBe(0.02529604246091587);
-    expect(p2?.proportion[0]).toBe(0.04089992026053879);
-    expect(p1?.proportion[14]).toBe(0.05386774831954687);
+    expect(p0?.proportion[0]).toBe(0.03296202862168288);
+    expect(p0?.proportion[19]).toBe(0.026276898456079615);
+    expect(p2?.proportion[0]).toBe(0.042616971066566346);
+    expect(p1?.proportion[14]).toBe(0.05618145165329451);
     expect(p1?.frequency[14]).toBe(0.625);
     expect(p0?.frequency[0]).toBe(0.975);
-    expect(largestProportion).toBe(0.05386774831954687);
+    expect(largestProportion).toBe(0.05618145165329451);
   });
 });
 
@@ -397,7 +396,7 @@ describe("PT1 D1 the spectrum on popgen2.html", () => {
 });
 
 describe("PT7 R1.2 the lines of the spectrum on popgen2.html: spectrumLinesOf and spectrumLinesCsv", () => {
-  test("the worked example: one line, of p0, its frequencies 0.75 and 0.5 and its proportions 0.4 and 0.4 over its 5 variants in the draw; p1, every variant with one allele, no line", () => {
+  test("the worked example: one line, of p0, its frequencies 0.75 and 0.5 and its proportions 0.5 and 0.5, its shares over its 4 variants with both alleles; p1, every variant with one allele, no line", () => {
     const lines = spectrumLinesOf(workedExample());
     expect(lines.numCalledAlleles).toBe(4);
     expect(lines.lines).toHaveLength(1);
@@ -405,9 +404,9 @@ describe("PT7 R1.2 the lines of the spectrum on popgen2.html: spectrumLinesOf an
     expect(p0?.population).toBe("p0");
     expect(p0?.index).toBe(0);
     expect([...(p0?.frequency ?? [])]).toEqual([0.75, 0.5]);
-    expect([...(p0?.proportion ?? [])]).toEqual([0.4, 0.4]);
+    expect([...(p0?.proportion ?? [])]).toEqual([0.5, 0.5]);
     expect([...(p0?.variants ?? [])]).toEqual([2, 2]);
-    expect(lines.largestProportion).toBe(0.4);
+    expect(lines.largestProportion).toBe(0.5);
   });
 
   test("a population not calculated has no line, and the next keeps its place in the result as its index", () => {
@@ -432,7 +431,7 @@ describe("PT7 R1.2 the lines of the spectrum on popgen2.html: spectrumLinesOf an
     });
     const [p0] = spectrumLinesOf(r).lines;
     expect([...(p0?.frequency ?? [])]).toEqual([0.8, 0.6]);
-    expect([...(p0?.proportion ?? [])]).toEqual([0.25, 0.5]);
+    expect([...(p0?.proportion ?? [])]).toEqual([1 / 3, 2 / 3]);
   });
 
   test("with no line the largest proportion is 0, and the same object for the same result", () => {
@@ -448,7 +447,7 @@ describe("PT7 R1.2 the lines of the spectrum on popgen2.html: spectrumLinesOf an
 
   test("spectrumLinesCsv of the worked example, to the letter, and a name with a comma quoted", () => {
     expect(spectrumLinesCsv(workedExample())).toBe(
-      "population,rarer_allele,commonest_allele_frequency,variants,proportion\np0,1,0.75,2,0.4\np0,2,0.5,2,0.4\n",
+      "population,rarer_allele,commonest_allele_frequency,variants,proportion\np0,1,0.75,2,0.5\np0,2,0.5,2,0.5\n",
     );
     const r = result({
       pops: ["a,b"],
@@ -457,7 +456,7 @@ describe("PT7 R1.2 the lines of the spectrum on popgen2.html: spectrumLinesOf an
       foldedSfs: [[1, 1]],
     });
     expect(spectrumLinesCsv(r)).toBe(
-      'population,rarer_allele,commonest_allele_frequency,variants,proportion\n"a,b",1,0.5,1,0.5\n',
+      'population,rarer_allele,commonest_allele_frequency,variants,proportion\n"a,b",1,0.5,1,1\n',
     );
   });
 });
