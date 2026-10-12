@@ -957,5 +957,36 @@ a live analysis does not start), `technology.md`, the status line of
 each spec; the samples of NU4 D6 were 320 to 340 ms apart (250 ms of
 wait and 70 to 90 ms per sample), not "every 250 ms".
 
-Left: the stale review of the documents; package 6; package 7, the
-owner's try.
+The stale review of the documents, 12 October 2026: five findings
+held, fixed in a3bad67c to c0958019 (the documents) and ac2cf99c,
+2e82faee (the skills): the download still said it waited for the PCA
+alone; the band's height and longest line at 320 px; 2.4 s in Chromium
+and 2.5 s in WebKit for the diversity of the VCF of 403 MB; section 12
+named the PCA alone; three skills limited the lock and the start by
+itself to the PCA, the stale checklist among them; "rem" for a query
+written in em.
+
+### Work package 6, 12 October 2026
+
+6.1: the session read the screens of packages 2 to 4, taken again at
+2e82faee (464 screens of `popgen2.html`, all passed), in sheets: the
+Populations tab in its 13 states at 1280 px light and at 320 px dark,
+the band in its 38 states at 320 px in both themes, the box
+Individuals greyed and its tooltips. Every state of the screen spec,
+the band spec's new rows and the greyed box is there and readable;
+nothing cut or overlapping. At 320 px the tooltip of "Open another
+individuals file…" covers Remove while it shows; it closes with Escape
+or when the pointer or the focus moves on (WCAG 1.4.13), so it is left
+as it is; 8dd80199's "no longer covers Remove" holds for the tooltips
+of the column list and of Remove only.
+
+6.2, at 2e82faee: typecheck, lint, format clean; Vitest 174 files,
+5,440 tests; the browser suite, every spec file but `measure` and
+`screens`, 48 files, in Chromium and WebKit, in four chunks: 426, 424,
+424 and 424 passed, 1,698 of 1,698, none retried. The first load of
+`popgen2.html`: 331.93 KB (sum of Vite's gzip sizes, the HTML
+included), against 321.62 KB before the piece.
+
+6.3: the report to the owner, in chat.
+
+Left: package 7, the owner's try.
