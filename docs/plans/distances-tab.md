@@ -143,3 +143,25 @@ distances never wait for a long LD decay; the tab's loader and the lines
 of a live analysis, written two and three times across both branches,
 are shared after the merge.
 
+
+The fixes, 12 and 13 October 2026, 7a16d585 to the branch's head, every
+test seen failing first or a mutation of the review now killed: the
+automatic runs count a new project as a change only when it changes, for
+an analysis that can be live, its key or the reason it is locked (the
+heatmap's measure, the PCA's colours, axes and 3D/2D no longer restart
+the quiet second nor lift the hold after a crash); the plural said
+everywhere; the legend's title above its bar, so that three populations
+write their values at 320 px, and a line pointing to the table when the
+cells cannot hold them; "0.0000 or below" when a distance is negative,
+with a sentence; each population's individuals in the caption; a
+paragraph under the measure, in popnei's words, for the owner to check;
+one name for the minimum; "The heatmap now shows Jost's D."; the
+populations, the column and the file in the key's tests; the status
+region's words tested. Checks at the head: typecheck, lint, format clean;
+Vitest 183 files, 5,568 tests; Chromium and WebKit, `popgen2Distances`
+with `popDists` and `plots` 120, `popgen2Tabs`, `popgen2Live` and
+`popgen2BandLive` 82, `popgen2Band` and `popgen2Populations` 132; no
+flow failed on a retry.
+
+The documents (phase 2) are written once for both pieces after their
+merge, so that the two branches do not conflict in them.
