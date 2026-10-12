@@ -436,7 +436,7 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
     );
   });
 
-  test("the key: another individuals file of the same table, and None, change it; the measure does not", () => {
+  test("the key: another individuals file of the same table, None, other populations of the same file and column, and another column of the same values change it; the measure does not", () => {
     const p = project();
     expect(keyOn(popDistsOnPopgen2, p)).not.toBe(
       keyOn(popDistsOnPopgen2, project({ tableName: "other.csv" })),
@@ -449,6 +449,29 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
     );
     expect(keyOn(popDistsOnPopgen2, p)).not.toBe(
       keyOn(popDistsOnPopgen2, project({ min: 2 })),
+    );
+    // The same file and column with other populations: i3 moved to B.
+    const moved: IndividualsTable = {
+      ...EXAMPLE_TABLE,
+      rows: EXAMPLE_TABLE.rows.map((row) =>
+        row[0] === "i3" ? ["i3", "B", "x"] : row,
+      ),
+    };
+    expect(keyOn(popDistsOnPopgen2, p)).not.toBe(
+      keyOn(popDistsOnPopgen2, project({ table: moved })),
+    );
+    // A second column of the same values under another name: the same
+    // populations, named in the warnings by another column.
+    const twice: IndividualsTable = {
+      columns: ["name", "pop", "site"],
+      rows: EXAMPLE_TABLE.rows.map((row) => [
+        row[0] ?? null,
+        row[1] ?? null,
+        row[1] ?? null,
+      ]),
+    };
+    expect(keyOn(popDistsOnPopgen2, project({ table: twice }))).not.toBe(
+      keyOn(popDistsOnPopgen2, project({ table: twice, column: "site" })),
     );
     // The old page's key reads no name of the individuals file.
     expect(keyOn(popDists, p)).toBe(
