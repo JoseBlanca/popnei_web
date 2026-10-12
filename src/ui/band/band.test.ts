@@ -482,6 +482,7 @@ describe("PT1 the band while a crash holds the PCA", () => {
       lineWords(
         {
           kind: "aboutToStart",
+          ids: ["pca"],
           named: [liveAnalysisOf(page(SUMMARY).store.getState(), "pca")],
           waitsFor: "afterCrash",
           withStop: true,

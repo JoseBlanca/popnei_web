@@ -28,7 +28,7 @@
  * A pure function of what the page holds, so that a test in node checks
  * it on the real store of the page.
  */
-import { POPGEN2_LIVE } from "../../core/apps.ts";
+import { POPGEN2_LIVE, isPopgen2Live } from "../../core/apps.ts";
 import type { Popgen2LiveId } from "../../core/apps.ts";
 import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
 import { writtenName } from "../../core/fileNames.ts";
@@ -115,6 +115,8 @@ export type BandLine =
       all, while two or more are live, ends `stopAll`. */
   | {
       readonly kind: "running";
+      /** The analysis running, whose Stop the band sends. */
+      readonly id: Popgen2LiveId;
       readonly named: LiveAnalysisName;
       readonly runId: number;
       readonly then: readonly LiveAnalysisName[];
@@ -139,6 +141,9 @@ export type BandLine =
       live, ends `stopAll`. */
   | {
       readonly kind: "aboutToStart";
+      /** The analyses about to start, one for each of `named`, in the
+          same order. */
+      readonly ids: readonly Popgen2LiveId[];
       readonly named: readonly LiveAnalysisName[];
       readonly waitsFor: AboutToStart;
       readonly withStop: boolean;
@@ -259,6 +264,7 @@ export function lineOf(page: BandPage): BandLine {
     if (status.kind !== "running") continue;
     return {
       kind: "running",
+      id,
       named: liveAnalysisOf(state, id),
       runId: status.runId,
       then: live
@@ -295,6 +301,7 @@ export function lineOf(page: BandPage): BandLine {
     );
     return {
       kind: "aboutToStart",
+      ids: together,
       named: together.map((id) => liveAnalysisOf(state, id)),
       waitsFor,
       withStop: together.length === 1 && page.tab !== LIVE_TABS[first],
@@ -363,7 +370,7 @@ function stoppingOf(
   }
   return {
     kind: "analysis",
-    name: POPGEN2_LIVE.some((one) => one === id)
+    name: isPopgen2Live(id)
       ? liveAnalysisOf(state, id).name
       : `the calculation of ${titleOf(id)}`,
   };

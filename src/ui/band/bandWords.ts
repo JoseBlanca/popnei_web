@@ -138,16 +138,19 @@ export function stopOf(line: BandLine): BandStop | null {
       return {
         label: "Stop",
         name: `Stop ${line.named.name}`,
-        stops: liveId(line.named),
+        stops: line.id,
         wideOnly: false,
       };
     case "aboutToStart": {
       const [only] = line.named;
-      if (!line.withStop || only === undefined) return null;
+      const [onlyId] = line.ids;
+      if (!line.withStop || only === undefined || onlyId === undefined) {
+        return null;
+      }
       return {
         label: STOP_RECALCULATING,
         name: `Stop recalculating ${only.name}`,
-        stops: liveId(only),
+        stops: onlyId,
         wideOnly: line.stopAll !== null,
       };
     }
@@ -165,15 +168,6 @@ export function stopAllOf(line: BandLine): BandStopAll | null {
     label: STOP_ALL_LABEL,
     name: `${STOP_ALL_LABEL}: ${joined(line.stopAll.map((one) => one.name))}`,
   };
-}
-
-/** The id of `named`, an analysis that can be live; a defect for any
-    other, which the band never names. */
-function liveId(named: LiveAnalysisName): Popgen2LiveId {
-  if (named.id === "pca" || named.id === "diversity") return named.id;
-  throw new Error(
-    `popnei_web defect: the band named ${named.id}, which is not live.`,
-  );
 }
 
 /** The analysis `named` at the start of a line: "PCA", "PCoA",
