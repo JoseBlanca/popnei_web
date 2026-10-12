@@ -5847,7 +5847,8 @@ for (const theme of ["light", "dark"] as const) {
           .click();
         const run = page
           .getByRole("tabpanel")
-          .getByRole("button", { name: "Run", exact: true });
+          .getByRole("button", { name: "Run", exact: true })
+          .first();
         await expect(run).toHaveAccessibleDescription(
           /^Type the LD distance/u,
           { timeout: 20_000 },
@@ -5876,7 +5877,9 @@ for (const theme of ["light", "dark"] as const) {
             .getByRole("tab", { name: "PCA", exact: true })
             .click();
           const panel = page.getByRole("tabpanel");
-          const run = panel.getByRole("button", { name: "Run", exact: true });
+          const run = panel
+            .getByRole("button", { name: "Run", exact: true })
+            .first();
           await expect(run).toHaveAccessibleDescription(
             /^Type the LD distance/u,
             { timeout: 20_000 },
@@ -5909,7 +5912,9 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("tab", { name: "PCA", exact: true })
           .click();
         const panel = page.getByRole("tabpanel");
-        const run = panel.getByRole("button", { name: "Run", exact: true });
+        const run = panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first();
         await expect(run).toHaveAccessibleDescription(
           /^Type the LD distance/u,
           {
@@ -5949,7 +5954,7 @@ for (const theme of ["light", "dark"] as const) {
           await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
           const panel = page.getByRole("tabpanel");
           await expect(
-            panel.getByRole("button", { name: "Run", exact: true }),
+            panel.getByRole("button", { name: "Run", exact: true }).first(),
           ).toHaveAccessibleDescription(/^Type the LD distance/u, {
             timeout: 20_000,
           });
@@ -5998,7 +6003,9 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("tab", { name: "PCA", exact: true })
           .click();
         const panel = page.getByRole("tabpanel");
-        const run = panel.getByRole("button", { name: "Run", exact: true });
+        const run = panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first();
         await expect(run).toHaveAccessibleDescription(
           /^Type the LD distance/u,
           {
@@ -6037,9 +6044,127 @@ for (const theme of ["light", "dark"] as const) {
           .click();
         const panel = page.getByRole("tabpanel");
         await expect(
-          panel.getByRole("button", { name: "Run", exact: true }),
+          panel.getByRole("button", { name: "Run", exact: true }).first(),
         ).toBeEnabled({ timeout: 20_000 });
         return panel;
+      }
+
+      /** The part of the LD decay of the Populations tab, from 12 October
+          2026 (popgen2-populations.md, "The LD decay"). */
+      function ldPart(page: Page): Locator {
+        return page.getByRole("region", { name: "LD decay", exact: true });
+      }
+
+      /** Opens ld.nei and ld_pops.csv, shows the Populations tab once the
+          one pass has read the file, and gives the part of the LD decay;
+          with `distance`, types it. A worker's script served with a
+          front that keeps back the results of `heldAnalysis`, so that
+          its run lasts for the picture. */
+      async function ldDecayReady(
+        page: Page,
+        distance: string | null,
+        heldAnalysis: "ldDecay" | "diversity" | null = null,
+      ): Promise<Locator> {
+        if (heldAnalysis !== null) {
+          await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
+            const response = await route.fetch();
+            const script = await response.text();
+            const front = `{ const realPost = self.postMessage.bind(self); self.postMessage = (m, t) => { if (m !== null && typeof m === "object" && m.kind === "result" && m.result !== null && typeof m.result === "object" && m.result.analysis === ${JSON.stringify(heldAnalysis)}) return; realPost(m, t); }; }\n`;
+            await route.fulfill({ response, body: front + script });
+          });
+          await page.goto("popgen2.html");
+        }
+        await pickOnNewPage(page, "ld.nei");
+        await pickIndividualsOnNewPage(page, "ld_pops.csv");
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "Populations", exact: true })
+          .click();
+        const part = ldPart(page);
+        await expect(
+          diversityPanel(page).getByRole("button", {
+            name: "Run",
+            exact: true,
+          }),
+        ).toBeEnabled({ timeout: 20_000 });
+        if (distance !== null) {
+          const field = part.getByRole("textbox", {
+            name: /^Largest distance between the two variants/u,
+          });
+          await field.fill(distance);
+          await field.press("Enter");
+        }
+        return part;
+      }
+
+      test("the LD decay locked: no distance typed, the line of help beside the field and the lock beside Run", async ({
+        page,
+      }) => {
+        await ldDecayReady(page, null);
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-ld-decay-locked${at}-${theme}`);
+      });
+
+      test("the LD decay ready: 100000 typed, Run", async ({ page }) => {
+        const part = await ldDecayReady(page, "100000");
+        await expect(
+          part.getByRole("button", { name: "Run", exact: true }),
+        ).toBeEnabled();
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-ld-decay-ready${at}-${theme}`);
+      });
+
+      test("the LD decay running, held: Stop, the bar and the line under it", async ({
+        page,
+      }) => {
+        const part = await ldDecayReady(page, "100000", "ldDecay");
+        await part.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(
+          part.getByRole("button", { name: "Stop", exact: true }),
+        ).toBeVisible();
+        await expect(part.getByRole("progressbar")).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-ld-decay-running${at}-${theme}`);
+      });
+
+      test("the LD decay waiting for the diversity, held running: its line of waiting with Stop recalculating", async ({
+        page,
+      }) => {
+        const part = await ldDecayReady(page, "100000", "diversity");
+        await diversityPanel(page)
+          .getByRole("button", { name: "Run", exact: true })
+          .click();
+        await part.getByRole("button", { name: "Run", exact: true }).click();
+        await expect(
+          part.getByText(
+            "The LD decay starts once the diversity, which is running, ends.",
+            { exact: true },
+          ),
+        ).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-ld-decay-waiting${at}-${theme}`);
+      });
+
+      for (const shot of ["done", "stopped"] as const) {
+        test(`the LD decay ${shot === "done" ? "done: the table, the time of the last run, the plot with its Download…" : "stopped after its result: the line of a Stop and the time of the last run"}`, async ({
+          page,
+        }) => {
+          const part = await ldDecayReady(page, "100000");
+          await part.getByRole("button", { name: "Run", exact: true }).click();
+          await expect(part.locator("svg.chart-line")).toBeVisible({
+            timeout: 20_000,
+          });
+          if (shot === "stopped") {
+            await part
+              .getByRole("button", { name: "Stop recalculating", exact: true })
+              .click();
+            await expect(
+              part.getByText(/^Stopped: the LD decay no longer starts/u),
+            ).toBeVisible();
+          }
+          await page.mouse.click(1, 1);
+          await save(page, `popgen2-ld-decay-${shot}${at}-${theme}`);
+        });
       }
 
       for (const shot of ["ready", "one-population"] as const) {
@@ -6067,9 +6192,12 @@ for (const theme of ["light", "dark"] as const) {
         // so.
         await page.goto("popgen2.html");
         const panel = await populationsReady(page);
-        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first()
+          .click();
         await expect(
-          panel.getByRole("button", { name: "Stop", exact: true }),
+          panel.getByRole("button", { name: "Stop", exact: true }).first(),
         ).toBeVisible();
         await expect(panel.getByRole("progressbar")).toBeVisible();
         await page.mouse.move(0, 0);
@@ -6089,9 +6217,12 @@ for (const theme of ["light", "dark"] as const) {
         });
         await page.goto("popgen2.html");
         const panel = await populationsReady(page);
-        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first()
+          .click();
         await expect(
-          panel.getByRole("button", { name: "Stop", exact: true }),
+          panel.getByRole("button", { name: "Stop", exact: true }).first(),
         ).toBeVisible();
         await page
           .getByRole("tablist", { name: "Files and analyses" })
@@ -6137,7 +6268,10 @@ for (const theme of ["light", "dark"] as const) {
             page,
             shot !== "one-population-done",
           );
-          await panel.getByRole("button", { name: "Run", exact: true }).click();
+          await panel
+            .getByRole("button", { name: "Run", exact: true })
+            .first()
+            .click();
           // One plot of the spectrum, a line per population.
           await expect(panel.locator("svg.chart-line")).toHaveCount(1, {
             timeout: 20_000,
@@ -6147,6 +6281,7 @@ for (const theme of ["light", "dark"] as const) {
           if (shot === "done") {
             await panel
               .getByRole("button", { name: "Stop recalculating", exact: true })
+              .first()
               .click();
             await expect(
               panel.getByText(/^Stopped: the diversity/u),
@@ -6199,7 +6334,9 @@ for (const theme of ["light", "dark"] as const) {
         await expect(minimum).toBeVisible({ timeout: 20_000 });
         await minimum.fill("16");
         await minimum.press("Enter");
-        const run = panel.getByRole("button", { name: "Run", exact: true });
+        const run = panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first();
         await expect(run).toBeEnabled({ timeout: 20_000 });
         await run.click();
         await expect(panel.locator("svg.chart-bars")).toHaveCount(5, {
@@ -6228,7 +6365,7 @@ for (const theme of ["light", "dark"] as const) {
           .click();
         const panel = page.getByRole("tabpanel");
         await expect(
-          panel.getByRole("button", { name: "Run", exact: true }),
+          panel.getByRole("button", { name: "Run", exact: true }).first(),
         ).toHaveAccessibleDescription(
           /^Run once panel\.nei is read to the end/u,
           {
@@ -6257,16 +6394,21 @@ for (const theme of ["light", "dark"] as const) {
         await expect(field).toBeVisible({ timeout: 20_000 });
         await field.fill("50000");
         await field.press("Enter");
-        const run = panel.getByRole("button", { name: "Run", exact: true });
+        const run = panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first();
         await expect(run).toBeEnabled({ timeout: 20_000 });
         await run.click();
         await expect(
-          panel.getByRole("button", { name: "Stop", exact: true }),
+          panel.getByRole("button", { name: "Stop", exact: true }).first(),
         ).toBeVisible();
         await tabs
           .getByRole("tab", { name: "Populations", exact: true })
           .click();
-        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first()
+          .click();
         await expect(
           panel.getByText(
             "The diversity starts once the PCA, which is running, ends.",
@@ -6281,7 +6423,10 @@ for (const theme of ["light", "dark"] as const) {
         page,
       }) => {
         const panel = await populationsReady(page);
-        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first()
+          .click();
         // The plot of the spectrum and the five bar plots of the table.
         await expect(panel.locator("svg.chart")).toHaveCount(6, {
           timeout: 20_000,
@@ -6319,10 +6464,14 @@ for (const theme of ["light", "dark"] as const) {
             .getByRole("tab", { name: "Populations", exact: true })
             .click();
           const panel = page.getByRole("tabpanel");
-          const run = panel.getByRole("button", { name: "Run", exact: true });
+          const run = panel
+            .getByRole("button", { name: "Run", exact: true })
+            .first();
           await expect(run).toBeEnabled({ timeout: 20_000 });
           await run.click();
-          const stop = panel.getByRole("button", { name: "Stop", exact: true });
+          const stop = panel
+            .getByRole("button", { name: "Stop", exact: true })
+            .first();
           await expect(stop).toBeVisible();
           if (shot === "stopped") {
             await stop.click();
@@ -6364,10 +6513,12 @@ for (const theme of ["light", "dark"] as const) {
           .click();
         const panel = page.getByRole("tabpanel");
         await expect(
-          panel.getByText(/^7 unclassified individuals kept are left out/u),
+          panel
+            .getByText(/^7 unclassified individuals kept are left out/u)
+            .first(),
         ).toBeVisible({ timeout: 20_000 });
         await expect(
-          panel.getByRole("button", { name: "Run", exact: true }),
+          panel.getByRole("button", { name: "Run", exact: true }).first(),
         ).toBeEnabled({ timeout: 20_000 });
         await page.mouse.click(1, 1);
         await save(page, `popgen2-populations-unclassified${at}-${theme}`);
@@ -6403,7 +6554,9 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("tab", { name: "PCA", exact: true })
           .click();
         const panel = page.getByRole("tabpanel");
-        const run = panel.getByRole("button", { name: "Run", exact: true });
+        const run = panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first();
         await expect(run).toHaveAccessibleDescription(
           /^Type the LD distance/u,
           { timeout: 20_000 },
@@ -6445,7 +6598,7 @@ for (const theme of ["light", "dark"] as const) {
             await stop.focus();
             await page.keyboard.press("Enter");
             await expect(
-              panel.getByRole("button", { name: "Run", exact: true }),
+              panel.getByRole("button", { name: "Run", exact: true }).first(),
             ).toBeFocused();
             await expect(panel.getByText(/^Stopped: the PCA/u)).toBeVisible();
           }
@@ -6483,7 +6636,9 @@ for (const theme of ["light", "dark"] as const) {
         const tabs = page.getByRole("tablist", { name: "Files and analyses" });
         await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
         const panel = page.getByRole("tabpanel");
-        const run = panel.getByRole("button", { name: "Run", exact: true });
+        const run = panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first();
         await expect(run).toHaveAccessibleDescription(
           /^Type the LD distance/u,
           { timeout: 20_000 },
@@ -6514,7 +6669,9 @@ for (const theme of ["light", "dark"] as const) {
         const tabs = page.getByRole("tablist", { name: "Files and analyses" });
         await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
         const panel = page.getByRole("tabpanel");
-        const run = panel.getByRole("button", { name: "Run", exact: true });
+        const run = panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first();
         await expect(run).toHaveAccessibleDescription(
           /^Type the LD distance/u,
           { timeout: 20_000 },
@@ -6563,7 +6720,9 @@ for (const theme of ["light", "dark"] as const) {
             .getByRole("tab", { name: "PCA", exact: true })
             .click();
           const panel = page.getByRole("tabpanel");
-          const run = panel.getByRole("button", { name: "Run", exact: true });
+          const run = panel
+            .getByRole("button", { name: "Run", exact: true })
+            .first();
           await expect(run).toHaveAccessibleDescription(
             /^Type the LD distance/u,
             {
@@ -6649,7 +6808,10 @@ for (const theme of ["light", "dark"] as const) {
         await expect(field).toBeVisible({ timeout: 20_000 });
         await field.fill("50000");
         await field.press("Enter");
-        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first()
+          .click();
         await expect(band(page)).toContainText("PCA running", {
           timeout: 20_000,
         });
@@ -6746,7 +6908,10 @@ for (const theme of ["light", "dark"] as const) {
           await expect(field).toBeVisible({ timeout: 20_000 });
           await field.fill("50000");
           await field.press("Enter");
-          await panel.getByRole("button", { name: "Run", exact: true }).click();
+          await panel
+            .getByRole("button", { name: "Run", exact: true })
+            .first()
+            .click();
           await expect(
             panel.getByText(/^The place of each of the 200 individuals/u),
           ).toBeVisible({ timeout: 30_000 });
@@ -6832,7 +6997,10 @@ for (const theme of ["light", "dark"] as const) {
             hasText: "Prune the variants by linkage disequilibrium (LD)",
           })
           .click();
-        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first()
+          .click();
         await expect(
           panel.getByRole("heading", { level: 3, name: "2 warnings" }),
         ).toBeVisible({ timeout: 30_000 });
@@ -6854,7 +7022,9 @@ for (const theme of ["light", "dark"] as const) {
         await tabs
           .getByRole("tab", { name: "Populations", exact: true })
           .click();
-        const run = panel.getByRole("button", { name: "Run", exact: true });
+        const run = panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first();
         await expect(run).toBeEnabled({ timeout: 20_000 });
         await run.click();
         await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
@@ -6888,14 +7058,19 @@ for (const theme of ["light", "dark"] as const) {
           await expect(field).toBeVisible({ timeout: 20_000 });
           await field.fill("50000");
           await field.press("Enter");
-          await panel.getByRole("button", { name: "Run", exact: true }).click();
+          await panel
+            .getByRole("button", { name: "Run", exact: true })
+            .first()
+            .click();
           await expect(
             panel.getByText(/^The place of each of the 200 individuals/u),
           ).toBeVisible({ timeout: 30_000 });
           await tabs
             .getByRole("tab", { name: "Populations", exact: true })
             .click();
-          const run = panel.getByRole("button", { name: "Run", exact: true });
+          const run = panel
+            .getByRole("button", { name: "Run", exact: true })
+            .first();
           await expect(run).toBeEnabled({ timeout: 20_000 });
           await run.click();
           await expect(
@@ -6966,14 +7141,19 @@ for (const theme of ["light", "dark"] as const) {
         await expect(field).toBeVisible({ timeout: 20_000 });
         await field.fill("50000");
         await field.press("Enter");
-        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first()
+          .click();
         await expect(
           panel.getByText(/^The place of each of the 200 individuals/u),
         ).toBeVisible({ timeout: 30_000 });
         await tabs
           .getByRole("tab", { name: "Populations", exact: true })
           .click();
-        const run = panel.getByRole("button", { name: "Run", exact: true });
+        const run = panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first();
         await expect(run).toBeEnabled({ timeout: 20_000 });
         await run.click();
         await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
@@ -7039,7 +7219,9 @@ for (const theme of ["light", "dark"] as const) {
         await expect(minimum).toBeVisible({ timeout: 20_000 });
         await minimum.fill("60");
         await minimum.press("Enter");
-        const run = panel.getByRole("button", { name: "Run", exact: true });
+        const run = panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first();
         await expect(run).toBeEnabled({ timeout: 20_000 });
         await run.click();
         await expect(
@@ -7074,7 +7256,9 @@ for (const theme of ["light", "dark"] as const) {
         await tabs
           .getByRole("tab", { name: "Populations", exact: true })
           .click();
-        const run = panel.getByRole("button", { name: "Run", exact: true });
+        const run = panel
+          .getByRole("button", { name: "Run", exact: true })
+          .first();
         await expect(run).toBeEnabled({ timeout: 20_000 });
         await run.click();
         await expect(panel.locator("[data-spectrum-warning]")).toBeVisible({
@@ -7115,11 +7299,13 @@ for (const theme of ["light", "dark"] as const) {
           await tabs
             .getByRole("tab", { name: "Populations", exact: true })
             .click();
-          const run = panel.getByRole("button", { name: "Run", exact: true });
+          const run = panel
+            .getByRole("button", { name: "Run", exact: true })
+            .first();
           await expect(run).toBeEnabled({ timeout: 20_000 });
           await run.click();
           await expect(
-            panel.getByRole("button", { name: "Stop", exact: true }),
+            panel.getByRole("button", { name: "Stop", exact: true }).first(),
           ).toBeVisible();
           if (shot === "held-after-crash") {
             await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
@@ -7131,6 +7317,7 @@ for (const theme of ["light", "dark"] as const) {
             await field.press("Enter");
             await panel
               .getByRole("button", { name: "Run", exact: true })
+              .first()
               .click();
             await expect(
               panel.getByText(
