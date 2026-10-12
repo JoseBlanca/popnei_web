@@ -276,7 +276,16 @@ function definitionOf(page: PopDistsPage): AnalysisDef<Job, JobResult> {
     // popgen2.html opens no project file, so it compares no numbers.
     numCheckNumbers: (p: Project) =>
       page === "popgen" ? numCheckNumbers(p) : null,
-    script,
+    // popgen2.html saves no project file and writes no report, so it
+    // asks no script; one asked there is a defect, not the old page's.
+    script: (p: Project) => {
+      if (page === "popgen2") {
+        throw defect(
+          "the Python script of the distances was asked on popgen2.html, which writes none.",
+        );
+      }
+      return script(p);
+    },
   });
 }
 
@@ -288,17 +297,6 @@ export const popDists: AnalysisDef<Job, JobResult> = definitionOf("popgen");
     listed last by POPGEN2_ANALYSES of src/core/apps.ts. */
 export const popDistsOnPopgen2: AnalysisDef<Job, JobResult> =
   definitionOf("popgen2");
-
-/** The page of the definition `def` that a store runs, "popgen" for
-    `popDists` and "popgen2" for `popDistsOnPopgen2`. Throws a defect on
-    the definition of another analysis. */
-export function popDistsPageOf(def: AnalysisDef<Job, JobResult>): PopDistsPage {
-  if (def === popDists) return "popgen";
-  if (def === popDistsOnPopgen2) return "popgen2";
-  throw defect(
-    `the page of the distances was asked of the analysis ${def.id}.`,
-  );
-}
 
 /** The populations to run on the page `page`. */
 function populationsToRunOf(p: Project, page: PopDistsPage): Pops | null {

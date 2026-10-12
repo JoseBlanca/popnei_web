@@ -7,12 +7,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import {
-  popDists,
-  popDistsOnPopgen2,
-  popDistsPageOf,
-  refusalText,
-} from "./popDists.ts";
+import { popDists, popDistsOnPopgen2, refusalText } from "./popDists.ts";
 import type { IndividualsKept } from "../individualsKept.ts";
 import { createKeyMemo, keyOf } from "../keys.ts";
 import type { KeyedDef } from "../keys.ts";
@@ -249,11 +244,9 @@ const TWO_POPULATIONS =
   "The distances between populations need two populations or more with individuals in panel.nei. Choose a column of the populations in the box Individuals that gives them two or more.";
 
 describe("DT1 D1 the definition of the distances of popgen2.html", () => {
-  test("both definitions are of the id popDists and key version 1, each of its page", () => {
+  test("both definitions are of the id popDists and key version 1", () => {
     expect(popDistsOnPopgen2.id).toBe("popDists");
     expect(popDistsOnPopgen2.keyVersion).toBe(1);
-    expect(popDistsPageOf(popDists)).toBe("popgen");
-    expect(popDistsPageOf(popDistsOnPopgen2)).toBe("popgen2");
   });
 
   test("run leaves out the unclassified i4 and i5, not in the variants file, with no lock", () => {
@@ -479,6 +472,13 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
     expect(keyOn(popDists, p)).toBe(
       keyOn(popDists, project({ tableName: "other.csv" })),
     );
+  });
+
+  test("no script on popgen2.html, which saves no project and writes no report: asked, a defect, where it gave the old page's script (the review of the Distances tab, 12 October 2026)", () => {
+    expect(() => popDistsOnPopgen2.script(project())).toThrow(
+      "popnei_web defect: the Python script of the distances was asked on popgen2.html, which writes none.",
+    );
+    expect(popDists.script(project())).toContain("popnei.calc_pop_dists(");
   });
 
   test("no check numbers on popgen2.html", () => {

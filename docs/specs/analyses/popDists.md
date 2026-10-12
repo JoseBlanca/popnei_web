@@ -1018,9 +1018,11 @@ that send the user to "the Variants step", "the Individuals step" and
   result is never shown with the words of another file. The key version
   stays 1; the definitions share the id `popDists`, and each page has
   its own store and cache, so neither finds a result of the other.
-- **The check numbers and the script** are the old ones; the page
-  compares none and shows no script, so `numCheckNumbers` gives `null`
-  on this page, as for a project that cannot be compared.
+- **The check numbers and the script**: the page compares none and
+  shows no script, so `numCheckNumbers` gives `null` on this page, as
+  for a project that cannot be compared, and `script` throws a defect
+  (since 12 October 2026, the review of the Distances tab: until then it
+  gave the old page's script, read from the old page's populations).
 
 ### The TypeScript interface
 
