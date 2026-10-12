@@ -911,8 +911,12 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     // The page as a whole in Chromium alone: WebKit's text at 200% of the
     // page leaves the media queries of the rest of the page at the usual
     // width, which then scrolls sideways under a band that does not.
+    // Waited for: the plots under the band are drawn again at the new
+    // size of text a moment after it.
     if (testInfo.project.name === "chromium") {
-      expect(fit?.noSidewaysScroll).toBe(true);
+      await expect
+        .poll(async () => (await lineFit(page))?.noSidewaysScroll)
+        .toBe(true);
     }
     await expect
       .poll(async () => {
