@@ -107,6 +107,25 @@ export interface AnalysisUi extends PanelErrorWords {
   /** A line under the bar of a calculation under way, for the project
       `p`, what the bar does not show; `null` for none. */
   readonly runningLine: (p: Project) => string | null;
+  /** A warning of the result said elsewhere in it, which the list of
+      the result's warnings names with a link to it and counts, when the
+      list is drawn; absent for an analysis with none. */
+  readonly linkedWarning?: LinkedWarning;
+}
+
+/** A warning of a result said elsewhere in it, as the spectrum's of the
+    diversity of popgen2.html, said in the spectrum's caption
+    (docs/specs/steps/popgen2-populations.md, "The warnings"). */
+export interface LinkedWarning {
+  /** Whether the result `result` of the project `p` has it. */
+  readonly has: (result: JobResult, p: Project) => boolean;
+  /** The words of its item in the list, after "Warning:". */
+  readonly text: string;
+  /** The words of the link to it, which end the item. */
+  readonly link: string;
+  /** The attribute of the element of the result the link gives the
+      focus to. */
+  readonly target: string;
 }
 
 /** The panel of the diversity (docs/specs/analyses/diversity.md, "The

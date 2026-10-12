@@ -1004,3 +1004,57 @@ test("PT7 R1.3 the MAF threshold at 0.95 and the diversity calculated, the Varia
   await expect(warning).toBeFocused();
   await expect(link).toHaveCount(0);
 });
+
+test("review of round 1: warnings of the result and the spectrum's, the Variants tab shown: the link Diversity: 3 warnings; pressed, the focus on the heading 3 warnings, the band's count, whose list ends with the link to the spectrum's warning, which gives it the focus", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.goto("popgen2.html");
+  await pick(page, "Variants", "panel.nei");
+  await pick(page, "Individuals", "panel_pops.csv");
+  await tab(page, "Variants").click();
+  const maf = page
+    .getByRole("region", { name: "Statistics of the file" })
+    .getByRole("group", { name: "Major allele frequency", exact: true })
+    .getByRole("textbox");
+  await maf.fill("0.95");
+  await maf.press("Enter");
+  await tab(page, "Populations").click();
+  // p0 holds 48 individuals: under a minimum of 60 it is a population of
+  // too few, and the result has two warnings of its own.
+  const minimum = shown(page).getByRole("textbox", {
+    name: /^Individuals with a called genotype needed in each population, per variant/u,
+  });
+  await expect(minimum).toBeVisible({ timeout: RESULT_TIMEOUT });
+  await minimum.fill("60");
+  await minimum.press("Enter");
+  await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+  await button(page, "Run").click();
+  const warning = shown(page).locator("[data-spectrum-warning]");
+  await expect(warning).toContainText(
+    "Warning: The MAF threshold of the Variants tab removes",
+    { timeout: RESULT_TIMEOUT },
+  );
+
+  await tab(page, "Variants").click();
+  const link = band(page).getByRole("link", {
+    name: "Diversity: 3 warnings, in the Populations tab",
+  });
+  await expect(link).toBeVisible();
+  await link.focus();
+  await page.keyboard.press("Enter");
+  const heading = shown(page).getByRole("heading", { name: "3 warnings" });
+  await expect(heading).toBeFocused();
+  const toSpectrum = shown(page)
+    .getByRole("region", { name: "3 warnings" })
+    .getByRole("listitem")
+    .last()
+    .getByRole("link", { name: "Go to the warning of the spectrum" });
+  await expect(toSpectrum).toBeVisible();
+  // The Tab key goes from the heading to that link, the first control
+  // of the list.
+  await page.keyboard.press("Tab");
+  await expect(toSpectrum).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(warning).toBeFocused();
+});

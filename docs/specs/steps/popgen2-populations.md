@@ -362,6 +362,18 @@ of the panel"), with these differences:
   popgen2.html"); `individualsWithoutPopulation`, which on the old page
   names the individuals of no population, is not raised here, where an
   unclassified individual is no fault and the caption says how many.
+  From 12 October 2026, the review of round 1: when the result has
+  warnings and the spectrum has its own, of the MAF threshold, the list
+  ends with one more, "Warning: The site frequency spectrum has a
+  warning of its own, about the MAF threshold, in its caption." and a
+  link, "Go to the warning of the spectrum", that gives the focus to
+  that warning; the heading counts it, "2 warnings", the count of the
+  band at the top of the page, whose link lands on that heading
+  (`popgen2-band.md`, "The warning of the spectrum"). Before, the
+  heading said "1 warning" where the band said 2, and the spectrum's
+  warning was six controls further down, after the table and the five
+  bar plots. With the spectrum's warning alone there is no list; the
+  band's link gives the focus to that warning itself.
 - **The line of the versions**, under the line of the "Download…" of
   the table:
   "Calculated with popnei 0.2.2, in version 0.1.0 of the application."
@@ -560,7 +572,8 @@ has its own, in `sfs.md`, "On popgen2.html".
 fields and "Use the default" when it is there; Run, Stop or Stop
 recalculating, one stop in one place, and after a failure that leaves
 the diversity live, or while a crash of the PCA holds its start, Run and
-then Stop recalculating; the warnings; the
+then Stop recalculating; the warnings, with the link to the warning of
+the spectrum when the list has it; the
 table, when it scrolls; its "Download…"; the "Download…" of each
 plot of the table, in their order, the plots themselves taking no
 focus, since the table holds their numbers; then, in the spectrum, the

@@ -357,8 +357,13 @@ threshold of the Variants tab at 0.95 and the diversity calculated, the
 Variants tab shown, "Diversity: 1 warning, in the Populations tab".
 The link gives the focus to the heading of the warnings above the
 table when the result has some, as for the PCA, since they come first
-in the tab, and the spectrum's warning, under the table, is reached
-after them; with the spectrum's warning alone, there is no such
+in the tab; from 12 October 2026 (the review of round 1) that list
+names the spectrum's warning too, as its last item with a link to it,
+"Go to the warning of the spectrum", and its heading counts it, so the
+heading where the focus lands says the band's count, "2 warnings", and
+the spectrum's warning is one control from there, where it was six,
+after the table and the five bar plots, under a heading of "1
+warning". With the spectrum's warning alone, there is no such
 heading, and the link gives the focus to that warning itself, which a
 screen reader then reads, "Warning: The MAF threshold of the Variants
 tab removes …". Until that day the band counted the warnings of the
@@ -922,6 +927,13 @@ pass held by `e2e/holdWorker.ts`:
   calculated, the Variants tab shown: the link "Diversity: 1 warning,
   in the Populations tab"; pressed with Enter: the Populations tab
   shown, the focus on the warning of the spectrum, the link gone;
+- from the review of round 1, 12 October 2026, two warnings of the
+  result, with a minimum of 60 individuals, which p0's 48 do not reach,
+  and the spectrum's, the MAF threshold at 0.95: the link "Diversity: 3
+  warnings, in the Populations tab"; pressed, the focus on the heading
+  "3 warnings", whose list ends with "Go to the warning of the
+  spectrum"; the Tab key reaches that link next, and Enter on it gives
+  the focus to the spectrum's warning;
 - from 11 October 2026, the PCA and the diversity live, a threshold
   moved in the Variants tab, the PCA held running: "PCA running · 0:0… ·
   then the diversity" with Stop and Stop all; Stop all: no request of
@@ -1012,9 +1024,11 @@ in the band, which the heading line had at `--text-xl`.
    among the warnings the band links to. Answered by the owner on 12
    October 2026, (b): counted with the result's warnings, the link
    taking the focus to that warning ("Several live analyses", "The
-   warning of the spectrum"). The count above the table of the
-   Populations tab does not change, since the warning stays in the
-   spectrum's caption, beside the plot it is about.
+   warning of the spectrum"). The warning stays in the spectrum's
+   caption, beside the plot it is about; from the review of round 1,
+   12 October 2026, the list of the result's warnings, when there is
+   one, names it too with a link to it, and its heading counts it, so
+   that it says the band's count.
 
 ## Not in this spec
 

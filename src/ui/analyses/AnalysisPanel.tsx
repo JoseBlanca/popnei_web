@@ -374,6 +374,13 @@ function Below({
   // than the reference's, or its VCF was read with other read options.
   const uncompared = useAppState((s) => uncomparedText(s.project, id));
   const runningLine = useAppState((s) => ui.runningLine(s.project));
+  // A warning of the result said elsewhere in it, which the list names
+  // and counts, so that its count is the band's.
+  const linked = ui.linkedWarning;
+  const hasLinked = useAppState(
+    (s) =>
+      status.kind === "done" && linked?.has(status.result, s.project) === true,
+  );
   switch (status.kind) {
     case "ready":
     case "removed":
@@ -394,7 +401,10 @@ function Below({
       return (
         <>
           {status.warnings.length > 0 && (
-            <Warnings warnings={status.warnings} />
+            <Warnings
+              warnings={status.warnings}
+              elsewhere={hasLinked && linked !== undefined ? linked : null}
+            />
           )}
           {/* A new result is drawn anew, with no state of the last. */}
           <ui.Results

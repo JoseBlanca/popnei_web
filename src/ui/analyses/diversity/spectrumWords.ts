@@ -213,6 +213,15 @@ export function allSpectraCsvName(variantsName: string): string {
     downloads, after "Download ". */
 export const LINES_WHAT = "the plot of the spectrum";
 
+/** The item of the list of the result's warnings on popgen2.html that
+    names the spectrum's warning, after "Warning:", before its link. */
+export const SPECTRUM_WARNING_ELSEWHERE =
+  "The site frequency spectrum has a warning of its own, about the MAF threshold, in its caption.";
+
+/** The words of the link of that item, which gives the focus to the
+    spectrum's warning. */
+export const SPECTRUM_WARNING_LINK = "Go to the warning of the spectrum";
+
 /** The label of the tab of the plot of popgen2.html, beside "Table". */
 export const PLOT_TAB = "Plot";
 
