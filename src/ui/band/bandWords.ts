@@ -192,11 +192,14 @@ function joined(names: readonly string[]): string {
 }
 
 /** The words of the analyses `named`, one or more, about to start,
-    waiting for `waitsFor`, as their tabs say it with no "again" but
-    under the dialog of the download, whose words they are: "The PCA
-    starts in a moment", "The PCA and the diversity start in a moment";
-    "… starts again when the download is written or closed"; after a
-    crash, "The PCA starts after the next change". */
+    waiting for `waitsFor`, as their tabs say it: "The PCA starts in a
+    moment", "The PCA and the diversity start in a moment"; after a
+    crash, "The PCA starts after the next change"; under the dialog of
+    the download, "… starts after the download", shorter than the
+    tabs' "… starts again when the download is written or closed.",
+    which beside Stop recalculating and Stop all took 831 px of the
+    736 of the line at its widest (the review of work package 4, 12
+    October 2026). */
 function aboutToStartWords(
   named: readonly LiveAnalysisName[],
   waitsFor: AboutToStart,
@@ -209,7 +212,7 @@ function aboutToStartWords(
   switch (waitsFor) {
     case "download":
       return {
-        full: `${subject} ${verb} again when the download is written or closed`,
+        full: `${subject} ${verb} after the download`,
         short: `${who} later`,
       };
     case "afterCrash":

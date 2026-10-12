@@ -282,7 +282,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
     expect(lineWords(pcoa.band().line, 0)?.short).toBe("PCoA soon");
   });
 
-  test("the PCA about to start while the dialog of the download holds it: the dialog's words, with Stop recalculating; the PCoA so named", async () => {
+  test("the PCA about to start while the dialog of the download holds it: The PCA starts after the download, with Stop recalculating; the PCoA so named", async () => {
     for (const method of ["pca", "pcoa"] as const) {
       const testPage = await pcaDone(SUMMARY, method, 548);
       testPage.store.apply("the missing data filter changed", (p) =>
@@ -296,7 +296,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
 
       const name = method === "pca" ? "PCA" : "PCoA";
       expect(words(testPage.band())).toBe(
-        `The ${name} starts again when the download is written or closed`,
+        `The ${name} starts after the download`,
       );
       expect(lineWords(testPage.band().line, 0)?.short).toBe(`${name} later`);
       expect(stopOf(testPage.band().line)?.name).toBe(
@@ -672,7 +672,7 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
     const release = testPage.gate.holdChange("download");
     await flush();
     expect(words(testPage.band())).toBe(
-      "The PCA and the diversity start again when the download is written or closed",
+      "The PCA and the diversity start after the download",
     );
     expect(short(testPage.band())).toBe("Analyses later");
     expect(buttons(testPage.band())).toEqual([
