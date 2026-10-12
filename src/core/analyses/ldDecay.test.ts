@@ -1883,6 +1883,35 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
     expect(jobsOf(extra)).toEqual(jobsOf(page2()));
   });
 
+  test("the script of the page: Unclassified for the one population of no file, of None and of a refused file, the populations of the column otherwise, in the words of the Variants tab (the review of the LD decay, 12 October 2026)", () => {
+    for (const p of [
+      page2({ table: null }),
+      page2({ column: null }),
+      refused(),
+    ]) {
+      const lines = ldDecayOnPopgen2.script(p).split("\n");
+      expect(lines.slice(0, 2)).toEqual([
+        "# The LD decay of every individual, as one population, over the",
+        "# thresholds of the Variants tab, on a Variants of its own",
+      ]);
+      expect(lines).toContain(
+        'pops = {"Unclassified": list(ld_variants.individuals)}',
+      );
+    }
+    const lines = ldDecayOnPopgen2.script(page2()).split("\n");
+    expect(lines.slice(0, 2)).toEqual([
+      '# The LD decay of each population, from the column "pop", over the',
+      "# thresholds of the Variants tab, on a Variants of its own",
+    ]);
+    expect(lines).toContain(
+      'for individual, pop in zip(individuals.iloc[:, 0], individuals["pop"]):',
+    );
+    // The old page's, unchanged.
+    expect(ldDecay.script(page2({ table: null })).split("\n")).toContain(
+      'pops = {"All individuals": list(ld_variants.individuals)}',
+    );
+  });
+
   test("no individuals file and None send Unclassified of every individual kept; the old page still sends All individuals", () => {
     for (const p of [page2({ table: null }), page2({ column: null })]) {
       expect(ldDecayOnPopgen2.needs(p)).toBeNull();

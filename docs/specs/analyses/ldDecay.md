@@ -1017,8 +1017,15 @@ filters of individuals", which that page does not have.
   and its cause are known from the populations of the key and the load
   of the variants file. The definitions share the id "ldDecay" and the
   key version 1; each page has its own store and cache.
-- **The check numbers and the script** are the old ones; the page
-  compares none and shows no script.
+- **The check numbers and the script** are the old ones over the
+  populations of this page: the count of the check numbers is 1 and 3
+  for each population this page runs on, `popgen2PopulationsToRun`;
+  the script builds the populations of the column, the unclassified
+  left out, or the one population "Unclassified", and its comment names
+  the thresholds of the Variants tab (corrected on 12 October 2026, the
+  review of the LD decay, where the page was given the old page's
+  script, with "All individuals"). The page compares no numbers and
+  shows no script.
 - **The CSV of the two tables** is the table component's, from the
   values of its cells, the header the labels of its columns, as every
   table of the page (`docs/specs/widgets/downloads.md`, "A table"), so

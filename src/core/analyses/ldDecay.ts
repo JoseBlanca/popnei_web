@@ -35,6 +35,7 @@ import {
   popgen2PopulationsToRun,
   shown,
   MAX_NAMED,
+  UNCLASSIFIED_POPULATION,
 } from "../project.ts";
 import { filtersApplied } from "../filtersApplied.ts";
 import {
@@ -851,7 +852,7 @@ function definitionOf(page: LdDecayPage): AnalysisDef<Job, JobResult> {
     warnings: (result: JobResult, p: Project) => warnings(result, p, page),
     checkNumbers,
     numCheckNumbers: (p: Project) => numCheckNumbers(p, page),
-    script,
+    script: (p: Project) => script(p, page),
   });
 }
 
@@ -1295,12 +1296,13 @@ function numCheckNumbers(p: Project, page: LdDecayPage): number | null {
  * its own, `ld_variants`, since the script's `variants` holds the LD
  * pruning, with the read options of a VCF written out; the individuals
  * kept, when the project has a filter of individuals; the filters of
- * `ldDecayFilters`; the populations, as the diversity's lines make them;
- * the call; and the prints of the two tables. Throws a defect on a project
- * with no variants file, no largest distance or no populations, since it
- * is asked only of an analysis that has run.
+ * `ldDecayFilters`; the populations of the page `page`, as the
+ * diversity's lines make them; the call; and the prints of the two
+ * tables. Throws a defect on a project with no variants file, no largest
+ * distance or no populations, since it is asked only of an analysis that
+ * has run.
  */
-function script(p: Project): string {
+function script(p: Project, page: LdDecayPage): string {
   const variants = p.variants;
   const options = ldDecayOptions(p);
   if (variants === null || options.maxDist === null) {
@@ -1310,7 +1312,7 @@ function script(p: Project): string {
   }
   const open = pythonOpenVariants(variants);
   return [
-    ...scriptComment(p),
+    ...scriptComment(p, page),
     `ld_variants = ${open}`,
     ...ldDecayFilters(filtersApplied(p))
       .filter((filter) => filter.kind === "passed")
@@ -1321,7 +1323,7 @@ function script(p: Project): string {
     ...ldDecayFilters(filtersApplied(p))
       .filter((filter) => filter.kind !== "passed")
       .map(filterLine),
-    ...scriptPops(p),
+    ...scriptPops(p, page),
     "ld = popnei.calc_ld_and_dist_per_pop(",
     `    ld_variants, pops=pops, min_dist=${String(LD_DECAY_MIN_DIST)}, max_dist=${String(options.maxDist)}, num_bins=${String(LD_DECAY_NUM_BINS)},`,
     `    max_allowed_maf=${String(options.maxAllowedMaf)},`,
@@ -1341,29 +1343,41 @@ function script(p: Project): string {
     .join("");
 }
 
+/** Whether the LD decay of `p` on the page `page` is of every
+    individual as one population. */
+function isOnePopulation(p: Project, page: LdDecayPage): boolean {
+  return page === "popgen"
+    ? populationsOf(p) === "all"
+    : popgen2OnePopulationCause(p) !== null;
+}
+
 /** The two lines of the comment of the script, which name the column of
-    the populations, or the one population. */
-function scriptComment(p: Project): readonly string[] {
-  const column = populationsColumn(p);
+    the populations, or the one population, and what was filtered, in the
+    words of the page `page`. */
+function scriptComment(p: Project, page: LdDecayPage): readonly string[] {
+  const column = isOnePopulation(p, page) ? null : populationsColumn(p);
   const whose =
     column === null
       ? "every individual, as one population,"
       : `each population, from the column ${JSON.stringify(column)},`;
   return [
     `# The LD decay of ${whose} over the`,
-    "# filters of the Variants step but its LD pruning, on a Variants of its own",
+    page === "popgen"
+      ? "# filters of the Variants step but its LD pruning, on a Variants of its own"
+      : "# thresholds of the Variants tab, on a Variants of its own",
   ];
 }
 
 /** The lines of the script that make the dict of the populations: from
     the column of the metadata file, narrowed to the individuals of
-    `ld_variants`; or, for the one population, the individuals of
-    `ld_variants`. Throws a defect on a project with no populations. */
-function scriptPops(p: Project): readonly string[] {
-  if (populationsOf(p) === "all") {
-    return [
-      `pops = {${JSON.stringify(ONE_POPULATION)}: list(ld_variants.individuals)}`,
-    ];
+    `ld_variants`, which leaves out the unclassified; or, for the one
+    population of the page `page`, "All individuals" or "Unclassified",
+    the individuals of `ld_variants`. Throws a defect on a project with
+    no populations. */
+function scriptPops(p: Project, page: LdDecayPage): readonly string[] {
+  if (isOnePopulation(p, page)) {
+    const name = page === "popgen" ? ONE_POPULATION : UNCLASSIFIED_POPULATION;
+    return [`pops = {${JSON.stringify(name)}: list(ld_variants.individuals)}`];
   }
   const column = populationsColumn(p);
   if (column === null) {
