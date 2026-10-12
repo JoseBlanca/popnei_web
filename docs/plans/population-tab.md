@@ -1096,6 +1096,20 @@ Vitest 177 files, 5,487 tests; Chromium and WebKit,
 load average of 60 to 137 from other work: 31 timeouts of
 `DownloadMenu.test.ts` in one full run passed alone and in the next.
 
-Left: a second review of the fixes (`browser`, `tests`); the owner's
-answer on the axis of the alleles per variant; the owner tries it
-again.
+The second review of the fixes (`browser`, `tests`; two, not three,
+with the machine at a load average of about 90): no defect in either
+engine on either page, the scatter's pointer untouched; held: the flat
+tenth added to measured widths cut names 10% too soon in Chromium and
+was guarded by no check of WebKit's PNG; three test gaps; the LD
+decay's flows drew before their font loaded. Fixed in 056d2e7c to
+93026b3b: a name is measured as the page draws it and, with a canvas's
+`measureText`, as the PNG draws it, the larger taken (twenty Ms at 12 px:
+202 px on WebKit's page, 209 in its PNG); a flow in each engine reads the
+PNG's edges. Not taken: names told apart only by a Cyrillic letter, as
+the user wrote them. Checks at 93026b3b: typecheck, lint, format clean;
+Vitest 178 files, 5,495 tests; Chromium and WebKit,
+`popgen2Populations` and `popgen2Downloads` 114, `plots` and `ldDecay`
+96; screens of the tab 76.
+
+Left: the owner's answer on the axis of the alleles per variant; the
+owner tries it again.
