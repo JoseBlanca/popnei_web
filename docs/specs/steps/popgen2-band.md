@@ -325,7 +325,13 @@ one about to start, is shown, the band drops that analysis's Stop or
 Stop recalculating, as it drops the PCA's in the PCA tab, and keeps
 Stop all, whose words differ from the tab's button. The link drops
 while its tab is shown, as now, and names the next in the order that
-has warnings or failed in a tab not shown, if any.
+has warnings or failed in a tab not shown, if any. The band counts the
+warnings of the result's status alone, and not the warning of the
+spectrum of the diversity, which its block in the Populations tab shows
+and which is not among them (`src/core/analyses/diversity.ts`): with
+that warning alone, after a change of the minor allele frequency in the
+Variants tab, the band shows "Popnei" alone (12 October 2026, the
+review of work package 4; open point 2).
 
 **Stopping** names the analysis by its words, "Stopping the diversity…",
 where the band named any analysis but the PCA by its title until 11
@@ -876,6 +882,18 @@ in the band, which the heading line had at `--text-xl`.
    take, and covers the top of what scrolls under it always, which the
    padding of the scroll keeps clear of a control reached by the Tab
    key.
+
+2. **The warning of the spectrum in the band**, put to the owner on 12
+   October 2026 (the review of work package 4 of
+   `docs/plans/population-tab.md`). The band links to the warnings of a
+   result of a tab not shown, and counts those of the result's status;
+   the spectrum of the diversity says its own warning, of the minor
+   allele frequency, in its block, and that warning is not among them,
+   so a user in the Variants tab who moved the minor allele frequency
+   is not sent to it. The options: (a) leave it, the block of the
+   spectrum telling it when the Populations tab is shown; (b) count it
+   among the warnings the band links to, which changes the result's
+   status of the diversity and the count its tab shows. Not decided.
 
 ## Not in this spec
 
