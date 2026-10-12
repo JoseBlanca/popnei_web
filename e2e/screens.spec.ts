@@ -6127,6 +6127,23 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-ld-decay-running${at}-${theme}`);
       });
 
+      test("the band with the LD decay held running alone, the Populations tab shown: its Stop kept in the band (the review of the LD decay, 12 October 2026)", async ({
+        page,
+      }) => {
+        const part = await ldDecayReady(page, "100000", "ldDecay");
+        await part.getByRole("button", { name: "Run", exact: true }).click();
+        const band = page.getByRole("banner", {
+          name: "What the page is doing",
+        });
+        await expect(
+          band.getByRole("button", { name: "Stop the LD decay", exact: true }),
+        ).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-band-ld-decay-populations${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
       test("the LD decay waiting for the diversity, held running: its line of waiting with Stop recalculating", async ({
         page,
       }) => {
