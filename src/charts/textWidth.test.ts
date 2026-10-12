@@ -2,7 +2,8 @@
  * The measure and the cut of the text of the plots, src/charts/textWidth.ts
  * (docs/specs/charts/bars.md, "The room of the names"), under jsdom with
  * the fake measure of testSupport.ts, which gives a W 11 pixels and any
- * other character 5.5, and the export's fonts the width it is given.
+ * other character 5.5 at 12 pixels, in proportion to the size of the
+ * text measured, and the export's fonts the width it is given.
  */
 
 import { afterEach, describe, expect, test } from "vitest";
@@ -27,6 +28,13 @@ describe("second review of round 1: a text measured in the page's font and in th
   test("the export's fonts 10% narrower: WWa is the 27.5 pixels of the page's font", () => {
     measureWithFake(0.9);
     expect(measuredWidth("WWa", 12)).toBe(27.5);
+  });
+
+  test("a text at 24 pixels measures twice its width at 12, the size set before each measure", () => {
+    measureWithFake();
+    expect(measuredWidth("WWa", 24)).toBe(55);
+    expect(measuredWidth("WWa", 12)).toBe(27.5);
+    expect(measuredWidth("WWa", 6)).toBe(13.75);
   });
 
   test("where nothing measures, the characters times the width given each", () => {
