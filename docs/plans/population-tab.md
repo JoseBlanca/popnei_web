@@ -812,3 +812,38 @@ Checks at 9cca2f50: typecheck, lint, format clean; Vitest 173 files,
 old page's variants, individuals and openVariants, none flaky. First
 load: popgen2.html 331.22 KB, popgen.html 376.12 KB (sum of Vite's
 gzip sizes, the HTML included).
+
+The second review of the fixes of packages 2 and 3 (`architecture`,
+`accessibility`): the accessibility reviewer found nothing; three
+findings of the architecture reviewer held, fixed in c191348e (a text
+or a folder refused with a sentence with no name), eeac958f (a Run
+that waited and was then held by a crash announced at the next change
+as that Run's start) and 6a642a1c (the end of a run's words per live
+analysis, from `LIVE_SAID`). Checks at 6a642a1c: Vitest 173 files,
+5,434 tests; Chromium and WebKit, `popgen2Populations`, `popgen2Live`,
+`popgen2Input`, `popgen2BandLive`, 166.
+
+### Work package 4, 11 and 12 October 2026
+
+Commits 68769c2f (the band spec's words follow the tabs', no "again"
+for an analysis about to start or held after a crash), 8b2d7298 (the
+band with two analyses, Stop all, `STOP_ALL_OFFERED` on), 8dd80199 (the
+tooltip 16 px from each edge at 320 px), 838b8393 (the flows,
+`e2e/popgen2BandLive.spec.ts`), 8c3b1703 (the screens), 117c861f.
+Checks at 117c861f: Vitest 173 files, 5,432 tests; Chromium and
+WebKit, every `e2e/popgen2*.spec.ts`, 416.
+
+The plan's stop at 320 px was met: with the PCA live and the
+diversity about to start alone, another tab shown, the band's line
+("Popnei", "Diversity soon", the whole "Stop recalculating", "Stop
+all") needs 290 px of 288, in Chromium 153 and WebKit 26.6; "Diversity
+soon" is cut away and Stop all runs 2 px past the edge (screen
+`popgen2-band-diversity-soon-320-*`; its flow marked as expected to
+fail). The owner chose on 12 October 2026: (a), on a narrow screen the
+band shows in that case "Stop all" alone, without the diversity's
+"Stop recalculating", which the Populations tab always offers.
+
+Left: (a) built, spec first; the review of package 4 (`api`, `react`,
+`accessibility`, `ux`, `browser` at 320 px, `bundle`, and the four that
+always run); package 5, the documents, with what the fix lists left
+for it; package 6; package 7, the owner's try.
