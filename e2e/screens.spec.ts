@@ -7425,6 +7425,134 @@ for (const theme of ["light", "dark"] as const) {
         });
       }
 
+      /** Opens ld.nei and ld_pops.csv, with the one pass held and
+          released to its end, and runs the four live analyses by their
+          Runs to their results, in the order of the tabs: the PCA, the
+          diversity, the LD decay at 100,000 bp and the distances; the
+          PCA held again from then on with `holdPca`. The Variants tab is
+          shown at the end. */
+      async function fourLive(page: Page, holdPca: boolean): Promise<void> {
+        await holdSummary(page, { holdPca });
+        await page.reload();
+        await pickOnNewPage(page, "ld.nei");
+        await release(page, "allSoFar");
+        await release(page, "result");
+        await pickIndividualsOnNewPage(page, "ld_pops.csv");
+        const tabs = page.getByRole("tablist", { name: "Files and analyses" });
+        const panel = page.getByRole("tabpanel");
+        await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+        const field = panel.getByRole("textbox", {
+          name: /^Distance within which variants are compared/u,
+        });
+        await expect(field).toBeVisible({ timeout: 20_000 });
+        await field.fill("50000");
+        await field.press("Enter");
+        await panel.getByRole("button", { name: "Run", exact: true }).click();
+        await release(page, "pca");
+        await expect(
+          panel.getByText(/^The place of each of the 100 individuals/u),
+        ).toBeVisible({ timeout: 30_000 });
+        await tabs
+          .getByRole("tab", { name: "Populations", exact: true })
+          .click();
+        const diversityRun = diversityPanel(page).getByRole("button", {
+          name: "Run",
+          exact: true,
+        });
+        await expect(diversityRun).toBeEnabled({ timeout: 20_000 });
+        await diversityRun.click();
+        await expect(
+          diversityPanel(page).getByRole("table", {
+            name: /^The diversity of each population/u,
+          }),
+        ).toBeVisible({ timeout: 30_000 });
+        const distance = ldPart(page).getByRole("textbox", {
+          name: /^Largest distance between the two variants/u,
+        });
+        await distance.fill("100000");
+        await distance.press("Enter");
+        await ldPart(page)
+          .getByRole("button", { name: "Run", exact: true })
+          .click();
+        await expect(
+          ldPart(page).getByRole("table", {
+            name: /^The LD decay of each population/u,
+          }),
+        ).toBeVisible({ timeout: 30_000 });
+        await tabs.getByRole("tab", { name: "Distances", exact: true }).click();
+        const distancesRun = panel.getByRole("button", {
+          name: "Run",
+          exact: true,
+        });
+        await expect(distancesRun).toBeEnabled({ timeout: 20_000 });
+        await distancesRun.click();
+        await expect(
+          panel.getByRole("table", {
+            name: /^Distances between the populations of ld\.nei/u,
+          }),
+        ).toBeVisible({ timeout: 30_000 });
+        await tabs.getByRole("tab", { name: "Variants", exact: true }).click();
+        if (holdPca) await release(page, "holdPcaAgain");
+      }
+
+      /** Moves the missing data of the variants to 0.05 in the Variants
+          tab, shown. */
+      async function moveMissing(page: Page): Promise<void> {
+        const missing = newPageStats(page)
+          .getByRole("group", {
+            name: "Proportion of missing genotypes",
+            exact: true,
+          })
+          .getByRole("textbox");
+        await missing.fill("0.05");
+        await missing.press("Enter");
+      }
+
+      test("the band with the four live, a threshold moved, the PCA held running with the diversity, the distances and the LD decay waiting after it, the Variants tab shown: Stop and Stop all (the merge of the LD decay and the distances, 13 October 2026)", async ({
+        page,
+      }) => {
+        await fourLive(page, true);
+        await moveMissing(page);
+        await expect(
+          band(page).getByRole("button", {
+            name: "Stop all: the PCA, the diversity, the LD decay and the distances",
+          }),
+        ).toBeVisible({ timeout: 20_000 });
+        await expect(
+          band(page).getByRole("button", { name: "Stop the PCA" }),
+        ).toBeVisible();
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-band-four-running${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test("the band with the four live about to start after a threshold moved, the Variants tab shown: their words in the order of the tabs and Stop all (the merge of the LD decay and the distances, 13 October 2026)", async ({
+        page,
+      }) => {
+        await page.clock.install();
+        await fourLive(page, false);
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        // The page's timers stand still, so that the quiet second does
+        // not run out before the picture.
+        await page.clock.pauseAt(Date.now() + 1000);
+        await moveMissing(page);
+        await expect(
+          band(page).getByRole("button", {
+            name: "Stop all: the PCA, the diversity, the LD decay and the distances",
+          }),
+        ).toBeVisible();
+        if (width === null) {
+          await expect(band(page)).toContainText(
+            "The PCA, the diversity, the LD decay and the distances start in a moment",
+          );
+        }
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-band-four-soon${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
       /** Opens panel.nei with the one pass released to its end and each
           diversity held, runs the PCA to its result, then the diversity,
           held running, and shows the Variants tab: the band's
