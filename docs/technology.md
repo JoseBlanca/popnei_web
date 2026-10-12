@@ -247,6 +247,26 @@ and the PCA calculated again by itself, although Undo and Redo left
 the page (work packages 1 to 4 of that plan). The `bundle` review of
 the band found nothing to take out.
 
+The Populations tab, built on the branch `population-tab` on 11 and 12
+October 2026 (`docs/plans/population-tab.md`), made the first load of
+`popgen2.html` 331.72 KB at commit 590caf53, by the same count with the
+HTML included, against 321.62 KB before it, 10.10 KB more: 4.95 KB of
+code the page needs before the tab is shown, the definition of the
+diversity the store reads, the code that starts the analyses by
+themselves and the fetching of a tab's code; 0.9 KB of the bundler's
+split, 12 files where there were 9; 3.74 KB of the tab's words, the
+locks and the fixes of their review; and 0.50 KB of the band for two
+analyses. The tab itself, its options, lines, result, table, histograms
+and menus, is loaded with `import()` when it is first shown, 7.79 KB
+gzipped after the plots of the Variants tab, measured after its first
+work package on 11 October 2026; two modules of core, the line of its
+one population and the names of the files of its histograms, are kept
+apart from the modules the page loads first so that only that code
+carries them (`docs/architecture.md`, section 9, and section 11, "The
+first load of `popgen2.html`"). The bundle reviews found nothing more
+to take out: a chunk of its own for the five things the tab imports
+from the first load would save no bytes.
+
 Not taken: component libraries with their own look, MUI, Chakra,
 Mantine, which bring a style we would fight and, for Chakra, a history of
 large rewrites; and Radix Primitives, whose maintenance slowed.
