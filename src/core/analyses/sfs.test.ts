@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { allSpectraCsv, spectraOf, populationSpectrumCsv } from "./sfs.ts";
+import {
+  allSpectraCsv,
+  spectraOf,
+  spectrumLinesCsv,
+  spectrumLinesOf,
+} from "./sfs.ts";
 import { spectrumWarnings } from "./sfsWarnings.ts";
 import type { Project } from "../project.ts";
 import {
@@ -336,6 +341,21 @@ describe("PA6 D6 the spectrum's module: the numbers of popnei", () => {
     expect(p1?.shares?.[14]).toBe(0.05618145165329451);
     expect(spectraOf(PANEL).largestShare).toBe(0.05618145165329451);
   });
+
+  test("PT7 R1.2 the lines of panel.nei at a draw of 40: p0's proportion at one copy of the rarer allele and at 20, p1's the largest, at 0.625", () => {
+    // popnei 0.2.2 under node, 12 October 2026, the same call with the
+    // missing data filter at 0.1, which keeps all 1,200 variants and
+    // gives these spectra: bin j over the sum of the 21 bins.
+    const { lines, largestProportion } = spectrumLinesOf(PANEL);
+    const [p0, p2, p1] = lines;
+    expect(p0?.proportion[0]).toBe(0.031731632140896686);
+    expect(p0?.proportion[19]).toBe(0.02529604246091587);
+    expect(p2?.proportion[0]).toBe(0.04089992026053879);
+    expect(p1?.proportion[14]).toBe(0.05386774831954687);
+    expect(p1?.frequency[14]).toBe(0.625);
+    expect(p0?.frequency[0]).toBe(0.975);
+    expect(largestProportion).toBe(0.05386774831954687);
+  });
 });
 
 describe("SF2 D4 the warning of the spectrum reads the filters that apply to the file", () => {
@@ -349,32 +369,6 @@ describe("SF2 D4 the warning of the spectrum reads the filters that apply to the
 });
 
 describe("PT1 D1 the spectrum on popgen2.html", () => {
-  test("populationSpectrumCsv of p0 gives the header and p0's rows of allSpectraCsv, in their order", () => {
-    const r = workedExample();
-    const [header = "", ...rows] = allSpectraCsv(r).split("\n");
-    const p0 = rows.filter((row) => row.startsWith("p0,"));
-    expect(p0).toHaveLength(3);
-    expect(populationSpectrumCsv(r, "p0")).toBe(
-      [header, ...p0].map((line) => `${line}\n`).join(""),
-    );
-    expect(populationSpectrumCsv(r, "p1")).toBe(
-      "population,rarer_allele,variants,share\np1,0,3,\np1,1,0,\np1,2,0,\n",
-    );
-  });
-
-  test("populationSpectrumCsv of a population not calculated gives the header alone, and of one not in the result a defect", () => {
-    const r = result({
-      pops: ["p0", "p3"],
-      numCalledAlleles: 4,
-      numVarsInDraw: [5, 0],
-      foldedSfs: [[1, 2, 2], null],
-    });
-    expect(populationSpectrumCsv(r, "p3")).toBe(
-      "population,rarer_allele,variants,share\n",
-    );
-    expect(() => populationSpectrumCsv(r, "p9")).toThrow("popnei_web defect");
-  });
-
   test("spectrumWarnings with the page popgen2 names the MAF threshold of the Variants tab, to the letter; the old page's words unchanged", () => {
     const p = projectWith([
       { kind: "missing_data", maxAllowedMissingRate: 0.05 },
@@ -399,5 +393,71 @@ describe("PT1 D1 the spectrum on popgen2.html", () => {
         text: "The MAF filter of the Variants step removes the variants whose commonest allele is above 0.95 in the individuals kept, taken together, and it removed 24 of the 1,152 it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn off the MAF filter in the Variants step.",
       },
     ]);
+  });
+});
+
+describe("PT7 R1.2 the lines of the spectrum on popgen2.html: spectrumLinesOf and spectrumLinesCsv", () => {
+  test("the worked example: one line, of p0, its frequencies 0.75 and 0.5 and its proportions 0.4 and 0.4 over its 5 variants in the draw; p1, every variant with one allele, no line", () => {
+    const lines = spectrumLinesOf(workedExample());
+    expect(lines.numCalledAlleles).toBe(4);
+    expect(lines.lines).toHaveLength(1);
+    const [p0] = lines.lines;
+    expect(p0?.population).toBe("p0");
+    expect(p0?.index).toBe(0);
+    expect([...(p0?.frequency ?? [])]).toEqual([0.75, 0.5]);
+    expect([...(p0?.proportion ?? [])]).toEqual([0.4, 0.4]);
+    expect([...(p0?.variants ?? [])]).toEqual([2, 2]);
+    expect(lines.largestProportion).toBe(0.4);
+  });
+
+  test("a population not calculated has no line, and the next keeps its place in the result as its index", () => {
+    const r = result({
+      pops: ["p3", "p0"],
+      numCalledAlleles: 4,
+      numVarsInDraw: [0, 5],
+      foldedSfs: [null, [1, 2, 2]],
+    });
+    const { lines } = spectrumLinesOf(r);
+    expect(lines.map((line) => [line.population, line.index])).toEqual([
+      ["p0", 1],
+    ]);
+  });
+
+  test("an odd draw: the last point at (n − floor(n / 2)) / n", () => {
+    const r = result({
+      pops: ["p0"],
+      numCalledAlleles: 5,
+      numVarsInDraw: [4],
+      foldedSfs: [[1, 1, 2]],
+    });
+    const [p0] = spectrumLinesOf(r).lines;
+    expect([...(p0?.frequency ?? [])]).toEqual([0.8, 0.6]);
+    expect([...(p0?.proportion ?? [])]).toEqual([0.25, 0.5]);
+  });
+
+  test("with no line the largest proportion is 0, and the same object for the same result", () => {
+    const r = result({
+      pops: ["p1"],
+      numCalledAlleles: 4,
+      numVarsInDraw: [3],
+      foldedSfs: [[3, 0, 0]],
+    });
+    expect(spectrumLinesOf(r).largestProportion).toBe(0);
+    expect(spectrumLinesOf(r)).toBe(spectrumLinesOf(r));
+  });
+
+  test("spectrumLinesCsv of the worked example, to the letter, and a name with a comma quoted", () => {
+    expect(spectrumLinesCsv(workedExample())).toBe(
+      "population,rarer_allele,commonest_allele_frequency,variants,proportion\np0,1,0.75,2,0.4\np0,2,0.5,2,0.4\n",
+    );
+    const r = result({
+      pops: ["a,b"],
+      numCalledAlleles: 2,
+      numVarsInDraw: [2],
+      foldedSfs: [[1, 1]],
+    });
+    expect(spectrumLinesCsv(r)).toBe(
+      'population,rarer_allele,commonest_allele_frequency,variants,proportion\n"a,b",1,0.5,1,0.5\n',
+    );
   });
 });

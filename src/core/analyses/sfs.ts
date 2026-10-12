@@ -184,3 +184,110 @@ function spectrumLines(pop: SpectrumOfPop): readonly string[] {
 function csvOf(lines: readonly string[]): string {
   return [CSV_HEADER, ...lines].map((line) => `${line}\n`).join("");
 }
+
+/** The line of one population in the plot of the spectrum of
+    popgen2.html (sfs.md, "On popgen2.html"). */
+export interface SpectrumLine {
+  /** The name of the population. */
+  readonly population: string;
+  /** Its place in the order of the result, which gives its colour and
+      its shape. */
+  readonly index: number;
+  /** The frequency of the commonest allele at each point, (n − j) / n,
+      for j copies of the rarer allele from 1 to floor(n / 2). */
+  readonly frequency: Float64Array;
+  /** Bin j over the sum of every bin of the population, bin 0 among
+      them, at each point. */
+  readonly proportion: Float64Array;
+  /** popnei's expected number of variants at each point, bin j. */
+  readonly variants: Float64Array;
+}
+
+/** The lines of the spectrum of a diversity result. */
+export interface SpectrumLines {
+  /** The size of the draw, n, of the request. */
+  readonly numCalledAlleles: number;
+  /** The populations with a line, in the order of the result. */
+  readonly lines: readonly SpectrumLine[];
+  /** The largest proportion of any line; 0 when there is none. */
+  readonly largestProportion: number;
+}
+
+/** The lines of each result. */
+const LINES = new WeakMap<DiversityResult, SpectrumLines>();
+
+/**
+ * The lines of the spectrum of `r`, of the plot of popgen2.html: one per
+ * population calculated with some variant that shows both alleles in the
+ * draw, those `spectraOf` gives shares, in the order of the result; the
+ * points from one copy of the rarer allele to floor(n / 2), each bin over
+ * the sum of every bin of the population. The same object for the same
+ * result. Throws the defects of `spectraOf`.
+ */
+export function spectrumLinesOf(r: DiversityResult): SpectrumLines {
+  const kept = LINES.get(r);
+  if (kept !== undefined) {
+    return kept;
+  }
+  const n = r.numCalledAlleles;
+  const lines: SpectrumLine[] = [];
+  let largestProportion = 0;
+  for (const [index, pop] of spectraOf(r).pops.entries()) {
+    if (!pop.calculated || pop.shares === null) continue;
+    let sum = 0;
+    for (const value of pop.expected) {
+      sum += value;
+    }
+    const variants = pop.expected.slice(1);
+    const proportion = variants.map((value) => value / sum);
+    for (const value of proportion) {
+      largestProportion = Math.max(largestProportion, value);
+    }
+    lines.push(
+      Object.freeze({
+        population: pop.population,
+        index,
+        frequency: Float64Array.from(
+          { length: variants.length },
+          (_, i) => (n - (i + 1)) / n,
+        ),
+        proportion,
+        variants,
+      }),
+    );
+  }
+  const answer = Object.freeze({
+    numCalledAlleles: n,
+    lines: Object.freeze(lines),
+    largestProportion,
+  });
+  LINES.set(r, answer);
+  return answer;
+}
+
+/** The header of the CSV of the lines. */
+const LINES_CSV_HEADER =
+  "population,rarer_allele,commonest_allele_frequency,variants,proportion";
+
+/**
+ * The data of the plot of the spectrum as the text of a CSV file: a
+ * header row, then one row per point of each line, in the order of
+ * `spectrumLinesOf`: the population, the count j of the rarer allele, the
+ * frequency of the commonest allele, popnei's expected number of
+ * variants and the proportion, the numbers as `String` writes them, the
+ * name quoted as `allSpectraCsv` quotes it, each line ended by a new line.
+ */
+export function spectrumLinesCsv(r: DiversityResult): string {
+  const rows = spectrumLinesOf(r).lines.flatMap((line) =>
+    [...line.frequency].map((frequency, i) =>
+      [
+        csvField(line.population),
+        String(i + 1),
+        String(frequency),
+        String(line.variants[i]),
+        String(line.proportion[i]),
+      ].join(","),
+    ),
+  );
+  return [LINES_CSV_HEADER, ...rows].map((line) => `${line}\n`).join("");
+}

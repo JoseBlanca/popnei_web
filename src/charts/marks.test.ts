@@ -17,6 +17,7 @@ import {
   MARK_RADIUS,
   NO_GROUP,
   PATH_DIGITS,
+  populationGroup,
   SYMBOL_AREA,
   symbolPath,
   viridisColour,
@@ -185,5 +186,17 @@ describe("stop C 2 the outline only on the three light colours", () => {
     expect(isOutlined(7)).toBe(true);
     expect(isOutlined(9)).toBe(false);
     expect(isOutlined(NO_GROUP)).toBe(true);
+  });
+});
+
+describe("PT7 R1.2 the group of a population by its place in a result", () => {
+  test("the population at 0, 1 and 8 of a result has the group 0, 1 and 8, and so the colour 0, 1 and 1", () => {
+    expect([0, 1, 8].map(populationGroup)).toEqual([0, 1, 8]);
+    expect(groupColourClass(populationGroup(8))).toBe("chart-colour-1");
+  });
+
+  test("a place that is not a whole number from 0 is a defect", () => {
+    expect(() => populationGroup(-1)).toThrow("popnei_web defect");
+    expect(() => populationGroup(1.5)).toThrow("popnei_web defect");
   });
 });
