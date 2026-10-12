@@ -3,7 +3,9 @@
  * in every state (docs/specs/analyses/popDists.md, "What it shows", its
  * options): the field of the minimum number of individuals, which stays
  * enabled while the panel is locked, since lowering it can unlock it,
- * and the radio buttons of the measure the heatmap draws. Each is one
+ * and the radio buttons of the measure the heatmap draws, with the line
+ * under them that says what each measure measures and when to read it,
+ * which describes the group for a screen reader. Each is one
  * command, of `commands.ts`. A minimum committed removes the result, as a
  * change of its key; a measure removes nothing, since it is in no key,
  * and the heatmap is drawn again below without moving the focus, so the
@@ -14,6 +16,8 @@ import { popDistsOptions } from "../../../core/analyses/popDists.ts";
 import { LARGEST_WHOLE_NUMBER } from "../../../core/project.ts";
 import type { ShownMeasure } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
+import { useId } from "react";
+
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
@@ -26,6 +30,7 @@ import styles from "./PopDistsOptionsPart.module.css";
 import {
   MEASURE_ITEMS,
   MEASURE_LABEL,
+  MEASURE_LINE,
   MINIMUM_LABEL,
   MINIMUM_LINE,
   measureAnnouncement,
@@ -46,6 +51,7 @@ export function PopDistsOptionsPart({
 }: PopDistsOptionsPartProps): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
+  const measureLineId = useId();
   // The same object while the options of the project are the same.
   const options = useAppState((s) => popDistsOptions(s.project));
 
@@ -75,6 +81,7 @@ export function PopDistsOptionsPart({
         label={MEASURE_LABEL}
         items={MEASURE_ITEMS}
         value={options.measure}
+        describedBy={measureLineId}
         onChange={(chosen) => {
           apply(measureCommand(chosen));
           // Said only when a heatmap is on the page to be drawn again.
@@ -85,6 +92,9 @@ export function PopDistsOptionsPart({
           if (text !== null) announcer.announce(text);
         }}
       />
+      <p id={measureLineId} className={classOf(styles, "line")}>
+        {MEASURE_LINE}
+      </p>
     </div>
   );
 }

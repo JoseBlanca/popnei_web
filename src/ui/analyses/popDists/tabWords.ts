@@ -131,7 +131,7 @@ export function distancesCaption(
   });
   const sentences = [
     captionText(r.passStats.numVars, variantsName),
-    `${counted(r.pops.length, "population")}: ${pops.join("; ")}.`,
+    `${counted(r.pops.length, "population")}, with the number of individuals each was calculated over: ${pops.join("; ")}.`,
     ...(numLeftOut > 0 ? [unclassifiedCaption(numLeftOut)] : []),
   ];
   return sentences.join(" ");
@@ -260,7 +260,7 @@ export function distancesPanelLive(
     write (docs/specs/steps/popgen2-distances.md, "The result"). */
 export function heatmapValuesLine(negative: boolean): string {
   const where =
-    "The cells are too small for their values, which the table below gives.";
+    "The cells are too small to hold their values; the table of the distances, after the heatmap, gives them.";
   return negative ? `${where} A negative distance has the colour of 0.` : where;
 }
 

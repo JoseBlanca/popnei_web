@@ -36,7 +36,7 @@ const RESULT_TIMEOUT = 30_000;
     the caption of the table (since 12 October 2026, the review of the
     Distances tab). */
 const POPS =
-  "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals.";
+  "3 populations, with the number of individuals each was calculated over: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals.";
 
 /** The caption of the table of panel.nei and panel_pops.csv at the
     missing data of 0.1. */
@@ -405,7 +405,7 @@ test.describe("DT1 D5 the Distances tab", () => {
     await pickIndividuals(page, "panel_split.csv");
     await runDistances(
       page,
-      "Distances between the populations of panel.nei, over the 1,200 variants the filters kept. 4 populations: p0a, 24 individuals; p0b, 24 individuals; p2, 84 individuals; p1, 68 individuals.",
+      "Distances between the populations of panel.nei, over the 1,200 variants the filters kept. 4 populations, with the number of individuals each was calculated over: p0a, 24 individuals; p0b, 24 individuals; p2, 84 individuals; p1, 68 individuals.",
     );
     await expect(
       shown(page).getByText(
@@ -460,7 +460,7 @@ test.describe("DT1 D5 the Distances tab", () => {
     ).toBeVisible();
     await runDistances(
       page,
-      "Distances between the populations of panel.nei, over the 1,200 variants the filters kept. 3 populations: p2, 81 individuals; p1, 68 individuals; p0, 44 individuals. 7 unclassified individuals kept are left out.",
+      "Distances between the populations of panel.nei, over the 1,200 variants the filters kept. 3 populations, with the number of individuals each was calculated over: p2, 81 individuals; p1, 68 individuals; p0, 44 individuals. 7 unclassified individuals kept are left out.",
     );
   });
 
@@ -701,7 +701,7 @@ test.describe("DT1 D5 the Distances tab", () => {
       .toEqual(["p0b", "p0a", "p2", "p1"]);
     expect(await heatmapValues(page)).toHaveLength(0);
     await expect(line).toHaveText(
-      "The cells are too small for their values, which the table below gives. A negative distance has the colour of 0.",
+      "The cells are too small to hold their values; the table of the distances, after the heatmap, gives them. A negative distance has the colour of 0.",
     );
     await expectNoAxeViolations(page, makeAxeBuilder);
   });

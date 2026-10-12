@@ -122,7 +122,19 @@ options), with their labels and defaults, each a command of
   7). A change of them redraws the heatmap from the same result and
   calculates nothing, since the measure is in no key; so they are never
   greyed, also while the distances run, and the status region says
-  "Heatmap of Jost's D" when a heatmap is drawn again.
+  "Heatmap of Jost's D" when a heatmap is drawn again. Under them, a
+  line says what each measure measures and when to read it, in the
+  words of popnei's `docs/specs/dists.md`, and describes the group for
+  a screen reader: "Hudson's Fst is the share of the diversity of the
+  two populations taken together that lies between them rather than
+  within them; most work on SNPs reports it. Jost's D measures how much
+  of the allelic variety of the two is not shared; it is the one to
+  read on markers of many alleles, such as microsatellites, where the
+  diversity within the populations keeps Fst well below 1 even when
+  they share no allele. Both are near 0 for populations with the same
+  allele frequencies, and as estimates either can fall slightly below 0. On SNPs the two give much the same picture." (since 12 October 2026, the review of the Distances tab: until
+  then nothing helped the user choose). The options are those of the
+  old panel, so the line stands there too.
 
 ### The populations it runs on
 
@@ -260,8 +272,7 @@ differences:
   title, "Hudson's Fst between populations", its order and its line of
   order under it, as the old panel's. While its cells are too small to
   hold their values, as on a page of 320 pixels with four populations,
-  a line under it says where the values are, "The cells are too small
-  for their values, which the table below gives.", with "A negative
+  a line under it says where the values are, "The cells are too small to hold their values; the table of the distances, after the heatmap, gives them.", with "A negative
   distance has the colour of 0." when the heatmap has one (since 12
   October 2026, the review of the Distances tab: until then nothing
   said it, and a negative distance was drawn as 0 with no word). Above it, on a line of its own,
@@ -283,7 +294,7 @@ differences:
 - **The table**, one row per pair, its columns "Pair", "Hudson's Fst",
   "Jost's D" and "Variants", its caption "Distances between the
   populations of panel.nei, over the 1,200 variants the filters kept.
-  3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68
+  3 populations, with the number of individuals each was calculated over: p0, 48 individuals; p2, 84 individuals; p1, 68
   individuals.", the populations of the result with the individuals
   each was calculated with, as section 6 of `docs/functionality.md`
   gives them, since the lines of the populations are not shown with a
@@ -392,8 +403,8 @@ scroll of the heatmap and of the table, and the words of a PNG refused.
 | the column, the zone, Remove and the lists of the reader, while they run | "Stop the distances in the Distances tab to change the populations; then press Run there to calculate them again." |
 | a file dropped or pasted on the greyed zone | "other.csv was not opened: the populations cannot change while the distances run. Stop the distances in the Distances tab, then open other.csv again." |
 | the download of the filtered variants, while they run | "Waits for the distances to end; or stop them in the Distances tab." |
-| under the heatmap, while its cells hold no values | "The cells are too small for their values, which the table below gives."; with a negative distance, "… A negative distance has the colour of 0." |
-| the caption of the table | "Distances between the populations of panel.nei, over the 1,200 variants the filters kept. 3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals."; with unclassified left out, "… 7 unclassified individuals kept are left out." |
+| under the heatmap, while its cells hold no values | "The cells are too small to hold their values; the table of the distances, after the heatmap, gives them."; with a negative distance, "… A negative distance has the colour of 0." |
+| the caption of the table | "Distances between the populations of panel.nei, over the 1,200 variants the filters kept. 3 populations, with the number of individuals each was calculated over: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals."; with unclassified left out, "… 7 unclassified individuals kept are left out." |
 | the buttons of the downloads, for a screen reader | "Download the heatmap of Hudson's Fst", "Download the heatmap of Jost's D"; "Download the table of the distances" |
 | the status region, a start by itself | "Calculating the distances between populations again. To change the filters or the populations, stop them in the Distances tab."; the first start of a round of several, the words of `popgen2-pca.md`, "The status region", with "the distances" among the analyses |
 | the status region, a Run that waited behind another calculation, once | "The distances start once the PCA, which is running, ends." |

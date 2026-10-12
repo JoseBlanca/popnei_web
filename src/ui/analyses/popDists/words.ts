@@ -40,6 +40,12 @@ export const MINIMUM_LABEL =
 export const MINIMUM_LINE =
   "This minimum is for the distances alone: the diversity has its own.";
 
+/** The line under the radio buttons of the measure, which says what each
+    measures and when to read it, in the words of popnei's docs/specs/
+    dists.md (the review of the Distances tab, 12 October 2026). */
+export const MEASURE_LINE =
+  "Hudson's Fst is the share of the diversity of the two populations taken together that lies between them rather than within them; most work on SNPs reports it. Jost's D measures how much of the allelic variety of the two is not shared; it is the one to read on markers of many alleles, such as microsatellites, where the diversity within the populations keeps Fst well below 1 even when they share no allele. Both are near 0 for populations with the same allele frequencies, and as estimates either can fall slightly below 0. On SNPs the two give much the same picture.";
+
 /** The label of the radio buttons of the measure the heatmap draws. */
 export const MEASURE_LABEL = "Distance in the heatmap";
 
