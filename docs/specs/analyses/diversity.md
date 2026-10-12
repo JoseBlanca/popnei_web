@@ -138,6 +138,17 @@ first sentence reads "Of the populations of popcat, only p0 has
 individuals kept, …", where "Only p0 has a population in popcat …" read
 as a population that has a population.
 
+"On popgen2.html" is built on the branch `population-tab` on 11
+October 2026, work packages 1 and 2 of that plan, in
+`src/core/analyses/diversity.ts`, `diversityOnePopulation.ts` and
+`src/core/project.ts`, and not yet tried by the owner. Beside the
+corrections above, the rounds of review changed the words of the one
+population, which no longer say "taken as one population since none
+has a population" of a file that could not be read or of a column of
+too many values, and of a refusal of popnei, which say that the
+diversity is calculated again by itself; each where that section says
+so, with its date.
+
 The walking skeleton is stage 2 of `docs/build-order.md`, the smallest
 application that goes through every part once. For it the owner decided,
 on 25 September 2026: the inbreeding coefficient F waits for stage 5, and

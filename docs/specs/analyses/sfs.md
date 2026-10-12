@@ -88,6 +88,16 @@ plan, so that the names say one population or all: `spectraCsv` is
 of the file of all the spectra is `allSpectraCsvName`; and
 `spectrumWarnings` takes its page with no default.
 
+"On popgen2.html" is built on the branch `population-tab` on 11
+October 2026, work packages 1 and 2 of that plan, and not yet tried by
+the owner. Beside the renaming above, the review of work packages 2
+and 3 changed the names of the files of the histograms, which compare
+the names of the populations without regard to case, so that "P1" and
+"p1" no longer give two files the system saves as one name, and moved
+the function that makes them, `fileNameParts`, out of
+`src/core/fileNames.ts`, which both pages load first, into
+`src/core/fileNameParts.ts`.
+
 ## What is decided here, and what is asked
 
 The spectrum is part of the diversity: the same call of popnei, the same
