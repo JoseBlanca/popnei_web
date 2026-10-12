@@ -73,7 +73,16 @@ where the code differs, in section 7, the keys of Undo and Redo, which
 the page takes from the browser, and the band while an error is shown,
 and in the row of `shell/` of section 9; and section 11 gains the
 memory of a PCA started by itself after a finished one, measured, and
-the time of a Stop said in the band.
+the time of a Stop said in the band. Revised on 12 October 2026 for
+`docs/designs/population-tab.md`, approved by the owner on 11 October
+2026 with the recommendations of its two open points, and with what
+the branch `population-tab` built and measured on 11 and 12 October
+2026 (`docs/plans/population-tab.md`, work packages 1 to 4, not yet
+tried by the owner): `popgen2.html` calculates two analyses again by
+themselves, the PCA and the diversity of its new Populations tab, one
+at a time in the order of the tabs, with Stop all in the band; in
+sections 3, 4, 5, 7, 9 and 11, each with a paragraph "What was revised
+on 12 October 2026" at its end.
 What was
 revised each time until 30 September 2026 is at the end
 of section 1. The document gives the parts of the web applications of
@@ -1062,7 +1071,8 @@ result a calculation would give again. The one pass reads no filter,
 so no change of a filter throws its result away, and its histograms
 stay. The memory the page keeps for results falls from up to the bound
 of 256 MB to the one pass's result and at most one PCA, 0.90 MB at
-9,381 individuals (`docs/specs/analyses/pca.md`, "How it runs"). Not
+9,381 individuals (`docs/specs/analyses/pca.md`, "How it runs"), and
+from 11 October 2026 one diversity of a few hundred bytes. Not
 taken: the cache kept, with the PCA started again even when it holds the
 result, which would show the old result during the minutes of the new
 calculation; and no cache at all on that page, which would drop the
@@ -1087,6 +1097,46 @@ for a change the lock missed; its other half, no notice, is what the
 page needs of it at every change. Once the PCA has ended, a change of
 what it reads starts it again by itself, a second after the user stops
 changing things (section 5).
+
+**Several analyses calculated again by themselves on `popgen2.html`.**
+From 11 October 2026 the diversity of the Populations tab is
+calculated again by itself after a change, as the PCA is, once its own
+Run has been pressed (`docs/designs/population-tab.md`; section 5).
+Each tab shows the result under the key the project gives its analysis
+now, and an analysis that waits for another to end shows none, so no
+result is shown stale with two of them. While the diversity runs, the
+screen locks what it reads: the thresholds and the FILTER box, its own
+options, and, unlike the PCA, what gives the populations, the column of
+the populations, the zone of the individuals file, its Remove and the
+three lists of how a text file of it is read, greyed with "Stop the
+diversity in the Populations tab to change the populations; then press
+Run there to calculate it again." (`docs/specs/steps/popgen2-input.md`,
+"While the diversity runs"). So a change of the populations stops no
+calculation, and only the user's Stop does, the owner's answer of 11
+October 2026 to the design's second open point; not taken, those
+controls left open and a change of them stopping the diversity and
+starting it again, a stop the user did not press, after which a
+WebKit tab kept about 0.2 GB more than before the diversity (the
+design, choice 2 (c), measured on 11 October 2026 on the owner's Apple
+M5 Pro with 64 GB). The options of the
+PCA stay open while the diversity runs, and a change of them makes the
+PCA wait after it. While another analysis is live beside the one
+running, the words of the lock of the filters add "or press Stop all
+beside the heading Popnei". The warnings of the diversity of this page name the
+individuals file and the column of the populations, and say why there
+is one population, "Unclassified", when there is; so its key holds,
+beside the populations it is sent with and its options, the name of
+the individuals file, the name of the column and the cause of the one
+population (`popgen2WordsRead` of `src/core/analyses/diversity.ts`),
+and a result is never shown with the words of a file or a column no
+longer open. The cost: a change of the individuals file or of the
+column calculates the diversity again even when it gives the same
+populations, 0.10 s on the gzipped VCF of 300 variants of 9,381
+individuals and 2.5 s on a VCF of 403 MB, 100,000 variants of 1,000
+individuals, in Chromium 153 and WebKit 26.6 on the owner's Apple M5
+Pro (`docs/designs/population-tab.md`, "The time and the memory of a
+diversity", measured on 11 October 2026 on the old page, which makes
+the same calls of popnei).
 
 **A failure is forgotten when its key is left behind.** A failure that
 is not popnei's, a crash of the worker, is kept under its key until a
@@ -1170,6 +1220,17 @@ in code of 2,971 lines that `popgen.html` still uses; it goes whole when
 starting the PCA itself (section 5), and the live state of the PCA in
 the project, which `popgen.html`'s project file would carry and the
 key of the PCA would have to leave out by hand.
+
+What was revised on 12 October 2026, for the design population-tab
+(`docs/designs/population-tab.md`, approved by the owner on 11 October
+2026 with the recommendations of its two open points) and what the
+branch `population-tab` built on 11 and 12 October 2026
+(`docs/plans/population-tab.md`, work packages 1 to 4): the paragraph
+"Several analyses calculated again by themselves on `popgen2.html`" is
+new; the paragraph on a running PCA holds for the PCA as it was. That
+the key of the diversity holds the words its warnings read is from the
+review of work package 1, which found a warning of a result naming an
+individuals file no longer open.
 
 ## 4. An analysis is a module
 
@@ -1558,6 +1619,27 @@ the code of stage 3, which gave the filter 10,000 base pairs from its
 switch: stage 4 adds it, for what reads the filters of the variants
 (`docs/specs/core/project.md`, `variantFilterNeeds`).
 
+What was revised on 12 October 2026, for the design population-tab
+(`docs/designs/population-tab.md`, approved by the owner on 11 October
+2026) and what the branch `population-tab` built on 11 and 12 October
+2026 (`docs/plans/population-tab.md`). `warnings` takes a third
+argument, `individuals`, the individuals kept that the request was sent
+with, `null` when the filters removed nobody, which the store gives
+from the client, so that a warning that counts the individuals kept
+counts those of its result and not those of the project at the time it
+is drawn: the warning of one classified population on `popgen2.html`
+counts the unclassified among them (the review of work package 1 of
+that plan, 11 October 2026; `docs/specs/core/store.md`). The diversity
+of `popgen2.html` is a definition of its own, `diversityOnPopgen2`,
+with the id and the key version of the old page's and the words of the
+new page, after the PCA in `POPGEN2_ANALYSES`, as the PCA has
+`pcaOnPopgen2`. `POPGEN2_LIVE` of `src/core/apps.ts` lists the
+analyses of that page calculated again by themselves, the PCA and then
+the diversity, in the order of the tabs; the store of the page, the
+words of the locks and the band key by it what they hold of each, its
+rule of failure, its name and its tab, so that an analysis added to the
+list without them does not compile.
+
 ## 5. The workers and their messages
 
 The page and each worker talk through typed messages
@@ -1606,7 +1688,10 @@ The page and each worker talk through typed messages
   that passed and failed, or `null` (`docs/plans/popnei-0.2.2.md`, "The
   FILTER failures"). The summary keeps every variant, whatever its
   FILTER column. From 10 October 2026 the PCA is the page's second
-  group, `POPGEN2_LIVE`, which starts by itself only once live (below).
+  group, and from 11 October 2026 the diversity of the Populations tab
+  its third, each a group of one analysis, those of `POPGEN2_LIVE` of
+  `src/core/apps.ts`, which start by themselves only once live (below,
+  "Several analyses calculated again by themselves").
   A member of a group can be `locked`, its project
   lacking what it needs: a locked member neither starts nor holds back
   the group, and the box offers no Start again for it; on
@@ -1737,6 +1822,101 @@ The page and each worker talk through typed messages
   outcome and the handling of its failures out of `src/ui/runs.ts`,
   several hundred lines and a design of their own, for a behaviour no
   other page has; it would win if a second page needed it.
+- **Several analyses calculated again by themselves**, on
+  `popgen2.html` from 11 October 2026, the PCA and the diversity of the
+  Populations tab (`docs/designs/population-tab.md`;
+  `docs/specs/steps/popgen2-pca.md`, "Several analyses calculated again
+  by themselves"). Each is live from its own Run, so a Run of the
+  diversity starts no PCA of minutes the user never asked for. One
+  quiet second serves them all: when it runs out, the first live
+  analysis about to start, in the order of the tabs, the PCA and then
+  the diversity, starts, and each next one when the one before it
+  ends, with no second more; one runs
+  at a time, since `sync` of `autoRuns.ts` starts nothing while any
+  analysis runs. A live analysis waits for the one pass and for a
+  calculation running, and for nothing else: whatever the state of
+  another live analysis, not live, stopped, locked, done or failed, it
+  does not hold it back. Until 11 October 2026 any analysis before it
+  that was neither done nor locked held it back, under which a PCA
+  never run would have kept the diversity from ever starting by itself
+  (the design, "For the session that builds it", point 1). Not taken,
+  the design's options for the order: the analysis of the tab shown
+  first, then the others in the order of the tabs, which differs from
+  the order of the tabs only when the user turns to another tab within
+  the quiet second; and the analyses of a tab calculated only when it
+  is shown, which would leave every analysis to calculate when the user
+  turns to it.
+
+  The user's Run, `run(id)`, answers what it did: "started" at once,
+  while nothing runs; "waiting", the analysis made live behind a
+  calculation that runs, after which it starts, with nothing sent
+  meanwhile, since the store has no state for a request that waits in
+  the client's queue; "kept", made live with nothing started nor
+  waiting, since the store would start nothing for it now, its result
+  there, locked, or the one pass over the variants file not yet
+  finished, so that it starts by itself
+  after the next change of its key; "refused", during a write of the
+  filtered variants, with nothing made live. The live state of each,
+  `liveState(id)`, which the tabs and the band read through one
+  subscription, is off before its first Run, stopped after the user's
+  Stop, ended by a failure, or live, and then whether it runs, what its
+  start waits for while it is about to start, and the analysis its tab
+  names, `after`. It waits for one of four things: "changes", the quiet
+  second or a change under way; "download", the dialog of the download
+  of the filtered variants open or its write running; "behind", another
+  calculation running; and "afterCrash", below.
+
+  The Stop of one, `pause(id)`, in its tab or in the band, ends its
+  live state and starts the quiet second again before it cancels the
+  run, so that a diversity waiting behind the PCA starts a second
+  after the PCA's Stop and not at once, and a threshold the user
+  changes in that second, the reason they stopped the PCA, is the one
+  it calculates with: the owner's answer of 11 October 2026 to the design's
+  first open point. Without it the second would not start again, since
+  a Stop is no change of the project, and the waiting analysis would
+  start in the new worker at once, the filters greyed again before the
+  user reached them. Stop all, `pauseAll()`, in the band, ends every
+  live state and cancels the analysis running, with no second, since
+  nothing is left live. Not taken: every Stop ending every live state,
+  one press that frees the filters for good, and a Run in each tab to
+  have them back.
+
+  A failure ends a live state by the rule of its analysis,
+  `popgen2EndsLive` of `src/ui/popgen2Store.ts`, keyed by
+  `POPGEN2_LIVE`: for both, the calculations that could not start, the
+  page out of date and an error of the application's own, which would
+  fail again at every change; for the PCA, a crash of the calculation
+  worker whose words speak of the memory, which they do from 2,264
+  individuals, where the PCA's matrix reaches 250 MB, below which no
+  browser of a computer was expected to refuse it (`crashText` of `src/core/analyses/pca.ts`; `failureEndsLive` of
+  `src/ui/analyses/pca/liveEnd.ts`); for the
+  diversity, every crash, since its words cannot tell a crash for
+  memory from another (`src/ui/analyses/diversity/liveEnd.ts`).
+  popnei's refusal, and a file that could not be read again, leave
+  either live, for the next change of its key to try again. What the
+  others about to start do then depends on the failure. After a
+  failure that ends a live state and is no crash, they start a quiet
+  second later, as after a Stop. After a crash that ends one, which may
+  be a crash for lack of memory that WebKit still holds in the ended
+  worker, they are held, `heldAfterCrash`, each in the state
+  "afterCrash", until the next change of the project or its own Run,
+  which lifts the hold for it alone; the page is told once which it
+  holds, and the status region, which a screen reader reads aloud,
+  says that each did not start and what starts it. A held
+  analysis is never said to start once the analysis running ends,
+  since that end does not start it: "afterCrash" wins over "behind".
+  A crash that ends no live state, of a PCA under 2,264 individuals,
+  holds nothing: the PCA stays live, and an analysis that waited for it
+  starts at once in the new worker (`popgen2-pca.md`, "A failure that
+  ends a live state").
+
+  `autoRuns.ts` tells the page of each start by itself, with the
+  analyses of its round, the starts that one quiet second gives, at the
+  first of them, so that the status region names the round once,
+  "Calculating the PCA and then the diversity again. …"; of the start
+  of a Run that waited, of a Stop, of Stop all, and of the analyses a
+  crash holds (`onLive`, its events `startedByItself`,
+  `startedAfterWaiting`, `paused`, `pausedAll` and `heldAfterCrash`).
 - **Why a change on `popgen2.html` does not stop a PCA.** The owner's
   first answer of 10 October 2026 was a change during a run that stops
   it and starts it on the new values, with no lock of the filters. A
@@ -1971,6 +2151,21 @@ page for an undo. Checked against the code built on the branch
 under way the second waits for, the menus "Download…" and a line of a
 threshold held still among them, and "Stop recalculating", which ends
 the live state as Stop does.
+
+What was revised on 12 October 2026, for the design population-tab
+(`docs/designs/population-tab.md`, approved by the owner on 11 October
+2026 with the recommendations of its two open points) and what the
+branch `population-tab` built on 11 and 12 October 2026
+(`docs/plans/population-tab.md`, work packages 1 to 4): the PCA is no
+longer the one analysis of `popgen2.html` calculated again by itself;
+the bullet "Several analyses calculated again by themselves" is new,
+and the bullet "A request that the current project no longer asks for
+is stopped" names the PCA and the diversity as the groups that start by
+themselves once live. What the review of work
+package 1 changed of the design, each in that bullet: the answer
+"kept" of a Run, where the design had a Run refused or waiting for
+nothing; and the hold after a crash, where the others had started at
+once in a tab that may have been at its limit.
 
 ## 6. The files of the user
 
@@ -2831,7 +3026,42 @@ for the smallest part of it.
   only when a screen reader reaches them, so that nothing is read twice.
   The progress in the box of the variants file and in the PCA tab
   stays, since the user who is in that tab looks there. Its screen is
-  `docs/specs/steps/popgen2-band.md`.
+  `docs/specs/steps/popgen2-band.md`. From 11 October 2026 it names
+  the diversity as it names the PCA, running, about to start or
+  stopping; the analysis running with those that wait after it, "PCA
+  running · 1:20 · then the diversity"; the analyses about to start
+  together; and the link to the warnings or the error of the first
+  analysis, in the order of the tabs, whose tab is not shown. It reads
+  the live state of each analysis of `POPGEN2_LIVE` through the one
+  subscription of `autoRuns.ts` (`BandPage.live` of
+  `src/ui/band/bandLine.ts`), so that between the end of one analysis
+  and the start of the next it never shows "Popnei" alone. Whenever two
+  or more analyses are live and one of them runs, waits or is about to
+  start, it offers "Stop all", which ends every live state at once
+  (section 5), so that the automatic runs of every analysis can be
+  ended from any tab and from the keyboard, the band being the first
+  stop of the Tab key on the page (WCAG 2.2, success criterion 2.2.1).
+  Its Stop of an analysis is a button of its own for each analysis it
+  stops, so that when the PCA ends with the keyboard on "Stop the PCA",
+  the button goes and the focus moves to the heading "Popnei", where
+  the same button renamed "Stop the diversity" had stopped, at the
+  next Enter, an analysis the user had not chosen (the review of work
+  package 4 of `docs/plans/population-tab.md`, 12 October 2026, in
+  Chromium and WebKit). Under 44 em, 704 px at the browser's usual size
+  of text, the band is narrow: its words take their short forms, its
+  heading is smaller, its buttons have 4 px of side padding in place of
+  12, and beside Stop all it leaves out the "Stop recalculating" of an
+  analysis about to start, which its tab always offers, as the owner
+  chose on 12 October 2026 when the line needed 290 px of the 288 a
+  window of 320 px leaves it. That width is decided in one place,
+  `src/ui/band/narrow.ts`, by one media query that the band's CSS does
+  not write again, so that a button the narrow band leaves out is not
+  drawn, and the focus it had goes to "Popnei", where a button hidden by
+  CSS had left the focus on nothing after the window narrowed. When a
+  line still cannot fit, a clock past an hour at 320 px or the text at
+  200%, its buttons go to a second row, and the room the page keeps
+  under the band grows with it; the band is 51 px high whenever its
+  line fits.
 - **The step of an application is in the URL hash**, so that the back
   button moves between steps (`docs/technology.md`).
 
@@ -2913,6 +3143,39 @@ emptied a number box reached by Tab and a screen reader said "Empty".
 The bullet of the band gains its height, the room the page keeps for
 it, its place while an error is shown, "Popnei" alone while nothing
 runs, and its "Stop recalculating".
+
+What was revised on 12 October 2026, for the design population-tab
+(`docs/designs/population-tab.md`, approved by the owner on 11 October
+2026 with the recommendations of its two open points) and what the
+branch `population-tab` built on 11 and 12 October 2026
+(`docs/plans/population-tab.md`, work packages 1 to 4): the bullet of
+the band gains the diversity, Stop all, its Stop of each analysis and
+its narrow form. `popgen2.html` gains the Populations tab, the
+diversity of each population and its spectrum, drawn by the old page's
+table and block of the spectrum given the new page's definition, with
+the "Download…" of each table and of each histogram of the spectrum;
+its whole code, but its name, its heading and the store's definition,
+is downloaded when the tab is first shown, as the result of the PCA tab
+is (`docs/specs/steps/popgen2-populations.md`). Every file of such a
+piece of code is asked of the network before its `import()`, read from
+the `manifest.json` the build writes, since Chromium 153 and WebKit
+26.6 keep the failure of a module for the life of the page, and Try
+again had never brought back a tab's code once a file it shares with
+the page failed, the PCA tab's included (the review of work package 1;
+section 9, `codeFiles.ts`). While the diversity runs, the box
+Individuals greys the column of the populations, the zone of the
+individuals file and its Remove, and the Individuals tab the three
+lists of how a text file is read (section 3); the zone of a file,
+`FileZone` of `src/ui/widgets/`, has a state that waits, with its
+reason as the tooltip and the description of its button, in which a
+file dropped, pasted, or picked in a picker opened before the wait
+opens nothing and is named as not opened, and it opens the picker from
+a file input of its own, since a press passed through React Aria's
+`FileTrigger` reaches the button by a way that a greyed button cannot
+refuse. And a file dropped on either page outside the zones of a file
+is refused, where Chromium and WebKit had opened it in the tab in place
+of the page, losing its files and results (`docs/specs/entry.md`, "A
+file dropped outside a zone"; section 9, `strayDrops.ts`).
 
 ## 8. The project file, the report and the script
 
@@ -3116,6 +3379,14 @@ src/core/
                     the stem of the variants file; from 9 October 2026
                     also the names of the downloads of the tables and
                     plots (downloadName)
+  fileNameParts.ts  from 11 October 2026, the names of the populations
+                    made parts of the names of the files of the
+                    histograms of the spectrum, "_" for any character
+                    but a letter, a digit, "-" and "_", and "_2" after a
+                    part an earlier name gave, compared without regard
+                    to case; apart from fileNames.ts, which both pages
+                    load first, so that only the Populations tab's code
+                    carries it
   noVariantKept.ts  from 9 October 2026, whether the filters keep no
                     variant for certain, told from the one pass of
                     popgen2.html finished (noVariantForCertain)
@@ -3175,7 +3446,16 @@ src/ui/
   pageStart.tsx     the opening both entries of population genetics
                     share: the guard taken over, the listeners of the
                     errors, the error bar, the store joined to the worker
-                    client, the reads, and the root of the application
+                    client, the reads, and the root of the application;
+                    from 11 October 2026 also the listener of the files
+                    dropped outside a zone (strayDrops.ts)
+  strayDrops.ts     from 11 October 2026, the listener on the window of
+                    both pages that refuses a file dropped outside the
+                    zone of a file, which Chromium and WebKit opened in
+                    the tab in place of the page, losing its files and
+                    results; a zone takes its own drop first, and a drag
+                    of text is left to the browser (docs/specs/entry.md,
+                    "A file dropped outside a zone")
   startGuard.js     the start guard, plain script, which a plugin of
                     vite.config.ts puts inline in each page that has the
                     comment <!-- the start guard -->
@@ -3206,7 +3486,12 @@ src/ui/
                     file as a new history; from 10 October 2026 one past
                     project, a type with no undo nor redo, the setting
                     dropLeftBehind, and the PCA as a second group after
-                    POPGEN2_CHAIN; apart from the entry, so that
+                    POPGEN2_CHAIN; from 11 October 2026 the diversity a
+                    third, a group for each analysis of POPGEN2_LIVE,
+                    and popgen2EndsLive, which failures end the live
+                    state of each, by the rule of its analysis
+                    (analyses/pca/liveEnd.ts, analyses/diversity/
+                    liveEnd.ts; section 5); apart from the entry, so that
                     a test in node makes it
   autoRunsContext.ts from 11 October 2026, autoRuns given to the screens
                     as the store is, through AutoRunsProvider and
@@ -3228,7 +3513,19 @@ src/ui/
                     live for a load once its Run is pressed, started
                     again a quiet second after a change, held while the
                     gate counts a change under way, and paused by its
-                    Stop until Run (section 5)
+                    Stop until Run (section 5); from 11 October 2026
+                    several live analyses, the PCA and the diversity,
+                    started one at a time in the order of the tabs from
+                    one quiet second, each held back only by the one
+                    pass and a calculation running: the answer of a Run,
+                    started, waiting, kept or refused; the live state of
+                    each, with what its start waits for, the quiet
+                    second, the download, another calculation or a
+                    crash, and the analysis its tab names; a Stop that
+                    starts the quiet second again, Stop all (pauseAll),
+                    the hold after a crash that ended a live state
+                    (heldAfterCrash), and the events the status region
+                    says (onLive)
   variants/         the screens of popgen2.html: the opening of the
                     variants file, the box of what it holds with the bar
                     of the pass running, the count of the variants so
@@ -3276,7 +3573,13 @@ src/ui/
                     digits not confirmed, a run of the arrow keys, the
                     dialog of the download open, each tagged a control
                     or the download, and tells autoRuns.ts when none is
-                    left and when a kind comes or goes
+                    left and when a kind comes or goes; from 11 October
+                    2026 the lock (filtersLock.ts) of whichever live
+                    analysis runs, and of the populations, the column,
+                    the zone of the individuals file, its Remove and the
+                    lists of its reader, while the diversity runs, and
+                    the download's wait and its words naming the
+                    analysis running and those waiting after it
   codeDownload.ts   from 10 October 2026, a download of code apart from
                     the page's first load, asked for the first time it
                     is needed, kept once it arrives, and asked again at
@@ -3304,7 +3607,11 @@ src/ui/
                     function tested
                     in node (bandLine.ts), its words (bandWords.ts), and the
                     band drawn (Band.tsx), which reuses the words and
-                    buttons of the error bar
+                    buttons of the error bar; from 11 October 2026 the
+                    live state of each analysis of POPGEN2_LIVE, Stop
+                    all and a Stop keyed by what it stops, and from 12
+                    October 2026 its narrow form decided in one place,
+                    the window under 44 em (narrow.ts)
   pageTab.ts        from 10 October 2026, the tab shown on popgen2.html,
                     a small store of the screen that the page and the
                     band both read and change
@@ -3368,7 +3675,20 @@ src/ui/
                     popgen2.html, its frame and first words, which the
                     page loads (PopulationsTab.tsx, tabLoadWords.ts),
                     and the tab itself with its result, downloaded when
-                    the tab is first shown (PopulationsTabView.tsx)
+                    the tab is first shown (PopulationsTabView.tsx); from
+                    11 October 2026 status.ts gives the live analysis
+                    running, and those live beside it or waiting after
+                    it, as the words of the page name them
+                    (runningAnalysisOf, in the place of runningPcaOf,
+                    which named the PCA alone), for the locks, the
+                    download and the band; liveRun.ts, the Run of a tab of a
+                    live analysis, which says in the status region once
+                    what a Run that waits waits for; liveWords.ts, the
+                    words of the status region of several live analyses,
+                    the round, a Run that waited and Stop all; and in
+                    diversity/ liveWords.ts, the words of the diversity
+                    the page says whichever tab is shown, and liveEnd.ts,
+                    which of its failures end its live state
   report/           renders the report model into its HTML page, with the plots
   widgets/          React Aria components with our styles, one wrapper per
                     widget; among them ThresholdSlider.tsx, from 7
@@ -3406,7 +3726,13 @@ src/ui/
                     that does not open and says its reason;
                     WideShort.tsx, from 10 October 2026, words whole and
                     in a short form under 30 rem, which the band's line
-                    and its link draw;
+                    and its link draw, and from 12 October 2026 when the
+                    band is narrow, under 44 em (band/narrow.ts);
+                    FileZone.tsx, the zone of a file, from 11 October
+                    2026 with a state that waits, its button greyed with
+                    the reason, a file dropped, pasted or picked then
+                    opened nothing and named, and the picker opened from
+                    a file input of its own;
                     DownloadMenu.tsx and downloadItems.ts, from 9
                     October 2026, the menu "Download…" of a table or a
                     plot and its items; waiting.ts, from 9 October
@@ -3504,6 +3830,31 @@ the same day (`docs/plans/no-undo.md`, work packages 1 to 5): the row
 of `shell/` had said that `shortcuts.ts` is drawn by `popgen.html`
 alone; `popgen2.html` takes from it `refuseUndoKeys`, which keeps the
 keys of Undo and Redo from the browser (section 7).
+
+What was revised on 12 October 2026, for the design population-tab
+(`docs/designs/population-tab.md`, approved by the owner on 11 October
+2026) and what the branch `population-tab` built on 11 and 12 October
+2026 (`docs/plans/population-tab.md`, work packages 1 to 4): in core,
+the diversity given `popgen2.html` and `diversityOnePopulation.ts`
+among the analyses, `POPGEN2_LIVE` in the row of `apps.ts`, and the
+new row of `fileNameParts.ts`; in `src/ui`, the rows of `pageStart.tsx`,
+`popgen2Store.ts`, `autoRuns.ts`, `codeDownload.ts`, `variants/`,
+`band/`, `analyses/` and `widgets/`, and the new rows of
+`strayDrops.ts`, `autoRunsContext.ts` and `codeFiles.ts`. Two modules
+of core are apart from the files they belong with only so that the
+first load of `popgen2.html` does not carry them: the line of the one
+population, out of `diversity.ts`, whose definition the store loads
+with the page, and `fileNameParts.ts`, out of `fileNames.ts`, which
+both pages load first; only the Populations tab's code, downloaded
+when the tab is first shown, imports them, since a module is loaded
+whole by every page that imports any of it. `codeFiles.ts` reads
+`manifest.json`, which the build writes beside the pages from 11
+October 2026 (`vite.config.ts`; `docs/technology.md`, section 4). No
+rule of the imports changes: `band/` imports, beyond the list of 10
+October 2026, `apps.ts` of core, for `POPGEN2_LIVE`, and, of
+`analyses/`, `status.ts`, for the names of the live analyses;
+`analyses/` imports `autoRuns.ts` and `autoRunsContext.ts`, as
+`variants/` does.
 
 ## 10. The walking skeleton
 
@@ -3744,7 +4095,8 @@ tests of the application are the same with it.
   from 10 October 2026 (`docs/designs/no-undo.md`). The page keeps at
   most two projects, the present and one past, where it kept up to 201,
   and the results of the values shown, the one pass's and at most one
-  PCA, 0.90 MB at 9,381 individuals, where the cache could hold 256 MB.
+  PCA, 0.90 MB at 9,381 individuals, and from 11 October 2026 one
+  diversity of a few hundred bytes, where the cache could hold 256 MB.
   The PCA calculated again after each change costs its time again: up
   to 4 minutes at 9,381 individuals (226 s in Chromium 153 and 134 s in
   WebKit 26.6 for the PCA, 259 s and 215 s for the PCoA, above), during
@@ -3767,8 +4119,14 @@ tests of the application are the same with it.
   LD pruning off: Run pressed, the PCA's missing-data slider moved by
   one press of a key 2 s after the first result, and the PCA started
   again by itself, sent to the worker 1.03 s after the press. The
-  memory is that of the engine's processes summed, read every 250 ms,
-  in GB; the times are those of each run.
+  memory is that of the engine's processes summed, in GB, sampled one
+  after another with a pause of 250 ms between the end of one sample
+  and the start of the next (`LIVE_PAUSE_MS` of `e2e/measure.spec.ts`),
+  so somewhat more than 250 ms apart: a sample itself takes some 70 to
+  90 ms, the median gap of the samples of `PT1 D5`, below, taken with a
+  pause of 10 ms, being 81 to 98 ms. The times are those of each run.
+  ("Read every 250 ms" until 12 October 2026, which counted the pause
+  alone.)
 
   | | WebKit 26.6 | Chromium 153 |
   |---|---|---|
@@ -3913,6 +4271,38 @@ tests of the application are the same with it.
   answer, the diversity of 300 variants and the new worker together.
   What a diversity of many more variants adds after a Stop was not
   measured.
+- **A worker started again after a Stop that never becomes ready**
+  reaches no state of the store. A Stop ends the calculation worker and
+  starts another, and the client gives a worker up after two failed
+  starts in a row by failing the requests waiting in its queue
+  (`giveUpCalculation` of `src/worker/client.ts`); after a Stop none
+  waits, so no state of the store says that the page can no longer
+  calculate, and a worker that hangs without failing says nothing
+  either. The band says "Stopping…" for its 10 s at most and then
+  drops it, and the user learns of it at their next Run, which fails
+  as a calculation that could not start. Older than the Populations
+  tab, and on `main` since the band of 10 October 2026; found by the
+  review of work package 4 of `docs/plans/population-tab.md`, 12
+  October 2026, and not seen in a browser.
+- **The first load of `popgen2.html`** is 331.72 KB gzipped, the sum of
+  the gzip sizes `vite build` reports for the files the page loads
+  before it draws, the HTML included, at commit 590caf53 of the branch
+  `population-tab` on 12 October 2026, against 321.62 KB before that
+  branch's work, 10.10 KB more. Of the 10.10 KB, work package 1 added
+  5.86 KB: 4.95 KB of code the page needs before the Populations tab
+  is shown, the definition of the diversity the store reads, the code
+  that starts the analyses by themselves and the fetching of a tab's
+  code, and 0.9 KB of the bundler's split of the scripts into 12 files
+  where there were 9; work packages 2 and 3 and the fixes of their
+  review 3.74 KB, the words of the tab's waits and of the locks among
+  them; and work package 4 0.50 KB, the band's code for two analyses,
+  Stop all among it. The Populations tab's own code, its options, lines, result, table, histograms and menus, is
+  7.79 KB more, downloaded when the tab is first shown after the plots
+  of the Variants tab, measured after work package 1 of
+  `docs/plans/population-tab.md` on 11 October 2026 and not measured
+  again since the downloads of work package 2 joined it. The first load
+  of the old page, `popgen.html`, is 376.12 KB by the same count,
+  measured on 11 October 2026 after work packages 2 and 3.
 - **The page frozen.** The key of every analysis is made on the page after
   every command, from the canonical form of its inputs, and the
   individuals table of 10,000 rows is among them. Since the project is
@@ -4017,7 +4407,14 @@ tests of the application are the same with it.
   words say to reload the page (`docs/specs/core/project.md`, open point
   4), and to save the project first, which they now say. Found by the
   specs and the architecture review of stage 4 on 27 September 2026, and
-  not yet seen in a browser (section 13, point 10).
+  not yet seen in a browser (section 13, point 10). From 11 October
+  2026 `popgen2.html` asks for each file of a tab's code before its
+  `import()`, as `manifest.json` names them (section 9,
+  `codeFiles.ts`), so that Try again asks the network again after a
+  failure, which a browser that keeps the failure of a module would
+  not; after a deploy the manifest of the new site may not name the
+  tab's code of the old page, and the `import()` then meets the missing
+  file itself, whose failure Try again cannot mend: only a reload does.
 
 What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
 approved by the owner that day: the thresholds set in number fields are
@@ -4044,6 +4441,20 @@ What was revised on 11 October 2026, with the measurement of the plan of
 the Populations tab (`docs/plans/population-tab.md`, work package 1,
 deliverable 5): the bullet "The diversity started after a large PCA" is
 new.
+
+What was revised on 12 October 2026, for what the branch
+`population-tab` built and measured on 11 and 12 October 2026
+(`docs/plans/population-tab.md`): the bullets "A worker started again
+after a Stop that never becomes ready", a known problem older than that
+branch, and "The first load of `popgen2.html`", with the measurement of
+its deliverable 1.6 and of its later packages, are new; "A file of the
+site fetched after a deploy" gains the files of a tab's code asked
+before its `import()`; and "A PCA started by itself after a finished
+one" says how far apart its samples were, which "every 250 ms" did
+not. The known problem of the PCA run again within about a minute of
+its Stop, at about 4.97 GB in WebKit, is in "The diversity started
+after a large PCA", as the owner decided on 11 October 2026, to be
+measured on a Mac with less memory and in Safari.
 
 ## 12. What is hard to undo
 
