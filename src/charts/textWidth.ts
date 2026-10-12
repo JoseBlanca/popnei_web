@@ -55,8 +55,19 @@ export function textWidth(
   fontSize: number,
   perCharacter: number,
 ): number {
+  return (
+    measuredWidth(text, fontSize) ?? Array.from(text).length * perCharacter
+  );
+}
+
+/**
+ * The width in CSS pixels of `text` at `fontSize` pixels in the font of
+ * the plots, measured; null where nothing measures, for a layout that is
+ * only corrected where the text is measured.
+ */
+export function measuredWidth(text: string, fontSize: number): number | null {
   const measure = measuringText();
-  if (measure === null) return Array.from(text).length * perCharacter;
+  if (measure === null) return null;
   measure.setAttribute("font-size", String(fontSize));
   measure.textContent = text;
   return measure.getComputedTextLength();

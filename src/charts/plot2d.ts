@@ -19,6 +19,7 @@ import "./charts.css";
 import { exportPng, exportSvg } from "./export.ts";
 import type { ExportSize } from "./export.ts";
 import { nextChartIds } from "./ids.ts";
+import { measuredWidth } from "./textWidth.ts";
 import type { ChartHandle } from "./types.ts";
 
 /** The texts every 2D plot draws, which its data hold beside the numbers. */
@@ -187,6 +188,16 @@ const Y_TICK_SPACING = 40;
 const X_LABEL_FROM_BOTTOM = 8;
 /** From the left of the SVG to the baseline of the label of the y axis. */
 const Y_LABEL_FROM_LEFT = 16;
+/**
+ * From the baseline of the last line of the label of the y axis to the
+ * right edge of its text, turned: its descent, about a quarter of its 13
+ * pixels, rounded up.
+ */
+const Y_LABEL_DESCENT = 4;
+/** Between the label of the y axis and the widest number of that axis. */
+const Y_LABEL_GAP = 6;
+/** The size of the numbers of an axis, as charts.css writes them. */
+const TICK_FONT_SIZE = 12;
 /**
  * The width counted for a character of the label of an axis, of 13
  * pixels, since nothing in a plot measures text: the label of the
@@ -508,11 +519,44 @@ export function createPlot2d<Data extends PlotText>(
   }
 
   /**
-   * Draws the current data at `size`, which is above 0, or empties the
-   * frame when the margins leave it no area.
+   * The left margin the label of the y axis on `numLines` lines and the
+   * numbers of that axis just drawn need, so that the label stands 6
+   * pixels from the widest number, measured; null where nothing
+   * measures, or with no label or no number.
    */
-  function drawAt(size: ExportSize): void {
-    const given = definition.margin(current, size);
+  function yLabelNeeds(numLines: number): number | null {
+    if (current.yLabel === "") return null;
+    let widest: number | null = null;
+    for (const tick of yAxisGroup.selectAll<SVGTextElement, unknown>(
+      "g.tick text",
+    )) {
+      const width = measuredWidth(tick.textContent, TICK_FONT_SIZE);
+      if (width === null) return null;
+      widest = Math.max(widest ?? 0, width);
+    }
+    if (widest === null) return null;
+    return Math.ceil(
+      Y_LABEL_FROM_LEFT +
+        LABEL_LINE * (numLines - 1) +
+        Y_LABEL_DESCENT +
+        Y_LABEL_GAP +
+        NUMBER_LABEL_OFFSET +
+        widest,
+    );
+  }
+
+  /**
+   * Draws the current data at `size`, which is above 0, or empties the
+   * frame when the margins leave it no area; with the left margin the
+   * definition gives `extraLeft` pixels wider, as the label of the y
+   * axis asks when the numbers of its axis are wide.
+   */
+  function drawAt(size: ExportSize, extraLeft = 0): void {
+    const fromDefinition = definition.margin(current, size);
+    const given: Margin = {
+      ...fromDefinition,
+      left: fromDefinition.left + extraLeft,
+    };
     // A label too long for one line takes a second, and the frame gives
     // it the room, below for the horizontal one and on the left for the
     // vertical one (plot2d.md, "The axes"). Each changes the room of the
@@ -650,6 +694,16 @@ export function createPlot2d<Data extends PlotText>(
       },
     };
     definition.draw(frame, current);
+    // The numbers of the y axis are drawn now, and only now can their
+    // width be measured: a label that would stand nearer to them than
+    // its gap widens the left margin, and the plot is drawn once more
+    // (from 12 October 2026, the review of round 1).
+    if (extraLeft === 0) {
+      const needs = yLabelNeeds(yLines.length);
+      if (needs !== null && needs > margin.left) {
+        drawAt(size, needs - margin.left);
+      }
+    }
   }
 
   function onFrame(): void {

@@ -759,3 +759,39 @@ describe("review of round 1: the labels of the legend measured, not counted", ()
     expect(legendTexts(above)).toEqual([cut, "pop1"]);
   });
 });
+
+describe("review of round 1: the label up the plot keeps its gap from the numbers of its axis", () => {
+  afterEach(() => {
+    stopFakeMeasure();
+  });
+
+  /** The left margin, from the transform of the frame. */
+  function leftOf(element: HTMLElement): number {
+    const transform =
+      element.querySelector("g.chart-frame")?.getAttribute("transform") ?? "";
+    return Number(/translate\(([-\d.]+),/u.exec(transform)?.[1]);
+  }
+
+  /** Data whose vertical axis runs to 100,000, in whole numbers. */
+  const wideNumbers = (): LineData => ({
+    ...lineOf([seriesOf(0)]),
+    yDomain: [0, 100_000],
+    yWholeNumbers: true,
+  });
+
+  test("numbers of 7 characters, measured at 42 pixels: the left margin widens from 60 to 77, 16 to the label's baseline, 4 of its descent, 6, 9 to the numbers and 42; numbers of 0.2 keep the 60; counted, as under jsdom, the margin stays 60", () => {
+    const counted = sizedElement();
+    createLine(counted, wideNumbers());
+    expect(leftOf(counted)).toBe(60);
+
+    measureWithFake();
+    const narrow = sizedElement();
+    createLine(narrow, lineOf([seriesOf(0)]));
+    expect(leftOf(narrow)).toBe(60);
+
+    const wide = sizedElement();
+    createLine(wide, wideNumbers());
+    expect(fakeWidth("100,000")).toBe(42);
+    expect(leftOf(wide)).toBe(16 + 4 + 6 + 9 + 42);
+  });
+});

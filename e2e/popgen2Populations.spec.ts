@@ -2111,6 +2111,61 @@ async function textsOutside(page: Page, selector: string): Promise<string[]> {
     }, selector);
 }
 
+/** Of each plot of the tab shown, the label of the vertical axis that
+    passes an edge of its SVG, or that comes nearer than 4 pixels to the
+    labels of the ticks of that axis, with its box. */
+async function yLabelsCramped(page: Page): Promise<string[]> {
+  return shown(page)
+    .locator("svg.chart-line")
+    .evaluateAll((svgs) => {
+      const cramped: string[] = [];
+      for (const svg of svgs) {
+        const plot = svg.getBoundingClientRect();
+        const label = svg.querySelector(".chart-axis-label-y");
+        if (label === null) continue;
+        const box = label.getBoundingClientRect();
+        const ticks = [
+          ...svg.querySelectorAll(".chart-axis-y g.tick text"),
+        ].map((tick) => tick.getBoundingClientRect().left);
+        const nearest = Math.min(...ticks);
+        if (
+          box.left < plot.left - 0.5 ||
+          box.top < plot.top - 0.5 ||
+          box.bottom > plot.bottom + 0.5 ||
+          box.right > nearest - 4
+        ) {
+          cramped.push(
+            `${label.textContent}: [${String(Math.round(box.left))}, ${String(Math.round(box.right))}] x [${String(Math.round(box.top))}, ${String(Math.round(box.bottom))}] in [${String(Math.round(plot.left))}, ${String(Math.round(plot.top))}, ${String(Math.round(plot.bottom))}], ticks from ${String(Math.round(nearest))}`,
+          );
+        }
+      }
+      return cramped;
+    });
+}
+
+test.describe("review of round 1: the label up the plot of the spectrum", () => {
+  for (const width of [1280, 320] as const) {
+    for (const many of [false, true] as const) {
+      test(`${many ? "twenty populations" : "panel_pops.csv"} at ${String(width)} px: the label up the plot of the spectrum within its SVG and 4 px or more from the numbers of its axis`, async ({
+        page,
+      }) => {
+        test.setTimeout(120_000);
+        await page.setViewportSize({ width, height: 900 });
+        if (many) {
+          await runTwenty(page);
+        } else {
+          await openPage(page);
+          await pick(page, "panel.nei");
+          await pickIndividuals(page, "panel_pops.csv");
+          await runDiversity(page);
+        }
+        await expect(shown(page).locator("svg.chart-line")).toHaveCount(1);
+        expect(await yLabelsCramped(page)).toEqual([]);
+      });
+    }
+  }
+});
+
 test.describe("review of round 1: long names of populations", () => {
   for (const width of [1280, 720, 320] as const) {
     test(`twenty populations of long and wide names at ${String(width)} px: every name of the bar plots and every label of the legend of the spectrum within its SVG`, async ({

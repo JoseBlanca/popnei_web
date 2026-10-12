@@ -256,7 +256,20 @@ and turned along the vertical one, in the margins:
   turns at 507 by 316 pixels, among other sizes, and three rounds ended
   with the vertical label broken where it fits. In that case alone a
   label that would fit is on two lines; otherwise a label that fits is
-  drawn on one line, with the definition's margins.
+  drawn on one line, with the definition's margins;
+- from 12 October 2026, the review of round 1 of the Populations tab,
+  **the label of the vertical axis keeps 6 pixels from the numbers of
+  its axis**. Once the axes are drawn, the base measures the widest
+  number of the vertical axis (`textWidth.ts`, as the names of
+  `bars.md` are measured), and when the label's last line, 16 pixels
+  from the left of the SVG and 16 more for a second line, with its
+  descent of 4 pixels, would stand nearer to it than 6 pixels, it widens
+  the left margin by what is lacking and draws the plot once more. The
+  margin of 60 pixels of the line plot held the label on one line, and
+  on two the numbers of the spectrum's axis overlapped its second line
+  by 1 pixel at 1,280 pixels, in Chromium and WebKit.
+  Where nothing measures, under jsdom, the margins are the
+  definition's, as before.
 
 The grid, `chart-grid`, stays empty until a plot asks for one.
 
