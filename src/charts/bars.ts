@@ -19,8 +19,8 @@ import type { Chart } from "./types.ts";
 
 /** What a bar plot draws. Every text is the screen's. */
 export interface BarsData extends PlotText {
-  /** The bars, the first at the top; at most MAX_BARS, their names
-      different. */
+  /** The bars, the first at the top; at most MAX_BARS. Two may have one
+      name: each has its own row, by its place. */
   readonly bars: readonly Bar[];
   /** The words in the row of a bar with no value: "no value". */
   readonly noValue: string;
@@ -118,9 +118,8 @@ function barsMargin(data: BarsData, size: ExportSize): Margin {
 
 /**
  * Throws an `Error`, a defect of the caller, for data the bar plot cannot
- * draw by its contract: more than MAX_BARS bars, two bars of one name, a
- * group that is not a whole number from 0, and a value below 0 or
- * infinite.
+ * draw by its contract: more than MAX_BARS bars, a group that is not a
+ * whole number from 0, and a value below 0 or infinite.
  */
 function checkBars(data: BarsData): void {
   if (data.bars.length > MAX_BARS) {
@@ -128,14 +127,7 @@ function checkBars(data: BarsData): void {
       `popnei_web defect: a bar plot was given ${String(data.bars.length)} bars, more than the ${String(MAX_BARS)} it draws.`,
     );
   }
-  const names = new Set<string>();
   for (const bar of data.bars) {
-    if (names.has(bar.name)) {
-      throw new Error(
-        `popnei_web defect: a bar plot was given the name ${JSON.stringify(bar.name)} twice.`,
-      );
-    }
-    names.add(bar.name);
     // Throws for a group that is not a whole number from 0.
     groupMark(bar.group);
     if (!Number.isNaN(bar.value) && !(bar.value >= 0 && bar.value < Infinity)) {
@@ -165,56 +157,74 @@ function valuesTop(data: BarsData): number {
   return top ?? largest;
 }
 
-/** The position of the row of `name`, a defect for a name not drawn. */
-function rowOf(start: number | undefined, name: string): number {
+/** A bar and its row: its place in the data, as the key of the band
+    scale and of the join, so that two bars of one name are two rows. */
+interface RowBar {
+  readonly row: string;
+  readonly bar: Bar;
+}
+
+/** The position of the row `row`, a defect for a row not drawn. */
+function rowOf(start: number | undefined, row: string): number {
   if (start === undefined) {
-    throw new Error(
-      `popnei_web defect: the bar plot has no row of the name ${JSON.stringify(name)}.`,
-    );
+    throw new Error(`popnei_web defect: the bar plot has no row ${row}.`);
   }
   return start;
 }
 
 function drawBars(frame: Frame, data: BarsData): void {
+  const rows: readonly RowBar[] = data.bars.map((bar, place) => ({
+    row: String(place),
+    bar,
+  }));
+  const nameOf = new Map(rows.map(({ row, bar }) => [row, bar.name]));
   const x = scaleLinear()
     .domain([0, valuesTop(data)])
     .range([0, frame.innerWidth]);
   const y = scaleBand()
-    .domain(data.bars.map((bar) => bar.name))
+    .domain(rows.map(({ row }) => row))
     .range([0, frame.innerHeight])
     .paddingInner(PADDING_INNER)
     .paddingOuter(PADDING_OUTER);
 
   frame.marks
-    .selectAll<SVGRectElement, Bar>("rect")
+    .selectAll<SVGRectElement, RowBar>("rect")
     .data(
-      data.bars.filter((bar) => !Number.isNaN(bar.value)),
-      (bar) => bar.name,
+      rows.filter(({ bar }) => !Number.isNaN(bar.value)),
+      ({ row }) => row,
     )
     .join("rect")
-    .attr("class", (bar) => barClass(bar.group))
+    .attr("class", ({ bar }) => barClass(bar.group))
     .attr("x", 0)
-    .attr("y", (bar) => rowOf(y(bar.name), bar.name))
-    .attr("width", (bar) => x(bar.value))
+    .attr("y", ({ row }) => rowOf(y(row), row))
+    .attr("width", ({ bar }) => x(bar.value))
     .attr("height", y.bandwidth());
 
   frame.annotations
-    .selectAll<SVGTextElement, Bar>("text.chart-bars-none")
+    .selectAll<SVGTextElement, RowBar>("text.chart-bars-none")
     .data(
-      data.bars.filter((bar) => Number.isNaN(bar.value)),
-      (bar) => bar.name,
+      rows.filter(({ bar }) => Number.isNaN(bar.value)),
+      ({ row }) => row,
     )
     .join("text")
     .attr("class", "chart-bars-none")
     .attr("x", NONE_FROM_AXIS)
-    .attr("y", (bar) => rowOf(y(bar.name), bar.name) + y.bandwidth() / 2)
+    .attr("y", ({ row }) => rowOf(y(row), row) + y.bandwidth() / 2)
     .attr("dy", "0.35em")
     .text(data.noValue);
 
   const room = nameRoom(
     frame.margin.left + frame.innerWidth + frame.margin.right,
   );
-  frame.axes(x, y, { nameFormat: (name) => cutName(name, room) });
+  frame.axes(x, y, {
+    nameFormat: (row) => {
+      const name = nameOf.get(row);
+      if (name === undefined) {
+        throw new Error(`popnei_web defect: the bar plot has no row ${row}.`);
+      }
+      return cutName(name, room);
+    },
+  });
 }
 
 /** The definition of the bar plot, which the base of the 2D plots draws. */
@@ -231,8 +241,8 @@ const barsDefinition: Plot2dDefinition<BarsData> = {
  * and no pointer.
  *
  * Throws an `Error`, a defect of the caller, here and in `update`, for
- * more than MAX_BARS bars, for two bars of one name, for a group that is
- * not a whole number from 0, and for a value below 0 or infinite.
+ * more than MAX_BARS bars, for a group that is not a whole number from 0,
+ * and for a value below 0 or infinite.
  */
 export const createBars: Chart<BarsData> = (element, data) =>
   createPlot2d(element, data, barsDefinition);

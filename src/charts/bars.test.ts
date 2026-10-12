@@ -176,6 +176,27 @@ describe("PT7 R1.1 the bar plot under jsdom, its SVG", () => {
     expect(element.querySelector("g.chart-axis-y b")).toBeNull();
   });
 
+  test("review of round 1: two bars of one name, two populations alike once escaped, a newline and a backslash and n, are two rows, each with its bar", () => {
+    const element = sizedElement();
+    createBars(
+      element,
+      barsOf([
+        { name: "a\\nb", group: 0, value: 0.3 },
+        { name: "a\\nb", group: 2, value: 0.15 },
+        { name: "p1", group: 1, value: Number.NaN },
+      ]),
+    );
+    expect(ticks(element, "y")).toEqual(["a\\nb", "a\\nb", "p1"]);
+    const bars = [...element.querySelectorAll("g.chart-marks > rect")];
+    expect(bars.map((bar) => bar.getAttribute("class"))).toEqual([
+      "chart-bars-bar chart-colour-0 chart-bars-outlined",
+      "chart-bars-bar chart-colour-2",
+    ]);
+    expect(bars.map((bar) => Number(bar.getAttribute("y")))).toEqual([
+      3.5, 31.5,
+    ]);
+  });
+
   test("barsHeight gives 8 above, 28 a row, 44 below and 16 for a label on two lines: 152 for 3 names, 96 for 1", () => {
     expect(barsHeight(3)).toBe(152);
     expect(barsHeight(1)).toBe(96);
@@ -191,13 +212,6 @@ describe("PT7 R1.1 the bar plot refuses what its contract does not draw", () => 
         group: i,
         value: 0.1,
       })),
-    ],
-    [
-      "two bars of one name",
-      [
-        { name: "p0", group: 0, value: 0.1 },
-        { name: "p0", group: 1, value: 0.2 },
-      ],
     ],
     ["a group of 1.5", [{ name: "p0", group: 1.5, value: 0.1 }]],
     ["a value below 0", [{ name: "p0", group: 0, value: -0.1 }]],

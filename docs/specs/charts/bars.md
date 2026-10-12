@@ -81,7 +81,7 @@ pixels its one bar was 8 pixels high under a label on two lines.)
 // src/charts/bars.ts
 /** What a bar plot draws. Every text is the screen's. */
 export interface BarsData extends PlotText {
-  /** The bars, the first at the top; at most MAX_BARS, their names different. */
+  /** The bars, the first at the top; at most MAX_BARS; two may have one name. */
   readonly bars: readonly Bar[];
   /** The words in the row of a bar with no value: "no value". */
   readonly noValue: string;
@@ -105,16 +105,20 @@ export const createBars: Chart<BarsData>;
 
 `createBars` throws an `Error`, a defect of the caller, here and in
 `update`, for more than `MAX_BARS` bars, 200, of `src/charts/limits.ts`;
-for two bars of one name, which the band scale of the names would
-draw as one; for a group that is not a whole number from 0; and for a
-value below 0 or infinite. No bar is a plot of an empty frame and its
-axes.
+for a group that is not a whole number from 0; and for a value below 0
+or infinite. No bar is a plot of an empty frame and its axes. Two bars
+may have one name, as two populations whose names differ only in a
+character a text escapes, a newline and a backslash followed by n: each
+has a row of its own, since the rows are keyed by their place in the
+data and the name is only what the row writes (from 12 October 2026,
+the review of round 1; before, two such names were refused, and the
+five bar plots of the tab were blanked).
 
 ## The SVG it builds
 
 The base makes the skeleton with the class `chart chart-bars`, and no
 `chart-overlay`. In `chart-marks`, one `rect.chart-bars-bar
-chart-colour-‹group % 7›` per name with a value, keyed by its name,
+chart-colour-‹group % 7›` per name with a value, keyed by its place,
 with the class `chart-bars-outlined` too for a light colour. In
 `chart-annotations`, one `text.chart-bars-none` per name with no value.
 The kind is `bars`, not `bar`, since `chart-bar` is the class of a bar
@@ -168,8 +172,9 @@ element stubbed at 400 by 136:
   as its first 15 and an ellipsis, with a left margin of 156; at 1,000
   pixels, as its first 19 and an ellipsis, with a margin of 192;
 - `barsHeight(3)` 152 and `barsHeight(1)` 96;
-- `check` throws for 201 bars, two bars named "p0", a group of 1.5, a
-  value of −0.1 and one of Infinity.
+- two bars of one name, `a\nb` twice: two rows, each with its bar;
+- `check` throws for 201 bars, a group of 1.5, a value of −0.1 and one
+  of Infinity.
 
 **In Playwright**, the screen's flows (`popgen2-populations.md`, "How it
 is checked"): the five plots of the table drawn, the SVG of one in the
