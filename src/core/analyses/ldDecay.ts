@@ -29,6 +29,10 @@ import {
   populationsNeeds,
   populationsOf,
   populationsToRun,
+  popgen2OnePopulationCause,
+  popgen2Populations,
+  popgen2PopulationsKept,
+  popgen2PopulationsToRun,
   shown,
   MAX_NAMED,
 } from "../project.ts";
@@ -38,16 +42,23 @@ import {
   populationsByLists,
   populationsColumnOf,
   populationsKeptNeeds,
+  popgen2PopulationsKeptNeeds,
 } from "../populations.ts";
-import type { Project, ProjectVariantFilter } from "../project.ts";
+import type {
+  PopulationsKept,
+  Project,
+  ProjectVariantFilter,
+} from "../project.ts";
 import type { Result } from "../result.ts";
 import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
+import { fileRefusalText } from "./fileRefusals.ts";
 import {
   CHANGE_SETTINGS,
   csvField,
   csvNumber,
   defect,
   populationWarnings,
+  populationNotInResult,
   pythonOpenVariants,
   refusalWords,
 } from "./words.ts";
@@ -56,12 +67,57 @@ import type {
   Job,
   JobResult,
   LdDecayResult,
+  Pops,
   Run,
   VariantFilter,
 } from "../../worker/protocol.ts";
 
 /** The id of the analysis. */
 const ID = "ldDecay";
+
+/** The page a definition is for, which picks the populations and the
+    words: the old page, popgen.html, or popgen2.html (ldDecay.md, "On
+    popgen2.html"). */
+export type LdDecayPage = "popgen" | "popgen2";
+
+/** The places a sentence of the module names, by the page. */
+interface PlaceWords {
+  /** How fewer individuals are kept: "with the filters of individuals"
+      on the old page. */
+  readonly fewerIndividuals: string;
+  /** The same, followed by where, in the words of a crash: "with the
+      filters of individuals in the Variants step". */
+  readonly fewerIndividualsWhere: string;
+  /** How the variants file is opened again: "load ld.nei again in the
+      Variants step", for its escaped name. */
+  readonly openAgain: (fileName: string) => string;
+}
+
+/** The places of each page. */
+const PLACES: Readonly<Record<LdDecayPage, PlaceWords>> = Object.freeze({
+  popgen: Object.freeze({
+    fewerIndividuals: "with the filters of individuals",
+    fewerIndividualsWhere:
+      "with the filters of individuals in the Variants step",
+    openAgain: (fileName: string) =>
+      `load ${fileName} again in the Variants step`,
+  }),
+  popgen2: Object.freeze({
+    fewerIndividuals:
+      "with the thresholds of the individuals in the Variants tab",
+    fewerIndividualsWhere:
+      "with the thresholds of the individuals in the Variants tab",
+    openAgain: (fileName: string) =>
+      `open ${fileName} again in the box Variants`,
+  }),
+});
+
+/** The end of a refusal on popgen2.html that leaves the LD decay live:
+    it starts again by itself after the change the words ask for. */
+const AGAIN_BY_ITSELF = "The LD decay is then calculated again by itself.";
+
+/** Where the variants file is opened again on popgen2.html. */
+const IN_BOX_VARIANTS = " in the box Variants";
 
 /** The two options of the LD decay, as the project holds them. */
 export interface LdDecayOptions {
@@ -163,9 +219,19 @@ export const LD_LEGEND_NAME_LENGTH = 16;
     variants within the largest distance. */
 const NO_MEMORY = "this machine has not the memory for";
 
-/** The words of that refusal. */
-const NO_MEMORY_TEXT =
-  "The LD decay needed more memory than the browser tab could give. Type a smaller largest distance, keep fewer individuals with the filters of individuals, or calculate it with popnei in Python, outside the browser.";
+/** The words of that refusal, with how fewer individuals are kept on
+    the page. */
+function noMemoryText(fewerIndividuals: string): string {
+  return `The LD decay needed more memory than the browser tab could give. Type a smaller largest distance, keep fewer individuals ${fewerIndividuals}, or calculate it with popnei in Python, outside the browser.`;
+}
+
+/** Whether popnei's refusal `message` is for lack of memory, of the
+    counts or of the variants within the largest distance: after it a run
+    at the same settings would take as long and be refused again, so on
+    popgen2.html it ends the live state of the LD decay. */
+export function isMemoryRefusal(message: string): boolean {
+  return message.startsWith(NO_MEMORY);
+}
 
 /** The options of the project for the LD decay, or `LD_DECAY_DEFAULTS`.
     Throws a defect on options its `parseOptions` would refuse, which no
@@ -215,7 +281,10 @@ export function ldDecayFilters(
  * populations, and the panel shows it beside the field of the distance
  * whenever it holds (ldDecay.md, "Why it cannot run").
  */
-export function maxDistReason(p: Project): string | null {
+export function maxDistReason(
+  p: Project,
+  page: LdDecayPage = "popgen",
+): string | null {
   const maxDist = ldDecayOptions(p).maxDist;
   if (maxDist === null) {
     // Why it has to be typed; `needs` says only where.
@@ -226,7 +295,12 @@ export function maxDistReason(p: Project): string | null {
   // leave nobody of the one population, "All individuals", which
   // `populationListsNeeds` leaves to the store's lock of the filters that
   // keep no individual, asked after `needs`: no memory to bound.
-  const numPops = populationsByLists(p)?.length ?? 0;
+  // On popgen2.html the populations of every individual of the variants
+  // file, before the thresholds of the individuals, which can only lower
+  // their number; none before the file is read.
+  const numPops =
+    (page === "popgen" ? populationsByLists(p) : popgen2PopulationsToRun(p))
+      ?.length ?? 0;
   return numPops > 0 && maxDist > maxDistFor(numPops)
     ? memoryText(numPops)
     : null;
@@ -482,6 +556,38 @@ export function ldBinsCsv(r: LdDecayResult): string {
   return [BINS_CSV_HEADER, ...lines].map((line) => `${line}\n`).join("");
 }
 
+/** The header of the CSV of the points of the plot. */
+const POINTS_CSV_HEADER = "population,distance_bp,mean_r2,fitted_r2";
+
+/**
+ * The data of the plot as the text of a CSV file, its "Data as CSV" on
+ * popgen2.html (ldDecay.md, "On popgen2.html"): a row for each population
+ * and bin, every population in the order of the result, the middle of the
+ * bin, (smallest + largest) / 2, where the plot draws its point, the mean
+ * r² of its pairs, empty for a bin with none, and the fitted curve at that
+ * distance, empty for a population
+ * with no curve; every digit, as `String` writes it.
+ */
+export function ldDecayPointsCsv(r: LdDecayResult): string {
+  const numBins = r.smallestDist.length;
+  const lines = r.pops.flatMap((population, i) => {
+    const curve = curveOf(r, i);
+    const n = valueAt(r.numIndividuals, i, "numIndividuals");
+    return ldBinRows(r)
+      .slice(i * numBins, (i + 1) * numBins)
+      .map((row) => {
+        const middle = (row.from + row.to) / 2;
+        return [
+          csvField(population),
+          String(middle),
+          csvNumber(row.meanR2),
+          curve === null ? "" : String(fittedR2(middle, curve.rhoPerBp, n)),
+        ].join(",");
+      });
+  });
+  return [POINTS_CSV_HEADER, ...lines].map((line) => `${line}\n`).join("");
+}
+
 /** The half distances written to three significant digits, below this
     many base pairs; from it, in whole base pairs (ldDecay.md, "What it
     shows"). */
@@ -663,12 +769,31 @@ export function ldDecayDescription(r: LdDecayResult, maxDist: number): string {
  * (ldDecay.md, "Its words"). Throws a defect on a project with no
  * variants file.
  */
-export function refusalText(message: string, p: Project): string {
+export function refusalText(
+  message: string,
+  p: Project,
+  page: LdDecayPage = "popgen",
+): string {
   if (p.variants === null) {
     throw defect("refusalText was given a project with no variants file.");
   }
-  if (message.startsWith(NO_MEMORY)) {
-    return NO_MEMORY_TEXT;
+  if (isMemoryRefusal(message)) {
+    return noMemoryText(PLACES[page].fewerIndividuals);
+  }
+  if (page === "popgen2") {
+    const fileWords = fileRefusalText(message, p, {
+      cannot: "the LD decay cannot be calculated",
+      where: IN_BOX_VARIANTS,
+    });
+    if (fileWords !== null) return fileWords;
+    return `${refusalWords(message, p, {
+      change: `Change the settings, or open the variants file again${IN_BOX_VARIANTS}`,
+      calculate: "calculate the LD decay",
+      nothingLeft: "there is no variant to calculate the LD decay over",
+      again: "to calculate it again",
+      emptyPass: (name) =>
+        `The thresholds of the Variants tab kept none of the variants of ${name}, so there is no variant to calculate the LD decay over. Loosen them.`,
+    })} ${AGAIN_BY_ITSELF}`;
   }
   return refusalWords(message, p, {
     change: CHANGE_SETTINGS,
@@ -689,11 +814,12 @@ export function refusalText(message: string, p: Project): string {
  * take many minutes and end the same way. Throws a defect on a project
  * with no variants file.
  */
-export function crashText(p: Project): string {
+export function crashText(p: Project, page: LdDecayPage = "popgen"): string {
   if (p.variants === null) {
     throw defect("crashText was given a project with no variants file.");
   }
-  return `The calculation stopped unexpectedly, perhaps because the LD decay needed more memory than the browser tab could give. Type a smaller largest distance, or keep fewer individuals with the filters of individuals in the Variants step, and run it again; or calculate it with popnei in Python, outside the browser. If it stops again at a small distance, load ${escaped(p.variants.name)} again in the Variants step.`;
+  const places = PLACES[page];
+  return `The calculation stopped unexpectedly, perhaps because the LD decay needed more memory than the browser tab could give. Type a smaller largest distance, or keep fewer individuals ${places.fewerIndividualsWhere}, and run it again; or calculate it with popnei in Python, outside the browser. If it stops again at a small distance, ${places.openAgain(escaped(p.variants.name))}.`;
 }
 
 /**
@@ -704,22 +830,45 @@ export function crashText(p: Project): string {
  * not read (ldDecay.md, "What goes into its key"). Its `keptNeeds` is the
  * diversity's, the individuals kept leaving no population.
  */
-export const ldDecay: AnalysisDef<Job, JobResult> = Object.freeze({
-  id: ID,
-  app: Object.freeze(["popgen"] as const),
-  defaults: Object.freeze({ ...LD_DECAY_DEFAULTS }),
-  keyVersion: 1,
-  filtersRead: Object.freeze({ variants: false, individuals: true }),
-  parseOptions,
-  keyInputs,
-  needs,
-  keptNeeds: populationsKeptNeeds,
-  run,
-  warnings,
-  checkNumbers,
-  numCheckNumbers,
-  script,
-});
+function definitionOf(page: LdDecayPage): AnalysisDef<Job, JobResult> {
+  return Object.freeze({
+    id: ID,
+    app: Object.freeze(["popgen"] as const),
+    defaults: Object.freeze({ ...LD_DECAY_DEFAULTS }),
+    keyVersion: 1,
+    filtersRead: Object.freeze({ variants: false, individuals: true }),
+    parseOptions,
+    keyInputs: (p: Project) => keyInputs(p, page),
+    needs: (p: Project) => (page === "popgen" ? needs(p) : popgen2Needs(p)),
+    keptNeeds:
+      page === "popgen" ? populationsKeptNeeds : popgen2PopulationsKeptNeeds,
+    run: (p: Project, c: WorkerClient<Job, JobResult>) => run(p, c, page),
+    warnings: (result: JobResult, p: Project) => warnings(result, p, page),
+    checkNumbers,
+    numCheckNumbers: (p: Project) => numCheckNumbers(p, page),
+    script,
+  });
+}
+
+/** The LD decay of the old page, listed by POPGEN_ANALYSES of
+    src/core/apps.ts. */
+export const ldDecay: AnalysisDef<Job, JobResult> = definitionOf("popgen");
+
+/** The LD decay of the Populations tab of popgen2.html, of the same id,
+    with the populations and the words of that page, listed by
+    POPGEN2_ANALYSES of src/core/apps.ts (ldDecay.md, "On
+    popgen2.html"). */
+export const ldDecayOnPopgen2: AnalysisDef<Job, JobResult> =
+  definitionOf("popgen2");
+
+/** The page of the definition `def` that a store runs, "popgen" for
+    `ldDecay` and "popgen2" for `ldDecayOnPopgen2`. Throws a defect on
+    the definition of another analysis. */
+export function ldDecayPageOf(def: AnalysisDef<Job, JobResult>): LdDecayPage {
+  if (def === ldDecay) return "popgen";
+  if (def === ldDecayOnPopgen2) return "popgen2";
+  throw defect(`the page of the LD decay was asked of the analysis ${def.id}.`);
+}
 
 /**
  * Checks the options of the LD decay read from a project file and gives
@@ -780,10 +929,10 @@ function readOptions(options: unknown): Result<LdDecayOptions, string> {
  * and the number of bins are constants, under the key version. Reads
  * nothing of `p.variants`, so it answers for any project.
  */
-function keyInputs(p: Project): JsonObject {
+function keyInputs(p: Project, page: LdDecayPage): JsonObject {
   const options = ldDecayOptions(p);
   return {
-    pops: populationsOf(p),
+    pops: page === "popgen" ? populationsOf(p) : popgen2Populations(p),
     filters: ldDecayFilters(filtersApplied(p)),
     options: {
       maxDist: options.maxDist,
@@ -821,6 +970,39 @@ function needs(p: Project): string | null {
     : maxDistReason(p);
 }
 
+/** The first reason the LD decay of popgen2.html cannot run beyond
+    those every analysis shares, or `null` (ldDecay.md, "On
+    popgen2.html"): the individuals file being read; the largest distance
+    not typed; a distance the memory does not allow for the populations
+    of the variants file. An individual not in the individuals file, a
+    refused file and a column that gives no population do not lock: their
+    individuals are unclassified. Throws a defect on a project of
+    association. */
+function popgen2Needs(p: Project): string | null {
+  const individuals = p.individuals;
+  if (individuals?.read.kind === "pending") {
+    return `The LD decay waits for ${escaped(individuals.name)} to be read.`;
+  }
+  if (p.grouping.kind === "roles") {
+    throw defect("the LD decay was given a project of association.");
+  }
+  return ldDecayOptions(p).maxDist === null
+    ? NO_DISTANCE_RUN
+    : maxDistReason(p, "popgen2");
+}
+
+/** The populations of `p` on the page `page`, narrowed to the
+    individuals kept, `kept`. */
+function populationsKeptOf(
+  p: Project,
+  kept: readonly string[] | null,
+  page: LdDecayPage,
+): PopulationsKept | null {
+  return page === "popgen"
+    ? populationsKept(p, kept)
+    : popgen2PopulationsKept(p, kept);
+}
+
 /** The reason of the lock of the memory for `numPops` populations. */
 function memoryText(numPops: number): string {
   const most = `can be at most ${grouped(maxDistFor(numPops))} base pairs`;
@@ -836,8 +1018,12 @@ function memoryText(numPops: number): string {
     there are no populations to run, which is also the case of a variants
     file not loaded or not read, and when the largest distance is not
     typed, which `needs` and the store rule out. */
-function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
-  const kept = populationsKept(p, c.individuals);
+function run(
+  p: Project,
+  c: WorkerClient<Job, JobResult>,
+  page: LdDecayPage,
+): Run<JobResult> {
+  const kept = populationsKeptOf(p, c.individuals, page);
   const options = ldDecayOptions(p);
   if (p.variants === null || kept === null || options.maxDist === null) {
     throw defect(
@@ -869,7 +1055,11 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
  * result. Throws a defect on a project whose variants file is not read or
  * that has no largest distance, and on a project of association.
  */
-function warnings(result: JobResult, p: Project): readonly Warning[] {
+function warnings(
+  result: JobResult,
+  p: Project,
+  page: LdDecayPage,
+): readonly Warning[] {
   const r = ldDecayResultOf(result);
   if (p.variants?.read.kind !== "read") {
     throw defect("the warnings of the LD decay need a variants file read.");
@@ -887,7 +1077,9 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
       code: "fewIndividuals",
       text: fewIndividualsText(
         few,
-        populationsOf(p) === "all",
+        page === "popgen"
+          ? populationsOf(p) === "all"
+          : popgen2OnePopulationCause(p) !== null,
         few.length < rows.length,
       ),
     });
@@ -917,7 +1109,23 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
       found.push({ code: "halfDistBelowPairs", text });
     }
   }
-  found.push(...populationWarnings(r.pops, p, LD_DECAY_WORDS));
+  if (page === "popgen") {
+    found.push(...populationWarnings(r.pops, p, LD_DECAY_WORDS));
+    return found;
+  }
+  // An unclassified individual is no fault on popgen2.html, whose tab
+  // says how many are left out.
+  const toRun: Pops = popgen2PopulationsToRun(p) ?? [];
+  const notInResult =
+    popgen2OnePopulationCause(p) !== null
+      ? null
+      : populationNotInResult(
+          r.pops,
+          toRun,
+          escaped(p.variants.name),
+          LD_DECAY_WORDS.notIn,
+        );
+  if (notInResult !== null) found.push(notInResult);
   return found;
 }
 
@@ -1061,7 +1269,13 @@ const NUMBERS_PER_POPULATION = 3;
     on the individuals, whose list needs the statistics of each
     individual, and when a list is one popnei would refuse, as for the
     diversity. */
-function numCheckNumbers(p: Project): number | null {
+function numCheckNumbers(p: Project, page: LdDecayPage): number | null {
+  if (page === "popgen2") {
+    const pops = popgen2PopulationsToRun(p);
+    return pops === null || hasIndividualThreshold(p)
+      ? null
+      : 1 + NUMBERS_PER_POPULATION * pops.length;
+  }
   if (populationsToRun(p) === null || hasIndividualThreshold(p)) {
     return null;
   }

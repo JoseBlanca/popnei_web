@@ -29,6 +29,7 @@ import {
   namesOf,
   populationsKept,
   populationsToRun,
+  popgen2PopulationsKept,
   shown,
   shownDecimal,
   MAX_LISTED_POPULATIONS,
@@ -124,6 +125,32 @@ export function populationsKeptNeeds(
     return null;
   }
   return allEmptiedText(list.length, column, left.emptied);
+}
+
+/** `populationsKeptNeeds` on popgen2.html, of the diversity and the LD
+    decay: the individuals kept, once known, leave none of the populations of the column, whose individuals
+    are then all unclassified, in the words of the Variants tab; `null`
+    for the one population, which takes every individual kept. */
+export function popgen2PopulationsKeptNeeds(
+  p: Project,
+  kept: IndividualsKept,
+): string | null {
+  const list = kept.list.kind === "known" ? kept.list.individuals : null;
+  const column = populationsColumnOf(p);
+  if (list === null || column === null) {
+    return null;
+  }
+  const left = popgen2PopulationsKept(p, list);
+  if (left === null || left.pops.length > 0 || left.emptied.length === 0) {
+    return null;
+  }
+  return allEmptiedText(
+    list.length,
+    column,
+    left.emptied,
+    (one) =>
+      `Loosen the thresholds of the individuals in the Variants tab to keep ${one ? "it" : "them"}.`,
+  );
 }
 
 /** The column the populations are taken from, or `null` when no column

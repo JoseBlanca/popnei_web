@@ -49,10 +49,10 @@ import {
 } from "../project.ts";
 import { filtersApplied } from "../filtersApplied.ts";
 import {
-  allEmptiedText,
   populationListsNeeds,
   populationsColumnOf,
   populationsKeptNeeds,
+  popgen2PopulationsKeptNeeds,
   populationsWithMinimum,
   populationsByLists,
 } from "../populations.ts";
@@ -774,32 +774,6 @@ function popgen2DrawNeeds(p: Project, kept: IndividualsKept): string | null {
       orElse: `, or loosen ${individualFilters} in ${filtersPlace}`,
     },
     "popgen2",
-  );
-}
-
-/** `populationsKeptNeeds` on popgen2.html: the individuals kept, once
-    known, leave none of the populations of the column, whose individuals
-    are then all unclassified, in the words of the Variants tab; `null`
-    for the one population, which takes every individual kept. */
-function popgen2PopulationsKeptNeeds(
-  p: Project,
-  kept: IndividualsKept,
-): string | null {
-  const list = kept.list.kind === "known" ? kept.list.individuals : null;
-  const column = populationsColumnOf(p);
-  if (list === null || column === null) {
-    return null;
-  }
-  const left = popgen2PopulationsKept(p, list);
-  if (left === null || left.pops.length > 0 || left.emptied.length === 0) {
-    return null;
-  }
-  return allEmptiedText(
-    list.length,
-    column,
-    left.emptied,
-    (one) =>
-      `Loosen the thresholds of the individuals in the Variants tab to keep ${one ? "it" : "them"}.`,
   );
 }
 

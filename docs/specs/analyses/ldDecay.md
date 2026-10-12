@@ -1022,7 +1022,7 @@ filters of individuals", which that page does not have.
   values of its cells, the header the labels of its columns, as every
   table of the page (`docs/specs/widgets/downloads.md`, "A table"), so
   `ldDecayCsv` and `ldBinsCsv` serve the old page alone. The plot's
-  "Data as CSV" is `ldDecayPointsCsv(r, maxDist)`, `population,
+  "Data as CSV" is `ldDecayPointsCsv(r)`, `population,
   distance_bp,mean_r2,fitted_r2`, a row for each population and bin in
   the order of the result, the middle of the bin, its mean r² or empty
   with no pair, and `fittedR2` at that distance or empty with no curve
@@ -1053,7 +1053,7 @@ export function crashText(p: Project, page: LdDecayPage): string;
 export function isMemoryRefusal(message: string): boolean;
 
 /** The CSV of the points of the plot and of the curve at each. */
-export function ldDecayPointsCsv(r: LdDecayResult, maxDist: number): string;
+export function ldDecayPointsCsv(r: LdDecayResult): string;
 ```
 
 And in `src/core/populations.ts`, moved from `diversity.ts`:

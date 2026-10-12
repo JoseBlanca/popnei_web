@@ -14,6 +14,10 @@ import {
   ldDecayRows,
   ldHalfMark,
   crashText,
+  isMemoryRefusal,
+  ldDecayOnPopgen2,
+  ldDecayPageOf,
+  ldDecayPointsCsv,
   ldLegendLabel,
   ldPlotOmittedText,
   maxDistFor,
@@ -26,6 +30,7 @@ import { individualChecks } from "./individualChecks.ts";
 import { individualsKept } from "../individualsKept.ts";
 import { createKeyMemo, keyOf } from "../keys.ts";
 import type { Key, KeyedDef } from "../keys.ts";
+import type { IndividualsKept } from "../individualsKept.ts";
 import { populationsKeptNeeds } from "../populations.ts";
 import {
   emptyProject,
@@ -1795,5 +1800,251 @@ describe("SF2 D4 the LD decay reads the filters that apply to the file", () => {
     const keeping = withPassedOn(base, true);
     expect(keyOfLd(keeping)).not.toBe(keyOfLd(base));
     expect(ldDecay.script(keeping)).toMatch(/ld_variants\.filter_passed\(\)/);
+  });
+});
+
+describe("LT1 D1 the LD decay of popgen2.html", () => {
+  /** The project of popgen2.html: ld.nei, ld_pops.csv and its column
+      pop, the missing data at 0.1 and no LD pruning, which that page's
+      filters do not have; each part replaced as `project` replaces it. */
+  function page2(options: Parameters<typeof project>[0] = {}): Project {
+    return project({ filters: [MISSING_DATA], ...options });
+  }
+
+  /** A client that keeps the jobs it is given. */
+  function jobsOf(p: Project, individuals: readonly string[] | null = null) {
+    const jobs: Job[] = [];
+    ldDecayOnPopgen2.run(p, {
+      run: (job: Job): Run<JobResult> => {
+        jobs.push(job);
+        return {
+          id: 1,
+          outcome: new Promise<Outcome<JobResult>>(() => undefined),
+          cancel: () => undefined,
+        };
+      },
+      intermediateKey: () => "",
+      individuals,
+    });
+    return jobs.map((job) => (job.analysis === "ldDecay" ? job.pops : null));
+  }
+
+  /** The project with the individuals file still being read. */
+  function pending(): Project {
+    const p = page2();
+    if (p.individuals === null) throw new Error("the test has a file");
+    return deepFreeze<Project>({
+      ...p,
+      individuals: { ...p.individuals, read: { kind: "pending" } },
+    });
+  }
+
+  /** The project with the individuals file refused by the reader. */
+  function refused(): Project {
+    const p = page2();
+    if (p.individuals === null) throw new Error("the test has a file");
+    return deepFreeze<Project>({
+      ...p,
+      individuals: {
+        ...p.individuals,
+        read: { kind: "failed", error: { kind: "empty" }, format: "text" },
+      },
+    });
+  }
+
+  test("ldDecayPageOf gives each definition's page, both of the id ldDecay and key version 1, and a defect for another", () => {
+    expect(ldDecayPageOf(ldDecay)).toBe("popgen");
+    expect(ldDecayPageOf(ldDecayOnPopgen2)).toBe("popgen2");
+    expect(ldDecayOnPopgen2.id).toBe("ldDecay");
+    expect(ldDecayOnPopgen2.keyVersion).toBe(1);
+    expect(ldDecayOnPopgen2.filtersRead).toEqual({
+      variants: false,
+      individuals: true,
+    });
+    expect(() => ldDecayPageOf(filterCounts)).toThrow("popnei_web defect");
+  });
+
+  test("run sends pop_a and pop_b of ld_pops.csv; an individual of the variants file not in the file is left out with no lock", () => {
+    expect(jobsOf(page2())).toEqual([
+      [
+        ["pop_a", LD_INDIVIDUALS.slice(0, 50)],
+        ["pop_b", LD_INDIVIDUALS.slice(50)],
+      ],
+    ]);
+    const extra = page2({ individuals: [...LD_INDIVIDUALS, "x1"] });
+    expect(ldDecayOnPopgen2.needs(extra)).toBeNull();
+    expect(ldDecay.needs(extra)).not.toBeNull();
+    expect(jobsOf(extra)).toEqual(jobsOf(page2()));
+  });
+
+  test("no individuals file and None send Unclassified of every individual kept; the old page still sends All individuals", () => {
+    for (const p of [page2({ table: null }), page2({ column: null })]) {
+      expect(ldDecayOnPopgen2.needs(p)).toBeNull();
+      expect(jobsOf(p)).toEqual([[["Unclassified", LD_INDIVIDUALS]]]);
+      expect(jobsOf(p, ["i001", "i002"])).toEqual([
+        [["Unclassified", ["i001", "i002"]]],
+      ]);
+    }
+    expect(ldDecayOnPopgen2.needs(refused())).toBeNull();
+    expect(jobsOf(refused())).toEqual([[["Unclassified", LD_INDIVIDUALS]]]);
+    const jobs: Job[] = [];
+    ldDecay.run(page2({ table: null }), {
+      run: (job: Job): Run<JobResult> => {
+        jobs.push(job);
+        return {
+          id: 1,
+          outcome: new Promise<Outcome<JobResult>>(() => undefined),
+          cancel: () => undefined,
+        };
+      },
+      intermediateKey: () => "",
+      individuals: null,
+    });
+    expect(jobs[0]).toMatchObject({
+      pops: [["All individuals", LD_INDIVIDUALS]],
+    });
+  });
+
+  test("needs: the individuals file being read, then no distance, then the memory for the populations of the variants file", () => {
+    expect(ldDecayOnPopgen2.needs(pending())).toBe(
+      "The LD decay waits for ld_pops.csv to be read.",
+    );
+    expect(ldDecayOnPopgen2.needs(page2({ ld: null }))).toBe(NO_DISTANCE_RUN);
+    expect(ldDecayOnPopgen2.needs(page2({ ld: { maxDist: 12_500_001 } }))).toBe(
+      "With 2 populations, the largest distance can be at most 12,500,000 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.",
+    );
+    expect(
+      ldDecayOnPopgen2.needs(page2({ ld: { maxDist: 12_500_000 } })),
+    ).toBeNull();
+  });
+
+  test("maxDistReason of the page counts the one population of None, which the old page cannot make", () => {
+    const none = page2({ column: null, ld: { maxDist: 25_000_001 } });
+    expect(maxDistReason(none, "popgen2")).toBe(
+      "The largest distance can be at most 25,000,000 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.",
+    );
+    expect(maxDistReason(none)).toBeNull();
+    expect(
+      maxDistReason(
+        page2({ column: null, ld: { maxDist: 25_000_000 } }),
+        "popgen2",
+      ),
+    ).toBeNull();
+    expect(maxDistReason(page2({ ld: null }), "popgen2")).toBe(NO_DISTANCE);
+  });
+
+  test("keptNeeds: the thresholds keep only unclassified individuals while the column classifies some, in the words of the Variants tab", () => {
+    const table = tableOf(LD_INDIVIDUALS, (_, i) =>
+      i < 50 ? "pop_a" : i < 99 ? "pop_b" : null,
+    );
+    const kept: IndividualsKept = {
+      list: { kind: "known", individuals: ["i099"] },
+      byLists: LD_INDIVIDUALS,
+      counts: [],
+    };
+    expect(ldDecayOnPopgen2.keptNeeds?.(page2({ table }), kept)).toBe(
+      "The one individual kept has no population in pop, so none of the 2 populations has an individual left. Loosen the thresholds of the individuals in the Variants tab to keep them.",
+    );
+    expect(
+      ldDecayOnPopgen2.keptNeeds?.(page2({ table: null }), kept),
+    ).toBeNull();
+  });
+
+  test("the warnings: no individualsWithoutPopulation for an unclassified individual; fewIndividuals of the one population names Unclassified", () => {
+    const table = tableOf(LD_INDIVIDUALS, (_, i) =>
+      i < 50 ? "pop_a" : i < 99 ? "pop_b" : null,
+    );
+    const r = resultOf([
+      flowPop("pop_a"),
+      flowPop("pop_b", { individuals: 49 }),
+    ]);
+    expect(
+      ldDecayOnPopgen2.warnings(r, page2({ table }), null).map((w) => w.code),
+    ).toEqual([]);
+    expect(
+      ldDecay.warnings(r, page2({ table }), null).map((w) => w.code),
+    ).toEqual(["individualsWithoutPopulation"]);
+    const one = resultOf([flowPop("Unclassified", { individuals: 12 })]);
+    expect(
+      ldDecayOnPopgen2.warnings(one, page2({ table: null }), null)[0]?.text,
+    ).toBe(
+      "Unclassified has 12 individuals. With fewer than 20, r² is higher than in the population by chance alone, more than the fitted curve corrects for, so its curve, when it has one, lies higher and its half distance is longer than those of a larger population.",
+    );
+  });
+
+  test("populationNotInResult is raised for a population of the column the result has not, not for the one population", () => {
+    const r = resultOf([flowPop("pop_a")]);
+    expect(
+      ldDecayOnPopgen2.warnings(r, page2(), null).map((w) => w.code),
+    ).toEqual(["populationNotInResult"]);
+    const one = resultOf([flowPop("Unclassified", { individuals: 100 })]);
+    expect(
+      ldDecayOnPopgen2.warnings(one, page2({ table: null }), null),
+    ).toEqual([]);
+  });
+
+  test("the words of a refusal for memory, of a crash and of the filters keeping no variant, in the words of the page; the old page's unchanged", () => {
+    const memory =
+      "this machine has not the memory for the pairs counted at every distance, 250000000 values of 16 bytes";
+    expect(isMemoryRefusal(memory)).toBe(true);
+    expect(isMemoryRefusal("`numBins` is 0.")).toBe(false);
+    expect(refusalText(memory, page2(), "popgen2")).toBe(
+      "The LD decay needed more memory than the browser tab could give. Type a smaller largest distance, keep fewer individuals with the thresholds of the individuals in the Variants tab, or calculate it with popnei in Python, outside the browser.",
+    );
+    expect(crashText(page2(), "popgen2")).toBe(
+      "The calculation stopped unexpectedly, perhaps because the LD decay needed more memory than the browser tab could give. Type a smaller largest distance, or keep fewer individuals with the thresholds of the individuals in the Variants tab, and run it again; or calculate it with popnei in Python, outside the browser. If it stops again at a small distance, open ld.nei again in the box Variants.",
+    );
+    expect(
+      refusalText(
+        "the pass gave no variant: its source gave 500 and the steps kept none of them, the filter by missing data kept 0",
+        page2(),
+        "popgen2",
+      ),
+    ).toBe(
+      "The thresholds of the Variants tab kept none of the variants of ld.nei, so there is no variant to calculate the LD decay over. Loosen them. The LD decay is then calculated again by itself.",
+    );
+    expect(refusalText("`numBins` is 0.", page2(), "popgen2")).toBe(
+      "popnei could not calculate the LD decay: numBins is 0. Change the settings, or open the variants file again in the box Variants, to calculate it again. The LD decay is then calculated again by itself.",
+    );
+    expect(refusalText(memory, page2())).toBe(
+      "The LD decay needed more memory than the browser tab could give. Type a smaller largest distance, keep fewer individuals with the filters of individuals, or calculate it with popnei in Python, outside the browser.",
+    );
+  });
+
+  test("the key: no individuals file and None the same, a column of the same populations the same, another population another key; the old page's key unchanged", () => {
+    const two = (p: Project): Key => keyOfLd(p, "0.2.2", ldDecayOnPopgen2);
+    expect(two(page2({ table: null }))).toBe(two(page2({ column: null })));
+    const renamed: IndividualsTable = {
+      columns: ["IID", "group"],
+      rows: LD_POPS.rows,
+    };
+    expect(two(page2({ table: renamed, column: "group" }))).toBe(two(page2()));
+    expect(two(page2({ table: THREE_POPS }))).not.toBe(two(page2()));
+    expect(keyOfLd(page2({ table: null }))).not.toBe(
+      keyOfLd(page2({ column: null })),
+    );
+  });
+
+  test("ldDecayPointsCsv: a row for each population and bin, the middle of the bin, the mean r² or empty, and the fitted curve or empty", () => {
+    const r = resultOf([
+      flowPop("pop_a", { pairs: pairsIn([0]), rhoPerBp: 0.0003 }),
+      flowPop("b,c", {
+        pairs: pairsIn([1]),
+        rhoPerBp: Number.NaN,
+        halfDist: Number.NaN,
+      }),
+    ]);
+    const lines = ldDecayPointsCsv(r).split("\n");
+    expect(lines[0]).toBe("population,distance_bp,mean_r2,fitted_r2");
+    expect(lines).toHaveLength(1 + 100 + 1);
+    expect(lines[1]).toBe(
+      `pop_a,1000.5,0.2,${String(fittedR2(1000.5, 0.0003, 50))}`,
+    );
+    expect(lines[2]).toBe(
+      `pop_a,3000.5,,${String(fittedR2(3000.5, 0.0003, 50))}`,
+    );
+    expect(lines[51]).toBe('"b,c",1000.5,,');
+    expect(lines[52]).toBe('"b,c",3000.5,0.2,');
+    expect(lines.at(-1)).toBe("");
   });
 });
