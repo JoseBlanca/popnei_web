@@ -369,7 +369,7 @@ as it would on `:hover` or `:checked`:
   the width under which it takes its short forms was measured for
   every line at every width from 320 to 1280 px in Chromium and WebKit:
   the widest whole line, 660 px, fits from 700 px, and the band is
-  narrow under 45 em, 720 px, 1 em more than that, so that a scrollbar
+  narrow under 45 em, 720 px, 20 px more than that, so that a scrollbar
   of 15 px that takes room leaves it whole (the review of work package 4 of `docs/plans/population-tab.md`, 12
   October 2026). A line of words beside buttons is measured with its
   longest words, a clock over an hour among them, before its breakpoint
