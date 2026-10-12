@@ -363,8 +363,8 @@ of the panel"), with these differences:
 - **The spectrum**, under its heading: its caption; from 12 October
   2026 one plot of lines, a line per population in the colour and the
   shape of its place in the result, with its legend, the lines of the
-  populations with none above it and the variants in the draw of each
-  under it, in the tab "Plot"; and the table in the tab beside it, as
+  populations with none above it and the variants of each with both
+  alleles in the draw, which its proportions are over, under it, in the tab "Plot"; and the table in the tab beside it, as
   the old block (`sfs.md`, "On popgen2.html", the plot). The plot has
   its "Download…" on a line of its own above it, with "Image as SVG",
   "Image as PNG" and "Data as CSV"; the table of the spectrum has its
@@ -610,7 +610,7 @@ page has them, the missing data of the variants at 0.1, which keeps all
 - **The downloads**: the table's "Table as CSV" saved and read back,
   its first row of p0 with 0.35193160994408107; the plot's "Data as
   CSV", its row of p0 at one copy of the rarer allele
-  "p0,1,0.975,38.07795856907602,0.031731632140896686", and its SVG; each
+  "p0,1,0.975,38.07795856907602,0.03296202862168288", and its SVG; each
   "Download…" of a table below it, the plot's above it, at 1280 and at
   320 px.
 - **The plot of the spectrum**, from 12 October 2026: three lines, p0,

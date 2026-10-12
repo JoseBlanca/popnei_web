@@ -35,7 +35,8 @@ line from the axis up to a height and a mark of the series at its top.
 From 12 October 2026 the spectrum of the Populations tab of
 `popgen2.html` is its second user (`docs/specs/analyses/sfs.md`, "On
 popgen2.html"): a series per population, its points and its line the
-same positions, the proportion of its variants in the draw against the
+same positions, the proportion of its variants with both alleles in
+the draw against the
 frequency of the commonest allele, and no marks. Nothing of this spec
 changes for it.
 

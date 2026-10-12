@@ -103,8 +103,8 @@ Populations tab (`docs/plans/population-tab.md`, "Work package 7, round
 1"): on `popgen2.html` the spectrum is one plot of lines, a line per
 population, in place of a histogram per population. Across, the
 frequency of the commonest allele in the draw; up, the proportion of the
-population's variants in the draw, each bin over the sum of every bin of
-that population; bin 0 left out of the plot. The plot has one
+population's variants with both alleles in the draw, each bin over the
+sum of bins 1 to n / 2, the table's share; bin 0 left out of the plot. The plot has one
 "Download…" of its own (below, "On popgen2.html"). So no file is named
 after a population any longer, and `populationSpectrumCsv` and
 `fileNameParts`, which named and filled the files of each histogram, are
@@ -550,16 +550,21 @@ same request, as on the old page. Four things differ, the plot since
     1 − j / n for j copies of the rarer allele in a draw of n
     chromosomes, from 0.5, j = n / 2, to just under 1, j = 1: 0.975 for
     n = 40. The axis runs from 0.5 to 1. **Up**, the **proportion** of
-    the population's variants in the draw that show j copies of the
-    rarer allele: bin j over the sum of every bin of that population,
-    bin 0 among them, which is its variants in the draw,
-    `numVars.inDraw`, but for the rounding of the last digit. A
-    population counts a variant only where it has the minimum of
-    individuals called and reaches the draw, so populations count
-    different numbers of variants, and the proportion compares them;
-    the owner asked why, and took it so on 12 October 2026. The axis
-    runs from 0 to the largest proportion of any population, made round
-    up to a half of its first digit: 0.0539 gives 0.055.
+    the population's variants with both alleles in the draw that show j
+    copies of the rarer allele: bin j over the sum of bins 1 to n / 2,
+    the share of the table and of the histograms of the old page, so
+    that the plot and the table agree. A population counts a variant
+    only where it has the minimum of individuals called and reaches the
+    draw, so populations count different numbers of variants, and the
+    proportion compares the shapes of their spectra; the owner asked
+    why on 12 October 2026. The same day the session chose this
+    denominator over every bin, bin 0 among them, which the first
+    revision of that day had: with bin 0 the height of every line moves
+    with how many variants of the population show one allele in the
+    draw, which the proportion of polymorphic variants, with its own
+    bar plot, already shows. The axis runs from 0 to the largest
+    proportion of any population, made round up to a half of its first
+    digit: 0.0562 gives 0.06.
   - **Bin 0**, the variants that show no copy of the rarer allele in the
     draw, which would stand at a frequency of 1, is left out of the
     plot: its size says more of the other populations than of this one
@@ -591,21 +596,24 @@ same request, as on the old page. Four things differ, the plot since
     a draw of 40 of its chromosomes at each variant, over the 1,200
     variants of panel.nei the filters kept. Each line is a population:
     across, the frequency of the commonest allele in the draw, 1 − j/40
-    for j copies of the rarer allele; up, the proportion of that
-    population's variants in the draw with that frequency. Variants with
-    no copy of the rarer allele in the draw are left out of the plot;
-    the table holds them. The number of chromosomes is set above the
+    for j copies of the rarer allele; up, the proportion of the
+    population's variants with both alleles in the draw that have that
+    frequency. Variants with no copy of the rarer allele in the draw are
+    left out of the plot and of the proportions; the table holds them.
+    The number of chromosomes is set above the
     table, with the rarefaction." The warning of the MAF filter ends it,
     as before.
-  - **Under the plot**, the variants in the draw of each population,
-    which the proportions are of: "Variants in the draw: p0, 1,200; p2,
-    1,200; p1, 1,200."; and, when n is even, "The points at 0.5 hold one
+  - **Under the plot**, the variants of each population with both
+    alleles in the draw, the sum of its bins 1 to n / 2, which the
+    proportions are of: "Each proportion is over the population's
+    variants with both alleles in the draw: p0, about 1,155; p2, about
+    1,152; p1, about 1,151."; and, when n is even, "The points at 0.5 hold one
     count of the rarer allele, 20, where the others hold two, such as 1
     and 39, so they are about half as high."
   - **Its text alternative**: the title "The spectrum of each
     population", and the description "3 lines, one per population, p0,
     p2 and p1, of 20 points each, from 0.5 to 0.975 of the commonest
-    allele; the largest proportion, 0.0539, of p1 at 0.625." The table,
+    allele; the largest proportion, 0.0562, of p1 at 0.625." The table,
     in the tab beside the plot, holds every number.
   - **Its tab** is "Plot", where it was "Histograms".
 - **The words of its warning**, `spectrumWarnings(r, p, page)`, with
@@ -648,7 +656,7 @@ export interface SpectrumLine {
   readonly index: number;
   /** The frequency of the commonest allele of each point, (n − j) / n, j from 1 to n / 2. */
   readonly frequency: Float64Array;
-  /** Bin j over the sum of every bin of the population, in the same order. */
+  /** Bin j over the sum of bins 1 to n / 2 of the population, its share, in the same order. */
   readonly proportion: Float64Array;
   /** popnei's expected number of variants of each point, bin j. */
   readonly variants: Float64Array;
@@ -677,21 +685,20 @@ export function populationGroup(index: number): number;
 Checked with Vitest: `spectrumLinesOf` on the worked example of "How it
 is verified", n = 4 and the spectra `[1, 2, 2]` and `[3, 0, 0]`: one
 line, of the first population, index 0, the frequencies 0.75 and 0.5,
-the proportions 0.4 and 0.4, the largest 0.4; a population not
+the proportions 0.5 and 0.5, its shares, the largest 0.5; a population not
 calculated, and the second, no line; the same object for the same
 result. `spectrumLinesCsv` of it, to the letter. The numbers of popnei
 0.2.2 under node, 12 October 2026, `panel.nei` with `panel_pops.csv`,
 n = 40, the missing data filter at 0.1, which keeps all 1,200 variants:
-p0's proportion at j = 1 is 0.031731632140896686, its bins summing to
-1199.9999999999998, and at j = 20 0.02529604246091587; the largest
-proportion is p1's, 0.05386774831954687, at j = 15, a frequency of
-0.625. `spectrumWarnings` with page "popgen2", the text above.
+p0's proportion at j = 1 is 0.03296202862168288, its share, and at
+j = 20 0.026276898456079615; the largest proportion is p1's,
+0.05618145165329451, at j = 15, a frequency of 0.625. `spectrumWarnings` with page "popgen2", the text above.
 
 In Playwright, in Chromium and WebKit, the Populations tab after Run on
 `panel.nei` and `panel_pops.csv`: one plot of three lines and a legend
 of p0, p2 and p1; its "Download…" above it, its three files named
 `panel.sfs.svg`, `panel.sfs.png` and `panel.sfs.proportions.csv`, the
-CSV's rows of p0 at j = 1 "p0,1,0.975,38.07795856907602,0.031731632140896686";
+CSV's rows of p0 at j = 1 "p0,1,0.975,38.07795856907602,0.03296202862168288";
 at 320 px wide the plot within the page, with no sideways scroll; axe
 in light and dark.
 
