@@ -316,6 +316,21 @@ async function lineFit(page: Page): Promise<{
   });
 }
 
+/** The widths of the window at which the widest lines are measured:
+    520 px, 704 px, the width under which the band was narrow until the
+    second review of package 4, 719 and 720 px, around the width under
+    which it is narrow, 45 em, and 736 px. */
+const WIDTHS_AROUND_NARROW = [520, 704, 719, 720, 736];
+
+/** The width the window has and the band does not, as a scrollbar
+    that takes room would leave. */
+async function scrollbarRoom(page: Page): Promise<number> {
+  return band(page).evaluate(
+    (header) =>
+      window.innerWidth - Math.round(header.getBoundingClientRect().width),
+  );
+}
+
 /**
  * Opens popgen2.html with each diversity held, panel.nei and
  * panel_pops.csv, runs the PCA to its result and the diversity by its
@@ -799,12 +814,20 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     await workersListening(page);
   });
 
-  test("PT4 D3 the widest lines of the band whole at 520 px and around the width under which it is narrow, 703 and 704 px, and at 720 px: the diversity about to start beside Stop recalculating and Stop all, then the PCA running then the diversity with Stop and Stop all (the review of package 4, 12 October 2026)", async ({
+  test("PT4 D3 the widest lines of the band whole, with a scrollbar of 15 px that takes room, at 520 px, at 704 px, and around the width under which it is narrow, 719 and 720 px, and at 736 px: the diversity about to start beside Stop recalculating and Stop all, then the PCA running then the diversity with Stop and Stop all (the reviews of package 4, 12 October 2026)", async ({
     page,
   }) => {
     test.setTimeout(120_000);
     await page.clock.install();
     await bothLive(page);
+    // A scrollbar that takes 15 px of room, as on Windows or on a Mac
+    // set to show them, inside the width the media queries compare: the
+    // browsers of Playwright draw none that takes room, so the band,
+    // fixed to the window, is made 15 px narrower than it, as such a
+    // scrollbar makes it.
+    await page.addStyleTag({
+      content: "#defects > header { inset-inline-end: 15px; }",
+    });
     await tab(page, "Populations").click();
     const minimum = shown(page).getByRole("textbox", {
       name: /^Individuals with a called genotype needed in each population, per variant/u,
@@ -814,12 +837,13 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     await minimum.press("Enter");
     await tab(page, "Variants").click();
     await holdWithAKeyTyped(page);
-    for (const width of [520, 703, 704, 720]) {
-      await page.setViewportSize({ width, height: 800 });
+    for (const width of WIDTHS_AROUND_NARROW) {
+      await page.setViewportSize({ width, height: 600 });
+      expect(await scrollbarRoom(page)).toBe(15);
       await expect
         .poll(() => lineText(page))
         .toMatch(
-          width < 704
+          width < 720
             ? /^Popnei Diversity soon Stop all$/u
             : /^Popnei The diversity starts in a moment Stop recalculating Stop all$/u,
         );
@@ -844,12 +868,13 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     await expect
       .poll(() => lineText(page), { timeout: RESULT_TIMEOUT })
       .toMatch(/^Popnei PCA( running)? · 0:\d\d.* Stop Stop all$/u);
-    for (const width of [520, 703, 704, 720]) {
-      await page.setViewportSize({ width, height: 800 });
+    for (const width of WIDTHS_AROUND_NARROW) {
+      await page.setViewportSize({ width, height: 600 });
+      expect(await scrollbarRoom(page)).toBe(15);
       await expect
         .poll(() => lineText(page))
         .toMatch(
-          width < 704
+          width < 720
             ? /^Popnei PCA · 0:\d\d Stop Stop all$/u
             : /^Popnei PCA running · 0:\d\d · then the diversity Stop Stop all$/u,
         );

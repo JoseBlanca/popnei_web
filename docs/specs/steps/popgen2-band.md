@@ -136,7 +136,7 @@ keeps its words whole at its left, and the status takes the rest, its
 words in a short form that fits with its button, the whole words given
 to a screen reader:
 
-| the words at 1280 px | the short form, under 44 rem wide |
+| the words at 1280 px | the short form, under 45 rem wide |
 |---|---|
 | "Statistics of panel.vcf.gz · 45%" | "Statistics · 45%" |
 | "PCA running · 1:20" | "PCA · 1:20" |
@@ -160,13 +160,14 @@ to a screen reader:
 
 "PCoA" in place of "PCA" under the PCoA. The flows check that each fits
 one line at 320 px with "Popnei" and its button, the whole "Stop
-recalculating" among them: so that it fits, under 44 rem the heading
+recalculating" among them: so that it fits, under 45 rem the heading
 "Popnei" is in the large text of the page, `--text-lg`, and the parts
 of the line stand a quarter of a rem apart, which leaves 73 px for the
 words beside "Stop recalculating" in Chromium 153 and WebKit 26.6 on the
 owner's Mac; "PCoA soon" takes 71 px there (measured on 10 October
 2026). From 12 October 2026, the review of work package 4, the short
-forms hold under 44 rem, where they held under 30 rem until then, and
+forms hold under 45 rem, where they held under 30 rem until then
+(44 rem until the second review, the same day, "The layout"), and
 the buttons of the band have a quarter of a rem of padding at their
 sides there, where they had three quarters ("The layout").
 
@@ -346,7 +347,7 @@ whole words given to a screen reader, and the line holds "Popnei", the
 short form, Stop and Stop all; the flows check that it fits on one
 line, as "PCoA soon" with the whole "Stop recalculating" does.
 
-Under 44 rem, where the band shows its short forms, an analysis about
+Under 45 rem, where the band shows its short forms, an analysis about
 to start beside Stop all loses its Stop recalculating in the band, and
 the line holds "Popnei", the short form and Stop all alone; its tab
 keeps its own Stop recalculating, and Stop all ends it with the
@@ -358,10 +359,10 @@ on the owner's Mac, so "Diversity soon" was cut and Stop all stood 2 px
 past the line's end. The button the band does not show is out of the
 order of the Tab key and is not read by a screen reader. The Stop of an
 analysis that runs stays beside Stop all: with the buttons' padding of
-a quarter of a rem under 44 rem, "Popnei", "Diversity · 59:59", Stop
+a quarter of a rem under 45 rem, "Popnei", "Diversity · 59:59", Stop
 and Stop all take 282 px of the 288 at 320 px, where with three
 quarters of a rem they took 314 and the clock was cut, "Diversity · …"
-(12 October 2026, the review of work package 4). At 44 rem and wider
+(12 October 2026, the review of work package 4). At 45 rem and wider
 nothing changes.
 
 ### An error of the application
@@ -549,7 +550,7 @@ change; it is still the screen's, not the project's
 | the PCA about to start | "The PCA starts in a moment"; "The PCoA starts in a moment"; held after a crash, "The PCA starts after the next change"; while the dialog of the download is open, "The PCA starts after the download"; "The PCoA starts after the download" |
 | the link to the warnings | "PCA: 1 warning, in the PCA tab"; "PCA: 2 warnings, in the PCA tab"; "PCoA: 1 warning, in the PCA tab" |
 | the link to an error | "PCA: could not be calculated, in the PCA tab"; "PCoA: could not be calculated, in the PCA tab" |
-| the short forms, under 44 rem wide, the whole words given to a screen reader ("Its place") | "Statistics · 45%"; "PCA · 1:20"; "Diversity · 0:12"; "Writing · 45%"; "Stopping…"; "PCA soon"; "Diversity soon"; "Analyses soon"; "PCA later"; "Diversity later"; "Analyses later"; "PCA: 2 warnings"; "Diversity: 2 warnings"; "PCA: failed"; "Diversity: failed"; "PCoA" in place of "PCA" under the PCoA (listed here on 12 October 2026, the review of work package 4) |
+| the short forms, under 45 rem wide, the whole words given to a screen reader ("Its place") | "Statistics · 45%"; "PCA · 1:20"; "Diversity · 0:12"; "Writing · 45%"; "Stopping…"; "PCA soon"; "Diversity soon"; "Analyses soon"; "PCA later"; "Diversity later"; "Analyses later"; "PCA: 2 warnings"; "Diversity: 2 warnings"; "PCA: failed"; "Diversity: failed"; "PCoA" in place of "PCA" under the PCoA (listed here on 12 October 2026, the review of work package 4) |
 | the buttons | "Stop"; "Stop recalculating"; "Stop all"; "Details"; "Close"; "Copy the details" |
 | the name of the Stop for a screen reader | "Stop the statistics of panel.vcf.gz"; "Stop the PCA"; "Stop the PCoA"; "Stop recalculating the PCA"; "Stop recalculating the PCoA"; "Stop the diversity"; "Stop recalculating the diversity"; "Stop all: the PCA and the diversity" |
 | an error of the application | the three sentences of `barText` on this page, "An error of the application", with the message in each |
@@ -599,7 +600,7 @@ focus never passes by itself from the Stop of one analysis to that of
 the next, which Enter would then stop unasked: when the PCA ends with
 its Stop focused and the diversity starts, the focus goes to "Popnei";
 and so does the focus of a Stop recalculating the band leaves out once
-the window is narrowed under 44 rem (the review of work package 4, 12
+the window is narrowed under 45 rem (the review of work package 4, 12
 October 2026). After "Close"
 the focus goes to the heading "Popnei", as the error bar's Close does.
 After the link, the focus is on the heading of the warnings or of the
@@ -701,7 +702,7 @@ form and in the small text of the page, `--text-sm`, the heading in
 longest, "PCoA soon" with the whole "Stop recalculating", fits beside
 "Popnei"; the flows check that it does.
 
-The width under which the band is narrow is 44 rem, 704 px at the
+The width under which the band is narrow was 44 rem, 704 px at the
 browser's usual size of text, from 12 October 2026, the review of work
 package 4; it was 30 rem, and between 480 and 700 px the whole words of
 a line with two buttons were cut, "The diversity st…" at 520 px. Every
@@ -712,7 +713,12 @@ widest whole line, "The diversity starts after the next change" with
 Stop recalculating and Stop all, takes 660 px and fits from a window of
 700 px, 672 px of room at 704; under 44 rem the widest short form,
 "Diversity · 59:59" with Stop and Stop all, takes 282 px of the 288 at
-320 px, with the buttons' padding of a quarter of a rem.
+320 px, with the buttons' padding of a quarter of a rem. From 12
+October 2026, the second review of work package 4, the width is 45
+rem, 720 px: a scrollbar that takes room, 15 px on Windows or on a Mac
+set to show them, is inside the width the media query compares and not
+inside the band's, so at 704 px the widest whole line would have had
+657 px of the 660 it takes, and wrapped; at 720 px it has 673.
 
 When the parts do not fit on one line, with the text at 200% or a
 clock past an hour at 320 px ("Diversity · 1:59:59" with its buttons
@@ -763,7 +769,7 @@ about to start alone, no button; the diversity running alone with the
 PCA live and idle, as after a change of the populations, its words with
 Stop and Stop all; the diversity about to start alone with the PCA
 live, its words with Stop recalculating and Stop all, the Stop
-recalculating not drawn under 44 rem, and the focus it had then
+recalculating not drawn under 45 rem, and the focus it had then
 on the heading; both live and
 nothing running, waiting nor about to start, no button; the link of
 the diversity's warnings

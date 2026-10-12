@@ -2,7 +2,7 @@
  * The words of the band at the top of popgen2.html
  * (docs/specs/steps/popgen2-band.md, "Its words" and "Its place"): the
  * line after "Popnei" in its whole words and in its short form, which
- * the band shows under 44 rem, a screen reader still given the whole;
+ * the band shows under 45 rem, a screen reader still given the whole;
  * its Stop, by what it stops; and its Stop all, by the analyses it
  * ends. An analysis is named as the page's words name it in the middle
  * of a sentence, "the PCA", "the diversity" (`LiveAnalysisName` of
@@ -36,7 +36,7 @@ export const STOP_ALL_LABEL = "Stop all";
 export interface LineWords {
   /** The whole words: "Statistics of panel.vcf.gz · 45%". */
   readonly full: string;
-  /** The short form under 44 rem: "Statistics · 45%". */
+  /** The short form under 45 rem: "Statistics · 45%". */
   readonly short: string;
   /** The whole words split around the name of the file they hold, which
       the band cuts with "…" when the line has no room for it, the rest
@@ -66,9 +66,9 @@ export interface BandStop {
       that can be live, by its id, running, its tab's Stop, or about to
       start, its tab's Stop recalculating; both end its live state. */
   readonly stops: "pass" | Popgen2LiveId;
-  /** Whether the band draws it only at 44 rem wide and more, and not
+  /** Whether the band draws it only at 45 rem wide and more, and not
       at all while narrow (narrow.ts): a Stop recalculating beside Stop
-      all, which under 44 rem the line has no room for beside the short
+      all, which under 45 rem the line has no room for beside the short
       form, as the owner chose on 12 October 2026; its tab keeps its
       own, and Stop all ends it with the others. */
   readonly wideOnly: boolean;
@@ -136,7 +136,7 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
  * start, "Stop recalculating", named "Stop recalculating the PCA". "PCoA"
  * under the PCoA. None for an analysis while its tab, which shows its
  * own, is shown, nor for several about to start, which Stop all ends.
- * A Stop recalculating beside Stop all is shown at 44 rem and wider
+ * A Stop recalculating beside Stop all is shown at 45 rem and wider
  * only, `wideOnly`.
  */
 export function stopOf(line: BandLine): BandStop | null {
