@@ -3339,7 +3339,10 @@ src/core/
                     popgen2.html both say; and sfs.ts, the rows,
                     the CSV and the warnings of the folded spectrum, which
                     the diversity's module and panel call and which is no
-                    analysis of its own (docs/specs/analyses/sfs.md);
+                    analysis of its own (docs/specs/analyses/sfs.md),
+                    from 12 October 2026 also the lines of its plot on
+                    popgen2.html, its warnings then apart in
+                    sfsWarnings.ts, which the band of that page loads;
                     from 11 October 2026 the diversity given popgen2.html,
                     diversityOnPopgen2 of diversity.ts, and the line of
                     its one population, apart in diversityOnePopulation.ts
@@ -3383,14 +3386,6 @@ src/core/
                     the stem of the variants file; from 9 October 2026
                     also the names of the downloads of the tables and
                     plots (downloadName)
-  fileNameParts.ts  from 11 October 2026, the names of the populations
-                    made parts of the names of the files of the
-                    histograms of the spectrum, "_" for any character
-                    but a letter, a digit, "-" and "_", and "_2" after a
-                    part an earlier name gave, compared without regard
-                    to case; apart from fileNames.ts, which both pages
-                    load first, so that only the Populations tab's code
-                    carries it
   noVariantKept.ts  from 9 October 2026, whether the filters keep no
                     variant for certain, told from the one pass of
                     popgen2.html finished (noVariantForCertain)
@@ -3436,7 +3431,10 @@ src/charts/
                     (docs/specs/charts/heatmap.md)
   marks.ts          the colour and the symbol of each group of points, and
                     the colours of a column of numbers, for the 2D and 3D
-                    plots of the PCA (docs/specs/charts/scatter.md)
+                    plots of the PCA (docs/specs/charts/scatter.md); from
+                    12 October 2026 the group of a population by its
+                    place in a result, populationGroup, which the plots
+                    of the Populations tab colour it by
   legend.ts         the entries of the legend of those plots, and the
                     legend drawn into an exported SVG
   hover.ts          the point nearest the pointer, and its tooltip
@@ -3851,7 +3849,9 @@ population, out of `diversity.ts`, whose definition the store loads
 with the page, and `fileNameParts.ts`, out of `fileNames.ts`, which
 both pages load first; only the Populations tab's code, downloaded
 when the tab is first shown, imports them, since a module is loaded
-whole by every page that imports any of it. `codeFiles.ts` reads
+whole by every page that imports any of it. `fileNameParts.ts` was
+removed on 12 October 2026, when the spectrum became one plot and no
+file was named after a population any longer. `codeFiles.ts` reads
 `manifest.json`, which the build writes beside the pages from 11
 October 2026 (`vite.config.ts`; `docs/technology.md`, section 4). No
 rule of the imports changes: `band/` imports, beyond the list of 10

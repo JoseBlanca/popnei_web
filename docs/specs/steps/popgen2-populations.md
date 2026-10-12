@@ -43,6 +43,15 @@ diversity alone, since the PCA reads no populations; and the start by
 itself said in the status region, which names the populations beside
 the filters; each where this spec says so, with its date.
 
+Revised on 12 October 2026 for the owner's first round of trying the
+tab (`docs/plans/population-tab.md`, "Work package 7, round 1"): the
+spectrum is one plot of lines, a line per population, in place of a
+histogram per population, with one "Download…" of its own; and the band
+at the top of the page counts the spectrum's warning with the result's
+warnings, its link giving that warning the focus when it is the only
+one (`docs/specs/steps/popgen2-band.md`). The bar plots of the table
+come in the same round, in their own revision of this spec.
+
 The tab is the diversity panel of the old page, `popgen.html`, which is
 built and which the owner tried and accepted on 1 October 2026: its
 screen spec is the second half of `docs/specs/analyses/diversity.md`,
@@ -109,8 +118,9 @@ And these:
 - The individuals of no population are left out of the table when some
   individuals have one, and the tab says how many; with none
   classified, the table has one row of every individual.
-- The table, each histogram of the spectrum and the table of the
-  spectrum offer their data, the tables with "Download…" below them.
+- The table, the plot of the spectrum and the table of the spectrum
+  offer their data, the tables with "Download…" below them, the plot
+  above it.
 
 ## What it shows
 
@@ -350,15 +360,19 @@ of the panel"), with these differences:
   "Rarefied to 40 chromosomes." (on a line of its own since 11 October
   2026: beside the versions, it read as their end).
 - **No comparison with check numbers**: the page opens no project file.
-- **The spectrum**, its heading, caption, one histogram per population
-  with its heading and the line under it, the line under the
-  histograms and the table in a tab beside them, as the old block. Each
-  histogram has its "Download…" on a line of its own above it, with
-  "Image as SVG", "Image as PNG" and "Data as CSV"; the table of the
-  spectrum has its "Download…" below it, "Table as CSV". These replace
-  the old button "Download the spectrum as CSV". The warning of the MAF
-  filter ends the caption with this page's words (`sfs.md`, "On
-  popgen2.html").
+- **The spectrum**, under its heading: its caption; from 12 October
+  2026 one plot of lines, a line per population in the colour and the
+  shape of its place in the result, with its legend, the lines of the
+  populations with none above it and the variants in the draw of each
+  under it, in the tab "Plot"; and the table in the tab beside it, as
+  the old block (`sfs.md`, "On popgen2.html", the plot). The plot has
+  its "Download…" on a line of its own above it, with "Image as SVG",
+  "Image as PNG" and "Data as CSV"; the table of the spectrum has its
+  "Download…" below it, "Table as CSV". These replace the old button
+  "Download the spectrum as CSV". The warning of the MAF filter ends the
+  caption with this page's words (`sfs.md`, "On popgen2.html"). Until
+  that day each population had a histogram of its own, with its own
+  "Download…".
 - **Its code**, that of the whole tab, the options, the lines, Run
   and the result with its table, spectrum and menus, is downloaded
   apart from the page's when the Populations tab is first shown with a
@@ -378,15 +392,11 @@ the stem of the variants file:
 | what | the files |
 |---|---|
 | the table of the diversity | `panel.diversity.csv` |
-| the histogram of the spectrum of a population | `panel.sfs.p0.svg`, `panel.sfs.p0.png`, `panel.sfs.p0.csv` |
+| the plot of the spectrum | `panel.sfs.svg`, `panel.sfs.png`, `panel.sfs.proportions.csv` |
 | the table of the spectrum | `panel.sfs.csv` |
 
-The name of the population in a file name has every character other
-than a letter, a digit, "-" and "_" written as "_", and a second
-population that would give the same name gets "_2" after it, then "_3";
-two names that differ only in case, "P1" and "p1", count as the same
-name, since macOS and Windows keep one file for both (since 11 October
-2026).
+No file is named after a population since 12 October 2026; until then
+each histogram's were, `panel.sfs.p0.svg`.
 
 ## The states
 
@@ -440,7 +450,7 @@ populations and the names of the files; the individuals kept;
 pass and `startedUnder` of `autoRuns`, for the lock of Run;
 `liveState("diversity")` of `autoRuns`, with its `subscribe` alone; and
 the tab shown, for the code of the tab. It holds of its own the tab
-of the spectrum, histograms or table, the scroll of the tables and the
+of the spectrum, plot or table, the scroll of the tables and the
 words of a PNG refused (`docs/architecture.md`, section 7).
 
 ## Its words
@@ -462,7 +472,8 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 | the status region, the end | "Diversity of panel.nei calculated."; a refusal or a failure, "The diversity of panel.nei could not be calculated: " and the words of its error |
 | the status region, the diversity held by a crash of the PCA | "The diversity did not start: it starts after the next change of the filters, of its options or of the populations, or when Run is pressed in the Populations tab." (`popgen2-pca.md`, "A failure that ends a live state") |
 | the status region, a Stop | "Diversity stopped. Press Run in the Populations tab to calculate it again."; with no Run to press, "Diversity stopped." |
-| the buttons of the downloads, for a screen reader | "Download the table of the diversity"; "Download the spectrum of p0"; "Download the table of the spectrum" |
+| the buttons of the downloads, for a screen reader | "Download the table of the diversity"; "Download the plot of the spectrum"; "Download the table of the spectrum" |
+| the spectrum's plot, its tab, its caption, its lines, its legend and its text alternative | `sfs.md`, "On popgen2.html", the plot |
 | the tab while its code downloads | "Loading the Populations tab…" |
 | the tab whose code could not be downloaded | "The Populations tab could not be loaded. Press Try again. If it fails again, the site may have been updated since this page was opened: reload the page and open panel.nei again; what the page has calculated is lost." with "Try again" (worded so on 11 October 2026: Try again first, the reload second with what it costs) |
 
@@ -480,7 +491,8 @@ again after each change once its Run is pressed.
 
 The criteria are those of WCAG 2.2 at level AA, and the old panel's
 part (`diversity.md`, "Accessibility"; `sfs.md`, "Accessibility")
-holds for the fields, the table, the bar and the histograms.
+holds for the fields, the table and the bar; the plot of the spectrum
+has its own, in `sfs.md`, "On popgen2.html".
 
 **The order of the Tab key** (2.4.3), after the row of tabs: the three
 fields and "Use the default" when it is there; Run, Stop or Stop
@@ -488,9 +500,8 @@ recalculating, one stop in one place, and after a failure that leaves
 the diversity live, or while a crash of the PCA holds its start, Run and
 then Stop recalculating; the warnings; the
 table, when it scrolls; its "Download…"; then, in the spectrum, the
-tabs of the histograms and the table, each histogram's "Download…"
-before its plot, and the "Download…" of the table of the spectrum after
-it.
+tabs of the plot and the table, the plot's "Download…" before it, and
+the "Download…" of the table of the spectrum after it.
 
 **What is said without moving the focus** (4.1.3): the words of the
 status region of "Its words": a start by itself, once for a round; the
@@ -597,9 +608,15 @@ page has them, the missing data of the variants at 0.1, which keeps all
   open nothing; the PCA's options not greyed; with the PCA held
   running, the column and the zone not greyed.
 - **The downloads**: the table's "Table as CSV" saved and read back,
-  its first row of p0 with 0.35193160994408107; a histogram's "Data as
-  CSV" of p0; each "Download…" of a table below it, at 1280 and at 320
-  px.
+  its first row of p0 with 0.35193160994408107; the plot's "Data as
+  CSV", its row of p0 at one copy of the rarer allele
+  "p0,1,0.975,38.07795856907602,0.031731632140896686", and its SVG; each
+  "Download…" of a table below it, the plot's above it, at 1280 and at
+  320 px.
+- **The plot of the spectrum**, from 12 October 2026: three lines, p0,
+  p2 and p1 in the legend, at 1280 and at 320 px, where it fits the
+  page with no sideways scroll; the caption's sentence of the variants
+  left out.
 - axe in each state of the tab, light and dark.
 
 **The screens**, `--project=screens`, at 1280 and 320 px, light and
@@ -624,16 +641,14 @@ warning for them; (a refused individuals file and a column of more than
 longer the session's; the CSV
 of the table with the labels of its columns as header, as every table
 of the page, where the old page wrote the names of the Python script;
-one "Download…" per histogram of the spectrum; the population's name
-in the file names; Run that starts at once when nothing runs, even
+one "Download…" for the plot of the spectrum, above it; Run that starts at once when nothing runs, even
 while the PCA is about to start, which then waits after it; and the
 words.
 
 ## Left for the running application
 
 The layout of the options and of the line of the populations, the
-number of histograms of the spectrum in a row, where each "Download…"
-of a histogram sits, and whether the table keeps the population in view
+size of the plot of the spectrum, and whether the table keeps the population in view
 while it scrolls sideways.
 
 ## Open points

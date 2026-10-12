@@ -37,6 +37,13 @@ another's; the narrow form decided in one place, under 45 em; the line
 that wraps, its words never cut but the file's name; another analysis
 about to start shown over a Stop under way.
 
+Revised on 12 October 2026 with the owner's answer to its open point 2,
+in their first round of trying the Populations tab
+(`docs/plans/population-tab.md`, "Work package 7, round 1"): the band
+counts the warning of the spectrum of the diversity with the warnings
+of its result, and its link gives that warning the focus when it is
+the only one ("Several live analyses"; "Open points").
+
 Revised on 11 October 2026 for `docs/designs/population-tab.md`,
 approved by the owner that day with the recommendations of its two open
 points, which brings the diversity of the Populations tab as a second
@@ -338,13 +345,25 @@ one about to start, is shown, the band drops that analysis's Stop or
 Stop recalculating, as it drops the PCA's in the PCA tab, and keeps
 Stop all, whose words differ from the tab's button. The link drops
 while its tab is shown, as now, and names the next in the order that
-has warnings or failed in a tab not shown, if any. The band counts the
-warnings of the result's status alone, and not the warning of the
-spectrum of the diversity, which its block in the Populations tab shows
-and which is not among them (`src/core/analyses/diversity.ts`): with
-that warning alone, after a change of the minor allele frequency in the
-Variants tab, the band shows "Popnei" alone (12 October 2026, the
-review of work package 4; open point 2).
+has warnings or failed in a tab not shown, if any.
+
+**The warning of the spectrum.** The diversity's spectrum says its own
+warning, of the MAF threshold, at the end of the caption of its block,
+and that warning is not among those above the result's table
+(`docs/specs/analyses/sfs.md`, "The warnings"). The band counts it with
+them, `spectrumWarnings` of `src/core/analyses/sfsWarnings.ts`, as the
+owner answered on 12 October 2026 (open point 2): with the MAF
+threshold of the Variants tab at 0.95 and the diversity calculated, the
+Variants tab shown, "Diversity: 1 warning, in the Populations tab".
+The link gives the focus to the heading of the warnings above the
+table when the result has some, as for the PCA, since they come first
+in the tab, and the spectrum's warning, under the table, is reached
+after them; with the spectrum's warning alone, there is no such
+heading, and the link gives the focus to that warning itself, which a
+screen reader then reads, "Warning: The MAF threshold of the Variants
+tab removes …". Until that day the band counted the warnings of the
+result's status alone, and with that warning alone it showed "Popnei"
+alone (the review of work package 4).
 
 **Stopping** names the analysis by its words, "Stopping the diversity…",
 where the band named any analysis but the PCA by its title until 11
@@ -624,7 +643,7 @@ the window is narrowed under 45 em (the review of work package 4, 12
 October 2026). After "Close"
 the focus goes to the heading "Popnei", as the error bar's Close does.
 After the link, the focus is on the heading of the warnings or of the
-tab, as above; when the PCA tab has no such heading, as when an error
+tab, or on the warning of the spectrum, as above; when the PCA tab has no such heading, as when an error
 has emptied the application's root, it goes to the heading "Popnei".
 
 Every button is at least 24 by 24 px (2.5.8). The link is as tall as
@@ -799,7 +818,10 @@ on the heading; both live and
 nothing running, waiting nor about to start, no button; the link of
 the diversity's warnings
 while the PCA has none, and the PCA's when both have them; "Stopping
-the diversity…".
+the diversity…"; from 12 October 2026, the warning of the spectrum
+counted with the result's, 1 warning alone, 3 with two of the result,
+none without a MAF threshold, the link's target the spectrum's warning
+alone in the first case and the heading of the warnings in the second.
 
 **In jsdom**, the band drawn: the Stop of the one pass calls
 `autoRuns.stop` with the page's group, and the Stop of the PCA and
@@ -896,6 +918,10 @@ pass held by `e2e/holdWorker.ts`:
   Run enabled after it in both; on the owner's Mac, an Apple M5 Pro of
   64 GB with macOS 27.0.1, on 10 October 2026, with a load average of
   3.3 over the last minute (`NU5 D6` of `e2e/measure.spec.ts`);
+- from 12 October 2026, the MAF threshold at 0.95 and the diversity
+  calculated, the Variants tab shown: the link "Diversity: 1 warning,
+  in the Populations tab"; pressed with Enter: the Populations tab
+  shown, the focus on the warning of the spectrum, the link gone;
 - from 11 October 2026, the PCA and the diversity live, a threshold
   moved in the Variants tab, the PCA held running: "PCA running · 0:0… ·
   then the diversity" with Stop and Stop all; Stop all: no request of
@@ -924,7 +950,11 @@ lines; from 12 October 2026 (the review of work package 4),
 `popgen2-band-diversity-running` ("Diversity running" with Stop and
 Stop all, the PCA live and idle), `popgen2-band-diversity-stopping`,
 `popgen2-band-diversity-warning` (the link "Diversity: 2 warnings, in
-the Populations tab"), `popgen2-band-diversity-failed` (the link
+the Populations tab"), from the same day's round 1
+`popgen2-band-spectrum-warning` (the link "Diversity: 1 warning, in
+the Populations tab", the MAF threshold at 0.95) and
+`popgen2-band-spectrum-warning-followed` (the Populations tab after
+the link, the focus on the spectrum's warning), `popgen2-band-diversity-failed` (the link
 "Diversity: could not be calculated, in the Populations tab") and
 `popgen2-band-held-after-crash` (the PCA held after a crash of the
 diversity it waited for, with its Stop recalculating), each with
@@ -979,8 +1009,12 @@ in the band, which the heading line had at `--text-xl`.
    so a user in the Variants tab who moved the minor allele frequency
    is not sent to it. The options: (a) leave it, the block of the
    spectrum telling it when the Populations tab is shown; (b) count it
-   among the warnings the band links to, which changes the result's
-   status of the diversity and the count its tab shows. Not decided.
+   among the warnings the band links to. Answered by the owner on 12
+   October 2026, (b): counted with the result's warnings, the link
+   taking the focus to that warning ("Several live analyses", "The
+   warning of the spectrum"). The count above the table of the
+   Populations tab does not change, since the warning stays in the
+   spectrum's caption, beside the plot it is about.
 
 ## Not in this spec
 

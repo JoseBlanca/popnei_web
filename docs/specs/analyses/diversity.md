@@ -1851,7 +1851,10 @@ chosen in the list of the column, where the owner decided that the
 unclassified are then one population; and words that send the user to
 "the Variants step", "the Individuals step" and "the metadata file",
 which the page does not have. The request, the runner, the numbers and
-the result are the old ones.
+the result are the old ones. From 12 October 2026, the owner's first
+round of trying the tab, the spectrum of each population is drawn there
+as one plot of lines, and the band at the top of the page counts its
+warning with the result's (`sfs.md`, "On popgen2.html").
 
 ### What differs
 

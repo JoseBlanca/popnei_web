@@ -98,6 +98,21 @@ the function that makes them, `fileNameParts`, out of
 `src/core/fileNames.ts`, which both pages load first, into
 `src/core/fileNameParts.ts`.
 
+Revised on 12 October 2026 for the owner's first round of trying the
+Populations tab (`docs/plans/population-tab.md`, "Work package 7, round
+1"): on `popgen2.html` the spectrum is one plot of lines, a line per
+population, in place of a histogram per population. Across, the
+frequency of the commonest allele in the draw; up, the proportion of the
+population's variants in the draw, each bin over the sum of every bin of
+that population; bin 0 left out of the plot. The plot has one
+"Download…" of its own (below, "On popgen2.html"). So no file is named
+after a population any longer, and `populationSpectrumCsv` and
+`fileNameParts`, which named and filled the files of each histogram, are
+removed; `spectrumWarnings` moves to `src/core/analyses/sfsWarnings.ts`,
+since the band at the top of the page, which loads with it, counts that
+warning from the same day (`docs/specs/steps/popgen2-band.md`). The old
+page changes in nothing.
+
 ## What is decided here, and what is asked
 
 The spectrum is part of the diversity: the same call of popnei, the same
@@ -329,7 +344,10 @@ and `passStats`, which every result carries, that is all this module
 reads.
 
 The functions the block of the panel calls, in
-`src/core/analyses/sfs.ts`:
+`src/core/analyses/sfs.ts`, but `spectrumWarnings`, in
+`src/core/analyses/sfsWarnings.ts` since 12 October 2026, so that the
+band of `popgen2.html`, which counts that warning and loads with the
+page, does not load the rest:
 
 ```ts
 /** The spectrum of one population, as the block draws it. */
@@ -360,8 +378,8 @@ export function spectraOf(r: DiversityResult): Spectra;
 /** The spectra as the text of a CSV file (the panel, "What it shows"). */
 export function allSpectraCsv(r: DiversityResult): string;
 
-/** The warnings of the spectrum, in the words of the page of the definition (below,
-    "On popgen2.html"); the page is required since 11 October 2026. */
+/** sfsWarnings.ts: the warnings of the spectrum, in the words of the page of the
+    definition (below, "On popgen2.html"); the page is required since 11 October 2026. */
 export function spectrumWarnings(r: DiversityResult, p: Project, page: DiversityPage): Warning[];
 ```
 
@@ -521,8 +539,75 @@ spec keeps both from any request.
 From 11 October 2026, for `docs/designs/population-tab.md`: the
 spectrum is part of the diversity of the Populations tab of
 `popgen2.html` (`docs/specs/steps/popgen2-populations.md`), from the
-same request, as on the old page. Three things differ.
+same request, as on the old page. Four things differ, the plot since
+12 October 2026, the owner's first round of trying the tab.
 
+- **The plot of the spectrum**: one plot of lines, a line per population,
+  in place of a histogram per population, so that the spectra of the
+  populations are compared on one frame, as the owner asked on 12 October
+  2026.
+  - **Across**, the frequency of the commonest allele in the draw,
+    1 − j / n for j copies of the rarer allele in a draw of n
+    chromosomes, from 0.5, j = n / 2, to just under 1, j = 1: 0.975 for
+    n = 40. The axis runs from 0.5 to 1. **Up**, the **proportion** of
+    the population's variants in the draw that show j copies of the
+    rarer allele: bin j over the sum of every bin of that population,
+    bin 0 among them, which is its variants in the draw,
+    `numVars.inDraw`, but for the rounding of the last digit. A
+    population counts a variant only where it has the minimum of
+    individuals called and reaches the draw, so populations count
+    different numbers of variants, and the proportion compares them;
+    the owner asked why, and took it so on 12 October 2026. The axis
+    runs from 0 to the largest proportion of any population, made round
+    up to a half of its first digit: 0.0539 gives 0.055.
+  - **Bin 0**, the variants that show no copy of the rarer allele in the
+    draw, which would stand at a frequency of 1, is left out of the
+    plot: its size says more of the other populations than of this one
+    (above, "What it shows of each bin"). The caption says so, and the
+    table holds it.
+  - **The colour and the shape** of a population are those of its
+    place in the order of the result, `populationGroup(i)` of
+    `src/charts/marks.ts`, i itself, the group of the rule of the scatter
+    (`docs/specs/charts/scatter.md`, "The marks of the groups"): the
+    bar plots of the diversity's table give a population the same
+    colour. Each point is drawn with the mark of its population, and
+    the legend, in the plot, names each population beside a piece of its
+    line and its mark, so that no line is told by its colour alone
+    (WCAG 2.2, 1.4.1). The line plot of `docs/specs/charts/line.md`
+    draws it, the points as its points and as its line, and no marks of
+    its own.
+  - **A population with no line**, not calculated, with no variant in
+    the draw, or whose every variant shows one allele in the draw, has
+    the line of "Its words" above the plot, as it had in place of its
+    histogram, "… so its spectrum has no line." in place of "no bar".
+  - **Too many points**: when the lines would hold more than the
+    50,000 points and positions an SVG plot draws, `MAX_SVG_POINTS`,
+    twice n / 2 for each population with a line, the plot is not drawn,
+    and the line "A draw of 20,000 chromosomes gives 10,000 points to
+    each of the 3 lines, too many to draw. The table of the spectrum
+    holds them." stands in its place.
+  - **The caption** of the block says what the axes are and what is
+    left out: "The folded site frequency spectrum of each population, in
+    a draw of 40 of its chromosomes at each variant, over the 1,200
+    variants of panel.nei the filters kept. Each line is a population:
+    across, the frequency of the commonest allele in the draw, 1 − j/40
+    for j copies of the rarer allele; up, the proportion of that
+    population's variants in the draw with that frequency. Variants with
+    no copy of the rarer allele in the draw are left out of the plot;
+    the table holds them. The number of chromosomes is set above the
+    table, with the rarefaction." The warning of the MAF filter ends it,
+    as before.
+  - **Under the plot**, the variants in the draw of each population,
+    which the proportions are of: "Variants in the draw: p0, 1,200; p2,
+    1,200; p1, 1,200."; and, when n is even, "The points at 0.5 hold one
+    count of the rarer allele, 20, where the others hold two, such as 1
+    and 39, so they are about half as high."
+  - **Its text alternative**: the title "The spectrum of each
+    population", and the description "3 lines, one per population, p0,
+    p2 and p1, of 20 points each, from 0.5 to 0.975 of the commonest
+    allele; the largest proportion, 0.0539, of p1 at 0.625." The table,
+    in the tab beside the plot, holds every number.
+  - **Its tab** is "Plot", where it was "Histograms".
 - **The words of its warning**, `spectrumWarnings(r, p, page)`, with
   the page of the diversity's definition (`diversity.md`, "On
   popgen2.html"): "The MAF threshold of the Variants tab removes the
@@ -531,46 +616,84 @@ same request, as on the old page. Three things differ.
   the spectrum lacks many of the rare alleles, and its first bins are
   lower than those of the population. To see every variant in the
   spectrum, turn the MAF threshold off in the Variants tab." The
-  condition and the numbers are the old ones.
+  condition and the numbers are the old ones. From 12 October 2026 the
+  band at the top of the page counts it with the result's warnings, and
+  its link gives it the focus when it is the only one
+  (`docs/specs/steps/popgen2-band.md`).
 - **The downloads**, as every plot and table of the page
-  (`docs/specs/widgets/downloads.md`): each histogram has its
-  "Download…", "Image as SVG", "Image as PNG" and "Data as CSV", whose
-  CSV is that population's rows of `allSpectraCsv`, with its header,
-  `populationSpectrumCsv(r, population)`; the table of the spectrum has its
+  (`docs/specs/widgets/downloads.md`): the plot has its "Download…",
+  on a line of its own above it, "Image as SVG", "Image as PNG" and
+  "Data as CSV", whose CSV is `spectrumLinesCsv(r)`: the header
+  `population,rarer_allele,commonest_allele_frequency,variants,proportion`,
+  then, for each population with a line in the order of the result,
+  one row per point, j from 1 to n / 2, the count j, the frequency, the
+  expected number of variants as popnei gave it, and the proportion,
+  the numbers as `String` writes them and the name quoted as the
+  diversity's CSV quotes it. The table of the spectrum has its
   "Download…" below it, "Table as CSV", from the values of its cells.
-  The old button "Download the spectrum as CSV", and `allSpectraCsv` as a
-  download, serve the old page alone.
-- **The names of the files**: `downloadName(stem, "sfs.‹population›",
-  ext)` for a histogram, `panel.sfs.p0.svg`, the population's name made
-  a part of a file name by `fileNameParts` of `src/core/fileNameParts.ts`,
-  every character other than a letter, a digit, "-" and "_" written
-  "_", and "_2", "_3" after a name that an earlier population of the
-  result already gave, the names compared without regard to case:
-  populations "P1" and "p1" give `P1` and `p1_2`, since the default file
-  systems of macOS and Windows hold one file for both names, and a
-  browser would save the second as `panel.sfs.p1 (1).svg`.
-  `panel.sfs.csv` for the table. (Since 11 October 2026, after the
-  review of work packages 2 and 3 of `docs/plans/population-tab.md`:
-  the names were compared as written before, and the function was in
-  `src/core/fileNames.ts`, which both pages load first, though only the
-  code of the Populations tab calls it.)
+  The old button "Download the spectrum as CSV", and `allSpectraCsv` as
+  a download, serve the old page alone.
+- **The names of the files**: `downloadName(stem, "sfs", ext)` for the
+  images of the plot, `panel.sfs.svg` and `panel.sfs.png`;
+  `panel.sfs.proportions.csv` for its data; `panel.sfs.csv` for the
+  table. (From 11 October 2026 until the plot, each histogram's files
+  were named after its population, `panel.sfs.p0.svg`, by
+  `fileNameParts`.)
 
 ```ts
-/** sfs.ts: the rows of one population of `allSpectraCsv`, with its header; a defect for a
-    population not in the result. */
-export function populationSpectrumCsv(r: DiversityResult, population: string): string;
+/** The line of one population in the plot of the spectrum. */
+export interface SpectrumLine {
+  readonly population: string;
+  /** Its place in the order of the result, which gives its colour and its shape. */
+  readonly index: number;
+  /** The frequency of the commonest allele of each point, (n − j) / n, j from 1 to n / 2. */
+  readonly frequency: Float64Array;
+  /** Bin j over the sum of every bin of the population, in the same order. */
+  readonly proportion: Float64Array;
+  /** popnei's expected number of variants of each point, bin j. */
+  readonly variants: Float64Array;
+}
+
+export interface SpectrumLines {
+  readonly numCalledAlleles: number;
+  /** The populations with a line, in the order of the result: calculated, with variants in
+      the draw, and with some variant that shows both alleles in it. */
+  readonly lines: readonly SpectrumLine[];
+  /** The largest proportion of any line; 0 when there is none. */
+  readonly largestProportion: number;
+}
+
+/** sfs.ts: the lines of a diversity result; the same object for the same result. */
+export function spectrumLinesOf(r: DiversityResult): SpectrumLines;
+/** sfs.ts: the data of the plot as the text of a CSV file, as above. */
+export function spectrumLinesCsv(r: DiversityResult): string;
+/** sfsWarnings.ts */
 export function spectrumWarnings(r: DiversityResult, p: Project, page: DiversityPage): Warning[];
 
-/** fileNameParts.ts: the parts of file names of `names`, in their order, as above. */
-export function fileNameParts(names: readonly string[]): readonly string[];
+/** src/charts/marks.ts: the group of the population at `index` in the order of a result. */
+export function populationGroup(index: number): number;
 ```
 
-Checked with Vitest: `populationSpectrumCsv` of the result of the flow at the
-missing data of 0.05, p0's rows equal to those of `allSpectraCsv` for p0;
-`spectrumWarnings` with page "popgen2", the text above; `fileNameParts`
-of `["p0", "a/b", "a?b", "é"]`, `["p0", "a_b", "a_b_2", "é"]`, a
-letter of another alphabet kept, since a browser saves it, and of
-`["P1", "p1", "A/b", "a?B"]`, `["P1", "p1_2", "A_b", "a_B_2"]`.
+Checked with Vitest: `spectrumLinesOf` on the worked example of "How it
+is verified", n = 4 and the spectra `[1, 2, 2]` and `[3, 0, 0]`: one
+line, of the first population, index 0, the frequencies 0.75 and 0.5,
+the proportions 0.4 and 0.4, the largest 0.4; a population not
+calculated, and the second, no line; the same object for the same
+result. `spectrumLinesCsv` of it, to the letter. The numbers of popnei
+0.2.2 under node, 12 October 2026, `panel.nei` with `panel_pops.csv`,
+n = 40, the missing data filter at 0.1, which keeps all 1,200 variants:
+p0's proportion at j = 1 is 0.031731632140896686, its bins summing to
+1199.9999999999998, and at j = 20 0.02529604246091587; the largest
+proportion is p1's, 0.05386774831954687, at j = 15, a frequency of
+0.625. `spectrumWarnings` with page "popgen2", the text above.
+
+In Playwright, in Chromium and WebKit, the Populations tab after Run on
+`panel.nei` and `panel_pops.csv`: one plot of three lines and a legend
+of p0, p2 and p1; its "Download…" above it, its three files named
+`panel.sfs.svg`, `panel.sfs.png` and `panel.sfs.proportions.csv`, the
+CSV's rows of p0 at j = 1 "p0,1,0.975,38.07795856907602,0.031731632140896686";
+at 320 px wide the plot within the page, with no sideways scroll; axe
+in light and dark.
 
 ## The block of the panel
 

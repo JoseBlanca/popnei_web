@@ -31,6 +31,11 @@ spectrum of a population downloads the population's rows of the CSV of
 the spectra ("A plot"), and Tab or Shift+Tab in an open menu closes it
 and moves the focus on ("The menu").
 
+Revised on 12 October 2026 for the owner's first round of trying the
+Populations tab (`docs/plans/population-tab.md`, "Work package 7, round
+1"): the spectrum is one plot of lines, with one menu, and no longer a
+histogram per population ("A plot").
+
 ## What it does
 
 A user who downloads a table to work on in a spreadsheet, or in R or
@@ -183,13 +188,18 @@ What each plot's CSV holds, written by the functions of core below:
   `left_edge,right_edge,count`; for the heterozygosity of the
   individuals, whose plot counts apart those with none, a last row with
   empty edges and their count.
-- **A histogram of the spectrum of a population**, in the Populations
-  tab of `popgen2.html`: not `binsCsv` but `populationSpectrumCsv` of
-  `docs/specs/analyses/sfs.md`, "On popgen2.html", the population's
-  rows of the CSV of the spectra, one per count of the rarer allele,
-  header `population,rarer_allele,variants,share`, the numbers the old
-  page's download of the spectrum gives. (Since 11 October 2026: this
-  list named `binsCsv` for every histogram before.)
+- **The plot of the spectrum**, in the Populations tab of
+  `popgen2.html`, from 12 October 2026: `spectrumLinesCsv` of
+  `docs/specs/analyses/sfs.md`, "On popgen2.html", a row per point of
+  each line, header
+  `population,rarer_allele,commonest_allele_frequency,variants,proportion`,
+  the expected number of variants as popnei gives it beside the
+  frequency and the proportion the plot draws; its files
+  `panel.sfs.svg`, `panel.sfs.png` and `panel.sfs.proportions.csv`. Its
+  element is drawn by the screen, which places the menu on a line of its
+  own above it, as `HistogramPlot` does. (From 11 October 2026 until
+  then, each population's histogram of the spectrum had a menu, whose
+  CSV was that population's rows of the CSV of the spectra.)
 - **The PCA's plot**, 2D or 3D: `pcaCoordinatesCsv` of
   `docs/specs/analyses/pca.md`, the coordinates vavilov-explorer
   imports.
