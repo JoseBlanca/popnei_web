@@ -181,11 +181,13 @@ export function SortableTable<Id extends string>(
         <DownloadMenu
           what={props.download.what}
           items={[
-            tableItem(
-              props.download.fileName,
-              props.columns.map((column) => column.csvLabel ?? column.label),
-              props.rows,
-            ),
+            tableItem(props.download.fileName, {
+              kind: "rows",
+              header: props.columns.map(
+                (column) => column.csvLabel ?? column.label,
+              ),
+              rows: props.rows,
+            }),
           ]}
           waiting={props.download.waiting}
         />

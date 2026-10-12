@@ -97,29 +97,47 @@ export function checkValues(
   }
 }
 
+/** What the CSV of a table is written from: its columns, labelled
+    `header`, and its rows, `rows`, in the order shown, whose values are
+    written; or `csv`, the screen's own CSV, for a table one of whose
+    cells joins two values, the pair of the distances between
+    populations (`TableDownload.csv`). */
+export type TableCsvSource =
+  | {
+      readonly kind: "rows";
+      readonly header: readonly string[];
+      readonly rows: readonly RowValues[];
+    }
+  | { readonly kind: "csv"; readonly csv: () => string };
+
 /**
- * The item "Table as CSV" of a table of columns labelled `header` and of
- * the rows `rows`, in the order shown: their values are taken, and the
- * CSV written, at the choice.
+ * The item "Table as CSV" of a table, saved as `fileName`, written from
+ * `source`, at the choice.
  */
 export function tableItem(
   fileName: string,
-  header: readonly string[],
-  rows: readonly RowValues[],
-  csv?: () => string,
+  source: TableCsvSource,
 ): DownloadItem {
   return {
     label: "Table as CSV",
     save: () => {
-      const values = rows.map((row) => row.values);
-      downloadText(
-        fileName,
-        csv === undefined ? tableCsv(header, values) : csv(),
-        CSV_TYPE,
-      );
+      downloadText(fileName, csvOf(source), CSV_TYPE);
       return Promise.resolve(fileName);
     },
   };
+}
+
+/** The text of the CSV of `source`. */
+function csvOf(source: TableCsvSource): string {
+  switch (source.kind) {
+    case "rows":
+      return tableCsv(
+        source.header,
+        source.rows.map((row) => row.values),
+      );
+    case "csv":
+      return source.csv();
+  }
 }
 
 /** What the images of a plot are made from: the exports of its handle,

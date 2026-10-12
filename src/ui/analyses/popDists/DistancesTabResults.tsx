@@ -108,9 +108,10 @@ export function DistancesTabResults({
             <DownloadMenu
               what={DISTANCES_TABLE_WHAT}
               items={[
-                tableItem(tableName(variantsName), [], [], () =>
-                  pairsCsv(result),
-                ),
+                tableItem(tableName(variantsName), {
+                  kind: "csv",
+                  csv: () => pairsCsv(result),
+                }),
               ]}
               waiting={null}
             />
