@@ -81,8 +81,8 @@ the branch `population-tab` built and measured on 11 and 12 October
 tried by the owner): `popgen2.html` calculates two analyses again by
 themselves, the PCA and the diversity of its new Populations tab, one
 at a time in the order of the tabs, with Stop all in the band; in
-sections 3, 4, 5, 7, 9 and 11, each with a paragraph "What was revised
-on 12 October 2026" at its end.
+sections 3, 4, 5, 7, 9, 11 and 12, each with a paragraph "What was
+revised on 12 October 2026" at its end.
 What was
 revised each time until 30 September 2026 is at the end
 of section 1. The document gives the parts of the web applications of
@@ -1131,10 +1131,10 @@ population (`popgen2WordsRead` of `src/core/analyses/diversity.ts`),
 and a result is never shown with the words of a file or a column no
 longer open. The cost: a change of the individuals file or of the
 column calculates the diversity again even when it gives the same
-populations, 0.10 s on the gzipped VCF of 300 variants of 9,381
-individuals and 2.5 s on a VCF of 403 MB, 100,000 variants of 1,000
-individuals, in Chromium 153 and WebKit 26.6 on the owner's Apple M5
-Pro (`docs/designs/population-tab.md`, "The time and the memory of a
+populations: on the gzipped VCF of 300 variants of 9,381 individuals,
+0.10 s in Chromium 153 and in WebKit 26.6; on a VCF of 403 MB, 100,000
+variants of 1,000 individuals, 2.4 s in Chromium and 2.5 s in WebKit;
+on the owner's Apple M5 Pro (`docs/designs/population-tab.md`, "The time and the memory of a
 diversity", measured on 11 October 2026 on the old page, which makes
 the same calls of popnei).
 
@@ -3007,9 +3007,10 @@ for the smallest part of it.
   `popgen.html`. It is drawn in the page's second root, `#defects`,
   where the error bar was, so that it stays when an error has emptied
   the application's root. While nothing runs it holds "Popnei" alone.
-  It is 51 px high in every state but an error, at 1280 and 320 px in
-  Chromium and WebKit, and the page keeps that room at its top, so that
-  nothing under it moves when it starts or stops saying something; while
+  It is 51 px high, at 1280 and 320 px in Chromium and WebKit, whenever
+  its line fits on one row (below, the cases where it takes two), and
+  the page keeps the band's room at its top, so that nothing under it
+  moves when it starts or stops saying something; while
   an error of the application is shown, it stands in the flow of the
   page at its top instead, and scrolls with it, so that at 200 to 400%
   zoom it does not cover the window (as built on the branch `pca-tab`,
@@ -3058,10 +3059,13 @@ for the smallest part of it.
   not write again, so that a button the narrow band leaves out is not
   drawn, and the focus it had goes to "Popnei", where a button hidden by
   CSS had left the focus on nothing after the window narrowed. When a
-  line still cannot fit, a clock past an hour at 320 px or the text at
-  200%, its buttons go to a second row, and the room the page keeps
-  under the band grows with it; the band is 51 px high whenever its
-  line fits.
+  line still cannot fit, its buttons go to a second row: a clock past
+  an hour at 320 px, the text at 200%, and at 320 px "Diversity later"
+  with its Stop recalculating, the diversity alone live and waiting for
+  the download or held after a crash, which needs 288.4 px of 288 and
+  is left so, its words whole (the review of work package 4 of
+  `docs/plans/population-tab.md`, 12 October 2026); and the room the page keeps
+  under the band grows with it.
 - **The step of an application is in the URL hash**, so that the back
   button moves between steps (`docs/technology.md`).
 
@@ -4488,13 +4492,16 @@ measured on a Mac with less memory and in Safari.
   and every project file the page will save holds the filter of the
   FILTER column, on or off, so a later change of that start changes what
   those files hold.
-- **The PCA of `popgen2.html` calculated again by itself**, from 10
-  October 2026 (`docs/designs/no-undo.md`). No file depends on it, no
-  key changes, and Undo can come back, since the history and its
-  buttons stay for `popgen.html` until that page is deleted. What is
-  hard to undo is what users learn: that a change of a filter starts the
-  PCA again a second later, and that nothing is undone; taking that
-  away later would be a change of habit for them.
+- **The analyses of `popgen2.html` calculated again by themselves**,
+  the PCA from 10 October 2026 (`docs/designs/no-undo.md`) and the
+  diversity from 11 October 2026 (`docs/designs/population-tab.md`).
+  No file depends on it, no key changes, and Undo can come back, since
+  the history and its buttons stay for `popgen.html` until that page
+  is deleted. What is hard to undo is what users learn: that a change
+  of a filter starts every analysis they ran again a second later, one
+  after the other in the order of the tabs, that Stop all ends that
+  everywhere, and that nothing is undone; taking that away later would
+  be a change of habit for them.
 
 The canonical form of the keys is not among these. No key and no fingerprint of
 settings is saved in a file: the cache lives in the tab, the calculation
@@ -4512,6 +4519,13 @@ What was revised on 10 October 2026, for the design no-undo
 (`docs/designs/no-undo.md`, approved by the owner that day): the
 bullet "The PCA of `popgen2.html` calculated again by itself", which
 that design lists as hard to undo for the habit it gives users.
+
+What was revised on 12 October 2026, for the design population-tab
+(`docs/designs/population-tab.md`, approved by the owner on 11 October
+2026): that bullet names the diversity beside the PCA, as "The
+analyses of `popgen2.html` calculated again by themselves", with the
+order after a change and Stop all, which that design lists as what
+users will learn.
 
 ## 13. Open points
 
