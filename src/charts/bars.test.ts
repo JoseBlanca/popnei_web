@@ -176,9 +176,9 @@ describe("PT7 R1.1 the bar plot under jsdom, its SVG", () => {
     expect(element.querySelector("g.chart-axis-y b")).toBeNull();
   });
 
-  test("barsHeight gives 8 above, 28 a row and 44 below: 136 for 3 names, 80 for 1", () => {
-    expect(barsHeight(3)).toBe(136);
-    expect(barsHeight(1)).toBe(80);
+  test("barsHeight gives 8 above, 28 a row, 44 below and 16 for a label on two lines: 152 for 3 names, 96 for 1", () => {
+    expect(barsHeight(3)).toBe(152);
+    expect(barsHeight(1)).toBe(96);
   });
 });
 

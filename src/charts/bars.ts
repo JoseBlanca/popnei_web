@@ -66,16 +66,20 @@ const NAME_LEAST = 4;
 const NAME_SHARE = 0.4;
 /** The ellipsis that ends a name cut. */
 const ELLIPSIS = "…";
+/** The second line of a label of the axis broken in two, which
+    barsHeight leaves room for, as the base adds it to the bottom margin. */
+const SECOND_LABEL_LINE = 16;
 /** From the axis of the names to the words of a bar with no value. */
 const NONE_FROM_AXIS = 4;
 
 /**
  * The height in CSS pixels of an element that holds `numBars` rows: 8
- * above the frame, 28 a row and 44 below it; 136 for 3 names. The screen
- * gives its element this height.
+ * above the frame, 28 a row, 44 below it and 16 more for a label of the
+ * axis on two lines, so that its rows keep their 28 pixels then; 152 for
+ * 3 names. The screen gives its element this height.
  */
 export function barsHeight(numBars: number): number {
-  return TOP + ROW * numBars + BOTTOM;
+  return TOP + ROW * numBars + BOTTOM + SECOND_LABEL_LINE;
 }
 
 /** The characters a name keeps in an element `width` pixels wide: what

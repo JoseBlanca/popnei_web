@@ -33,12 +33,21 @@
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
 }
 
-/* One plot: its heading, its "Download…" and its element. */
+/* One plot: its heading, its "Download…" and its element, in three
+   rows of the grid of the plots, so that a heading on two lines, "Alleles
+   per variant, rarefied to 40 chromosomes" in a column of 355 pixels,
+   lowers the plot beside it too, and the two frames stay level. */
 .plot {
   display: grid;
-  gap: var(--space-1);
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: var(--space-1);
   align-content: start;
   min-inline-size: 0;
+}
+
+.plot > :first-child {
+  align-self: end;
 }
 
 .plotHeading {
@@ -55,5 +64,5 @@
   position: relative;
   inline-size: 100%;
   min-inline-size: 0;
-  block-size: var(--bars-height, 136px);
+  block-size: var(--bars-height, 152px);
 }

@@ -66,10 +66,14 @@ name keeps 11 characters. The names are not measured, as no text of a plot is.
 
 The plot never sets the size of its element (charts.md). The screen
 gives the element the height `barsHeight(n)` gives for `n` names: 8
-pixels above the frame, 28 a row and 44 below it, for the axis and its
-label; 136 pixels for 3 names. A label of the axis broken into two lines
-in a narrow element takes 16 pixels more from the frame, and the rows
-are then 5 pixels lower each for 3 names.
+pixels above the frame, 28 a row, 44 below it, for the axis and its
+label, and 16 more for a label broken into two lines, which the base
+takes from the frame; 152 pixels for 3 names. So the rows keep their 28
+pixels when the label takes two lines, as "Alleles per variant,
+rarefied to 40 chromosomes" does in a plot 355 pixels wide, and a label
+on one line leaves 16 pixels free under the plot. (Corrected on 12
+October 2026, after the screen of one population: without those 16
+pixels its one bar was 8 pixels high under a label on two lines.)
 
 ## The TypeScript interface
 
@@ -163,7 +167,7 @@ element stubbed at 400 by 136:
   name of 30 characters at 400 pixels, where 16 characters fit, written
   as its first 15 and an ellipsis, with a left margin of 156; at 1,000
   pixels, as its first 19 and an ellipsis, with a margin of 192;
-- `barsHeight(3)` 136 and `barsHeight(1)` 80;
+- `barsHeight(3)` 152 and `barsHeight(1)` 96;
 - `check` throws for 201 bars, two bars named "p0", a group of 1.5, a
   value of −0.1 and one of Infinity.
 

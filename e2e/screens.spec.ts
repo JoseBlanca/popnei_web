@@ -6224,7 +6224,8 @@ for (const theme of ["light", "dark"] as const) {
       }) => {
         const panel = await populationsReady(page);
         await panel.getByRole("button", { name: "Run", exact: true }).click();
-        await expect(panel.locator("svg.chart")).toHaveCount(3, {
+        // The plot of the spectrum and the five bar plots of the table.
+        await expect(panel.locator("svg.chart")).toHaveCount(6, {
           timeout: 20_000,
         });
         const minimum = panel.getByRole("textbox", {

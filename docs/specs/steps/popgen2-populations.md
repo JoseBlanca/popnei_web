@@ -413,7 +413,7 @@ of the panel"), with these differences:
   pixels, about 735 pixels wide, and one to a row at 320 pixels, so
   that the five do not make the tab five plots long. With
   the one population each plot has one bar. A plot's element is as
-  high as `barsHeight` gives for the number of populations, 136 pixels
+  high as `barsHeight` gives for the number of populations, 152 pixels
   for three.
 - **The spectrum**, under its heading: its caption; from 12 October
   2026 one plot of lines, a line per population in the colour and the
