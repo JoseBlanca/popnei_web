@@ -364,8 +364,10 @@ of the panel"), with these differences:
   unclassified individual is no fault and the caption says how many.
   From 12 October 2026, the review of round 1: when the result has
   warnings and the spectrum has its own, of the MAF threshold, the list
-  ends with one more, "Warning: The site frequency spectrum has a
-  warning of its own, about the MAF threshold, in its caption." and a
+  ends with one more, "Warning: The site frequency spectrum has one
+  more warning, about the MAF threshold, said in the spectrum's
+  caption." (worded so after the first reader, who could not tell
+  whether it was counted) and a
   link, "Go to the warning of the spectrum", that gives the focus to
   that warning; the heading counts it, "2 warnings", the count of the
   band at the top of the page, whose link lands on that heading

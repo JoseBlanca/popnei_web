@@ -231,7 +231,7 @@ export const LINES_WHAT = "the plot of the spectrum";
 /** The item of the list of the result's warnings on popgen2.html that
     names the spectrum's warning, after "Warning:", before its link. */
 export const SPECTRUM_WARNING_ELSEWHERE =
-  "The site frequency spectrum has a warning of its own, about the MAF threshold, in its caption.";
+  "The site frequency spectrum has one more warning, about the MAF threshold, said in the spectrum's caption.";
 
 /** The words of the link of that item, which gives the focus to the
     spectrum's warning. */
