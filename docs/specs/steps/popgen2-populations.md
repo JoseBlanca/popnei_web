@@ -151,7 +151,9 @@ And these:
 ### The order of the tab
 
 Its heading, an `<h2>`, "Diversity". Under it, in this order: the
-three options; the line of the populations it runs on; Run, Stop or
+three options; before a result, the line of the populations it runs
+on, which the frame of the panel draws only then (said since 12
+October 2026, the review of the Distances tab); Run, Stop or
 Stop recalculating, with the lock beside it; the line in the place of
 the bar; and, once calculated, the result: the warnings, the table,
 its "Download…", the line of the versions, and the block of the
@@ -345,8 +347,10 @@ in the Populations tab and the PCA in the PCA tab to change the
 filters; then press Run in each tab to calculate them again."
 
 The words of the lock of the populations name, beside the diversity,
-only the live analyses that read the populations, none today: the PCA
-does not read them, so a change of the column or of the individuals
+only the live analyses that read the populations, none today (since 12
+October 2026 the distances between populations of the Distances tab
+read them too, and are named beside the diversity,
+`popgen2-distances.md`): the PCA does not read them, so a change of the column or of the individuals
 file sends it no request, and stopping it to make one would end its
 live state for nothing. With the PCA live, they are those of the
 diversity alone, "Stop the diversity in the Populations tab to change
@@ -763,7 +767,8 @@ as the diversity is. The owner's decisions it takes, of 12 October
 
 - **Live, like the others.** After its first Run it is calculated again
   by itself after each change of what it reads, last in the order of
-  the page, after the PCA and the diversity, so that after one change
+  calculation, after the PCA, the diversity and the distances of the
+  Distances tab (the merge of 13 October 2026), so that after one change
   the others start before it; a change of another analysis's own
   options while it runs waits for it, as "While it runs" says
   (corrected on 12 October 2026, the review of the LD decay, where this

@@ -23,12 +23,12 @@ import {
 import type { Project } from "../../../core/project.ts";
 import type { AboutToStart, LiveState } from "../../autoRuns.ts";
 import type { PanelLive } from "../AnalysisPanel.tsx";
-import type { RunWithheld } from "../status.ts";
+import type { LiveAnalysisName, RunWithheld } from "../status.ts";
 import type { LastRun } from "./lastRun.ts";
 import { emptiedLine, unclassifiedLine } from "../diversity/tabWords.ts";
 import { passLockText } from "../pca/passLock.ts";
 import type { PassLock } from "../pca/passLock.ts";
-import { clockText, populationsText } from "../words.ts";
+import { clockText, populationsText, runningUntilEnd } from "../words.ts";
 
 /** The analysis in the middle of a sentence. */
 export const LD_DECAY_TAB_NAME = "the LD decay";
@@ -148,7 +148,7 @@ export function ldDecayTabLock(
     for none: the diversity's lines with "The LD decay". */
 export function ldDecayWaitingLine(
   waits: AboutToStart,
-  before: string | null,
+  before: LiveAnalysisName | null,
 ): string {
   const inAMoment =
     "The LD decay starts in a moment, later if the filters, its options or the populations change.";
@@ -156,11 +156,11 @@ export function ldDecayWaitingLine(
     case "behind":
       return before === null
         ? inAMoment
-        : `The LD decay starts once ${before}, which is running, ends.`;
+        : `The LD decay starts once ${runningUntilEnd(before)}.`;
     case "changes":
       return before === null
         ? inAMoment
-        : `The LD decay starts after ${before}, once the filters, the options and the populations stop changing.`;
+        : `The LD decay starts after ${before.name}, once the filters, the options and the populations stop changing.`;
     case "download":
       return "The LD decay starts again when the download is written or closed.";
     case "afterCrash":
@@ -173,7 +173,7 @@ export function ldDecayWaitingLine(
     state offers no Run, `withheld`, `runWithheldOf` of its status. */
 export function ldDecayPanelLive(
   state: LiveState,
-  before: string | null,
+  before: LiveAnalysisName | null,
   withheld: RunWithheld,
 ): PanelLive {
   switch (state.kind) {

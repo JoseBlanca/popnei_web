@@ -162,6 +162,8 @@ export interface TestPage {
   /** Changes the options of the LD decay, through the gate, as the
       Populations tab does. */
   readonly setLdDecay: (options: Partial<LdDecayOptions>) => void;
+  /** The last request of the distances the fake worker was given. */
+  readonly lastPopDists: () => Request;
 }
 
 /** Makes the test page, whose one pass ends with `summary`, the
@@ -284,6 +286,7 @@ export function page(
     setDiversity,
     lastLdDecay: () => lastOf("ldDecay"),
     setLdDecay,
+    lastPopDists: () => lastOf("popDists"),
   };
   return testPage;
 }
@@ -348,6 +351,24 @@ export function ldDecayResult(): JobResult {
   };
 }
 
+/** A result of the distances between A and B, `s000` and `s001`. */
+export function popDistsResult(): JobResult {
+  return {
+    analysis: "popDists",
+    pops: ["A", "B"],
+    numIndividuals: Uint32Array.from([1, 1]),
+    fst: Float64Array.from([0.1]),
+    dest: Float64Array.from([0.05]),
+    numVarsPerPair: Uint32Array.from([548]),
+    order: {
+      fst: { kind: "file", reason: "twoPopulations" },
+      dest: { kind: "file", reason: "twoPopulations" },
+    },
+    leftOut: [],
+    passStats: { numVars: 548, filtering: {} },
+  };
+}
+
 /** Ends the last request of `analysis` of `testPage` with its result. */
 export async function endLast(
   testPage: TestPage,
@@ -362,6 +383,7 @@ export async function endLast(
     pca: { last: testPage.lastPca, result: () => pcaResult("pca", 548) },
     diversity: { last: testPage.lastDiversity, result: diversityResult },
     ldDecay: { last: testPage.lastLdDecay, result: ldDecayResult },
+    popDists: { last: testPage.lastPopDists, result: popDistsResult },
   };
   const last = ends[analysis].last();
   last.end({ kind: "done", key: last.key, result: ends[analysis].result() });

@@ -17,12 +17,26 @@
  * table does, and while it does, and only then, a line over it says so
  * and the Tab key reaches the frame, a region named by the title of the
  * heatmap, so that the arrow keys scroll it (WCAG 1.4.10 and 2.1.1).
+ *
+ * On popgen2.html it is given a download, and draws its "Download…"
+ * above it, with the images of the heatmap from its handle and its data
+ * as the CSV the screen writes (docs/specs/steps/popgen2-distances.md,
+ * "The result"); and the line that says where the values are, drawn
+ * under it while its cells are too small to hold them, as on a page of
+ * 320 pixels with four populations.
  */
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { createHeatmap, heatmapMargin } from "../../../charts/heatmap.ts";
+import {
+  createHeatmap,
+  heatmapMargin,
+  writesValues,
+} from "../../../charts/heatmap.ts";
 import type { HeatmapData } from "../../../charts/heatmap.ts";
 import { classOf } from "../../classOf.ts";
+import { plotItems } from "../../widgets/downloadItems.ts";
+import type { PlotDownload } from "../../widgets/downloadItems.ts";
+import { DownloadMenu } from "../../widgets/DownloadMenu.tsx";
 import { useSidewaysFrame } from "../../widgets/sidewaysFrame.ts";
 import { usePlot } from "../../widgets/usePlot.ts";
 import styles from "./PopDistsResults.module.css";
@@ -32,9 +46,10 @@ import { HEATMAP_SCROLL_TEXT } from "./words.ts";
  * The least side of the grid, in pixels, below which the element does
  * not shrink: 128, three bands of 43 pixels, which hold the names of
  * the axes and no values. A page 320 pixels wide gives the panel 288,
- * and the heatmap of panel.nei, with names of 2 characters and the
- * legend of "Hudson's Fst", takes 144.4 of them in margins, leaving a
- * grid of 143: at 160 it scrolled sideways. The owner kept it on 1
+ * and the heatmap of panel.nei, with names of 2 characters, took 144.4
+ * of them in margins until 12 October 2026, when the name of the value
+ * moved above the bar, and 101.2 since, leaving a grid of 143 then: at
+ * 160 it scrolled sideways. The owner kept it on 1
  * October 2026 (heatmap.md, "The size").
  */
 const GRID_MIN_WIDTH = 128;
@@ -44,6 +59,14 @@ export interface HeatmapPlotProps {
   /** What the heatmap draws, the same object until the result or the
       measure changes, so that it is not drawn again on every render. */
   readonly data: HeatmapData;
+  /** Its download, whose menu "Download…" stands on a line of its own
+      above the heatmap, as on popgen2.html; none, as on popgen.html, when
+      absent. */
+  readonly download?: PlotDownload;
+  /** The line under the heatmap while its cells are too small to hold
+      their values, which says where they are, as on popgen2.html; none,
+      as on popgen.html, when absent. */
+  readonly valuesLine?: string;
 }
 
 /** The lengths the CSS of the panel reads, by their names there. */
@@ -51,13 +74,41 @@ type HeatmapLengths = React.CSSProperties &
   Record<"--heatmap-least-width" | "--heatmap-beyond-width", string>;
 
 /** The frame of the heatmap, and the heatmap in it. */
-export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
+export function HeatmapPlot({
+  data,
+  download,
+  valuesLine,
+}: HeatmapPlotProps): React.JSX.Element {
   const frameRef = useRef<HTMLDivElement>(null);
-  const { ref: containerRef } = usePlot(createHeatmap, data);
+  const { ref: containerRef, handle } = usePlot(createHeatmap, data);
+  // The items read the handle at the choice, so they are made again only
+  // when the download changes.
+  const items = useMemo(
+    () => (download === undefined ? null : plotItems(download, handle)),
+    [download, handle],
+  );
   // Whether the heatmap is wider than its frame, which the browser
   // measures and React does not, and what the frame is then.
   const frame = useSidewaysFrame(frameRef);
   const scrolls = frame.scrolls;
+  // Whether the cells hold their values, at the size the browser gives
+  // the element, which React does not know: measured as the heatmap
+  // measures it, its content box.
+  const [holdsValues, setHoldsValues] = useState(true);
+  useEffect(() => {
+    const element = containerRef.current;
+    if (element === null || valuesLine === undefined) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        setHoldsValues(writesValues(data, { width, height }));
+      }
+    });
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, [containerRef, data, valuesLine]);
 
   // The margins with the names, which the heatmap keeps down to this
   // width, and by which its height exceeds its width: a grid as wide as
@@ -74,6 +125,15 @@ export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
 
   return (
     <div className={classOf(styles, "heatmapFrame")}>
+      {download !== undefined && items !== null && (
+        <div>
+          <DownloadMenu
+            what={download.what}
+            items={items}
+            waiting={download.waiting}
+          />
+        </div>
+      )}
       {scrolls && (
         <p className={classOf(styles, "scrollLine")}>{HEATMAP_SCROLL_TEXT}</p>
       )}
@@ -95,6 +155,9 @@ export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
           style={lengths}
         />
       </div>
+      {valuesLine !== undefined && !holdsValues && (
+        <p className={classOf(styles, "line")}>{valuesLine}</p>
+      )}
     </div>
   );
 }

@@ -80,9 +80,11 @@ describe("PA5 D1 the commands of the options of the distances", () => {
 
 describe("PA5 D1 a change of the measure is announced only over a heatmap", () => {
   test("done with 200 populations or fewer, the heatmap of the measure", () => {
-    expect(measureAnnouncement(done(3), "dest")).toBe("Heatmap of Jost's D");
+    expect(measureAnnouncement(done(3), "dest")).toBe(
+      "The heatmap now shows Jost's D.",
+    );
     expect(measureAnnouncement(done(200), "fst")).toBe(
-      "Heatmap of Hudson's Fst",
+      "The heatmap now shows Hudson's Fst.",
     );
   });
 

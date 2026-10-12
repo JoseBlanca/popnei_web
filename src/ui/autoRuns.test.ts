@@ -7,7 +7,12 @@ import {
   diversityOnPopgen2,
   diversityOptions,
 } from "../core/analyses/diversity.ts";
+import { ldDecayOnPopgen2, ldDecayOptions } from "../core/analyses/ldDecay.ts";
 import { pcaOnPopgen2, pcaOptions } from "../core/analyses/pca.ts";
+import {
+  popDistsOnPopgen2,
+  popDistsOptions,
+} from "../core/analyses/popDists.ts";
 import { POPGEN2_LIVE, countsOf, firstProject } from "../core/apps.ts";
 import { keyFromWire } from "../core/keys.ts";
 import {
@@ -33,6 +38,7 @@ import type {
   WriteJob,
 } from "../worker/protocol.ts";
 import { LIVE_QUIET_MS, createAutoRuns } from "./autoRuns.ts";
+import { ldDecayResult, popDistsResult } from "./band/testSupport.ts";
 import type { AutoRuns, LiveEvent } from "./autoRuns.ts";
 import {
   POPGEN2_AUTO_GROUPS,
@@ -1812,12 +1818,13 @@ describe("PT1 D2 several analyses calculated again by themselves", () => {
     vi.useRealTimers();
   });
 
-  test("the page's groups are the one pass, the PCA and the diversity, and its live analyses the PCA and then the diversity", () => {
-    expect(POPGEN2_LIVE).toEqual(["pca", "diversity", "ldDecay"]);
+  test("the page's groups are the one pass, the PCA, the diversity, the distances and the LD decay, and its live analyses in that order, the LD decay last", () => {
+    expect(POPGEN2_LIVE).toEqual(["pca", "diversity", "popDists", "ldDecay"]);
     expect(POPGEN2_AUTO_GROUPS).toEqual([
       ["variantsSummary"],
       ["pca"],
       ["diversity"],
+      ["popDists"],
       ["ldDecay"],
     ]);
   });
@@ -2406,5 +2413,236 @@ describe("run's answers: a Run that waits after a Stop of the same key", () => {
     await page.endPca();
     expect(diversityRequests(page)).toHaveLength(3);
     expect(runningNow(page)).toEqual([DIV]);
+  });
+});
+
+/** The measure of the heatmap of the distances set to `measure`, and the
+    colour, the axes and the view of the PCA changed, as their options
+    parts do: changes of the project that no key holds. */
+function changeWhatNoKeyHolds(page: LivePage, measure: "fst" | "dest"): void {
+  page.store.apply("the measure of the heatmap changed", (p) =>
+    setAnalysisOptions(p, popDistsOnPopgen2, {
+      ...popDistsOptions(p),
+      measure,
+    }),
+  );
+  page.store.apply("the view of the PCA changed", (p) => {
+    const o = pcaOptions(p, "popgen2");
+    return setAnalysisOptions(p, pcaOnPopgen2, {
+      ...o,
+      colourBy: o.colourBy === null ? "pop" : null,
+      axes: [o.axes[0], o.axes[2], o.axes[1]],
+      view: o.view === "3d" ? "2d" : "3d",
+    });
+  });
+}
+
+describe("a change for the live analyses is one of a key or of a lock (the review of the Distances tab, 12 October 2026)", () => {
+  const DIV = diversityOnPopgen2.id;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("during the quiet second, a change of the measure of the heatmap or of the view of the PCA does not put the start off", async () => {
+    const page = await liveDone();
+    page.setMissing(0.05);
+    await wait(600);
+    const before = page.pca();
+    changeWhatNoKeyHolds(page, "dest");
+    expect(keyOf(page.pca())).toBe(keyOf(before));
+    await wait(399);
+    expect(page.pcaRequests()).toHaveLength(1);
+    await wait(1);
+    expect(page.pcaRequests()).toHaveLength(2);
+  });
+
+  test("after a crash holds the diversity, a change of the measure of the heatmap or of the view of the PCA leaves the hold, and a change of a threshold lifts it", async () => {
+    const individuals = Array.from(
+      { length: 2264 },
+      (_, i) => `s${String(i).padStart(4, "0")}`,
+    );
+    const page = await bothLiveDone(individuals);
+    page.setMissing(0.05);
+    await wait(1000);
+    await page.endPca({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    expect(page.auto.aboutToStart(DIV)).toBe("afterCrash");
+    changeWhatNoKeyHolds(page, "dest");
+    expect(page.auto.aboutToStart(DIV)).toBe("afterCrash");
+    await wait(10_000);
+    expect(diversityRequests(page)).toHaveLength(1);
+    changeWhatNoKeyHolds(page, "fst");
+    await wait(10_000);
+    expect(diversityRequests(page)).toHaveLength(1);
+    page.setMissing(0.04);
+    expect(page.auto.aboutToStart(DIV)).toBe("changes");
+    await wait(1000);
+    expect(diversityRequests(page)).toHaveLength(2);
+  });
+});
+
+/** The requests of the analysis `id` the fake worker was sent. */
+function requestsOf(page: LivePage, id: string): readonly LiveRequest[] {
+  return page.requests.filter(
+    (r) => "analysis" in r.job && r.job.analysis === id,
+  );
+}
+
+/** The analyses of the requests sent from the `from`-th on, in their
+    order. */
+function sentSince(page: LivePage, from: number): readonly string[] {
+  return page.requests
+    .slice(from)
+    .map((r) => ("analysis" in r.job ? r.job.analysis : "write"));
+}
+
+/** The largest distance of the LD decay set to `value`, as its options
+    part does. */
+function setLdDistance(page: LivePage, value: number): void {
+  page.store.apply("the largest distance of the LD decay changed", (p) =>
+    setAnalysisOptions(p, ldDecayOnPopgen2, {
+      ...ldDecayOptions(p),
+      maxDist: value,
+    }),
+  );
+}
+
+/** Ends the last request of the live analysis `id` with its result. */
+async function endLive(
+  page: LivePage,
+  id: "pca" | "diversity" | "popDists" | "ldDecay",
+): Promise<void> {
+  if (id === "pca") {
+    await page.endPca();
+    return;
+  }
+  if (id === "diversity") {
+    await endDiversity(page);
+    return;
+  }
+  const last = requestsOf(page, id).at(-1);
+  if (last === undefined) throw new Error(`no ${id} was sent`);
+  last.end({
+    kind: "done",
+    key: last.key,
+    result: id === "popDists" ? popDistsResult() : ldDecayResult(),
+  });
+  await flush();
+}
+
+/** The page with the populations A and B, the minimums at 1 and the
+    largest distance of the LD decay typed, and the four analyses that
+    can be live run by their Runs in the order of the tabs, the PCA, the
+    diversity, the LD decay and the distances, and ended with their
+    results, all live. */
+async function fourLiveDone(): Promise<LivePage> {
+  const page = await livePage();
+  await withPopulations(page);
+  page.store.apply("the options of the diversity changed", (p) =>
+    setAnalysisOptions(p, diversityOnPopgen2, {
+      ...diversityOptions(p),
+      minNumIndividuals: 1,
+      numCalledAlleles: 2,
+    }),
+  );
+  page.store.apply("the minimum of the distances changed", (p) =>
+    setAnalysisOptions(p, popDistsOnPopgen2, {
+      ...popDistsOptions(p),
+      minNumIndividuals: 1,
+    }),
+  );
+  setLdDistance(page, 100_000);
+  await flush();
+  for (const id of ["pca", "diversity", "ldDecay", "popDists"] as const) {
+    expect(page.auto.run(id)).toBe("started");
+    await endLive(page, id);
+  }
+  for (const id of POPGEN2_LIVE) {
+    expect(page.auto.liveState(id).kind).toBe("live");
+  }
+  page.told.length = 0;
+  return page;
+}
+
+describe("the four live analyses after the merge of the LD decay and the distances (13 October 2026)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("after one change of a threshold they run in the order of calculation, the PCA, the diversity, the distances and the LD decay last, the distances not waiting for the LD decay", async () => {
+    const page = await fourLiveDone();
+    const from = page.requests.length;
+    page.setMissing(0.05);
+    await wait(1000);
+    expect(runningNow(page)).toEqual(["pca"]);
+    await endLive(page, "pca");
+    expect(runningNow(page)).toEqual(["diversity"]);
+    await endLive(page, "diversity");
+    // The distances start as the diversity ends, with the LD decay still
+    // about to start behind them.
+    expect(runningNow(page)).toEqual(["popDists"]);
+    expect(page.auto.aboutToStart("ldDecay")).toBe("behind");
+    await endLive(page, "popDists");
+    expect(runningNow(page)).toEqual(["ldDecay"]);
+    await endLive(page, "ldDecay");
+    expect(sentSince(page, from)).toEqual([
+      "pca",
+      "diversity",
+      "popDists",
+      "ldDecay",
+    ]);
+    expect(page.told[0]).toEqual({
+      kind: "startedByItself",
+      id: "pca",
+      round: ["pca", "diversity", "popDists", "ldDecay"],
+    });
+  });
+
+  test("a change of what no key holds, or of a threshold switched off, neither puts the start off nor lifts the LD decay's hold after a crash; a change of the LD decay's own option lifts it", async () => {
+    const page = await fourLiveDone();
+    // A threshold switched off, kept with its value in filtersOff, which
+    // no key holds, changed.
+    const switchedOff = (value: number): void => {
+      page.store.apply("a threshold switched off changed", (p) => ({
+        ...p,
+        filtersOff: [
+          { kind: "maf", maxAllowedMaf: value },
+          ...p.filtersOff.filter((f) => f.kind !== "maf"),
+        ],
+      }));
+    };
+    const pcas = page.pcaRequests().length;
+    page.setMissing(0.05);
+    await wait(600);
+    switchedOff(0.9);
+    changeWhatNoKeyHolds(page, "dest");
+    await wait(399);
+    expect(page.pcaRequests()).toHaveLength(pcas);
+    await wait(1);
+    expect(page.pcaRequests()).toHaveLength(pcas + 1);
+    await endLive(page, "pca");
+    // A crash of the diversity ends its live state and holds the others.
+    await endDiversity(page, {
+      kind: "failed",
+      error: { kind: "workerFailed", message: "a crash" },
+    });
+    expect(page.auto.aboutToStart("ldDecay")).toBe("afterCrash");
+    const sent = requestsOf(page, "ldDecay").length;
+    switchedOff(0.8);
+    changeWhatNoKeyHolds(page, "fst");
+    expect(page.auto.aboutToStart("ldDecay")).toBe("afterCrash");
+    await wait(10_000);
+    expect(requestsOf(page, "ldDecay")).toHaveLength(sent);
+    setLdDistance(page, 80_000);
+    expect(page.auto.aboutToStart("ldDecay")).toBe("changes");
   });
 });

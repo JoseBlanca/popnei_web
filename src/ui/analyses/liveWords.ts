@@ -11,6 +11,7 @@
  */
 import { escaped } from "../../core/project.ts";
 import type { LiveAnalysisName } from "./status.ts";
+import { inTabOrder } from "./tabOrder.ts";
 import { eachInItsTab } from "./words.ts";
 
 /** The analyses `names`, in their order, joined as a sentence names
@@ -70,7 +71,8 @@ export interface StoppedByAll {
 
 /**
  * What the status region says at Stop all, which ended the live state of
- * the analyses `stopped`, two or more in their order: "Stopped: the PCA
+ * the analyses `stopped`, two or more, named in the order of the tabs
+ * whatever their order: "Stopped: the PCA
  * and the diversity no longer start by themselves.", and, as a Stop in
  * one tab says it, Run to press only in the tabs that offer it: "Press
  * Run in their tabs to calculate them again." when all do, "Press Run in
@@ -79,11 +81,14 @@ export interface StoppedByAll {
  * analyses calculated again by themselves", "The status region").
  */
 export function stopAllText(stopped: readonly StoppedByAll[]): string {
+  const ordered = inTabOrder(
+    stopped.map((one) => ({ id: one.named.id, one })),
+  ).map(({ one }) => one);
   const first = `Stopped: ${joined(
-    stopped.map((one) => one.named.name),
+    ordered.map((one) => one.named.name),
     false,
   )} no longer start by themselves.`;
-  const offered = stopped
+  const offered = ordered
     .filter((one) => one.runOffered)
     .map((one) => one.named);
   const [only] = offered;

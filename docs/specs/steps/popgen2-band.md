@@ -59,6 +59,11 @@ and 16 presses of the Tab key away, so the band keeps the LD decay's Stop and
 Stop recalculating while the Populations tab is shown ("The LD decay",
 "The tab shown").
 
+Revised on 12 October 2026 for the Distances tab
+(`docs/plans/distances-tab.md`): the band names the distances between
+populations as a further live analysis, "Distances", with its verbs in
+the plural ("Several live analyses", "The distances").
+
 Revised on 11 October 2026 for `docs/designs/population-tab.md`,
 approved by the owner that day with the recommendations of its two open
 points, which brings the diversity of the Populations tab as a second
@@ -451,6 +456,24 @@ and Stop all take 282 px of the 288 at 320 px, where with three
 quarters of a rem they took 314 and the clock was cut, "Diversity · …"
 (12 October 2026, the review of work package 4). At 45 em and wider
 nothing changes.
+
+**The distances**, from 12 October 2026 (`popgen2-distances.md`,
+`docs/plans/distances-tab.md`), are a further live analysis, last in
+the order of the tabs, named by the band as the others, "Distances",
+in the Distances tab, with the verb in the plural where an analysis
+alone is the subject: "Distances running · 0:12"; "PCA running · 1:20
+· then the diversity and the distances"; "The distances start in a
+moment", "The distances start after the next change", "The distances
+start after the download"; "The PCA and the distances start in a
+moment"; "Stopping the distances…"; "Distances: 1 warning, in the
+Distances tab"; "Distances: could not be calculated, in the Distances
+tab"; the short forms "Distances · 0:12", "Distances soon", "Distances
+later", "Distances: 2 warnings", "Distances: failed"; the names of the
+buttons "Stop the distances", "Stop recalculating the distances",
+"Stop all: the PCA and the distances". "Distances" and "Diversity" are
+words of nine letters, so the short forms fit at 320 px as the
+diversity's do; a flow of `e2e/popgen2Distances.spec.ts` checks
+"Popnei", "Distances · 0:0…", Stop and Stop all on one line at 320 px.
 
 ### An error of the application
 
@@ -1100,3 +1123,5 @@ in the band, which the heading line had at `--text-xl`.
 - The error bar of `popgen.html`: `docs/specs/shell.md`.
 - The tabs of the Populations and the Distances, not built: when they
   have results with warnings, the link names them as it names the PCA's.
+  Both are built since 11 and 12 October 2026 (`popgen2-populations.md`,
+  `popgen2-distances.md`).

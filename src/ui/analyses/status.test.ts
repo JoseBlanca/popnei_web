@@ -91,12 +91,14 @@ describe("PT1 D7 the live analyses of popgen2.html as the words name them", () =
       name: "the PCA",
       tab: "PCA",
       readsPopulations: false,
+      plural: false,
     });
     expect(liveAnalysisOf(state, "diversity")).toStrictEqual({
       id: "diversity",
       name: "the diversity",
       tab: "Populations",
       readsPopulations: true,
+      plural: false,
     });
     expect(liveAnalysisOf(state, "diversity")).toBe(
       liveAnalysisOf(state, "diversity"),

@@ -72,7 +72,9 @@ export type TableProps = TableLook &
       }
     | {
         /** Its rows, each with its values as stored, which the CSV holds
-            in place of what is shown. */
+            in place of what is shown, unless the download gives a CSV of
+            its own, `TableDownload.csv`, as the table of the distances
+            between populations does. */
         readonly rows: readonly (TableRow & RowValues)[];
         /** The download of the table, which draws the menu "Download…"
             below it. */
@@ -133,8 +135,13 @@ export function Table(props: TableProps): React.JSX.Element {
         items={[
           tableItem(
             props.download.fileName,
-            columns.map((column) => column.label),
-            props.rows,
+            props.download.csv === undefined
+              ? {
+                  kind: "rows",
+                  header: columns.map((column) => column.label),
+                  rows: props.rows,
+                }
+              : { kind: "csv", csv: props.download.csv },
           ),
         ]}
         waiting={props.download.waiting}

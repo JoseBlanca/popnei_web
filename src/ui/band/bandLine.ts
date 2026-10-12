@@ -10,9 +10,8 @@
  * shown; and, under it, the line of an error of the application, in the
  * words of the error bar of popgen.html.
  *
- * The live analyses of `POPGEN2_LIVE`, the PCA, the diversity and the LD
- * decay, each live once its Run is pressed, are named alike ("Several
- * live analyses"): the one running, with those that
+ * The live analyses of `POPGEN2_LIVE`, each live once its Run is pressed,
+ * are named alike ("Several live analyses"): the one running, with those that
  * wait after it; those about to start together; the first result of the
  * order of the tabs with warnings or an error, in a tab not shown. While
  * one is about to start alone, the band offers its "Stop recalculating"
@@ -39,6 +38,7 @@ import type { AnalysisTabId, PageTab } from "../../core/popgen2Tabs.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult, PcaMethod } from "../../worker/protocol.ts";
 import { liveAnalysisOf, statusOf } from "../analyses/status.ts";
+import { POPGEN2_LIVE_IN_TABS } from "../analyses/tabOrder.ts";
 import type { LiveAnalysisName } from "../analyses/status.ts";
 import { titleOf } from "../analyses/titles.ts";
 import { progressShare } from "../analyses/words.ts";
@@ -66,6 +66,7 @@ export const LIVE_TABS: Readonly<Record<Popgen2LiveId, AnalysisTabId>> =
     pca: "pca",
     diversity: "populations",
     ldDecay: "populations",
+    popDists: "distances",
   });
 
 /** The live analyses whose part comes after another's in their tab,
@@ -200,6 +201,7 @@ export function liveStatesOf(
   return {
     pca: live.liveState("pca"),
     diversity: live.liveState("diversity"),
+    popDists: live.liveState("popDists"),
     ldDecay: live.liveState("ldDecay"),
   };
 }
@@ -287,9 +289,13 @@ export function lineOf(page: BandPage): BandLine {
     };
   }
 
+  // In the order of calculation, for those that wait after the one
+  // running, "then …"; Stop all and those about to start together are
+  // named in the order of the tabs.
   const live = POPGEN2_LIVE.filter((id) => page.live[id].kind === "live");
+  const liveInTabs = POPGEN2_LIVE_IN_TABS.filter((id) => live.includes(id));
   const stopAll =
-    live.length >= 2 ? live.map((id) => liveAnalysisOf(state, id)) : null;
+    live.length >= 2 ? liveInTabs.map((id) => liveAnalysisOf(state, id)) : null;
 
   // Each tab shows its own Stop and Stop recalculating; the band offers
   // them while another tab is shown.
@@ -319,16 +325,22 @@ export function lineOf(page: BandPage): BandLine {
   }
 
   // Those about to start that wait for the same as the first, so that
-  // the line says one thing true of each. With the PCA and the diversity
-  // they never wait for different things: a Run lifts the hold of a
-  // crash for its own analysis and starts it at once, and a change of
-  // the project lifts it for all; with a third live analysis, one may
-  // wait for the next change while another, run since the crash, waits
-  // for a change under way. Over a Stop under way of another, so that
+  // the line says one thing true of each. However many analyses are
+  // live, two about to start never wait for different things, as the
+  // review of the Distances tab settled on 12 October 2026: "behind"
+  // needs one running, and the line is then that of the running one;
+  // "download" and "changes" are decided for all alike, by the dialog,
+  // the write and the changes under way; and "afterCrash" holds every
+  // one but those Run since the crash. A Run starts its own at once, or
+  // finds it done or locked, and it is about to start again only under
+  // a new key, which comes only from a change of the project that
+  // changes a key, and that lifts the hold for all (autoRuns.ts); the
+  // locks the store lifts with no change of the project are the one
+  // pass's, during which Run is locked. Over a Stop under way of another, so that
   // the band keeps their Stop recalculating within the quiet second the
   // Stop starts again (WCAG 2.2.1).
   const stopped = state.stoppedAwaitingWorker;
-  const about = live.filter(
+  const about = liveInTabs.filter(
     (id) => id !== stopped && aboutToStartOf(page.live[id]) !== null,
   );
   const [first] = about;
@@ -366,7 +378,7 @@ export function lineOf(page: BandPage): BandLine {
 
   // The first result of the order of the tabs with warnings or an
   // error, in a tab not shown.
-  for (const id of POPGEN2_LIVE) {
+  for (const id of POPGEN2_LIVE_IN_TABS) {
     const tab = LIVE_TABS[id];
     if (page.tab === tab) continue;
     const status = statusOf(state, id);

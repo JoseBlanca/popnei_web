@@ -8,6 +8,7 @@
 import { diversityOnPopgen2 } from "../../core/analyses/diversity.ts";
 import { ldDecayOnPopgen2 } from "../../core/analyses/ldDecay.ts";
 import { pcaMethodOf, pcaOnPopgen2 } from "../../core/analyses/pca.ts";
+import { popDistsOnPopgen2 } from "../../core/analyses/popDists.ts";
 import { POPGEN2_LIVE, isPopgen2Live } from "../../core/apps.ts";
 import type { Popgen2LiveId } from "../../core/apps.ts";
 import type { AnalysisId } from "../../core/project.ts";
@@ -15,6 +16,7 @@ import type { AnalysisStatus, AppState, Notice } from "../../core/store.ts";
 import type { JobResult, PcaMethod } from "../../worker/protocol.ts";
 import type { AutoRuns, LiveState } from "../autoRuns.ts";
 import { methodName } from "./pca/words.ts";
+import { POPGEN2_LIVE_IN_TABS } from "./tabOrder.ts";
 
 /** The state of the analysis `id` in `s`; a defect when the store has
     none. */
@@ -138,7 +140,7 @@ export function stoppedNotice(
     analyses calculated again by themselves"). */
 export interface LiveAnalysisName {
   /** Its id in the store, one of `POPGEN2_LIVE`: "pca", "diversity",
-      "ldDecay". */
+      "popDists", "ldDecay". */
   readonly id: AnalysisId;
   /** The analysis in the middle of a sentence: "the PCA", "the PCoA",
       "the diversity". */
@@ -149,6 +151,12 @@ export interface LiveAnalysisName {
       populations, the individuals file and how it is read wait while it
       runs (`populationsLockOf` of src/ui/variants/filtersLock.ts). */
   readonly readsPopulations: boolean;
+  /** Whether it is named in the plural, "the distances", which the
+      sentences that name it give a verb and a pronoun in the plural,
+      "the distances run", "stop them"; false for one named in the
+      singular. Required, so that an analysis added to the page does not
+      compile without saying it. */
+  readonly plural: boolean;
 }
 
 /** The PCA by its method, the same object for the same method,
@@ -163,12 +171,14 @@ const PCA_NAMES: Readonly<Record<PcaMethod, LiveAnalysisName>> = Object.freeze({
     name: `the ${methodName("pca")}`,
     tab: "PCA",
     readsPopulations: false,
+    plural: false,
   }),
   pcoa: Object.freeze({
     id: pcaOnPopgen2.id,
     name: `the ${methodName("pcoa")}`,
     tab: "PCA",
     readsPopulations: false,
+    plural: false,
   }),
 });
 
@@ -178,6 +188,17 @@ const DIVERSITY_NAMES: LiveAnalysisName = Object.freeze({
   name: "the diversity",
   tab: "Populations",
   readsPopulations: true,
+  plural: false,
+});
+
+/** The distances between populations of the Distances tab, which read
+    the populations and are named in the plural. */
+const DISTANCES_NAMES: LiveAnalysisName = Object.freeze({
+  id: popDistsOnPopgen2.id,
+  name: "the distances",
+  tab: "Distances",
+  readsPopulations: true,
+  plural: true,
 });
 
 /** The LD decay of the Populations tab, which reads the populations
@@ -187,6 +208,7 @@ const LD_DECAY_NAMES: LiveAnalysisName = Object.freeze({
   name: "the LD decay",
   tab: "Populations",
   readsPopulations: true,
+  plural: false,
 });
 
 /** How the words of the page name each analysis that can be live in
@@ -197,6 +219,7 @@ const LIVE_NAMES: Readonly<
 > = Object.freeze({
   pca: (s) => PCA_NAMES[pcaMethodOf(s.project, "popgen2")],
   diversity: () => DIVERSITY_NAMES,
+  popDists: () => DISTANCES_NAMES,
   ldDecay: () => LD_DECAY_NAMES,
 });
 
@@ -230,8 +253,8 @@ export function runningAnalysisOf(
 }
 
 /** The live analyses of the page other than `running`, live beside it,
-    in their order, as `isLive` of `live` tells: those a Stop all stops
-    too. */
+    in the order of the tabs, as `isLive` of `live` tells: those a Stop
+    all stops too. */
 export function liveBeside(
   s: AppState<JobResult, unknown>,
   running: LiveAnalysisName,
@@ -239,7 +262,7 @@ export function liveBeside(
 ): readonly LiveAnalysisName[] {
   return namedOf(
     s,
-    POPGEN2_LIVE.filter((id) => id !== running.id && live.isLive(id)),
+    POPGEN2_LIVE_IN_TABS.filter((id) => id !== running.id && live.isLive(id)),
   );
 }
 
@@ -269,13 +292,15 @@ function namedOf(
 
 /** The analysis the line of waiting of the live state `state` names
     in `s`, as the words of the page name it, "the PCA", "the
-    diversity": the one `after` holds, that runs or is about to start
-    before it; `null` for none. */
+    distances", with its number, so that the line gives it its verb: the
+    one `after` holds, that runs or is about to start before it; `null`
+    for none. The same object for the same analysis and method, so that
+    a selector may return it. */
 export function waitsAfterName(
   s: AppState<JobResult, unknown>,
   state: LiveState,
-): string | null {
+): LiveAnalysisName | null {
   return state.kind === "live" && state.after !== null
-    ? liveAnalysisOf(s, state.after).name
+    ? liveAnalysisOf(s, state.after)
     : null;
 }

@@ -31,8 +31,8 @@ import { passLockText } from "../pca/passLock.ts";
 import type { PassLock } from "../pca/passLock.ts";
 import type { AboutToStart, LiveState } from "../../autoRuns.ts";
 import type { PanelLive } from "../AnalysisPanel.tsx";
-import type { RunWithheld } from "../status.ts";
-import { populationsText } from "../words.ts";
+import type { LiveAnalysisName, RunWithheld } from "../status.ts";
+import { populationsText, runningUntilEnd } from "../words.ts";
 import { minimumAndDrawLines } from "./words.ts";
 
 /** The analysis in the middle of a sentence. */
@@ -210,7 +210,7 @@ export function diversityTabLock(
  */
 export function diversityWaitingLine(
   waits: AboutToStart,
-  before: string | null,
+  before: LiveAnalysisName | null,
 ): string {
   const inAMoment =
     "The diversity starts in a moment, later if the filters, its options or the populations change.";
@@ -218,11 +218,11 @@ export function diversityWaitingLine(
     case "behind":
       return before === null
         ? inAMoment
-        : `The diversity starts once ${before}, which is running, ends.`;
+        : `The diversity starts once ${runningUntilEnd(before)}.`;
     case "changes":
       return before === null
         ? inAMoment
-        : `The diversity starts after ${before}, once the filters, the options and the populations stop changing.`;
+        : `The diversity starts after ${before.name}, once the filters, the options and the populations stop changing.`;
     case "download":
       return "The diversity starts again when the download is written or closed.";
     case "afterCrash":
@@ -238,7 +238,7 @@ export function diversityWaitingLine(
     first two name a Run only while the state offers it. */
 export function diversityPanelLive(
   state: LiveState,
-  before: string | null,
+  before: LiveAnalysisName | null,
   withheld: RunWithheld,
 ): PanelLive {
   switch (state.kind) {

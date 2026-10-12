@@ -5,3 +5,11 @@
   gap: var(--space-4);
   inline-size: 100%;
 }
+
+/* The line under the radio buttons of the measure. */
+.line {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  max-inline-size: 60ch;
+}

@@ -3,7 +3,8 @@
  * store, away from the focus: the file read, its count, the statistics
  * of the open file, the sentence of no variant that takes the place
  * of the button of the download after a change of the filters, and the
- * end of a run of the PCA or of the diversity, whichever tab is shown. The
+ * end of a run of each live analysis, `POPGEN2_LIVE`, whichever tab is
+ * shown. The
  * entry calls it once, before the page is drawn; a test calls it over the
  * store of the page and the section alone.
  */
@@ -30,6 +31,12 @@ import {
   runWaitedText,
   stopAllText,
 } from "../analyses/liveWords.ts";
+import {
+  DISTANCES_HELD_AFTER_CRASH,
+  DISTANCES_STARTED_BY_ITSELF,
+  distancesEndAnnouncement,
+  distancesStoppedText,
+} from "../analyses/popDists/liveWords.ts";
 import {
   pcaEndAnnouncement,
   pcaHeldAfterCrashText,
@@ -91,6 +98,14 @@ const LIVE_SAID: Readonly<Record<Popgen2LiveId, LiveSaid>> = Object.freeze({
     heldAfterCrash: () => DIVERSITY_HELD_AFTER_CRASH,
     stopped: (_s: AppState<JobResult, Blob>, runOffered: boolean) =>
       diversityStoppedText(runOffered),
+  }),
+  popDists: Object.freeze({
+    runKind: "popDistsRun",
+    end: distancesEndAnnouncement,
+    startedAlone: () => DISTANCES_STARTED_BY_ITSELF,
+    heldAfterCrash: () => DISTANCES_HELD_AFTER_CRASH,
+    stopped: (_s: AppState<JobResult, Blob>, runOffered: boolean) =>
+      distancesStoppedText(runOffered),
   }),
   ldDecay: Object.freeze({
     runKind: "ldDecayRun",

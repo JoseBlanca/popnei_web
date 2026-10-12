@@ -32,6 +32,7 @@ import type {
   TableFormat,
 } from "../../worker/protocol.ts";
 import type { LiveAnalysisName } from "../analyses/status.ts";
+import { withVerb } from "../analyses/words.ts";
 import { firstSheetText, sizeText } from "../steps/individuals/words.ts";
 import { chainButton, chainStatuses } from "./chain.ts";
 
@@ -129,7 +130,7 @@ export function notOpenedWhileRunningText(
   name: string,
   running: LiveAnalysisName,
 ): string {
-  return `${escaped(name)} was not opened: the populations cannot change while ${running.name} runs. Stop ${running.name} in the ${running.tab} tab, then open ${escaped(name)} again.`;
+  return `${escaped(name)} was not opened: the populations cannot change while ${withVerb(running, "runs", "run")}. Stop ${running.name} in the ${running.tab} tab, then open ${escaped(name)} again.`;
 }
 
 /** The label of the list of the column of the populations, and its first

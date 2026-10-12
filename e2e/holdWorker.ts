@@ -34,8 +34,9 @@
  *
  * Asked to, it holds the diversity as the PCA, for the Populations tab
  * of popgen2.html: its result kept back until a release of "diversity",
- * which lets it through and holds no diversity after it; and the LD
- * decay the same, released by "ldDecay".
+ * which lets it through and holds no diversity after it; the LD decay
+ * the same, released by "ldDecay"; and the distances between populations
+ * the same, for the Distances tab, until a release of "popDists".
  *
  * A release sent before the worker's script has made its channel would
  * be lost, as right after a file is picked, while the page makes the
@@ -66,7 +67,8 @@ export type Release =
   | "pca"
   | "diversity"
   | "ldDecay"
-  | "holdPcaAgain";
+  | "holdPcaAgain"
+  | "popDists";
 
 /** What a worker says on the channel once it listens. */
 const LISTENING = "listening";
@@ -97,26 +99,41 @@ function countWorkers([channelName, listening, counts]: readonly [
   };
 }
 
-/** The lines in front of the worker's script; `holdWrite`, whether a
-    write is held after its first report of progress; `holdPca`, whether
-    the result of a PCA is held; `holdDiversity`, that of a diversity. */
-const front = (
-  holdWrite: boolean,
-  holdPca: boolean,
-  holdDiversity: boolean,
-  holdLdDecay: boolean,
-): string => `{
+/** What the worker's script holds, as `holdSummary` takes it, each
+    given: `holdWrite`, whether a write is held after its first report of
+    progress; `holdPca`, whether the result of a PCA is held;
+    `holdDiversity`, that of a diversity; `holdLdDecay`, that of an LD
+    decay; `holdPopDists`, that of the distances. One object, so that a
+    branch that adds a hold adds one field and touches no other's place. */
+interface Holds {
+  readonly holdWrite: boolean;
+  readonly holdPca: boolean;
+  readonly holdDiversity: boolean;
+  readonly holdLdDecay: boolean;
+  readonly holdPopDists: boolean;
+}
+
+/** The lines in front of the worker's script, holding what `holds`
+    says. */
+const front = ({
+  holdWrite,
+  holdPca,
+  holdDiversity,
+  holdLdDecay,
+  holdPopDists,
+}: Holds): string => `{
   const realNow = performance.now.bind(performance);
   performance.now = () => realNow() * 1e6;
   const realPost = self.postMessage.bind(self);
   const held = { soFar: [], result: [] };
-  const holding = { soFar: true, result: true, write: ${JSON.stringify(holdWrite)}, pca: ${JSON.stringify(holdPca)}, diversity: ${JSON.stringify(holdDiversity)}, ldDecay: ${JSON.stringify(holdLdDecay)} };
+  const holding = { soFar: true, result: true, write: ${JSON.stringify(holdWrite)}, pca: ${JSON.stringify(holdPca)}, diversity: ${JSON.stringify(holdDiversity)}, ldDecay: ${JSON.stringify(holdLdDecay)}, popDists: ${JSON.stringify(holdPopDists)} };
   const heldLdDecay = [];
   const ofLdDecay = (m) =>
     m !== null && typeof m === "object" && m.kind === "result" &&
     m.result !== null && typeof m.result === "object" && m.result.analysis === "ldDecay";
   const heldPca = [];
   const heldDiversity = [];
+  const heldPopDists = [];
   const writes = new Set();
   const heldWrite = [];
   const reported = new Set();
@@ -130,6 +147,9 @@ const front = (
   const ofDiversity = (m) =>
     m !== null && typeof m === "object" && m.kind === "result" &&
     m.result !== null && typeof m.result === "object" && m.result.analysis === "diversity";
+  const ofPopDists = (m) =>
+    m !== null && typeof m === "object" && m.kind === "result" &&
+    m.result !== null && typeof m.result === "object" && m.result.analysis === "popDists";
   const ofSummary = (m) =>
     m !== null && typeof m === "object" && m.result !== null &&
     typeof m.result === "object" && m.result.analysis === "variantsSummary";
@@ -157,6 +177,11 @@ const front = (
     if (release === "ldDecay") {
       holding.ldDecay = false;
       for (const [m, t] of heldLdDecay.splice(0)) realPost(m, t);
+      return;
+    }
+    if (release === "popDists") {
+      holding.popDists = false;
+      for (const [m, t] of heldPopDists.splice(0)) realPost(m, t);
       return;
     }
     if (release === "write") {
@@ -198,6 +223,10 @@ const front = (
       heldLdDecay.push([m, t]);
       return;
     }
+    if (holding.popDists && ofPopDists(m)) {
+      heldPopDists.push([m, t]);
+      return;
+    }
     if (ofSummary(m) && (m.kind === "soFar" || m.kind === "result") && holding[m.kind]) {
       held[m.kind].push([m, t]);
       return;
@@ -210,8 +239,9 @@ const front = (
 /** Serves every calculation worker of the page with the results of the
     summary held, and, with `holdWrite`, each write held after its first
     report of progress, with `holdPca` the result of each PCA, and with
-    `holdDiversity` that of each diversity; to call before the page is
-    opened. */
+    `holdDiversity` that of each diversity, with `holdLdDecay` that of
+    each LD decay, and with `holdPopDists` that of each calculation of
+    the distances; to call before the page is opened. */
 export async function holdSummary(
   page: Page,
   {
@@ -219,11 +249,13 @@ export async function holdSummary(
     holdPca = false,
     holdDiversity = false,
     holdLdDecay = false,
+    holdPopDists = false,
   }: {
     readonly holdWrite?: boolean;
     readonly holdPca?: boolean;
     readonly holdDiversity?: boolean;
     readonly holdLdDecay?: boolean;
+    readonly holdPopDists?: boolean;
   } = {},
 ): Promise<void> {
   await page.addInitScript(countWorkers, [CHANNEL, LISTENING, COUNTS] as const);
@@ -232,7 +264,14 @@ export async function holdSummary(
     const script = await response.text();
     await route.fulfill({
       response,
-      body: front(holdWrite, holdPca, holdDiversity, holdLdDecay) + script,
+      body:
+        front({
+          holdWrite,
+          holdPca,
+          holdDiversity,
+          holdLdDecay,
+          holdPopDists,
+        }) + script,
     });
   });
 }

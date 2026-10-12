@@ -10,7 +10,7 @@ import { setVariantFilter } from "../../core/project.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import { liveAnalysisOf } from "../analyses/status.ts";
 import { LIVE_QUIET_MS } from "../autoRuns.ts";
-import type { AboutToStart } from "../autoRuns.ts";
+import type { AboutToStart, LiveState } from "../autoRuns.ts";
 import { createDefects } from "../defects.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 import { startWriting } from "../runs.ts";
@@ -24,6 +24,7 @@ import {
   pageOf,
   pcaDone,
   pcaResult,
+  popDistsResult,
 } from "./testSupport.ts";
 import type { TestPage, WriteRequest } from "./testSupport.ts";
 
@@ -235,6 +236,7 @@ describe("NU5 D1 what the band of popgen2.html says", () => {
       "Stopping the statistics of panel.nei…",
       "Stopping the PCA…",
       "Stopping the diversity…",
+      "Stopping the distances…",
       "Stopping the LD decay…",
     ]);
   });
@@ -823,6 +825,7 @@ describe("PT4 D1 the band with the PCA and the diversity", () => {
               running: false,
               after: null,
             },
+            popDists: { kind: "off" },
             ldDecay: { kind: "off" },
           },
         },
@@ -1230,5 +1233,107 @@ describe("LT1 D2 the band and the automatic runs with the LD decay", () => {
     );
     testPage.tab = "populations";
     expect(testPage.band().line).toEqual({ kind: "nothing" });
+  });
+});
+
+describe("the band with the four live analyses (the merge of the LD decay and the distances, 13 October 2026)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** The band of the page with the PCA, the diversity and the LD decay
+      done and live, the distances live as `popDists` says, the tab `tab`
+      shown; while the LD decay is done, the distances done with its
+      warnings, and the diversity, which has warnings of its own, locked. */
+  async function withDistances(
+    popDists: LiveState,
+    tab: TestPage["tab"],
+  ): Promise<{ readonly testPage: TestPage; readonly band: () => Band }> {
+    const testPage = await threeDone();
+    testPage.tab = tab;
+    const band = (): Band => {
+      const base = pageOf(testPage);
+      const state = base.state;
+      const ld = state.analyses.find((view) => view.id === "ldDecay");
+      const done = ld?.status.kind === "done" ? ld.status : null;
+      return bandOf(
+        {
+          ...base,
+          state: {
+            ...state,
+            analyses: state.analyses.map((view) => {
+              if (done === null) return view;
+              if (view.id === "popDists") {
+                return {
+                  ...view,
+                  status: { ...done, result: popDistsResult() },
+                };
+              }
+              return view.id === "diversity"
+                ? { ...view, status: { kind: "locked", reason: "a test" } }
+                : view;
+            }),
+          },
+          live: { ...base.live, popDists },
+        },
+        testPage.defects.getState(),
+      );
+    };
+    return { testPage, band };
+  }
+
+  test("the link goes to the first result with warnings in the order of the tabs, the LD decay's before the distances'", async () => {
+    const idle: LiveState = {
+      kind: "live",
+      aboutToStart: null,
+      running: false,
+      after: null,
+    };
+    const { testPage, band } = await withDistances(idle, "pca");
+    expect(words(band())).toMatch(
+      /^LD decay: \d+ warnings?, in the Populations tab$/u,
+    );
+    testPage.tab = "populations";
+    expect(words(band())).toMatch(
+      /^Distances: \d+ warnings?, in the Distances tab$/u,
+    );
+  });
+
+  test("the four about to start, and Stop all, are named in the order of the tabs; those that wait after the one running in the order of calculation", async () => {
+    const about: LiveState = {
+      kind: "live",
+      aboutToStart: "changes",
+      running: false,
+      after: null,
+    };
+    const { testPage, band } = await withDistances(about, "variants");
+    moveThreshold(testPage, 0.05);
+    await flush();
+    expect(words(band())).toBe(
+      "The PCA, the diversity, the LD decay and the distances start in a moment",
+    );
+    expect(short(band())).toBe("Analyses soon");
+    expect(buttons(band())).toEqual([
+      null,
+      "Stop all: the PCA, the diversity, the LD decay and the distances",
+    ]);
+    await quietSecond();
+    const { testPage: running, band: runningBand } = await withDistances(
+      { kind: "live", aboutToStart: "behind", running: false, after: "pca" },
+      "variants",
+    );
+    moveThreshold(running, 0.05);
+    await flush();
+    await quietSecond();
+    expect(words(runningBand(), 12)).toBe(
+      "PCA running · 0:12 · then the diversity, the distances and the LD decay",
+    );
+    expect(buttons(runningBand())).toEqual([
+      "Stop the PCA",
+      "Stop all: the PCA, the diversity, the LD decay and the distances",
+    ]);
   });
 });

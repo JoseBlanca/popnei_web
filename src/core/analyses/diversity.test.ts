@@ -3290,6 +3290,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       "variantsSummary",
       "pca",
       "diversity",
+      "popDists",
       "ldDecay",
     ]);
     expect(POPGEN2_ANALYSES[1]).toBe(pcaOnPopgen2);

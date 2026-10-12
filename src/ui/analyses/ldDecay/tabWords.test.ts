@@ -45,6 +45,19 @@ import {
   ldDecayTabReadyLines,
   ldDecayWaitingLine,
 } from "./tabWords.ts";
+import type { LiveAnalysisName } from "../status.ts";
+
+/** An analysis that can be live, named `name` in the singular, as the
+    lines of waiting are given it. */
+function named(name: string): LiveAnalysisName {
+  return {
+    id: "diversity",
+    name,
+    tab: "Populations",
+    readsPopulations: true,
+    plural: false,
+  };
+}
 
 /** The ten individuals of the variants file, s000 to s009. */
 const INDIVIDUALS = Array.from({ length: 10 }, (_, i) => `s00${String(i)}`);
@@ -209,12 +222,15 @@ describe("LT1 D3 the words of the LD decay of the Populations tab", () => {
     expect(ldDecayWaitingLine("changes", null)).toBe(
       "The LD decay starts in a moment, later if the filters, its options or the populations change.",
     );
-    expect(ldDecayWaitingLine("changes", "the PCA")).toBe(
+    expect(ldDecayWaitingLine("changes", named("the PCA"))).toBe(
       "The LD decay starts after the PCA, once the filters, the options and the populations stop changing.",
     );
-    expect(ldDecayWaitingLine("behind", "the diversity")).toBe(
+    expect(ldDecayWaitingLine("behind", named("the diversity"))).toBe(
       "The LD decay starts once the diversity, which is running, ends.",
     );
+    expect(
+      ldDecayWaitingLine("behind", { ...named("the distances"), plural: true }),
+    ).toBe("The LD decay starts once the distances, which are running, end.");
     expect(ldDecayWaitingLine("download", null)).toBe(
       "The LD decay starts again when the download is written or closed.",
     );
@@ -232,7 +248,7 @@ describe("LT1 D3 the words of the LD decay of the Populations tab", () => {
           running: false,
           after: "diversity",
         },
-        "the diversity",
+        named("the diversity"),
         null,
       ),
     ).toEqual({
@@ -349,6 +365,7 @@ describe("LT1 D3 the words of the LD decay of the Populations tab", () => {
       name: "the LD decay",
       tab: "Populations",
       readsPopulations: true,
+      plural: false,
     });
     expect(roundText([pca, diversity, ld])).toBe(
       "Calculating the PCA, the diversity and then the LD decay again. To change the filters, press Stop all beside the heading Popnei, or stop each in its tab; to change the populations, stop the diversity and the LD decay in the Populations tab.",

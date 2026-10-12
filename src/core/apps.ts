@@ -12,7 +12,7 @@ import { filterCounts, variantsOfFile } from "./analyses/filterCounts.ts";
 import { individualChecks } from "./analyses/individualChecks.ts";
 import { ldDecay, ldDecayOnPopgen2 } from "./analyses/ldDecay.ts";
 import { pca, pcaOnPopgen2 } from "./analyses/pca.ts";
-import { popDists } from "./analyses/popDists.ts";
+import { popDists, popDistsOnPopgen2 } from "./analyses/popDists.ts";
 import { variantChecks } from "./analyses/variantChecks.ts";
 import { variantsSummary } from "./analyses/variantsSummary.ts";
 import { defect } from "./analyses/words.ts";
@@ -72,9 +72,12 @@ export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
     tab (docs/specs/analyses/pca.md, "On popgen2.html"); then the
     diversity of the Populations tab, the definition of that page, whose
     unclassified individuals are left out or one population
-    (docs/specs/analyses/diversity.md, "On popgen2.html"); then, from 12
-    October 2026, the LD decay of the same tab, the definition of that
-    page (docs/specs/analyses/ldDecay.md, "On popgen2.html"). It is a list
+    (docs/specs/analyses/diversity.md, "On popgen2.html"); from 12
+    October 2026, the distances between populations of the Distances
+    tab, the definition of that page (docs/specs/analyses/popDists.md,
+    "On popgen2.html"), and last the LD decay of the Populations tab, the
+    definition of that page (docs/specs/analyses/ldDecay.md, "On
+    popgen2.html"), in the order of `POPGEN2_LIVE`. It is a list
     apart from `POPGEN_ANALYSES`, so that the old page neither shows the
     summary nor changes (docs/plans/open-variants.md, "Its own list of
     analyses"). */
@@ -83,21 +86,30 @@ export const POPGEN2_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
     variantsSummary,
     pcaOnPopgen2,
     diversityOnPopgen2,
+    popDistsOnPopgen2,
     ldDecayOnPopgen2,
   ]);
 
 /** The analyses of popgen2.html that can be live, calculated again by
     themselves once the user's Run made each live, in the order they
-    start after one change, that of the tabs: the PCA, the diversity
-    and, from 12 October 2026, the LD decay (docs/specs/steps/popgen2-pca.md, "The PCA calculated again
-    by itself" and "Several analyses calculated again by themselves").
+    start after one change: the PCA, the diversity, from 12 October 2026
+    the distances between populations of the Distances tab, and last the
+    LD decay of the Populations tab (docs/specs/steps/popgen2-pca.md, "The
+    PCA calculated again by itself" and "Several analyses calculated again
+    by themselves"). This is the order of calculation, not that of the
+    tabs, which `LIVE_TABS` of the band and the words that name several
+    analyses follow: the LD decay, which may take minutes and which
+    nothing interrupts, runs last, so that the others, the distances
+    among them, never wait for it.
     The one list of them: the store of the page and the words of its
     locks read it, here, where popgen.html already loads it. The ids of
-    `pcaOnPopgen2`, `diversityOnPopgen2` and `ldDecayOnPopgen2`, as literals, so that a table
-    keyed by them must name each. */
+    `pcaOnPopgen2`, `diversityOnPopgen2`, `popDistsOnPopgen2` and
+    `ldDecayOnPopgen2`, as literals, so that a table keyed by them must
+    name each. */
 export const POPGEN2_LIVE = Object.freeze([
   "pca",
   "diversity",
+  "popDists",
   "ldDecay",
 ] as const);
 

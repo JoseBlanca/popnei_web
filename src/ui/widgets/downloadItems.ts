@@ -41,6 +41,12 @@ export interface TableDownload {
   readonly fileName: string;
   /** The reason the menu waits, or null. */
   readonly waiting: string | null;
+  /** The CSV the screen writes in place of the values of the cells, at
+      the choice, for a table one of whose cells joins two values: the
+      pair of the distances between populations, "p0 and p2", written as
+      two fields (docs/specs/steps/popgen2-distances.md, "The result").
+      Absent for every other table. */
+  readonly csv?: () => string;
 }
 
 /** What a plot takes to be downloaded. */
@@ -91,24 +97,47 @@ export function checkValues(
   }
 }
 
+/** What the CSV of a table is written from: its columns, labelled
+    `header`, and its rows, `rows`, in the order shown, whose values are
+    written; or `csv`, the screen's own CSV, for a table one of whose
+    cells joins two values, the pair of the distances between
+    populations (`TableDownload.csv`). */
+export type TableCsvSource =
+  | {
+      readonly kind: "rows";
+      readonly header: readonly string[];
+      readonly rows: readonly RowValues[];
+    }
+  | { readonly kind: "csv"; readonly csv: () => string };
+
 /**
- * The item "Table as CSV" of a table of columns labelled `header` and of
- * the rows `rows`, in the order shown: their values are taken, and the
- * CSV written, at the choice.
+ * The item "Table as CSV" of a table, saved as `fileName`, written from
+ * `source`, at the choice.
  */
 export function tableItem(
   fileName: string,
-  header: readonly string[],
-  rows: readonly RowValues[],
+  source: TableCsvSource,
 ): DownloadItem {
   return {
     label: "Table as CSV",
     save: () => {
-      const values = rows.map((row) => row.values);
-      downloadText(fileName, tableCsv(header, values), CSV_TYPE);
+      downloadText(fileName, csvOf(source), CSV_TYPE);
       return Promise.resolve(fileName);
     },
   };
+}
+
+/** The text of the CSV of `source`. */
+function csvOf(source: TableCsvSource): string {
+  switch (source.kind) {
+    case "rows":
+      return tableCsv(
+        source.header,
+        source.rows.map((row) => row.values),
+      );
+    case "csv":
+      return source.csv();
+  }
 }
 
 /** What the images of a plot are made from: the exports of its handle,

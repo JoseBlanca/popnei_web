@@ -6,6 +6,7 @@ import { MAX_HEATMAP_NAMES } from "../../../charts/limits.ts";
 import {
   captionText,
   csvName,
+  MEASURE_LINE,
   heatmapTitle,
   measureAnnounced,
   numberCells,
@@ -19,14 +20,22 @@ import {
 // which it does not import (docs/specs/analyses/popDists.md, "How it is
 // verified").
 
+describe("the line under the choice of the measure (the review of the Distances tab, 12 October 2026)", () => {
+  test("says what each measure measures and when to read it", () => {
+    expect(MEASURE_LINE).toBe(
+      "Hudson's Fst is the share of the diversity of the two populations taken together that lies between them rather than within them; most work on SNPs reports it. Jost's D measures how much of the allelic variety of the two is not shared; it is the one to read on markers of many alleles, such as microsatellites, where the diversity within the populations keeps Fst well below 1 even when they share no allele. Both are near 0 for populations with the same allele frequencies, and as estimates either can fall slightly below 0. On SNPs the two give much the same picture.",
+    );
+  });
+});
+
 describe("PA5 D1 the words of the panel of the distances", () => {
   test("the most populations the panel shows is the most names the heatmap draws", () => {
     expect(POP_DISTS_MAX_SHOWN).toBe(MAX_HEATMAP_NAMES);
   });
 
   test("a change of the measure is announced as the heatmap of the measure drawn, and the heatmap is titled by it", () => {
-    expect(measureAnnounced("dest")).toBe("Heatmap of Jost's D");
-    expect(measureAnnounced("fst")).toBe("Heatmap of Hudson's Fst");
+    expect(measureAnnounced("dest")).toBe("The heatmap now shows Jost's D.");
+    expect(measureAnnounced("fst")).toBe("The heatmap now shows Hudson's Fst.");
     expect(heatmapTitle("fst")).toBe("Hudson's Fst between populations");
     expect(heatmapTitle("dest")).toBe("Jost's D between populations");
   });

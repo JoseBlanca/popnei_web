@@ -385,6 +385,37 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
     expect(savedText().text).toBe("Populations,Distance\np1 - p2,-0.011283\n");
   });
 
+  test("a table given its own CSV saves that CSV, not the values of its cells (the review of the Distances tab, 12 October 2026)", async () => {
+    draw(
+      createElement(Table, {
+        caption: "Distances",
+        columns: [
+          { id: "pair", label: "Pair", isRowHeader: true },
+          { id: "fst", label: "Hudson's Fst", isNumeric: true },
+        ],
+        rows: [
+          {
+            id: "p0 and p2",
+            cells: ["p0 and p2", "0.1027"],
+            values: ["p0 and p2", 0.10273588423661377],
+          },
+        ],
+        download: {
+          what: "the distances",
+          fileName: "panel.popdists.csv",
+          waiting: null,
+          csv: () =>
+            "First population,Second population,Hudson's Fst\np0,p2,0.10273588423661377\n",
+        },
+      }),
+    );
+    await choose("the distances", "Table as CSV");
+    expect(savedText()).toEqual({
+      name: "panel.popdists.csv",
+      text: "First population,Second population,Hudson's Fst\np0,p2,0.10273588423661377\n",
+    });
+  });
+
   test.each([
     ["given", false, true],
     ["taken away", true, false],

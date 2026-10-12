@@ -314,12 +314,14 @@ const PCA: LiveAnalysisName = {
   name: "the PCA",
   tab: "PCA",
   readsPopulations: false,
+  plural: false,
 };
 const DIVERSITY: LiveAnalysisName = {
   id: "diversity",
   name: "the diversity",
   tab: "Populations",
   readsPopulations: true,
+  plural: false,
 };
 
 describe("PT1 D7 the words of the download's wait for the analyses", () => {

@@ -71,7 +71,8 @@ export const POPGEN2_AUTO_GROUPS: readonly (readonly AnalysisId[])[] =
     analyses/pca/liveEnd.ts, a crash of the memory or a failure only a
     reload mends; the diversity's, `diversityFailureEndsLive` of
     analyses/diversity/liveEnd.ts, every crash and the failures only a
-    reload mends; the LD decay's, `ldDecayFailureEndsLive` of
+    reload mends; the distances', the diversity's, which tells no crash
+    from another either; the LD decay's, `ldDecayFailureEndsLive` of
     analyses/ldDecay/liveEnd.ts, the diversity's and popnei's refusal for
     memory. Keyed by `POPGEN2_LIVE`, so that an analysis added to
     it without a rule does not compile. */
@@ -83,6 +84,7 @@ const ENDS_LIVE: Readonly<
 > = Object.freeze({
   pca: failureEndsLive,
   diversity: diversityFailureEndsLive,
+  popDists: diversityFailureEndsLive,
   ldDecay: ldDecayFailureEndsLive,
 });
 

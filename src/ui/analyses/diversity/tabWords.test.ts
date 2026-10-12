@@ -39,6 +39,19 @@ import {
   POPULATIONS_TAB_LOADING,
   populationsTabFailed,
 } from "./tabLoadWords.ts";
+import type { LiveAnalysisName } from "../status.ts";
+
+/** An analysis that can be live, named `name` in the singular, as the
+    lines of waiting are given it. */
+function named(name: string): LiveAnalysisName {
+  return {
+    id: "pca",
+    name,
+    tab: "PCA",
+    readsPopulations: false,
+    plural: false,
+  };
+}
 
 /** The ten individuals of the variants file, s000 to s009. */
 const INDIVIDUALS = Array.from({ length: 10 }, (_, i) => `s00${String(i)}`);
@@ -236,19 +249,19 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
   });
 
   test("the quiet second with the PCA live and about to start before it, by the method", () => {
-    expect(diversityWaitingLine("changes", "the PCA")).toBe(
+    expect(diversityWaitingLine("changes", named("the PCA"))).toBe(
       "The diversity starts after the PCA, once the filters, the options and the populations stop changing.",
     );
-    expect(diversityWaitingLine("changes", "the PCoA")).toBe(
+    expect(diversityWaitingLine("changes", named("the PCoA"))).toBe(
       "The diversity starts after the PCoA, once the filters, the options and the populations stop changing.",
     );
   });
 
   test("waiting for the PCA that runs, by the method", () => {
-    expect(diversityWaitingLine("behind", "the PCA")).toBe(
+    expect(diversityWaitingLine("behind", named("the PCA"))).toBe(
       "The diversity starts once the PCA, which is running, ends.",
     );
-    expect(diversityWaitingLine("behind", "the PCoA")).toBe(
+    expect(diversityWaitingLine("behind", named("the PCoA"))).toBe(
       "The diversity starts once the PCoA, which is running, ends.",
     );
   });
@@ -257,7 +270,7 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
     const line =
       "The diversity starts again when the download is written or closed.";
     expect(diversityWaitingLine("download", null)).toBe(line);
-    expect(diversityWaitingLine("download", "the PCA")).toBe(line);
+    expect(diversityWaitingLine("download", named("the PCA"))).toBe(line);
   });
 
   test("after a crash ended another live state, the next change", () => {
@@ -292,7 +305,7 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
     expect(
       diversityPanelLive(
         { kind: "live", aboutToStart: "behind", running: false, after: "pca" },
-        "the PCA",
+        named("the PCA"),
         null,
       ),
     ).toEqual({
@@ -309,7 +322,7 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
           running: false,
           after: "pca",
         },
-        "the PCA",
+        named("the PCA"),
         null,
       ),
     ).toEqual({

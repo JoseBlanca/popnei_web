@@ -113,7 +113,11 @@ application: "−0.0113", the longest value, is about 50 pixels wide at
 the 12 pixels of the text of the plots, 7.2 pixels a character, the
 width the scatter's legend counts (`scatter.md`, "The export"), and the
 cell is the band less its gap of 1 pixel. Below that the cells hold no text,
-and the tooltip and the table beside the plot give the values. The
+and the tooltip and the table beside the plot give the values.
+`writesValues(data, size)` says whether the heatmap of `data` in an
+element of `size` writes them, so that the screen can say where they
+are when it does not (since 12 October 2026, the review of the
+Distances tab). The
 format is that of the table of `popDists.md`: four decimals, the minus
 sign U+2212 for a negative value, `heatmapNumber` below.
 
@@ -180,8 +184,20 @@ legend is; the two values at its ends, in `heatmapNumber`; the name of
 the value, `valueName`, above it, in the top margin or, when the frame
 is higher than the grid, in the room left over above the grid. The
 right margin is 16 pixels, the bar and 4 pixels, and 7.2
-pixels for each character of the longest of the name of the value and
-the two numbers at the ends.
+pixels for each character of the longer of the two numbers at the ends.
+The name of the value ends where the numbers end, right-aligned, and
+reaches left over the room above the grid, so that it takes no width
+from the grid (since 12 October 2026, the review of the Distances tab
+of `popgen2.html`). Until then the right margin counted it too, and
+"Hudson's Fst", 12 characters where its numbers have 6, took 43 pixels
+more than its numbers: on a page of 320 pixels the cells of three
+populations were 55.7 pixels, under `CELL_TEXT_MIN`, and held no value,
+while those of "Jost's D" held them. When a value is below 0, which
+has the colour of 0, the legend writes "or below" under its 0, so that
+the bar reads "0.0000 or below" at its foot, and the right margin
+counts it, 8 characters (since 12 October 2026, the review of the
+Distances tab: until then a negative distance was painted the lowest
+colour of a bar marked "0.0000", with nothing to say it was below).
 
 ### The cell under the pointer
 
@@ -226,6 +242,10 @@ export const createHeatmap: Chart<HeatmapData>;
 /** A value of a cell, of its tooltip and of the legend: four decimals,
     the minus sign U+2212, "0.1027", "−0.0113". */
 export function heatmapNumber(value: number): string;
+
+/** Whether the heatmap of `data` in an element of `size` writes the
+    values in its cells (since 12 October 2026). */
+export function writesValues(data: HeatmapData, size: ExportSize): boolean;
 ```
 
 ```ts
@@ -309,12 +329,16 @@ blank, 115 pixels on a page of 1,280 pixels, 18% of the plot, and 40%
 of it on a page of 320, as the review of that work measured. At 40rem,
 640 pixels at the default size of text, with names of 3 characters and
 the legend of "Hudson's Fst", the margins are 35 pixels left, about 35
-below, 24 above and about 118 right, the grid about 487 pixels a side,
-and the element about 546 high: 3 populations give bands of
-about 163 pixels, with their values written, 8 populations bands of
-about 61, still with them, and 9 of about 54, without. At 320 pixels
-wide, the width of a phone in WCAG 2.2, 1.4.10, the grid is about 167
-pixels a side. Its PNG at 3 times is 1,920 pixels wide at 40rem.
+below, 24 above and about 75 right, the grid about 530 pixels a side,
+and the element about 589 high: 3 populations give bands of
+about 177 pixels, with their values written, 9 populations bands of
+about 59, still with them, and 10 of about 53, without (with the right
+margin of about 118 that counted the name of the value until 12 October
+2026, 8 and 9). On a page of 320 pixels, the width of a phone in WCAG
+2.2, 1.4.10, the element of `popgen2.html` is about 310 pixels wide:
+the names of `panel.nei` give a grid of about 209 pixels, bands of
+about 70, with their values, and four populations of names of 3
+characters bands of about 50, without. Its PNG at 3 times is 1,920 pixels wide at 40rem.
 
 **The least width.** The screen gives the element a least width, the
 left and the right margins of the heatmap with its names, which the
@@ -342,7 +366,8 @@ shorter as the width falls.
 - **No value above 0**: every finite cell the colour of 0, the bar one
   band; `viridisStep` is not called.
 - **A negative value**: the colour of 0, and its number with the minus
-  sign in the cell and the tooltip.
+  sign in the cell and the tooltip; "or below" under the 0 of the
+  legend.
 - **An `update` to the other measure, or another order**: the paths are
   joined by their steps and the texts by their row and column, in the
   same SVG; the tooltip is hidden.
@@ -379,17 +404,22 @@ steps 239, 245 and 255, each with the colour of `viridisColour` of its
 step and two cells, and the six values written, "0.1027" in the cells of
 p2 and p0; a matrix whose values are all 0 or below gives one path, of
 step 0, and a bar of one band; the names on the vertical axis read p2, p0, p1 from the top;
-the diagonal has no cell; the grid of that element, 495.6 pixels a side
-in a frame 587.2 high, starts 91.6 pixels below the top of the frame and
-ends at its foot, the bar of the legend starts level with it, and a move
+the diagonal has no cell; the grid of that element, 538.8 pixels a side
+in a frame 587.2 high, starts 48.4 pixels below the top of the frame and
+ends at its foot, the bar of the legend starts level with it, the name
+of the value ends at the right of the numbers of the bar, and a move
 of the pointer to the room above the grid shows no tooltip. The margins
 of those names, of 2 characters, are 26 pixels left and 8 + 0.71 × 18 +
-8 below, and of a name of 30 characters those of 20. 60 names of 20
+8 below, and of a name of 30 characters those of 20; the right margin
+is 75.2 pixels for "Hudson's Fst" and for "Jost's D" alike. 60 names of 20
 characters in an element of 640 by 640 pixels, whose bands with the
-margins of the names would be of about 5 pixels, are drawn with no name,
+margins of the names would be of about 6 pixels, are drawn with no name,
 in margins of 8 pixels left and below; so are the names of `panel.nei`
-in an element of 140 by 140 pixels, narrower than the 144.4 pixels of
-their left and right margins. A matrix with a NaN pair gives the path
+in an element of 100 by 100 pixels, narrower than the 101.2 pixels of
+their left and right margins. In an element 310 pixels wide and as
+high as the screen makes it, three populations write their values,
+for either name of the value, and four of names of 3 characters write
+none, as `writesValues` says. A matrix with a NaN pair gives the path
 `chart-cell-none` with its two cells crossed; a negative value is of
 step 0 and writes "−0.0113"; a band of 55 pixels writes no value; two
 names alike, a matrix not symmetric, one name or 201, throw. A move of

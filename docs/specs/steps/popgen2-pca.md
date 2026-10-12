@@ -309,11 +309,17 @@ MAF, the LD switch, its r² and its distance. Nothing else starts it:
 not "Colour the points by", the axes, 3D or 2D, the turn of the 3D
 view, the individuals file, its column of the populations, nor a turn
 to another tab, since the key holds none of them
-(`docs/specs/analyses/pca.md`, "On popgen2.html", the key). A change of
-the project that is not of the key, the end of a read of the
-individuals file among them, still starts the quiet second again, so a
-PCA about to start then starts up to a second later, for the same
-values: nothing stale is shown. The live
+(`docs/specs/analyses/pca.md`, "On popgen2.html", the key). Until 12
+October 2026 a change of the project that was not of the key, the end
+of a read of the individuals file among them, still started the quiet
+second again. Since then (the review of the Distances tab), a change of
+the project is a change for the live analyses only when it changes,
+for one of the analyses that can be live, the PCA, the diversity or
+the distances, live or not, its key or the reason it is locked: so
+"Colour the points by", the axes, 3D or 2D, and the measure of the
+heatmap of the Distances tab, which no key holds, neither put off a
+start about to come nor lift the hold after a crash (below, "Several
+analyses calculated again by themselves"). The live
 state ends at a Stop of the PCA, in this tab or in the band, during a
 run or during the quiet second, as the owner chose on 10 October 2026
 (open point 1 of the design); at the opening of another variants file,
@@ -629,7 +635,7 @@ From 11 October 2026, for `docs/designs/population-tab.md`, the PCA and
 the diversity of the Populations tab are each live on their own; from
 12 October 2026 the LD decay of the same tab is too
 (`docs/plans/ld-decay-tab.md`), and the distances between populations
-will be.
+of the Distances tab (`popgen2-distances.md` and below).
 What this section says holds for every live analysis; what the section
 above says of the PCA, its live state, its quiet second, its changes
 under way, its Stop and its failures, holds for each, with its own key,
@@ -638,13 +644,36 @@ calculated again does not get a PCA of minutes they never asked for:
 each analysis is live once its own Run is pressed (the design, choice
 4).
 
-From 12 October 2026 the LD decay of the Populations tab is the third
-live analysis, last in the order, after the diversity in the same tab
+From 12 October 2026 the LD decay of the Populations tab is a further
+live analysis, last in the order of calculation, after the distances
 (`docs/specs/steps/popgen2-populations.md`, "The LD decay";
-`docs/plans/ld-decay-tab.md`). Nothing below changes for it: it follows
-every rule of this section, with its own words. What it adds is said
-where it applies: its rule of `endsLive`, the round of three, and the
-words of the analyses of one tab.
+`docs/plans/ld-decay-tab.md`): it may run for minutes and nothing
+interrupts it, so it runs after the others, which never wait for it
+after a change. The tabs keep their order, the LD decay after the
+diversity in the Populations tab, and the band and the words that name
+several analyses follow the tabs. Nothing below changes for it: it
+follows every rule of this section, with its own words. What it adds is
+said where it applies: its rule of `endsLive`, the round of three, and
+the words of the analyses of one tab.
+
+From 12 October 2026 the distances between populations of the
+Distances tab are a further live analysis (`popgen2-distances.md`,
+`docs/plans/distances-tab.md`), after the diversity and before the LD
+decay in the order of calculation, `"popDists"` in `POPGEN2_LIVE`, with nothing of this section changed but the
+words that name them: they read the populations, as the diversity does,
+so the lock of the populations and the round's words name them where
+they name the diversity; and the page calls them "the distances", a
+plural, so the sentences that name an analysis by its words give them
+a verb and a pronoun in the plural: "The distances start in a moment",
+"Stop the distances in the Distances tab to change the filters; then
+press Run there to calculate them again.", "Waits for the distances to
+end; or stop them in the Distances tab.", "…while the distances run."
+So do the sentences of another analysis that name them, since the
+review of the Distances tab on 12 October 2026: "The PCA starts once
+the distances, which are running, end.", "Waits for the distances, and
+the PCA after them, to end; or press Stop all beside the heading
+Popnei." `LiveAnalysisName` of `src/ui/analyses/status.ts` says which
+analyses are named in the plural.
 
 **The order.** The calculation worker runs one calculation at a time.
 When several live analyses are about to start after one change, a
@@ -863,7 +892,12 @@ the one list the page reads. In
   client starts after every LD decay. A failure that ends the live state starts the quiet second
   again, `quietAgain`, for the others about to start; a crash of the
   worker holds them instead until the next change of the project, which
-  starts the second.
+  starts the second. A change of the project, here and for the quiet
+  second, is one that changes the key of an analysis that can be live,
+  or the reason it is locked, as the store gives them; another change
+  of the project, the measure of the heatmap or the colour of the
+  points, is none (since 12 October 2026, the review of the Distances
+  tab: until then any new project was one).
 - The interface changes so:
 
 ```ts
@@ -1003,7 +1037,8 @@ showed one line, "Not built yet: the diversity of each population, its
 site frequency spectrum and its LD decay come in a later version of the
 page." Distances: "Not built yet:
 the distances between the populations, Hudson's Fst or Jost's D, come
-in a later version of the page."
+in a later version of the page.", until 12 October 2026, when the tab
+shows the distances between populations (`popgen2-distances.md`).
 
 ### The PCA tab
 
@@ -1418,7 +1453,9 @@ plot could not be made as a PNG in this browser; download it as SVG."
 ## The states
 
 Of the PCA tab. The tab of Populations and of Distances is either
-greyed or shows its line of not built yet.
+greyed or shows its line of not built yet; since 11 and 12 October
+2026 they show the diversity and the distances, whose states are in
+`popgen2-populations.md` and `popgen2-distances.md`.
 
 | state | what the user sees | what they can do |
 |---|---|---|
@@ -1986,7 +2023,8 @@ and those of `docs/designs/no-undo.md` on 10 October 2026.
   `docs/specs/core/store.md`.
 - The boxes, the Variants tab and the Individuals tab:
   `popgen2-input.md`, `popgen2-filters.md`, `popgen2-download.md`.
-- The Populations tab: `popgen2-populations.md`. The LD decay and the
-  Distances tab, later pieces.
+- The Populations tab: `popgen2-populations.md`. The LD decay, a later
+  piece. The Distances tab: `popgen2-distances.md`, since 12 October
+  2026.
 - The saving of a project on this page, and the help drawer.
 - The old page, `popgen.html`, which gets none of this.

@@ -7,10 +7,10 @@
  * (docs/plans/live-stats.md).
  *
  * They are given in groups, each the analyses a Stop of a group stops
- * together and its start again starts again; popgen2.html has the one pass,
- * which the Stop and the Start again of its box act on, and then one group
- * for each analysis that can be live, `POPGEN2_LIVE` of src/core/apps.ts,
- * the PCA, the diversity and the LD decay, each of its own, which starts by
+ * together and its start again starts again; popgen2.html has the one
+ * pass, which the Stop and the Start again of its box act on, and then a
+ * group for each analysis of `POPGEN2_LIVE`, the PCA, the diversity, the
+ * distances between populations and the LD decay, each of which starts by
  * itself only once live (below). They start one at a time, in their order, since the one
  * calculation worker runs one request at a time and the store has no state
  * for a request that waits in the client's queue. An analysis starts once
@@ -45,7 +45,9 @@
  * (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by itself";
  * docs/designs/no-undo.md, choices 1 to 3). The second runs from the latest
  * of the last change of the project and the end of the last change under way
- * that the gate of the page counts; the analysis starts when it runs out,
+ * that the gate of the page counts, a change of the project being one that
+ * changes the key of an analysis that can be live or the reason it is
+ * locked, and no other (since 12 October 2026); the analysis starts when it runs out,
  * under the key the store gives then, while nothing runs, no write of the
  * filtered variants runs and no change is under way. It starts once for each
  * key the project gives: a key the store leaves behind is forgotten, so a
@@ -54,8 +56,8 @@
  * names, by the rule of each analysis, while every other failure leaves it
  * live, for the next change of its key to try again.
  *
- * Several analyses can be live at once, each a group of its own, in the
- * order of `POPGEN2_LIVE` on popgen2.html, each live from its own Run
+ * Several analyses can be live at once, each a group of its own, those of
+ * `POPGEN2_LIVE` on popgen2.html in its order, each live from its own Run
  * (docs/specs/steps/popgen2-pca.md, "Several analyses calculated again by
  * themselves"; docs/designs/population-tab.md). One quiet second serves them
  * all: when it runs out, the first live analysis about to start starts, and
@@ -551,6 +553,26 @@ export function createAutoRuns(deps: {
   let quietTimer: ReturnType<typeof setTimeout> | null = null;
   let lastProject = store.getState().project;
 
+  /** What the analyses that can be live are calculated from, as the
+      store gives it: for each, its key, or the reason it is locked. A
+      new project is a change for the live analyses only when it changes
+      this, so that a change of what no key holds, the measure of the
+      heatmap of the distances or the colour of the points of the PCA,
+      neither puts a start off nor lifts the hold after a crash
+      (docs/specs/steps/popgen2-pca.md, "The PCA calculated again by
+      itself"). */
+  function inputsNow(): string {
+    return liveOrder
+      .map((id) => {
+        const status = statusOf(id);
+        return status.kind === "locked"
+          ? `locked: ${status.reason}`
+          : status.key;
+      })
+      .join("\n");
+  }
+  let lastInputs = live === null ? "" : inputsNow();
+
   function tellLive(event: LiveEvent): void {
     for (const listener of [...liveListeners]) listener(event);
   }
@@ -746,12 +768,18 @@ export function createAutoRuns(deps: {
           quietAgain();
         }
       }
+      // A change of the store that is no change of the project, the end
+      // of the one pass among them, gives keys too, and is no change.
+      const inputs = inputsNow();
       if (state.project !== lastProject) {
         lastProject = state.project;
-        heldAfterCrash = false;
-        runSinceCrash.clear();
-        quietAgain();
+        if (inputs !== lastInputs) {
+          heldAfterCrash = false;
+          runSinceCrash.clear();
+          quietAgain();
+        }
       }
+      lastInputs = inputs;
       tellLiveChanges();
       const held = crashed
         ? liveOrder.filter((id) => aboutToStart(id) === "afterCrash")

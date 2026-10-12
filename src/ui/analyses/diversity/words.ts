@@ -19,6 +19,7 @@ import {
   namesOf,
 } from "../../../core/project.ts";
 import {
+  minimumOf,
   populationsWithMinimum,
   underMinimumText,
 } from "../../../core/populations.ts";
@@ -312,7 +313,7 @@ export function minimumAndDrawLines(
       ? [
           underMinimumText(
             under,
-            minNumIndividuals,
+            minimumOf(minNumIndividuals),
             noOthers ? NO_OTHERS_UNDER_MINIMUM : UNDER_MINIMUM,
           ),
         ]

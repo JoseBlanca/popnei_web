@@ -88,6 +88,23 @@ describe("what the pages load first", () => {
     }
   });
 
+  test("popgen2.html loads of the Distances tab only its frame and its first words, and the code of the tab, the heatmap among it, when it is first shown (the review of the Distances tab, 12 October 2026)", () => {
+    const reached = reachedFrom("ui/popgen2.tsx");
+    expect(reached).toContain("ui/analyses/popDists/DistancesTab.tsx");
+    expect(reached).toContain("ui/analyses/popDists/tabLoadWords.ts");
+    expect(reached).toContain("core/analyses/popDists.ts");
+    for (const module of [
+      "DistancesTabView.tsx",
+      "distancesTabPanel.ts",
+      "DistancesTabResults.tsx",
+      "tabWords.ts",
+      "HeatmapPlot.tsx",
+    ]) {
+      expect(reached).not.toContain(`ui/analyses/popDists/${module}`);
+    }
+    expect(reached).not.toContain("charts/heatmap.ts");
+  });
+
   test("popgen2.html loads the rows, the lines and the CSV of the spectrum with the code of the Populations tab, not first, and its warning first, for the band", () => {
     expect(
       reachedFrom("ui/analyses/diversity/PopulationsTabView.tsx"),

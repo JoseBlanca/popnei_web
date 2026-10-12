@@ -30,6 +30,7 @@ import type { AnalysisError, Notice } from "../../core/store.ts";
 import type { Pops, Progress, RunError } from "../../worker/protocol.ts";
 import { capitalized, undoneOrRedone } from "../sentences.ts";
 import type { LiveAnalysisName } from "./status.ts";
+import { inTabOrder } from "./tabOrder.ts";
 import { numberText } from "../widgets/committedNumber.ts";
 import type { NumberRefusal } from "../widgets/committedNumber.ts";
 
@@ -591,22 +592,49 @@ function lockedText(
   beside: readonly LiveAnalysisName[],
 ): string {
   if (beside.length === 0) {
-    return `Stop ${running.name} in the ${running.tab} tab to change ${what}; then press Run there to calculate it again.`;
+    return `Stop ${running.name} in the ${running.tab} tab to change ${what}; then press Run there to calculate ${itOf(running)} again.`;
   }
   return `Stop ${running.name} in the ${running.tab} tab to change ${what}, or press ${STOP_ALL_PLACE} to stop ${bothOf(beside.map((one) => one.name))} too; then press Run in each tab to calculate them again.`;
 }
 
+/** The pronoun of the analysis `named`: "it", or "them" for one named
+    in the plural, "the distances". */
+export function itOf(named: LiveAnalysisName): "it" | "them" {
+  return named.plural ? "them" : "it";
+}
+
+/** The analysis `named` and a verb of the third person after it, in its
+    number, `singular` or `plural`: "the diversity runs", "the distances
+    run". */
+export function withVerb(
+  named: LiveAnalysisName,
+  singular: string,
+  plural: string,
+): string {
+  return `${named.name} ${named.plural ? plural : singular}`;
+}
+
+/** The analysis `named`, which runs, until it ends, in its number, as
+    the lines of waiting name the one they wait for: "the PCA, which is
+    running, ends", "the distances, which are running, end". */
+export function runningUntilEnd(named: LiveAnalysisName): string {
+  return named.plural
+    ? `${named.name}, which are running, end`
+    : `${named.name}, which is running, ends`;
+}
+
 /** The analyses `named`, each with its tab, as a Stop of each names
     them: "the PCA in the PCA tab and the diversity in the Populations
-    tab"; those of one tab named with it once, in the order of their
-    first, "the diversity and the LD decay in the Populations tab"
-    (from 12 October 2026). */
+    tab"; in the order of the tabs, whatever the order of `named`,
+    those of one tab named with it once, "the diversity and the LD decay
+    in the Populations tab" (from 12 October 2026). */
 export function eachInItsTab(named: readonly LiveAnalysisName[]): string {
-  const tabs = [...new Set(named.map((one) => one.tab))];
+  const ordered = inTabOrder(named);
+  const tabs = [...new Set(ordered.map((one) => one.tab))];
   return bothOf(
     tabs.map(
       (tab) =>
-        `${bothOf(named.filter((one) => one.tab === tab).map((one) => one.name))} in the ${tab} tab`,
+        `${bothOf(ordered.filter((one) => one.tab === tab).map((one) => one.name))} in the ${tab} tab`,
     ),
   );
 }

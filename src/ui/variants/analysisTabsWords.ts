@@ -33,10 +33,6 @@ export const PAGE_TAB_LABELS: Readonly<Record<PageTab, string>> = {
 /** The name of the row of tabs, for a screen reader. */
 export const ANALYSES_TABS_LABEL = "Files and analyses";
 
-/** What the Distances tab says once it is not greyed. */
-export const DISTANCES_NOT_BUILT =
-  "Not built yet: the distances between the populations, Hudson's Fst or Jost's D, come in a later version of the page.";
-
 /** What each tab of the analyses needs, the start of its reasons. */
 const SUBJECTS: Readonly<Record<AnalysisTabId, string>> = {
   pca: "The PCA needs",
