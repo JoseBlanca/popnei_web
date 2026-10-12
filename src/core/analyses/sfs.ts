@@ -1,20 +1,15 @@
 /**
  * The folded site frequency spectrum of each population, a statistic of
  * the diversity's call of popnei: its spectra as the block of the
- * diversity's panel draws them, their CSV, and the spectrum's warning
- * (docs/specs/analyses/sfs.md, "The module").
+ * diversity's panel draws them, and their CSV (docs/specs/analyses/sfs.md,
+ * "The module").
  *
  * The expected numbers of variants are popnei's, `foldedSfs` of
  * `calcPopDiversity`, carried by the diversity's result; this module only
  * divides bins 1 to n / 2 of each population by their sum, the shares the
- * histograms draw.
+ * histograms draw. Its warning is in sfsWarnings.ts.
  */
 
-import { grouped } from "../project.ts";
-import { filtersApplied } from "../filtersApplied.ts";
-import type { Project } from "../project.ts";
-import type { Warning } from "../store.ts";
-import type { DiversityPage } from "./diversity.ts";
 import { csvField, defect } from "./words.ts";
 import type { DiversityResult } from "../../worker/protocol.ts";
 
@@ -188,56 +183,4 @@ function spectrumLines(pop: SpectrumOfPop): readonly string[] {
     by a new line. */
 function csvOf(lines: readonly string[]): string {
   return [CSV_HEADER, ...lines].map((line) => `${line}\n`).join("");
-}
-
-/** How the warning of the spectrum names the MAF filter, after "The
-    MAF", and how it is turned off, by the page. */
-const MAF_PLACES: Readonly<
-  Record<DiversityPage, { readonly filter: string; readonly turnOff: string }>
-> = Object.freeze({
-  popgen: Object.freeze({
-    filter: "filter of the Variants step",
-    turnOff: "turn off the MAF filter in the Variants step",
-  }),
-  popgen2: Object.freeze({
-    filter: "threshold of the Variants tab",
-    turnOff: "turn the MAF threshold off in the Variants tab",
-  }),
-});
-
-/** The threshold of the MAF filter at which it removes only the variants
-    with no called allele, which the warning does not count. */
-const MAF_KEEPS_ALL = 1;
-
-/**
- * The warnings of the spectrum, which the block of the spectrum writes
- * at the end of its caption, given the project `p` the request of `r`
- * was made from: a MAF filter with a threshold below 1 that removed at
- * least one of the variants it was given, as the counts of the pass of
- * `r` have them, in the words of the page `page` of the diversity's
- * definition (sfs.md, "On popgen2.html").
- */
-export function spectrumWarnings(
-  r: DiversityResult,
-  p: Project,
-  page: DiversityPage,
-): Warning[] {
-  const filter = filtersApplied(p).find((f) => f.kind === "maf");
-  const counts = r.passStats.filtering.maf;
-  if (
-    filter?.kind !== "maf" ||
-    filter.maxAllowedMaf >= MAF_KEEPS_ALL ||
-    counts === undefined ||
-    counts.varsKept >= counts.varsProcessed
-  ) {
-    return [];
-  }
-  const removed = counts.varsProcessed - counts.varsKept;
-  const place = MAF_PLACES[page];
-  return [
-    {
-      code: "mafFilterOnSpectrum",
-      text: `The MAF ${place.filter} removes the variants whose commonest allele is above ${String(filter.maxAllowedMaf)} in the individuals kept, taken together, and it removed ${grouped(removed)} of the ${grouped(counts.varsProcessed)} it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, ${place.turnOff}.`,
-    },
-  ];
 }

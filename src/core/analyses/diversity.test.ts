@@ -38,7 +38,7 @@ import {
 } from "../project.ts";
 import { populationsKeptNeeds } from "../populations.ts";
 import type { Project, VariantSource } from "../project.ts";
-import { spectrumWarnings } from "./sfs.ts";
+import { spectrumWarnings } from "./sfsWarnings.ts";
 import { createStore } from "../store.ts";
 import type { AnalysisStatus, Warning, WorkerClient } from "../store.ts";
 import { deepFreeze, noPopDiversity, withPassedOn } from "../testSupport.ts";

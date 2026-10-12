@@ -48,8 +48,8 @@ import {
   allSpectraCsv,
   populationSpectrumCsv,
   spectraOf,
-  spectrumWarnings,
 } from "../../../core/analyses/sfs.ts";
+import { spectrumWarnings } from "../../../core/analyses/sfsWarnings.ts";
 import { fileNameParts } from "../../../core/fileNameParts.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import type { SpectrumOfPop } from "../../../core/analyses/sfs.ts";

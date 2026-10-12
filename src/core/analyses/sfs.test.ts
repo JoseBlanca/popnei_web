@@ -1,10 +1,6 @@
 import { describe, expect, test } from "vitest";
-import {
-  allSpectraCsv,
-  spectraOf,
-  populationSpectrumCsv,
-  spectrumWarnings,
-} from "./sfs.ts";
+import { allSpectraCsv, spectraOf, populationSpectrumCsv } from "./sfs.ts";
+import { spectrumWarnings } from "./sfsWarnings.ts";
 import type { Project } from "../project.ts";
 import {
   deepFreeze,
