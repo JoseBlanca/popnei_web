@@ -563,7 +563,7 @@ test.describe("DT1 D5 the Distances tab", () => {
     await expect(missingBox(page)).not.toHaveAttribute("aria-disabled", "true");
   });
 
-  test("DT1 D5 the downloads: the heatmap's data, the square matrix, and the table's, two columns of populations, read back; the heatmap's SVG", async ({
+  test("DT1 D5 the downloads: the heatmap's data, the square matrix of Hudson's Fst and of Jost's D, and the table's, two columns of populations, read back; the heatmap's SVG", async ({
     page,
   }) => {
     test.setTimeout(90_000);
@@ -594,6 +594,28 @@ test.describe("DT1 D5 the Distances tab", () => {
     );
     expect(svg.suggestedFilename()).toBe("panel.popdists.fst_hudson.svg");
     expect(await textOf(svg)).toMatch(/^<svg[^>]*>/u);
+
+    // The heatmap of Jost's D offers D's values, popnei's.
+    await shown(page)
+      .getByRole("radiogroup", { name: "Distance in the heatmap" })
+      .locator("label")
+      .filter({ hasText: "Jost's D" })
+      .click();
+    const dMatrix = await choose(
+      page,
+      "the heatmap of Jost's D",
+      "Data as CSV",
+    );
+    expect(dMatrix.suggestedFilename()).toBe("panel.popdists.jost_d.csv");
+    expect(await textOf(dMatrix)).toBe(
+      [
+        "Population,p2,p0,p1",
+        "p2,,0.06129813142463423,0.06567052128821259",
+        "p0,0.06129813142463423,,0.06354346296076403",
+        "p1,0.06567052128821259,0.06354346296076403,",
+        "",
+      ].join("\n"),
+    );
 
     const pairs = await choose(
       page,

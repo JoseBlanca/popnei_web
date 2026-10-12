@@ -288,6 +288,29 @@ describe("DT1 D3 the words of the Distances tab", () => {
     );
   });
 
+  test("the CSV of the heatmap of Jost's D: popnei's D values, in the heatmap's order of D", () => {
+    expect(matrixCsv(flowResult(), "dest")).toBe(
+      [
+        "Population,p2,p0,p1",
+        "p2,,0.06129813142463423,0.06567052128821259",
+        "p0,0.06129813142463423,,0.06354346296076403",
+        "p1,0.06567052128821259,0.06354346296076403,",
+        "",
+      ].join("\n"),
+    );
+    // The order of D, not of Fst, when the two differ.
+    const otherOrder: PopDistsResult = {
+      ...flowResult(),
+      order: {
+        fst: flowResult().order.fst,
+        dest: { kind: "pcoa", order: Uint32Array.from([2, 1, 0]) },
+      },
+    };
+    expect(matrixCsv(otherOrder, "dest").split("\n")[0]).toBe(
+      "Population,p1,p2,p0",
+    );
+  });
+
   test("the CSV of the table: two columns of populations, the values as stored", () => {
     expect(pairsCsv(flowResult())).toBe(
       [
