@@ -873,6 +873,27 @@ describe("LT1 D4 the part of the LD decay in the Populations tab", () => {
     );
   });
 
+  test("done and live: Stop recalculating pressed with the focus on it, the button goes and the focus goes to the heading LD decay, not to the diversity's above it (the review of the LD decay, 12 October 2026)", async () => {
+    const page = await readyTab();
+    await typeMaxDist(page, 100_000);
+    const run = ldButton("Run");
+    run?.focus();
+    await press(run);
+    const [request] = page.requests.filter((r) => r.job.analysis === "ldDecay");
+    if (request === undefined) throw new Error("no LD decay sent");
+    request.end({ kind: "done", key: request.key, result: ldDecayResult() });
+    await settle();
+    // The time of the last run beside it draws the button anew, and the
+    // focus goes to it.
+    const stop = ldButton("Stop recalculating");
+    expect(document.activeElement).toBe(stop);
+    await press(stop);
+    expect(ldButton("Stop recalculating")).toBeNull();
+    expect(ldButton("Run")).toBeNull();
+    expect(document.activeElement?.tagName).toBe("H2");
+    expect(document.activeElement?.textContent).toBe("LD decay");
+  });
+
   test("its heading after the diversity's; Run locked until a distance is typed; Run and Stop recalculating through autoRuns of the LD decay alone; the time of the last run after a result, kept after a Stop", async () => {
     const page = await readyTab();
     const headings = [...container.querySelectorAll("h2")].map(
