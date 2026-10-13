@@ -475,7 +475,7 @@ beside it. **At Try again**, as there: the focus goes to the place of
 the tab's content, and to its heading once the code arrives.
 
 **Not yet heard in VoiceOver**, which the session cannot run: the round
-said with three analyses live, and the Distances tab's line of waiting.
+said with the four analyses live, and the Distances tab's line of waiting.
 
 ## How it is checked
 

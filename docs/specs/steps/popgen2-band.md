@@ -483,7 +483,9 @@ nothing changes.
 the order of the tabs, named by the band as the others, "Distances",
 in the Distances tab, with the verb in the plural where an analysis
 alone is the subject: "Distances running · 0:12"; "PCA running · 1:20
-· then the diversity and the distances"; "The distances start in a
+· then the diversity and 1 more", read to a screen reader "PCA running
+· 1:20 · then the diversity and the distances" (13 October 2026); "The
+distances start in a
 moment", "The distances start after the next change", "The distances
 start after the download"; "The PCA and the distances start in a
 moment"; "Stopping the distances…"; "Distances: 1 warning, in the
@@ -683,7 +685,7 @@ change; it is still the screen's, not the project's
 | the link to an error | "PCA: could not be calculated, in the PCA tab"; "PCoA: could not be calculated, in the PCA tab" |
 | the short forms, under 45 em wide, the whole words given to a screen reader ("Its place") | "Statistics · 45%"; "PCA · 1:20"; "Diversity · 0:12"; "Writing · 45%"; "Stopping…"; "PCA soon"; "Diversity soon"; "Analyses soon"; "PCA later"; "Diversity later"; "Analyses later"; "PCA: 2 warnings"; "Diversity: 2 warnings"; "PCA: failed"; "Diversity: failed"; "PCoA" in place of "PCA" under the PCoA (listed here on 12 October 2026, the review of work package 4) |
 | the buttons | "Stop"; "Stop recalculating"; "Stop all"; "Details"; "Close"; "Copy the details" |
-| the name of the Stop for a screen reader | "Stop the statistics of panel.vcf.gz"; "Stop the PCA"; "Stop the PCoA"; "Stop recalculating the PCA"; "Stop recalculating the PCoA"; "Stop the diversity"; "Stop recalculating the diversity"; "Stop all: the PCA and the diversity"; from 12 October 2026, "Stop the LD decay", "Stop recalculating the LD decay", "Stop all: the PCA, the diversity and the LD decay" |
+| the name of the Stop for a screen reader | "Stop the statistics of panel.vcf.gz"; "Stop the PCA"; "Stop the PCoA"; "Stop recalculating the PCA"; "Stop recalculating the PCoA"; "Stop the diversity"; "Stop recalculating the diversity"; "Stop all: the PCA and the diversity"; from 12 October 2026, "Stop the LD decay", "Stop recalculating the LD decay", "Stop all: the PCA, the diversity and the LD decay"; from 13 October 2026, with the distances live too, "Stop the distances", "Stop recalculating the distances", "Stop all: the PCA and the distances", "Stop all: the PCA, the diversity, the LD decay and the distances" |
 | the LD decay, from 12 October 2026 | "LD decay running · 0:12"; "The LD decay starts in a moment"; "Stopping the LD decay…"; "LD decay: 1 warning, in the Populations tab"; the short forms "LD decay · 0:12", "LD decay soon", "LD decay later", "LD decay: 1 warning", "LD decay: failed" |
 | an error of the application | the three sentences of `barText` on this page, "An error of the application", with the message in each |
 | its details | "1 more error followed it."; "3 more errors followed it." |
@@ -926,10 +928,24 @@ From 12 October 2026, at `bandOf`, with the LD decay live as well: the
 LD decay running with the diversity live, "LD decay running · 0:12"
 with Stop and Stop all; the diversity running and the LD decay
 waiting, "Diversity running · 0:12 · then the LD decay"; the three
-about to start, "The PCA, the diversity and the LD decay start in a
-moment" with Stop all; the link of the LD decay's warnings while the
-diversity has none, and the diversity's when both have them; the
-Populations tab shown with the LD decay running, no Stop.
+live, the distances not, about to start, read "The PCA, the diversity
+and the LD decay start in a moment" with Stop all, which from 13
+October 2026 shows "The PCA and 2 more start in a moment"; the link of
+the LD decay's warnings while the diversity has none, and the
+diversity's when both have them; the Populations tab shown with the LD
+decay running, no Stop.
+
+From 13 October 2026, with the four live analyses, the distances among
+them: the four about to start, read "The PCA, the diversity, the LD
+decay and the distances start in a moment", shown "The PCA and 3 more
+start in a moment", "Analyses soon" under 45 em, with "Stop all: the
+PCA, the diversity, the LD decay and the distances"; the PCA running
+with the three others waiting, read "PCA running · 0:12 · then the
+diversity, the distances and the LD decay", in the order of
+calculation, shown "PCA running · 0:12 · then the diversity and 2
+more", with "Stop the PCA" and that Stop all; the link to the first
+result with warnings in the order of the tabs, the LD decay's before
+the distances'.
 
 **In jsdom**, the band drawn: the Stop of the one pass calls
 `autoRuns.stop` with the page's group, and the Stop of the PCA and

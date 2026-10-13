@@ -47,7 +47,7 @@ import { summaryStatus } from "./variants/words.ts";
 // that records the jobs and never ends them.
 
 describe("the store of popgen2.html", () => {
-  test("one-pass the page starts by itself the summary alone, whose one pass gives the statistics too, and then the PCA, the diversity and the distances once live, each a group of its own", () => {
+  test("one-pass the page starts by itself the summary alone, whose one pass gives the statistics too, and then the PCA, the diversity, the distances and the LD decay once live, each a group of its own", () => {
     expect(POPGEN2_AUTO_GROUPS).toEqual([
       ["variantsSummary"],
       ["pca"],

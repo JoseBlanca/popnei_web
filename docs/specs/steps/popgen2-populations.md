@@ -1108,9 +1108,12 @@ again. To change the filters, press Stop all beside the heading Popnei,
 or stop each in its tab; to change the populations, stop the diversity
 and the LD decay in the Populations tab."; the failures that end its
 live state, a crash, a refusal for memory, and not another refusal; and
-at `createAutoRuns` with the real store, the three live, a change of a
-threshold: the PCA, the diversity and the LD decay, one at a time, in
-that order, the worker's requests counted.
+at `createAutoRuns` with the real store, the three live, the distances
+not, a change of a threshold: the PCA, the diversity and the LD decay,
+one at a time, in that order, the worker's requests counted; and from
+13 October 2026 the four live, the distances among them: the PCA, the
+diversity, the distances and the LD decay, in that order, the
+distances not waiting for the LD decay.
 
 **In jsdom**: Run through `autoRuns.run("ldDecay")`, Stop and Stop
 recalculating through `autoRuns.pause("ldDecay")`; the time of the last
