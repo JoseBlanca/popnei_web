@@ -24,6 +24,15 @@ the margins of the names at 9 pixels a character, and made without the
 names when the names are not written; and the least width of the
 heatmap, below which it scrolls sideways.
 
+Revised and built on 12 October 2026 for the Distances tab of
+`popgen2.html`, on the branch `distances-tab`, joined on the branch
+`case4-ld-distances` on 13 October 2026, and not yet tried by the
+owner: from the review of that tab, the title of the legend ends over
+the numbers of its bar, so that three populations write their values in
+their cells at 320 px; "or below" under the legend's 0 when a value is
+negative; and `writesValues`, which tells the screen when the cells
+hold no values.
+
 The words of the web this spec needs are those of the scatter's spec,
 which it uses as that spec defines them: SVG and `<path>`, the base, a
 handle, React Aria, a screen reader, the focus, WCAG 2.2 and its success
