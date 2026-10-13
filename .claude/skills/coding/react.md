@@ -480,7 +480,9 @@ ends, results removed, is heard only through a live region.
   for the automatic runs: an option that only changes what is drawn (the
   heatmap's measure, the PCA's colours and axes) restarts nothing (the
   review of the Distances tab, 12 October 2026). The lines of a live
-  analysis are built once from its name, `liveLines.ts`, and its panel
+  analysis are built once from its name, `liveLines.ts` (what the band and
+  the status region say, in the page's first load) and `liveTabLines.ts`
+  (what its tab draws, loaded with the tab), and its panel
   is `LivePart`; a fifth analysis adds its name, not a copy of them. Every table keyed by a live analysis, its tab, its
   words, its end said in the status region, is a `Record` over
   `Popgen2LiveId`, so that a third does not compile without them; a list
