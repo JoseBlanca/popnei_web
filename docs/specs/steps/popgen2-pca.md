@@ -89,6 +89,17 @@ its rule of `endsLive`, which popnei's refusal for memory joins; and
 the words of the round and of Stop all, which name the analyses of one
 tab with that tab once.
 
+Its section "Several analyses calculated again by themselves" for the
+LD decay and the distances was built on the branches `ld-decay-tab` and
+`distances-tab` on 12 October 2026 and joined on the branch
+`case4-ld-distances` on 13 October 2026, and is not yet tried by the
+owner. Their reviews and the joining changed it, each where this spec
+says so with its date: the order of calculation, the PCA, the
+diversity, the distances and the LD decay, no longer that of the tabs;
+and a new project a change for the live analyses only when it changes
+the key of one of them or the reason it is locked, so that the measure
+of the heatmap and the view of the PCA start nothing.
+
 Corrected on 11 October 2026 after the review of work package 1 of that
 plan, in "Several analyses calculated again by themselves": `run`
 answers "kept" when the store starts nothing for its analysis, done,
