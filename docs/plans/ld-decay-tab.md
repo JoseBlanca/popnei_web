@@ -247,3 +247,14 @@ tab alone needs was moved into the tab (d3f48f49, ccee97be).
 One flow of the 3D PCA in WebKit (AP6 D3 kept drawn) failed once in
 three under load and passed 6 of 6 after; neither it nor the 3D code
 changed in these pieces.
+
+### The checks before the owner's try, 13 October 2026
+
+At 52233286, on the branch `case4-ld-distances`: typecheck, lint, format
+clean; Vitest 190 files, 5,641 tests; the browser suite, every spec file
+but `measure` and `screens`, in Chromium and WebKit, in five chunks:
+358, 362, 358, 356 and 356 passed, 1,790 of 1,790, none passing only on
+a retry. Two earlier runs of chunks were set aside: 101 failures at a
+load average of about 200 from the owner's other work, 95 of them
+browsers that could not start; and 4 failures and 75 not run while the
+computer was being moved; both chunks passed whole when run again.
