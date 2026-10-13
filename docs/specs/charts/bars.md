@@ -23,6 +23,12 @@ level at the start of its bar: a name of the user's file can be long,
 and the names of the populations are at most 20 on `popgen2.html`
 (`MAX_LISTED_POPULATIONS`), which fit one under the other.
 
+Unchanged in what it draws by the branch `case4-ld-distances` of 12 and
+13 October 2026: the function that cuts its names and numbers two that
+would read alike moved to `distinctCuts` of `textWidth.ts`, from the
+review of the LD decay, so that the legend of the line plot cuts its
+names the same way.
+
 ## What it does
 
 ### What the user sees
