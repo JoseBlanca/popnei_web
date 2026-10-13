@@ -659,9 +659,10 @@ give the principal components that go into the GWAS as covariates.
   bp a whole LD decay at a largest distance of 1,000,000 base pairs
   takes 45 s in Chromium 153 and 52 s in WebKit 26.6, measured on 13
   October 2026 (`docs/plans/ld-decay-tab.md`, "Phase 2"), so the wait is
-  at most that, and minutes at longer distances. The owner has not yet
-  decided on this wait: it was found after their decision of 12 October
-  2026, which accepted the greyed filters but not it.
+  at most that, and minutes at longer distances. This wait was found
+  after the owner's decision of 12 October 2026, which accepted the
+  greyed filters but not it, and was put to the owner on 13 October
+  2026 with the measurement.
 
   The Stop of one analysis stops that analysis alone. An analysis that
   is running goes on running. One that was waiting for the stopped
