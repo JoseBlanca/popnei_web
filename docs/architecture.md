@@ -82,7 +82,17 @@ tried by the owner): `popgen2.html` calculates two analyses again by
 themselves, the PCA and the diversity of its new Populations tab, one
 at a time in the order of the tabs, with Stop all in the band; in
 sections 3, 4, 5, 7, 9, 11 and 12, each with a paragraph "What was
-revised on 12 October 2026" at its end.
+revised on 12 October 2026" at its end. Revised on 13 October 2026
+with what the branches `ld-decay-tab` and `distances-tab` built on 12
+and 13 October 2026 and the branch `case4-ld-distances` joined
+(`docs/plans/ld-decay-tab.md`, `docs/plans/distances-tab.md`, not yet
+tried by the owner): `popgen2.html` calculates four analyses again by
+themselves, the PCA, the diversity and the LD decay of the Populations
+tab, and the distances between populations of the new Distances tab,
+one at a time in an order of calculation that puts the LD decay last
+and is no longer that of the tabs; in sections 3, 4, 5, 7, 9 and 11,
+each with a paragraph "What was revised on 13 October 2026" at its
+end.
 What was
 revised each time until 30 September 2026 is at the end
 of section 1. The document gives the parts of the web applications of
@@ -1072,7 +1082,9 @@ so no change of a filter throws its result away, and its histograms
 stay. The memory the page keeps for results falls from up to the bound
 of 256 MB to the one pass's result and at most one PCA, 0.90 MB at
 9,381 individuals (`docs/specs/analyses/pca.md`, "How it runs"), and
-from 11 October 2026 one diversity of a few hundred bytes. Not
+from 11 October 2026 one diversity of a few hundred bytes, and from
+12 October 2026 one result of the distances between populations and
+one of the LD decay, whose sizes were not measured. Not
 taken: the cache kept, with the PCA started again even when it holds the
 result, which would show the old result during the minutes of the new
 calculation; and no cache at all on that page, which would drop the
@@ -1137,6 +1149,28 @@ variants of 1,000 individuals, 2.4 s in Chromium and 2.5 s in WebKit;
 on the owner's Apple M5 Pro (`docs/designs/population-tab.md`, "The time and the memory of a
 diversity", measured on 11 October 2026 on the old page, which makes
 the same calls of popnei).
+
+From 12 October 2026 two more analyses of `popgen2.html` are
+calculated again by themselves in the same way: the distances between
+populations of the Distances tab and the LD decay of the Populations
+tab (`docs/specs/steps/popgen2-distances.md`;
+`docs/specs/steps/popgen2-populations.md`, "The LD decay"). Both read
+the populations, so while either runs the screen locks what gives
+them, as for the diversity, with its own words, "Stop the distances in
+the Distances tab to change the populations; then press Run there to
+calculate them again.", in the plural for the distances. The key of the
+distances holds, as the diversity's does, the name of the individuals
+file and the column, which their warnings name; the key of the LD
+decay holds neither, since none of its words names them
+(`docs/specs/analyses/popDists.md` and `ldDecay.md`, "On
+popgen2.html"). The measure the heatmap of the distances draws is in
+no key (section 4), so its radio buttons are never greyed, and a change
+of them is no change for the automatic runs (section 5). A change of
+the options of the PCA or of the diversity while the LD decay runs is
+not greyed, since the LD decay does not read them, and that analysis
+waits until the LD decay ends: up to a minute at a largest distance of
+1,000,000 base pairs on 1,000 individuals with a variant every 100 bp,
+and minutes beyond (section 11, "The LD decay on `popgen2.html`").
 
 **A failure is forgotten when its key is left behind.** A failure that
 is not popnei's, a crash of the worker, is kept under its key until a
@@ -1231,6 +1265,17 @@ new; the paragraph on a running PCA holds for the PCA as it was. That
 the key of the diversity holds the words its warnings read is from the
 review of work package 1, which found a warning of a result naming an
 individuals file no longer open.
+
+What was revised on 13 October 2026, for what the branches
+`distances-tab` and `ld-decay-tab` built on 12 and 13 October 2026 and
+the branch `case4-ld-distances` joined (`docs/plans/distances-tab.md`,
+`docs/plans/ld-decay-tab.md`): the paragraph on the distances and the
+LD decay calculated again by themselves is new, and the memory of the
+results of "No result kept for values left behind" names their two
+results. That a change of the options of another analysis waits for a
+long LD decay was found by the review of the LD decay on 12 October
+2026, after the owner's decision of the same day that the others never
+wait for it.
 
 ## 4. An analysis is a module
 
@@ -1640,6 +1685,38 @@ words of the locks and the band key by it what they hold of each, its
 rule of failure, its name and its tab, so that an analysis added to the
 list without them does not compile.
 
+What was revised on 13 October 2026, for what the branches
+`distances-tab` and `ld-decay-tab` built on 12 and 13 October 2026 and
+the branch `case4-ld-distances` joined (`docs/plans/distances-tab.md`,
+`docs/plans/ld-decay-tab.md`). The distances between populations and
+the LD decay of `popgen2.html` are definitions of their own,
+`popDistsOnPopgen2` of `popDists.ts` and `ldDecayOnPopgen2` of
+`ldDecay.ts`, each made by the code of the old page's with the
+populations and the words of the new page, as the diversity has
+`diversityOnPopgen2`, with the old ids and key versions; each page has
+its own store and cache, so neither finds a result of the other.
+`POPGEN2_ANALYSES` ends with them, and `POPGEN2_LIVE`, the analyses
+calculated again by themselves, is from then the order of calculation,
+the PCA, the diversity, the distances and the LD decay, which is no
+longer the order of the tabs, the PCA, the diversity and the LD decay
+of the Populations tab, the distances of the Distances tab: the LD
+decay, which may take minutes and which nothing interrupts but its
+Stop, runs last, so that the others never wait for it after a change
+(section 5). The order of the tabs is `POPGEN2_LIVE_IN_TABS` of
+`src/ui/analyses/tabOrder.ts`, keyed by `POPGEN2_LIVE` so that an
+analysis added there without its place does not compile; the words
+that name several analyses with no sequence, Stop all, those about to
+start together, the lock's "to stop … too", a Run to press in each
+tab, and the band's link to the first result with warnings, read it,
+and the words of a sequence, the band's "then …" and the status
+region's round, read `POPGEN2_LIVE`. The lock of the individuals kept
+leaving no population, which the diversity, the LD decay and the
+distances share, moved from `diversity.ts` to
+`popgen2PopulationsKeptNeeds` of `src/core/populations.ts`, so that no
+module of an analysis imports a value of another's, and the line of
+the one population, which the diversity and the LD decay each say,
+from `diversityOnePopulation.ts` to `onePopulation.ts`.
+
 ## 5. The workers and their messages
 
 The page and each worker talk through typed messages
@@ -1688,10 +1765,12 @@ The page and each worker talk through typed messages
   that passed and failed, or `null` (`docs/plans/popnei-0.2.2.md`, "The
   FILTER failures"). The summary keeps every variant, whatever its
   FILTER column. From 10 October 2026 the PCA is the page's second
-  group, and from 11 October 2026 the diversity of the Populations tab
-  its third, each a group of one analysis, those of `POPGEN2_LIVE` of
-  `src/core/apps.ts`, which start by themselves only once live (below,
-  "Several analyses calculated again by themselves").
+  group, from 11 October 2026 the diversity of the Populations tab
+  its third, and from 12 October 2026 the distances between populations
+  and the LD decay the fourth and the fifth, each a group of one
+  analysis, those of `POPGEN2_LIVE` of `src/core/apps.ts` in its order,
+  which start by themselves only once live (below, "Several analyses
+  calculated again by themselves").
   A member of a group can be `locked`, its project
   lacking what it needs: a locked member neither starts nor holds back
   the group, and the box offers no Start again for it; on
@@ -1824,14 +1903,33 @@ The page and each worker talk through typed messages
   other page has; it would win if a second page needed it.
 - **Several analyses calculated again by themselves**, on
   `popgen2.html` from 11 October 2026, the PCA and the diversity of the
-  Populations tab (`docs/designs/population-tab.md`;
+  Populations tab, and from 12 October 2026 the distances between
+  populations of the Distances tab and the LD decay of the Populations
+  tab (`docs/designs/population-tab.md`;
   `docs/specs/steps/popgen2-pca.md`, "Several analyses calculated again
   by themselves"). Each is live from its own Run, so a Run of the
   diversity starts no PCA of minutes the user never asked for. One
   quiet second serves them all: when it runs out, the first live
-  analysis about to start, in the order of the tabs, the PCA and then
-  the diversity, starts, and each next one when the one before it
-  ends, with no second more; one runs
+  analysis about to start, in the order of calculation, `POPGEN2_LIVE`,
+  starts, and each next one when the one before it ends, with no
+  second more. That order is the PCA, the diversity, the distances and
+  the LD decay; until 13 October 2026 it was that of the tabs, the PCA
+  and then the diversity. The LD decay is last since nothing
+  interrupts it but its Stop and it may take minutes, 222 s at
+  2,000,000 base pairs on 1,000 individuals with a variant every 100
+  bp (section 11): in the order of the tabs, before the distances, it
+  would make them wait that long, and then for the calculation worker
+  started again after it, for a calculation of 118 to 155 ms on 20,000
+  variants of 1,000 individuals, against the owner's reason of 12
+  October 2026 for the LD decay calculated again by itself, that the
+  others never wait for it (found by the architecture review of the LD
+  decay on 12 October 2026, and settled when the two branches were
+  joined on 13 October 2026). One
+  wait for it remains: an analysis made about to start while the LD
+  decay runs, by a change of its own options, which the LD decay does
+  not read and so does not lock, or by its Run, waits until the LD
+  decay ends, under a minute up to 1,000,000 base pairs on that file
+  (section 11, "The LD decay on `popgen2.html`"). One runs
   at a time, since `sync` of `autoRuns.ts` starts nothing while any
   analysis runs. A live analysis waits for the one pass and for a
   calculation running, and for nothing else: whatever the state of
@@ -1846,6 +1944,21 @@ The page and each worker talk through typed messages
   the quiet second; and the analyses of a tab calculated only when it
   is shown, which would leave every analysis to calculate when the user
   turns to it.
+
+  A new project is a change for the live analyses only when it changes,
+  for one of `POPGEN2_LIVE`, its key or the reason it is locked, from
+  12 October 2026 (`inputsNow` of `autoRuns.ts`). Only such a change
+  starts the quiet second again and lifts the hold after a crash
+  (below). A command that changes how a result is drawn and no key, the
+  measure of the heatmap of the distances, the column that colours the
+  points of the PCA, its axes and its 2D or 3D view, and the value of
+  a threshold switched off, which no key holds, starts nothing and
+  lifts no hold. Until then every new project did both, and the review
+  of the Distances tab found that a change of the measure put the start
+  of the others off by a second and let them start in a tab that a
+  crash had left at the limit of its memory. The rule reads the
+  store's statuses, the key or the lock of each, so an analysis added
+  to `POPGEN2_LIVE` is covered with no change to it.
 
   The user's Run, `run(id)`, answers what it did: "started" at once,
   while nothing runs; "waiting", the analysis made live behind a
@@ -1891,9 +2004,15 @@ The page and each worker talk through typed messages
   browser of a computer was expected to refuse it (`crashText` of `src/core/analyses/pca.ts`; `failureEndsLive` of
   `src/ui/analyses/pca/liveEnd.ts`); for the
   diversity, every crash, since its words cannot tell a crash for
-  memory from another (`src/ui/analyses/diversity/liveEnd.ts`).
-  popnei's refusal, and a file that could not be read again, leave
-  either live, for the next change of its key to try again. What the
+  memory from another (`src/ui/analyses/diversity/liveEnd.ts`), and
+  from 12 October 2026 the same for the distances; for the LD decay,
+  every crash and also popnei's refusal for lack of memory, after which
+  a run at the same settings would take as long, up to 25 minutes on a
+  dense file, and be refused again at each change
+  (`src/ui/analyses/ldDecay/liveEnd.ts`; `isMemoryRefusal` of
+  `src/core/analyses/words.ts`). popnei's other refusals, and a file
+  that could not be read again, leave each live, for the next change
+  of its key to try again. What the
   others about to start do then depends on the failure. After a
   failure that ends a live state and is no crash, they start a quiet
   second later, as after a Stop. After a crash that ends one, which may
@@ -1917,6 +2036,9 @@ The page and each worker talk through typed messages
   of a Run that waited, of a Stop, of Stop all, and of the analyses a
   crash holds (`onLive`, its events `startedByItself`,
   `startedAfterWaiting`, `paused`, `pausedAll` and `heldAfterCrash`).
+  The round is named in the order of calculation, and Stop all in the
+  order of the tabs (section 4, "What was revised on 13 October
+  2026").
 - **Why a change on `popgen2.html` does not stop a PCA.** The owner's
   first answer of 10 October 2026 was a change during a run that stops
   it and starts it on the new values, with no lock of the filters. A
@@ -2166,6 +2288,19 @@ package 1 changed of the design, each in that bullet: the answer
 "kept" of a Run, where the design had a Run refused or waiting for
 nothing; and the hold after a crash, where the others had started at
 once in a tab that may have been at its limit.
+
+What was revised on 13 October 2026, for what the branches
+`distances-tab` and `ld-decay-tab` built on 12 and 13 October 2026 and
+the branch `case4-ld-distances` joined (`docs/plans/distances-tab.md`,
+`docs/plans/ld-decay-tab.md`): the bullet "A request that the current
+project no longer asks for is stopped" names the distances and the LD
+decay as the fourth and fifth groups; the bullet "Several analyses
+calculated again by themselves" gives the order of calculation, which
+puts the LD decay last and is no longer that of the tabs, the wait
+that remains for it, the rule of what counts as a change for the live
+analyses, from the review of the Distances tab, and the failures that
+end the live state of the distances and of the LD decay, the LD
+decay's refusal for memory among them, from its review.
 
 ## 6. The files of the user
 
@@ -3071,7 +3206,25 @@ for the smallest part of it.
   the download or held after a crash, which needs 288.4 px of 288 and
   is left so, its words whole (the review of work package 4 of
   `docs/plans/population-tab.md`, 12 October 2026); and the room the page keeps
-  under the band grows with it.
+  under the band grows with it. From 12 October 2026 it names the
+  distances and the LD decay as it names the diversity, the distances
+  in the plural, "Distances running"; "LD decay soon" with its Stop
+  recalculating needs 295 px of the 288 at 320 px, and takes the second
+  row as "Diversity later" does. With three or four analyses live, from
+  13 October 2026, it names the next analysis waiting and counts the
+  others, "PCA running · 0:00 · then the diversity and 2 more", and,
+  with more than two about to start, the first and a count, "The PCA
+  and 3 more start in a moment", since the whole list with Stop and
+  Stop all took two rows at 1280 px and at 720 px; a screen reader is
+  still given every name. The analyses waiting after the one running
+  are named in the order of calculation, those about to start together,
+  Stop all and the link to the first result with warnings in the order
+  of the tabs (section 4). It drops the Stop and the Stop recalculating
+  of an analysis while its tab is shown only for the first analysis of
+  that tab: the LD decay's stay while the Populations tab is shown,
+  since its own are below the diversity's whole result, 16 presses of
+  the Tab key down in the review of the LD decay of 12 October 2026
+  (`BELOW_ANOTHER` of `src/ui/band/bandLine.ts`).
 - **The step of an application is in the URL hash**, so that the back
   button moves between steps (`docs/technology.md`).
 
@@ -3189,6 +3342,46 @@ refuse. And a file dropped on either page outside the zones of a file
 is refused, where Chromium and WebKit had opened it in the tab in place
 of the page, losing its files and results (`docs/specs/entry.md`, "A
 file dropped outside a zone"; section 9, `strayDrops.ts`).
+
+What was revised on 13 October 2026, for what the branches
+`distances-tab` and `ld-decay-tab` built on 12 and 13 October 2026 and
+the branch `case4-ld-distances` joined (`docs/plans/distances-tab.md`,
+`docs/plans/ld-decay-tab.md`): the bullet of the band gains the
+distances and the LD decay, its count of the analyses after the next,
+and its rule of the Stops it drops. The Distances tab of
+`popgen2.html`, which said "Not built yet", draws the distances between
+populations, with the old page's heatmap and table given the new
+page's definition (`docs/specs/steps/popgen2-distances.md`), and the
+Populations tab gains the LD decay under the diversity, with the old
+page's plot and tables (`docs/specs/steps/popgen2-populations.md`, "The
+LD decay"). The code of the whole Distances tab, but its name, its
+heading and the store's definition, is downloaded when the tab is
+first shown, as the Populations tab's is, and the LD decay's code comes
+with the Populations tab's. Both tabs are loaded by one loader,
+`createTabLoader` of `src/ui/analyses/tabLoader.tsx`, given the
+`import()` of the tab's module, the path of that module as the
+manifest of the build names it, the line while it loads and the words
+of a failure; a wrong path fails only in the built site, where the
+files are asked for by it (`codeFiles.ts`), so a test reads each path
+against its `import()`. Each analysis of a tab that can be live but
+the PCA, the diversity, the LD decay and the distances, is drawn by
+one part, `LivePart` of `src/ui/analyses/LivePart.tsx`, the frame of
+`AnalysisPanel` with its Run, Stop, Stop recalculating, the line of
+what it waits for and the lock of its Run by the one pass, given the
+analysis's own words, and an `aside` after its button, the time of the
+LD decay's last run. The lines of a live analysis that reads the
+populations, in its tab and in the status region, are written once
+from its name, its tab and its number, in `liveLines.ts`, and the
+words of the unclassified left out once for the three, in
+`unclassifiedWords.ts` (section 9). Until the two branches were
+joined each analysis had its own loader, its own part and its own
+copy of each of those lines, written two and three times, and the
+distances' plural had made the copies drift. A population has the same
+colour and mark in the LD decay's plot as in the diversity's plots and
+the PCA, from `populationGroups` of `src/ui/analyses/populationGroups.ts`,
+and the legend of the line plot cuts a long name in the middle, as the
+bar plot does, numbering two that would still read alike
+(`distinctCuts` of `src/charts/textWidth.ts`).
 
 ## 8. The project file, the report and the script
 
@@ -3354,9 +3547,17 @@ src/core/
                     sfsWarnings.ts, which the band of that page loads;
                     from 11 October 2026 the diversity given popgen2.html,
                     diversityOnPopgen2 of diversity.ts, and the line of
-                    its one population, apart in diversityOnePopulation.ts
-                    so that the page does not load it before the
-                    Populations tab
+                    its one population, apart in onePopulation.ts
+                    (diversityOnePopulation.ts until 12 October 2026,
+                    when the LD decay came to say it too) so that the
+                    page does not load it before the Populations tab;
+                    from 12 October 2026 the distances between
+                    populations and the LD decay given popgen2.html,
+                    popDistsOnPopgen2 of popDists.ts and
+                    ldDecayOnPopgen2 of ldDecay.ts; and in words.ts
+                    isMemoryRefusal, whether a refusal of popnei is its
+                    refusal for lack of memory, which ends the LD
+                    decay's live state
   individualsKept.ts
                     the list of the individuals the filters keep, and the
                     counts of each filter of individuals (section 4)
@@ -3364,7 +3565,13 @@ src/core/
                     the locks when no population is left, the populations
                     under the minimum of individuals and their words; it
                     imports project.ts and individualsKept.ts, and neither
-                    imports it
+                    imports it; from 12 October 2026
+                    popgen2PopulationsKeptNeeds, the lock of the
+                    individuals kept leaving no population on
+                    popgen2.html, moved from diversity.ts for the LD decay
+                    and the distances, and the words of the minimum given
+                    by the panel, minimumOf, since the Distances tab names
+                    it "the individuals needed per variant"
   histogram.ts      the bins of the statistics of each individual (section 7)
   thresholds.ts     from 7 October 2026, the thresholds on the
                     histograms of popgen2.html: the step and the fine
@@ -3390,7 +3597,10 @@ src/core/
                     popgen2.html, which has no steps; from 7 October
                     2026 popgen2FirstProject, the first project of that
                     page; from 11 October 2026 POPGEN2_LIVE, the one
-                    list of the analyses of that page that can be live
+                    list of the analyses of that page that can be live,
+                    from 13 October 2026 in the order of calculation,
+                    the PCA, the diversity, the distances and the LD
+                    decay (section 4)
   fileNames.ts      the names of the files the application writes, from
                     the stem of the variants file; from 9 October 2026
                     also the names of the downloads of the tables and
@@ -3437,14 +3647,25 @@ src/charts/
                     (docs/specs/charts/line.md), and heatmap.ts the grid
                     of a symmetric matrix between named things, the
                     distances between populations'
-                    (docs/specs/charts/heatmap.md)
+                    (docs/specs/charts/heatmap.md); from 12 October
+                    2026 line.ts draws each series in the dash of its
+                    group as well as its colour, and cuts the names of
+                    its legend in the middle, numbering two that would
+                    still read alike, and heatmap.ts writes "or below"
+                    under the 0 of its legend when a value is negative,
+                    ends the title of its legend over the numbers of
+                    the bar so that the cells keep their room, and
+                    tells the screen whether its cells hold their
+                    values (writesValues)
   bars.ts           from 12 October 2026, a bar across for each of a few
                     names, the plots of the table of the diversity in
                     the Populations tab (docs/specs/charts/bars.md)
   textWidth.ts      from 12 October 2026, the width of a text of a plot,
                     measured in a hidden SVG in the font of the plots, and a
                     text cut to a width, for the names of bars.ts and the
-                    legend of line.ts
+                    legend of line.ts; from 12 October 2026 distinctCuts,
+                    the names of both cut in the middle and numbered by
+                    their place when two would read alike
   marks.ts          the colour and the symbol of each group of points, and
                     the colours of a column of numbers, for the 2D and 3D
                     plots of the PCA (docs/specs/charts/scatter.md)
@@ -3491,7 +3712,11 @@ src/ui/
                     October 2026, no notice; and,
                     from 10 October 2026, the band (band/) drawn in
                     #defects in the place of the error bar, the tab
-                    shown (pageTab.ts) given to both roots
+                    shown (pageTab.ts) given to both roots; from 12
+                    October 2026 the clock of the LD decay's last run
+                    (analyses/ldDecay/lastRun.ts), made with the page
+                    before any run, beside the analyses it starts by
+                    itself, so that no drawing of a component makes it
   popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES, the
                     summary of the variants file alone, POPGEN2_CHAIN,
                     and no counts, statistics config or writing, and the
@@ -3506,8 +3731,11 @@ src/ui/
                     and popgen2EndsLive, which failures end the live
                     state of each, by the rule of its analysis
                     (analyses/pca/liveEnd.ts, analyses/diversity/
-                    liveEnd.ts; section 5); apart from the entry, so that
-                    a test in node makes it
+                    liveEnd.ts; section 5), and from 12 October 2026
+                    the distances and the LD decay, the distances by the
+                    diversity's rule and the LD decay by
+                    analyses/ldDecay/liveEnd.ts; apart from the entry,
+                    so that a test in node makes it
   autoRunsContext.ts from 11 October 2026, autoRuns given to the screens
                     as the store is, through AutoRunsProvider and
                     useAutoRuns, and to the band, its own root, through
@@ -3529,9 +3757,10 @@ src/ui/
                     again a quiet second after a change, held while the
                     gate counts a change under way, and paused by its
                     Stop until Run (section 5); from 11 October 2026
-                    several live analyses, the PCA and the diversity,
-                    started one at a time in the order of the tabs from
-                    one quiet second, each held back only by the one
+                    several live analyses, from 12 October 2026 the
+                    four of POPGEN2_LIVE, started one at a time in its
+                    order, the order of calculation, from one quiet
+                    second, each held back only by the one
                     pass and a calculation running: the answer of a Run,
                     started, waiting, kept or refused; the live state of
                     each, with what its start waits for, the quiet
@@ -3540,7 +3769,9 @@ src/ui/
                     starts the quiet second again, Stop all (pauseAll),
                     the hold after a crash that ended a live state
                     (heldAfterCrash), and the events the status region
-                    says (onLive)
+                    says (onLive); from 12 October 2026 a new project a
+                    change for them only when it changes the key of one
+                    of them or the reason it is locked (section 5)
   variants/         the screens of popgen2.html: the opening of the
                     variants file, the box of what it holds with the bar
                     of the pass running, the count of the variants so
@@ -3628,7 +3859,11 @@ src/ui/
                     October 2026 its narrow form decided in one place,
                     the window under 45 em (narrow.ts), and the warning
                     of the diversity's spectrum counted with the
-                    result's (spectrumWarnings of core)
+                    result's (spectrumWarnings of core); from 12 and 13
+                    October 2026 the four live analyses, the LD decay's
+                    Stop kept while the Populations tab is shown
+                    (BELOW_ANOTHER), and, with three or more, the next
+                    analysis and a count of the others
   pageTab.ts        from 10 October 2026, the tab shown on popgen2.html,
                     a small store of the screen that the page and the
                     band both read and change
@@ -3705,7 +3940,32 @@ src/ui/
                     the round, a Run that waited and Stop all; and in
                     diversity/ liveWords.ts, the words of the diversity
                     the page says whichever tab is shown, and liveEnd.ts,
-                    which of its failures end its live state
+                    which of its failures end its live state. From 12
+                    and 13 October 2026: ldDecay/ also the LD decay's
+                    part of the Populations tab (LdDecayTabOptions.tsx,
+                    ldDecayTabPanel.tsx, tabWords.ts, liveWords.ts,
+                    liveEnd.ts) and lastRun.ts, the clock of its last
+                    run; popDists/ the Distances tab (DistancesTab.tsx,
+                    which the page loads with tabLoadWords.ts, and
+                    DistancesTabView.tsx, downloaded when the tab is
+                    first shown, with DistancesTabOptions.tsx,
+                    DistancesTabResults.tsx, distancesTabPanel.ts,
+                    tabWords.ts and liveWords.ts); tabLoader.tsx,
+                    createTabLoader, the one loader of the two tabs
+                    downloaded apart; LivePart.tsx, the part of a tab of
+                    each live analysis but the PCA, its Run, Stop, Stop
+                    recalculating and line of what it waits for, in the
+                    frame AnalysisPanel.tsx, which gains an aside after
+                    its button; liveLines.ts, the lines of a live
+                    analysis that reads the populations, written once
+                    from its name and its number, the distances in the
+                    plural; unclassifiedWords.ts, the words of the
+                    unclassified left out and of the populations the
+                    thresholds empty, one set for the three analyses of
+                    the populations; and tabOrder.ts, the live analyses
+                    in the order of the tabs, POPGEN2_LIVE_IN_TABS and
+                    inTabOrder, which the words that name several with
+                    no sequence read (section 4)
   report/           renders the report model into its HTML page, with the plots
   widgets/          React Aria components with our styles, one wrapper per
                     widget; among them ThresholdSlider.tsx, from 7
@@ -3729,7 +3989,10 @@ src/ui/
                     box after a drag of the line; Checkbox.tsx, with a line
                     under the box that describes it; Table.tsx, the plain table of a
                     few rows that is only read, SortableTable.tsx, the
-                    table sorted by any column, whose Virtualizer draws
+                    table sorted by any column, both of whose CSV can
+                    be the screen's own from 12 October 2026, for the
+                    pair of the distances written as two fields, and
+                    whose Virtualizer draws
                     only the rows in view, for thousands of rows such as
                     the statistics of each individual and, from 9
                     October 2026, the individuals file under the tab of
@@ -3878,6 +4141,25 @@ warning of the spectrum it counts, and the attribute of that warning
 of `Warnings.tsx`, which its link gives the focus to;
 `analyses/` imports `autoRuns.ts` and `autoRunsContext.ts`, as
 `variants/` does.
+
+What was revised on 13 October 2026, for what the branches
+`distances-tab` and `ld-decay-tab` built on 12 and 13 October 2026 and
+the branch `case4-ld-distances` joined (`docs/plans/distances-tab.md`,
+`docs/plans/ld-decay-tab.md`): in core, the rows of `analyses/`, with
+the definitions of the distances and the LD decay given `popgen2.html`,
+`onePopulation.ts` in the place of `diversityOnePopulation.ts` and
+`isMemoryRefusal`, of `apps.ts` and of `populations.ts`; in
+`src/charts`, the rows of `line.ts`, `heatmap.ts` and `textWidth.ts`;
+in `src/ui`, the rows of `popgen2.tsx`, `popgen2Store.ts`,
+`autoRuns.ts`, `band/`, `analyses/` and `widgets/`. No rule of the
+imports changes. `popDists.ts` and `ldDecay.ts` import
+`popgen2PopulationsKeptNeeds` from `populations.ts` and not from
+`diversity.ts`, so that no module of an analysis imports a value of
+another's. `band/` imports
+`analyses/tabOrder.ts`, for the order of the tabs it names Stop all
+and its link in. The LD decay's part imports
+`analyses/populationGroups.ts`, as the diversity's plots do, so that a
+population has one colour and one mark in every plot of the tab.
 
 ## 10. The walking skeleton
 
@@ -4036,6 +4318,37 @@ tests of the application are the same with it.
   That memory stays with wasm after the analysis, so the worker is
   started again after every LD decay (section 13, point 16), which gave
   all of it back in both engines.
+- **The LD decay on `popgen2.html`**, calculated again by itself after
+  each change from 12 October 2026, was measured there on 13 October
+  2026 with no other agent at work on the machine, the owner's Mac,
+  at a load average over one minute of 4.8 to 7.0 (measurement LD2 of
+  `e2e/measure.spec.ts`, commit 3dca6bfe;
+  `docs/plans/ld-decay-tab.md`, "Phase 2"). The file: 15,000 variants,
+  one every 100 bp (1.5 Mb), of 1,000 diploid individuals; each case
+  run once on a new page; the time from Run to the table shown; the
+  memory the sum of the engine's processes, sampled every 100 ms, before
+  the run and at its peak:
+
+  | case | Chromium 153 | WebKit 26.6 |
+  |---|---|---|
+  | 100,000 bp, one population | 8.6 s; 0.19 → 0.79 GB | 10.7 s; 0.36 → 1.02 GB |
+  | 1,000,000 bp, one population | 45.3 s; 0.19 → 0.91 GB | 52.1 s; 0.35 → 1.12 GB |
+  | 100,000 bp, two populations of 500 | 8.2 s; 0.22 → 0.63 GB | 10.5 s; 0.40 → 0.88 GB |
+  | 1,000,000 bp, two populations | 46.1 s; 0.22 → 0.83 GB | 49.4 s; 0.43 → 1.09 GB |
+  | the PCA, the diversity and the LD decay at 100,000 bp, live, after the missing data moved to 0.04 | PCA 2.1 s, diversity 2.8 s, LD decay 10.3 s; 0.32 → 0.77 GB | PCA 2.1 s, diversity 2.8 s, LD decay 11.8 s; 0.47 → 1.27 GB |
+
+  No tab closed and popnei refused nothing. Beside the old page's
+  measurement above, on a file of the same density, 222 s at 2,000,000
+  bp and 10 to 14 minutes at 4,000,000 bp, these say what the owner's
+  decision of 12 October 2026 costs a user: up to 1,000,000 bp on
+  1,000 individuals, under a minute of greyed filters after each change,
+  with the PCA and the diversity answering within 3 s before it, and
+  minutes beyond 2,000,000 bp. The tab's time of the last run is about
+  1 s less than the time from Run to the table, and shows whole seconds
+  rounded down. The distances between populations were not live in this
+  measurement, which was made before the two branches were joined; they
+  run before the LD decay (section 5), and took 118 ms on 20,000
+  variants of 1,000 individuals (below).
 - **The distances between populations take one pass**, and their time
   grows with the variants and with the pairs of populations. Measured
   through the application on 30 September 2026, in Chromium 153 and
@@ -4047,7 +4360,10 @@ tests of the application are the same with it.
   individuals; on the `.nei` file of 19 MB of section 13, 20,000
   variants of 1,000 individuals, 118 and 118 ms with three populations,
   and 155 and 144 ms with twenty of 50 individuals, the pass taking most
-  of it.
+  of it. On `popgen2.html`, from 12 October 2026, they make the same
+  call of popnei and are calculated again by themselves after each
+  change, so the filters they read are greyed about that long; the time
+  was not measured again there.
 - **The diversity takes two passes from stage 5**, one for each of its
   calls of popnei, until popnei issue #4 lets it make one. Measured the
   same way on 30 September 2026 on the same file of 19 MB, with the
@@ -4307,9 +4623,21 @@ tests of the application are the same with it.
   tab, and on `main` since the band of 10 October 2026; found by the
   review of work package 4 of `docs/plans/population-tab.md`, 12
   October 2026, and not seen in a browser.
-- **The first load of `popgen2.html`** is 331.72 KB gzipped, the sum of
+- **The first load of `popgen2.html`** is 337.19 KB gzipped, the sum of
   the gzip sizes `vite build` reports for the files the page loads
-  before it draws, the HTML included, at commit 590caf53 of the branch
+  before it draws, the HTML included, at commit 48bfa8a0 of the branch
+  `case4-ld-distances` on 13 October 2026, against 332.37 KB on `main`
+  before the distances and the LD decay, 4.82 KB more. The bundle
+  review of each branch found 0.86 KB for the LD decay and 0.94 KB for
+  the distances on 12 October 2026; the other 3.02 KB came with the
+  joining of the two branches and its fixes, and were not measured part
+  by part. The rest of their code is downloaded with their tabs. Measured the same day by the same count, at that commit, after
+  the plots of the Variants tab, which come with the first variants
+  file: the Populations tab's code, the LD decay's among it, is 25.90
+  KB at its first show; the Distances tab's is 17.21 KB when it is
+  shown first, and 9.20 KB after the Populations tab, with which it
+  shares the rest. Before these pieces the first load was 331.72 KB, at
+  commit 590caf53 of the branch
   `population-tab` on 12 October 2026, against 321.62 KB before that
   branch's work, 10.10 KB more. Of the 10.10 KB, work package 1 added
   5.86 KB: 4.95 KB of code the page needs before the Populations tab
@@ -4478,6 +4806,16 @@ not. The known problem of the PCA run again within about a minute of
 its Stop, at about 4.97 GB in WebKit, is in "The diversity started
 after a large PCA", as the owner decided on 11 October 2026, to be
 measured on a Mac with less memory and in Safari.
+
+What was revised on 13 October 2026, for what the branches
+`distances-tab` and `ld-decay-tab` built and measured on 12 and 13
+October 2026 and the branch `case4-ld-distances` joined
+(`docs/plans/distances-tab.md`, `docs/plans/ld-decay-tab.md`): the
+bullet "The LD decay on `popgen2.html`", with the measurement of phase
+2 of its plan, is new; "The distances between populations take one
+pass" says what their time means on `popgen2.html`; and "The first load
+of `popgen2.html`" gives the size at the head of the joined branch and
+the code of the two tabs at their first show.
 
 ## 12. What is hard to undo
 
