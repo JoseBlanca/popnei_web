@@ -16,19 +16,41 @@
    the column is too narrow for them, as "Major allele frequency max:"
    may at 320 pixels, and is aligned with the last line of the label, the
    one that ends with "max:": its baseline on the label's last baseline,
-   or its bottom on the label's where a browser has no last baseline. */
+   or its bottom on the label's where a browser has no last baseline.
+   When even the label's longest piece, "genotypes max:", joined by a
+   no-break space, and the input do not fit side by side, the input goes
+   under the label: with the grid of before, at 320 pixels and the text
+   at 200%, the label was 231 pixels wide in a column of 72, under its
+   input, in the Mac's font, and in DejaVu Sans it passed the window's
+   edge, which scrolled sideways (the CI on Linux, 13 October 2026). The
+   label starts from its longest piece and grows up to its whole width,
+   so the line breaks only when that piece and the input do not fit, and
+   where they fit the input stands where the grid's column of
+   max-content put it, at the same pixels at 1280 and 320 px. A piece
+   wider than the whole line, "genotypes max:" at 200% in DejaVu Sans,
+   is broken inside its word rather than passing the window's edge. */
 .inline {
-  display: grid;
-  grid-template-columns: minmax(0, max-content) auto;
-  justify-content: start;
-  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
   align-items: last baseline;
   column-gap: var(--space-2);
   row-gap: var(--space-1);
 }
 
+.inline > .label {
+  flex: 1 1 min-content;
+  min-inline-size: 0;
+  max-inline-size: max-content;
+  overflow-wrap: break-word;
+}
+
+.inline > .input {
+  flex: none;
+}
+
 .inline > p {
-  grid-column: 1 / -1;
+  flex-basis: 100%;
 }
 
 /* The input of such a field, a threshold of up to six characters,

@@ -63,7 +63,10 @@ threshold:
 
 From 7 October 2026 a threshold may come with no legend, for the
 thresholds of `popgen2.html`, which are no filters and which the screen
-shows in a box after the short title, "Obs. het. max: 0.04"
+shows in a box after the short title, "Obs. het. max: 0.04", the box
+beside the title where the two fit and under it where they do not, as
+at 320 px with the text at 200% (the CI on Linux, 13 October 2026:
+until then the title lay under its box there)
 (`docs/plans/thresholds.md`): the line and the bars as above, no
 legend, and the top margin of a plot without one. From 8 October 2026
 such a threshold may say that it keeps every value, `keepsAll` of

@@ -932,3 +932,56 @@ test("NU8 R1 at 320 pixels with the text at twice its size, the lines at the top
     ),
   ).toBe(true);
 });
+
+/** Each threshold of the Variants tab whose label and box share a field:
+    its label's words, and whether the label lies clear of its box, beside
+    it or above it, and whether the box is beside the label, on its last
+    line. */
+async function thresholdFields(page: Page): Promise<
+  readonly {
+    readonly label: string;
+    readonly clear: boolean;
+    readonly beside: boolean;
+  }[]
+> {
+  return page.getByRole("tabpanel", { name: "Variants" }).evaluate((panel) =>
+    [...panel.querySelectorAll("label")].flatMap((label) => {
+      const input = label.parentElement?.querySelector("input");
+      if (input === null || input === undefined) return [];
+      const words = label.getBoundingClientRect();
+      const box = input.getBoundingClientRect();
+      return [
+        {
+          label: (label.textContent ?? "").split(" max:")[0] ?? "",
+          clear: words.right <= box.left + 0.5 || words.bottom <= box.top + 0.5,
+          beside: box.top < words.bottom && box.left >= words.right - 0.5,
+        },
+      ];
+    }),
+  );
+}
+
+test("NU8 R1 at 320 pixels with the text at twice its size, no label of a threshold lies under its box, which goes under the label where the two do not fit side by side; at the usual size, each box beside its label (the CI on Linux, 13 October 2026)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await openPage(page);
+  await pick(page, join(FIXTURES, "panel.nei"));
+  await expect(facts(page).getByRole("paragraph")).toHaveCount(3);
+  const usual = await thresholdFields(page);
+  expect(usual.length).toBeGreaterThanOrEqual(3);
+  for (const field of usual) {
+    expect(field, field.label).toMatchObject({ clear: true, beside: true });
+  }
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "32px";
+  });
+  await expect
+    .poll(async () => (await thresholdFields(page)).every((f) => f.clear))
+    .toBe(true);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
