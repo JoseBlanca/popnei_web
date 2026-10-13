@@ -879,7 +879,14 @@ words with a name of 74 characters took a row of their own, the band
 percentage, in Chromium 153 and WebKit 26.6). Until 12 October 2026 the line did
 not wrap, and at 200% text at 320 px Stop all stood 109 px past the
 window, out of reach, and the words shrank to nothing (the review of
-work package 4). At 100% text every line is on one row from 320 px up.
+work package 4). At 100% text, in the Mac's system font, every line is
+on one row from 320 px up. In a wider font, as DejaVu Sans, the
+sans-serif font of Linux, a line may not fit: "Popnei", "Diversity ·
+0:05", Stop and Stop all at 320 px, and the PCA running then the
+diversity and 2 more at 720 px, take a second row for Stop all, whole,
+inside the window, nothing cut and no sideways scroll; the flows assert
+one row where the parts fit and that wrap where they do not (the CI on
+Linux, 13 October 2026).
 
 One case is known only from an emulation, for the owner to try in
 Safari (the review of the merge of the LD decay and the distances, 13

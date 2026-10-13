@@ -1036,8 +1036,11 @@ of its tooltip, in place of the options, which stay drawn, hidden, with
 what the user left in them. When the tab is no longer greyed, its
 content comes back as it was.
 
-**At 320 px** the five labels wrap to two lines, as the row's style lets
-them; the tab shown keeps its bar and its weight on whichever line it
+**At 320 px** the five labels wrap to two lines in the Mac's system
+font, as the row's style lets them, and to three in a wider font, as
+DejaVu Sans, the sans-serif font of Linux, each line as full as it can
+be, nothing cut and no sideways scroll (the CI on Linux, 13 October
+2026); the tab shown keeps its bar and its weight on whichever line it
 is, and the page does not scroll sideways.
 
 ### The tabs not built yet
@@ -1836,7 +1839,8 @@ engines that start on the owner's Mac, on `panel.nei`,
   description; the tab shown keeps `aria-selected="true"`. The PCA tab
   shown, then another variants file opened: the tab stays shown,
   greyed, with the reason in its place. At 320 px, the five labels on
-  two lines and no sideways scroll.
+  two lines in the Mac's system font, three in DejaVu Sans, and no
+  sideways scroll.
 - **The PCA**, all thresholds of the Variants tab as a new page has
   them, the missing rate of the variants at 0.1: the PCA tab opened
   during the one pass, held (`e2e/holdWorker.ts`), shows Run disabled
