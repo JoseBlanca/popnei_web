@@ -411,6 +411,7 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
         "the pass gave no variant: its source gave 1200 and the steps kept none of them",
         p,
         "popgen2",
+        true,
       ),
     ).toBe(
       "The thresholds of the Variants tab kept none of the variants of panel.nei, so there is no variant to calculate the distances between populations over. Loosen them. The distances are then calculated again by themselves.",
@@ -420,6 +421,7 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
         "the pass gave no variant: its source gave 1200 and the steps kept none of them",
         p,
         "popgen",
+        false,
       ),
     ).toBe(
       "The filters kept none of the variants of panel.nei, so there is no variant to calculate the distances between populations over. Loosen the filters in the Variants step.",
@@ -432,14 +434,32 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
         "the pass gave no variant and its source holds none",
         p,
         "popgen2",
+        true,
       ),
     ).toBe(
       "panel.nei has no variants. Open another variants file in the box Variants.",
     );
     // In the plural, and said once (the review of the Distances tab, 12
     // October 2026).
-    expect(refusalText("something else went wrong.", p, "popgen2")).toBe(
+    expect(refusalText("something else went wrong.", p, "popgen2", true)).toBe(
       "popnei could not calculate the distances between populations: something else went wrong. Change the settings, or open the variants file again in the box Variants, and the distances are then calculated again by themselves.",
+    );
+    // Not live, after a Stop over the refusal: nothing is calculated by
+    // itself, so the words do not say it (the merge of the LD decay and
+    // the distances, 13 October 2026, as the LD decay's review gave the
+    // diversity).
+    expect(refusalText("something else went wrong.", p, "popgen2", false)).toBe(
+      "popnei could not calculate the distances between populations: something else went wrong. Change the settings, or open the variants file again in the box Variants, to run them again.",
+    );
+    expect(
+      refusalText(
+        "the pass gave no variant: its source gave 1200 and the steps kept none of them",
+        p,
+        "popgen2",
+        false,
+      ),
+    ).toBe(
+      "The thresholds of the Variants tab kept none of the variants of panel.nei, so there is no variant to calculate the distances between populations over. Loosen them.",
     );
   });
 

@@ -253,7 +253,7 @@ const POP_DISTS: AnalysisUi = Object.freeze({
         );
   },
   refusalText: (message: string, p: Project): string =>
-    popDistsRefusalText(message, p, "popgen"),
+    popDistsRefusalText(message, p, "popgen", false),
   statisticsFailedText: (
     error: AnalysisError,
     p: Project,

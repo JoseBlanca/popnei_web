@@ -205,14 +205,18 @@ const IN_BOX_VARIANTS = " in the box Variants";
  * `refusalWords`, with "the distances between populations" in the place
  * of "the diversity" (popDists.md, "Its words"); on popgen2.html, the
  * refusals of the variants file itself in the words of the box
- * Variants, and the others in the words of that page, ending with what
- * happens after the change they ask for. Throws a defect on a project
- * with no variants file.
+ * Variants, and the others in the words of that page, ending, while the
+ * distances are live, `live`, with what happens after the change they
+ * ask for, and otherwise with no word of a calculation by themselves
+ * (since 13 October 2026, as the LD decay's review gave the diversity);
+ * `live` is not read on popgen.html. Throws a defect on a project with
+ * no variants file.
  */
 export function refusalText(
   message: string,
   p: Project,
   page: PopDistsPage,
+  live: boolean,
 ): string {
   if (p.variants === null) {
     throw defect("refusalText was given a project with no variants file.");
@@ -230,11 +234,11 @@ export function refusalText(
       calculate: "calculate the distances between populations",
       nothingLeft:
         "there is no variant to calculate the distances between populations over",
-      again: THEN_AGAIN,
+      again: live ? THEN_AGAIN : "to run them again",
       emptyPass: (name) =>
         `The thresholds of the Variants tab kept none of the variants of ${name}, so there is no variant to calculate the distances between populations over. Loosen them.`,
     });
-    return words.endsWith(`${THEN_AGAIN}.`)
+    return !live || words.endsWith(`${THEN_AGAIN}.`)
       ? words
       : `${words} ${AGAIN_BY_THEMSELVES}`;
   }

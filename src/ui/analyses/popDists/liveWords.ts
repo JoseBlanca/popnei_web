@@ -36,8 +36,8 @@ const DISTANCES_NAME = "the distances between populations";
     that failed in the words of the one pass, and the failures that are
     not popnei's refusals in the words of the page. */
 export const DISTANCES_TAB_ERRORS: PanelErrorWords = Object.freeze({
-  refusalText: (message: string, p: Project): string =>
-    refusalText(message, p, "popgen2"),
+  refusalText: (message: string, p: Project, live: boolean): string =>
+    refusalText(message, p, "popgen2", live),
   statisticsFailedText: (
     error: AnalysisError,
     p: Project,
