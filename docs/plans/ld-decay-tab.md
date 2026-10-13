@@ -258,3 +258,5 @@ a retry. Two earlier runs of chunks were set aside: 101 failures at a
 load average of about 200 from the owner's other work, 95 of them
 browsers that could not start; and 4 failures and 75 not run while the
 computer was being moved; both chunks passed whole when run again.
+
+The owner checked the result on 13 October 2026 and ordered the merge into `main`, the push and the deploy.
