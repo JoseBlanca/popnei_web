@@ -9,8 +9,8 @@
  * drawn into it by the plot.
  */
 
+import { FONT_STACK } from "./fonts.ts";
 import { MAX_CANVAS_SIDE } from "./limits.ts";
-import { FONT_STACK } from "./textWidth.ts";
 import type { PngScale } from "./types.ts";
 
 /** The size of a plot at its last draw, in CSS pixels. */

@@ -37,7 +37,7 @@ import type { AboutToStart, LiveState } from "../../autoRuns.ts";
 import type { PanelLive } from "../AnalysisPanel.tsx";
 import { passLockText } from "../pca/passLock.ts";
 import type { PassLock } from "../pca/passLock.ts";
-import { panelLive, stoppedLine, waitingLine } from "../liveLines.ts";
+import { panelLive, stoppedLine, waitingLine } from "../liveTabLines.ts";
 import { DISTANCES_NAMES } from "../status.ts";
 import type { LiveAnalysisName, RunWithheld } from "../status.ts";
 import {
@@ -149,7 +149,7 @@ export function distancesTabLock(
 /** The line after a Stop, until Run or another variants file, in the
     place of the bar; with no Run until a change, `noRunYet`, the result
     shown or popnei's refusal, "… After the next change, Run calculates
-    them …" (`stoppedLine` of liveLines.ts). */
+    them …" (`stoppedLine` of liveTabLines.ts). */
 export function distancesStoppedLine(noRunYet: boolean): string {
   return stoppedLine(DISTANCES_NAMES, noRunYet);
 }
@@ -157,7 +157,7 @@ export function distancesStoppedLine(noRunYet: boolean): string {
 /** The line in the place of the bar while the distances are live, do
     not run, and are about to start, waiting for `waits`, with `before`
     the live analysis the line names, `null` for none (`waitingLine` of
-    liveLines.ts). */
+    liveTabLines.ts). */
 export function distancesWaitingLine(
   waits: AboutToStart,
   before: LiveAnalysisName | null,
@@ -168,7 +168,7 @@ export function distancesWaitingLine(
 /** The live state `state` of the distances as their panel draws it,
     with `before`, the live analysis its line of waiting names, or
     `null`, and why their state offers no Run, `withheld`, `runWithheldOf`
-    of their status (`panelLive` of liveLines.ts). */
+    of their status (`panelLive` of liveTabLines.ts). */
 export function distancesPanelLive(
   state: LiveState,
   before: LiveAnalysisName | null,

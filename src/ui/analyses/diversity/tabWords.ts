@@ -35,7 +35,7 @@ import {
   panelLive,
   stoppedLine,
   waitingLine,
-} from "../liveLines.ts";
+} from "../liveTabLines.ts";
 import { DIVERSITY_NAMES } from "../status.ts";
 import type { LiveAnalysisName, RunWithheld } from "../status.ts";
 import { emptiedLine, unclassifiedLine } from "../unclassifiedWords.ts";
@@ -47,7 +47,7 @@ export const DIVERSITY_TAB_NAME = "the diversity";
 
 /** The line after a Stop, until Run or another variants file, in the
     place of the bar, the Run of after the next change while the state
-    offers none, `noRunYet` (`stoppedLine` of liveLines.ts). */
+    offers none, `noRunYet` (`stoppedLine` of liveTabLines.ts). */
 export function diversityStoppedLine(noRunYet: boolean): string {
   return stoppedLine(DIVERSITY_NAMES, noRunYet);
 }
@@ -156,7 +156,7 @@ export function diversityTabLock(
     not run, and is about to start, waiting for `waits`, with `before`
     the live analysis its line names, "the PCA" or "the PCoA", `null` for
     none (docs/specs/steps/popgen2-populations.md, "Run and Stop", the
-    line in the place of the bar; `waitingLine` of liveLines.ts). */
+    line in the place of the bar; `waitingLine` of liveTabLines.ts). */
 export function diversityWaitingLine(
   waits: AboutToStart,
   before: LiveAnalysisName | null,
@@ -166,7 +166,7 @@ export function diversityWaitingLine(
 
 /** The live state `state` of the diversity as its panel draws it, with
     `before`, the live analysis its line of waiting names, and why its
-    state offers no Run, `withheld` (`panelLive` of liveLines.ts). */
+    state offers no Run, `withheld` (`panelLive` of liveTabLines.ts). */
 export function diversityPanelLive(
   state: LiveState,
   before: LiveAnalysisName | null,

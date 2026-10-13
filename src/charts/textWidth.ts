@@ -21,17 +21,12 @@
  * that stands in for it.
  */
 
+import { FONT_STACK } from "./fonts.ts";
+
 /** The ellipsis that stands for the middle of a text cut. */
 export const ELLIPSIS = "…";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
-
-/**
- * The fonts the exported SVG names while the applications use the fonts
- * of the system: a generic stack, and no font embedded (charts.md,
- * "Fonts").
- */
-export const FONT_STACK = 'system-ui, "Helvetica", "Arial", sans-serif';
 
 /** The text that measures in the page's font, in its SVG in the body;
     null before the first measure, and made again when a page or a test

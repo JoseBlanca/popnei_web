@@ -29,7 +29,7 @@ import {
   panelLive,
   stoppedLine,
   waitingLine,
-} from "../liveLines.ts";
+} from "../liveTabLines.ts";
 import { LD_DECAY_NAMES } from "../status.ts";
 import type { LiveAnalysisName, RunWithheld } from "../status.ts";
 import type { LastRun } from "./lastRun.ts";
@@ -65,7 +65,7 @@ export const LD_DECAY_FAILURE_ENDED_LINE = failureEndedLine(
 );
 
 /** The line after a failure that ended the live state, as
-    `failureEndedLine` of liveLines.ts, but for popnei's refusal for
+    `failureEndedLine` of liveTabLines.ts, but for popnei's refusal for
     memory, which ends it, and after which the changes the refusal asks
     for bring Run back (the review of the LD decay, 12 October 2026). */
 export function ldDecayFailureEndedLine(withheld: RunWithheld): string {
@@ -134,7 +134,7 @@ export function ldDecayTabLock(
 /** The line in the place of the bar while the LD decay is live, does
     not run, and is about to start, waiting for `waits`, with `before`
     the live analysis its line names, `null` for none (`waitingLine` of
-    liveLines.ts). */
+    liveTabLines.ts). */
 export function ldDecayWaitingLine(
   waits: AboutToStart,
   before: LiveAnalysisName | null,

@@ -1,5 +1,6 @@
 /**
- * The lines of the live analyses that read the populations, written
+ * The lines of the live analyses that read the populations, in their
+ * tabs (liveTabLines.ts) and in the status region (liveLines.ts), written
  * once from how the page names each (the merge of the LD decay and the
  * distances, 13 October 2026): the words of the diversity and of the LD
  * decay in the singular, those of the distances in the plural, each in
@@ -10,14 +11,16 @@ import { describe, expect, test } from "vitest";
 import { DIVERSITY_LINES } from "./diversity/liveWords.ts";
 import { LD_DECAY_LINES } from "./ldDecay/liveWords.ts";
 import {
-  afterCrashLine,
-  failureEndedLine,
   heldAfterCrashText,
   startedByItselfText,
-  stoppedLine,
   stoppedText,
-  waitingLine,
 } from "./liveLines.ts";
+import {
+  afterCrashLine,
+  failureEndedLine,
+  stoppedLine,
+  waitingLine,
+} from "./liveTabLines.ts";
 import { DISTANCES_LINES } from "./popDists/liveWords.ts";
 import { DIVERSITY_NAMES } from "./status.ts";
 

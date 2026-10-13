@@ -105,6 +105,23 @@ describe("what the pages load first", () => {
     expect(reached).not.toContain("charts/heatmap.ts");
   });
 
+  test("popgen2.html loads the lines a live analysis says in the status region, and those of its tab and the measure of the text of the plots with the code of the tabs (the review of the merge of the LD decay and the distances, 13 October 2026)", () => {
+    const reached = reachedFrom("ui/popgen2.tsx");
+    expect(reached).toContain("ui/analyses/liveLines.ts");
+    expect(reached).not.toContain("ui/analyses/liveTabLines.ts");
+    // The export of a plot, which the first load carries, reads only the
+    // fonts of the exported file.
+    expect(reached).toContain("charts/export.ts");
+    expect(reached).toContain("charts/fonts.ts");
+    expect(reached).not.toContain("charts/textWidth.ts");
+    expect(
+      reachedFrom("ui/analyses/diversity/PopulationsTabView.tsx"),
+    ).toContain("ui/analyses/liveTabLines.ts");
+    expect(reachedFrom("ui/analyses/popDists/DistancesTabView.tsx")).toContain(
+      "ui/analyses/liveTabLines.ts",
+    );
+  });
+
   test("popgen2.html loads the rows, the lines and the CSV of the spectrum with the code of the Populations tab, not first, and its warning first, for the band", () => {
     expect(
       reachedFrom("ui/analyses/diversity/PopulationsTabView.tsx"),
