@@ -267,6 +267,26 @@ first load of `popgen2.html`"). The bundle reviews found nothing more
 to take out: a chunk of its own for the five things the tab imports
 from the first load would save no bytes.
 
+The LD decay in the Populations tab and the Distances tab, built on the
+branches `ld-decay-tab` and `distances-tab` on 12 October 2026 and
+joined on the branch `case4-ld-distances` on 13 October 2026
+(`docs/plans/ld-decay-tab.md`, `docs/plans/distances-tab.md`), made
+the first load of `popgen2.html` 337.19 KB at commit 48bfa8a0, by the
+same count with the HTML included, against 332.37 KB on `main` before
+them, 4.82 KB more: 0.86 KB for the LD decay and 0.94 KB for the
+distances as the bundle review of each branch found them, and 3.02 KB
+with the joining of the two and its fixes, not measured part by part.
+The code of the Distances tab is loaded with `import()` when the tab is
+first shown, as the Populations tab's is, and the LD decay's comes with
+the Populations tab. Measured at the same commit after the plots of the
+Variants tab: the Populations tab's code is 25.90 KB gzipped at its
+first show, against the 7.79 KB of its first work package, since its
+plots, its downloads and the LD decay joined it; the Distances tab's
+is 17.21 KB when it is the first of the two shown, and 9.20 KB after
+the Populations tab, with which it shares 8.01 KB of code
+(`docs/architecture.md`, section 11, "The first load of
+`popgen2.html`").
+
 Not taken: component libraries with their own look, MUI, Chakra,
 Mantine, which bring a style we would fight and, for Chakra, a history of
 large rewrites; and Radix Primitives, whose maintenance slowed.
