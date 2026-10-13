@@ -109,9 +109,10 @@ export function usePopulationsLock(): string | null {
   return useLive(populationsLockOf);
 }
 
-/** The live analysis running that reads the populations, the diversity
-    or the distances, whose run locks them; `null` while none runs; the component is drawn
-    again only when it changes. */
+/** The live analysis running that reads the populations, the
+    diversity, the LD decay or the distances, whose run locks them;
+    `null` while none runs; the component is drawn again only when it
+    changes. */
 export function usePopulationsRunning(): LiveAnalysisName | null {
   return useLive((s) => {
     const running = runningAnalysisOf(s);
