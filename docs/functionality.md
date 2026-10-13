@@ -644,24 +644,24 @@ give the principal components that go into the GWAS as covariates.
   variant every 100 bp, in Chromium 153 on the owner's Mac on 30
   September 2026. Placed before the others, it would make each of them
   wait that long after every change, where the distances take 118 ms
-  on 20,000 variants of 1,000 individuals. The order was settled on 13
-  October 2026, when the two analyses were joined on one branch, from
-  the owner's decision of 12 October 2026 that the others never wait
-  for the LD decay. Where the page names several analyses at once with
-  no sequence, Stop all and the analyses about to start together among
-  them, it names them in the order of the tabs instead: the PCA, the
-  diversity and the LD decay, the distances.
+  on 20,000 variants of 1,000 individuals. This order, of 13 October
+  2026, carries out the owner's decision of 12 October 2026 that the
+  others never wait for the LD decay. A line that lists several
+  analyses without saying which runs first, such as the analyses that
+  Stop all ends, lists them instead in the order of the tabs: the PCA,
+  the diversity, the LD decay, the distances.
 
   One wait for the LD decay remains. While it runs, the options of the
   PCA and of the diversity are not greyed, since it does not read them,
   and a change of them, or a Run of the PCA, makes that analysis wait
-  until the LD decay ends or is stopped. On a file of 1,000 individuals
-  with a variant every 100 bp that wait is under a minute up to a
-  largest distance of 1,000,000 base pairs, 45 s in Chromium 153 and 52
-  s in WebKit 26.6, and minutes beyond, as measured on 13 October 2026
-  (`docs/plans/ld-decay-tab.md`, "Phase 2"). This was found after the
-  owner's decision of 12 October 2026, and was not part of what the
-  owner accepted then.
+  until the LD decay ends or is stopped; its tab says that it waits for
+  the LD decay. On a file of 1,000 individuals with a variant every 100
+  bp a whole LD decay at a largest distance of 1,000,000 base pairs
+  takes 45 s in Chromium 153 and 52 s in WebKit 26.6, measured on 13
+  October 2026 (`docs/plans/ld-decay-tab.md`, "Phase 2"), so the wait is
+  at most that, and minutes at longer distances. The owner has not yet
+  decided on this wait: it was found after their decision of 12 October
+  2026, which accepted the greyed filters but not it.
 
   The Stop of one analysis stops that analysis alone. An analysis that
   is running goes on running. One that was waiting for the stopped
@@ -674,10 +674,8 @@ give the principal components that go into the GWAS as covariates.
   distances, the column that colours the points of the PCA, its axes or
   its 2D or 3D view, calculates nothing: it does not put a start off by
   a second, and it does not lift the hold after a crash (below). The
-  same holds for the value of a threshold that is switched off. So it
-  was decided on 12 October 2026, after the review of the Distances tab
-  found that a change of the measure put the start of the others off
-  and let them start after a crash.
+  same holds for the value of a threshold that is switched off. This
+  holds from 12 October 2026.
 
   An analysis set to be calculated again by itself does not start after
   a change:
@@ -989,20 +987,23 @@ owner accepted that cost on 12 October 2026. Measured on 13 October
 2026 on this page, on a file of 15,000 variants, one every 100 bp, of
 1,000 diploid individuals, on the owner's Mac, from Run to the table
 shown: 8.6 s in Chromium 153 and 10.7 s in WebKit 26.6 at a largest
-distance of 100,000 base pairs, and 45.3 s and 52.1 s at 1,000,000;
-the PCA and the diversity, after one change that all three read, took
-2.1 s and 2.8 s before it (`docs/plans/ld-decay-tab.md`, "Phase 2").
-Longer distances take minutes: 222 s at 2,000,000 base pairs and 10
-to 14 minutes at 4,000,000 on the old page, measured on 30 September
-2026 on a file of 1,000 individuals with a variant every 100 bp.
+distance of 100,000 base pairs, and 45.3 s and 52.1 s at 1,000,000.
+After one change that the PCA, the diversity and the LD decay all read,
+the PCA took 2.1 s and the diversity 2.8 s before the LD decay started,
+in both browsers (`docs/plans/ld-decay-tab.md`, "Phase 2").
+Longer distances take minutes: on the old page, 222 s at 2,000,000
+base pairs in Chromium 153 and 10 to 14 minutes at 4,000,000 in
+Chromium 153 and WebKit 26.6, measured on 30 September 2026 on a file
+of 1,000 individuals with a variant every 100 bp.
 
 So that the user knows what the next change will cost, beside its
 button the tab says how long the last run took and at what distance,
 "The last run, pairs up to 100,000 base pairs, took 3:42.", as the
-session recommended and the owner accepted with the decision above.
-The time runs from the page's request to its answer, and includes the
-start of a new calculation worker when the one before was ended, as it
-is after every LD decay and every large PCA. It is in whole seconds,
+owner decided on 12 October 2026. The time runs from the page's
+request to popnei's answer, and includes the start of a new
+calculation worker, the second thread of the tab where popnei runs,
+which the page ends and starts again after every LD decay and every
+large PCA to give their memory back. It is in whole seconds,
 rounded down, and about 1 s less than the time from Run to the table
 shown.
 
