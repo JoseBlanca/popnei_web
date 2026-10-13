@@ -71,6 +71,15 @@ more start in a moment", which at 720 px, 45 em, took two rows too; a
 screen reader is still given the whole list ("Several live
 analyses").
 
+Its parts for the LD decay and the distances were built on the branches
+`ld-decay-tab` and `distances-tab` on 12 October 2026 and joined on the
+branch `case4-ld-distances` on 13 October 2026, and are not yet tried
+by the owner. Their reviews changed what the paragraphs above say: the
+LD decay's Stop kept while the Populations tab is shown, and, at the
+joining, the next analysis and a count of the others; "LD decay soon"
+with its Stop recalculating needs 295 px of the 288 at 320 px and takes
+a second row, as "Diversity later" does.
+
 Revised on 12 October 2026 for the Distances tab
 (`docs/plans/distances-tab.md`): the band names the distances between
 populations as a further live analysis, "Distances", with its verbs in
