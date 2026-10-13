@@ -208,10 +208,12 @@ The button, "Download filtered variants…", is greyed out, with its
 reason beside it, until the file has been read to the end once. It opens
 a dialog with the choice of the format, and while the file is written
 the dialog shows a bar and Stop, and no filter can change. While an
-analysis runs, the PCA or the diversity, the button waits too, greyed,
-with the reason beside it: "Waits for the PCA to end; or stop it in the
-PCA tab." ("the PCoA" for a PCoA), "Waits for the diversity to end; or
-stop it in the Populations tab.", and, while another analysis waits to
+analysis runs, the PCA, the diversity, the distances between
+populations or the LD decay, the button waits too, greyed, with the
+reason beside it: "Waits for the PCA to end; or stop it in the PCA
+tab." ("the PCoA" for a PCoA), "Waits for the diversity to end; or
+stop it in the Populations tab.", "Waits for the distances to end; or
+stop them in the Distances tab.", and, while another analysis waits to
 start after the one running, "Waits for the PCA, and the diversity
 after it, to end; or press Stop all beside the heading Popnei.", since
 a Stop of the one running would let the other start a second later and
@@ -628,16 +630,54 @@ give the principal components that go into the GWAS as covariates.
   line in the tab says that the PCA no longer starts by itself and that
   Run starts it again.
 
-- The diversity of the Populations tab is calculated again by itself
-  in the same way (section 6, "Diversity"). Each analysis is so only
-  once its own Run has been pressed. The page runs one calculation at a
-  time, so after a change that both read, a threshold for one, it
-  calculates the PCA first and the diversity after it, in the order of
-  the tabs, and the tab of the one that waits says which analysis it
-  waits for. The Stop of the PCA stops the PCA alone. A diversity that
-  is running goes on running. A diversity that was waiting for the PCA
-  starts one second after the Stop, so that a threshold the user
-  changes in that second is the one it is calculated with.
+- Three more analyses are calculated again by themselves in the same
+  way: the diversity and the LD decay of the Populations tab (section
+  6) and the distances between populations of the Distances tab
+  (section 7). Each is so only once its own Run has been pressed. The
+  page runs one calculation at a time, so after a change that several
+  of them read, a threshold for one, it calculates them one after
+  another in this order: the PCA, the diversity, the distances, and the
+  LD decay last. The tab of an analysis that waits says which analysis
+  it waits for. The LD decay is last because nothing interrupts it but
+  its Stop and, with a long largest distance on a dense file, it takes
+  minutes: 222 s at 2,000,000 base pairs on 1,000 individuals with a
+  variant every 100 bp, in Chromium 153 on the owner's Mac on 30
+  September 2026. Placed before the others, it would make each of them
+  wait that long after every change, where the distances take 118 ms
+  on 20,000 variants of 1,000 individuals. The order was settled on 13
+  October 2026, when the two analyses were joined on one branch, from
+  the owner's decision of 12 October 2026 that the others never wait
+  for the LD decay. Where the page names several analyses at once with
+  no sequence, Stop all and the analyses about to start together among
+  them, it names them in the order of the tabs instead: the PCA, the
+  diversity and the LD decay, the distances.
+
+  One wait for the LD decay remains. While it runs, the options of the
+  PCA and of the diversity are not greyed, since it does not read them,
+  and a change of them, or a Run of the PCA, makes that analysis wait
+  until the LD decay ends or is stopped. On a file of 1,000 individuals
+  with a variant every 100 bp that wait is under a minute up to a
+  largest distance of 1,000,000 base pairs, 45 s in Chromium 153 and 52
+  s in WebKit 26.6, and minutes beyond, as measured on 13 October 2026
+  (`docs/plans/ld-decay-tab.md`, "Phase 2"). This was found after the
+  owner's decision of 12 October 2026, and was not part of what the
+  owner accepted then.
+
+  The Stop of one analysis stops that analysis alone. An analysis that
+  is running goes on running. One that was waiting for the stopped
+  analysis starts one second after the Stop, so that a threshold the
+  user changes in that second is the one it is calculated with.
+
+  A change, for these automatic runs, is a change of what one of these
+  analyses is calculated from, or of the reason it cannot run. A change
+  of how a result is drawn, the measure of the heatmap of the
+  distances, the column that colours the points of the PCA, its axes or
+  its 2D or 3D view, calculates nothing: it does not put a start off by
+  a second, and it does not lift the hold after a crash (below). The
+  same holds for the value of a threshold that is switched off. So it
+  was decided on 12 October 2026, after the review of the Distances tab
+  found that a change of the measure put the start of the others off
+  and let them start after a crash.
 
   An analysis set to be calculated again by itself does not start after
   a change:
@@ -645,9 +685,14 @@ give the principal components that go into the GWAS as covariates.
   - after its Stop, or its "Stop recalculating", until its Run;
   - after a crash of the calculation that ended its automatic runs,
     which for the PCA is a crash said to be for lack of memory, at
-    2,264 individuals or more, and for the diversity any crash: the
-    others then wait too, until the next change or their own Run,
-    since the tab may be at the limit of its memory;
+    2,264 individuals or more, and for the diversity, the distances and
+    the LD decay any crash: the others then wait too, until the next
+    change or their own Run, since the tab may be at the limit of its
+    memory;
+  - for the LD decay, after popnei refused it for lack of memory, since
+    a run with the same settings would take as long and be refused
+    again; the tab says that a smaller largest distance, or fewer
+    individuals kept, brings Run back;
   - after a failure only a reload of the page mends;
   - after another variants file is opened, until its Run for that file;
   - while a control is held, a slider, an open list or menu, a number
@@ -665,10 +710,19 @@ give the principal components that go into the GWAS as covariates.
   (`docs/specs/steps/popgen2-band.md`). Whenever two or more analyses
   are set to be calculated again and one of them runs, waits or is
   about to start, it offers "Stop all", which ends the automatic runs
-  of every analysis at once. The PCA was the one analysis calculated
-  again by itself from 10 October 2026, and the diversity joined it on
-  11 October 2026 (`docs/designs/no-undo.md`,
-  `docs/designs/population-tab.md`).
+  of every analysis at once. With three or four analyses it names the
+  next and counts the rest, "PCA running · 1:20 · then the diversity
+  and 2 more", "The PCA and 3 more start in a moment", so that its
+  line stays on one row in a window 1280 pixels wide, while a screen
+  reader is given every name. It offers the Stop of an analysis while
+  another tab is shown, and also the LD decay's while the Populations
+  tab is shown, since the LD decay's own Stop is then below the whole
+  result of the diversity. The PCA was the one analysis calculated
+  again by itself from 10 October 2026, the diversity joined it on 11
+  October 2026 (`docs/designs/no-undo.md`,
+  `docs/designs/population-tab.md`), and the distances and the LD decay
+  on 12 October 2026 (`docs/plans/distances-tab.md`,
+  `docs/plans/ld-decay-tab.md`).
 
 ## 6. Each population
 
@@ -714,8 +768,8 @@ popnei, and from then on the diversity is calculated again by itself a
 second after each change of what it reads, the filters of the Variants
 tab, its options, the individuals file and the column of the
 populations, as the PCA is (section 5), until its Stop or its "Stop
-recalculating"; with the PCA calculated again by itself too, "Stop
-all" in the band at the top of the page ends both.
+recalculating"; with another analysis calculated again by itself too,
+"Stop all" in the band at the top of the page ends them all.
 
 The populations are those of the column chosen in the box headed
 "Individuals" at the top of the page, which holds the individuals file
@@ -765,7 +819,8 @@ change the populations; then press Run there to calculate it again."
 While the PCA alone runs, that box stays open, since the PCA reads no
 populations. A change of the options of the PCA while the
 diversity runs is not greyed, and the PCA then waits for the diversity.
-The download of the filtered variants waits for either.
+The download of the filtered variants waits for any analysis that
+runs.
 
 ### Rarefaction
 
@@ -903,6 +958,62 @@ individuals, because r² is then biased upwards.
   half distances of 10,509 to 11,357 bp where populations of 50 gave
   7,340 and 7,548 (`docs/specs/analyses/ldDecay.md`, "The warnings").
 
+On `popgen2.html` the LD decay is in the Populations tab, below the
+diversity and its spectrum, under its own heading "LD decay"
+(`docs/specs/steps/popgen2-populations.md`, "The LD decay"). It was
+built on the branch `ld-decay-tab` on 12 October 2026 and joined with
+the Distances tab on the branch `case4-ld-distances` on 13 October
+2026, and the owner has not yet tried it. It is the analysis of the
+old page above, with the same options and bounds, the same lock above
+1 GB of counts, the same warning below 20 individuals and the same
+plot of at most 16 populations. It runs on the populations of the
+diversity of this page: those of the column chosen in the box headed
+"Individuals", with the unclassified individuals kept left out and
+counted in a line; or, when no individual is classified, the one
+population "Unclassified" of every individual kept. When that one
+population stands for an individuals file or a column the user opened,
+a line says that its r² is that of all the individuals taken as one
+population, and comes out higher than within each population at every
+distance: individuals of populations whose allele frequencies differ
+are in LD at any distance once they are pooled.
+
+As the owner decided on 12 October 2026, once its Run has been pressed
+the LD decay is calculated again by itself a second after each change
+of what it reads: the filters of the Variants tab, its two options and
+the populations. It is the last of the four analyses to start after a
+change (section 5). With no largest distance typed it cannot run, and
+it never starts by itself. While it runs, what it reads is greyed with
+the reason, as for the diversity, and with a long distance on a dense
+file that lasts minutes, until it ends or the user presses Stop; the
+owner accepted that cost on 12 October 2026. Measured on 13 October
+2026 on this page, on a file of 15,000 variants, one every 100 bp, of
+1,000 diploid individuals, on the owner's Mac, from Run to the table
+shown: 8.6 s in Chromium 153 and 10.7 s in WebKit 26.6 at a largest
+distance of 100,000 base pairs, and 45.3 s and 52.1 s at 1,000,000;
+the PCA and the diversity, after one change that all three read, took
+2.1 s and 2.8 s before it (`docs/plans/ld-decay-tab.md`, "Phase 2").
+Longer distances take minutes: 222 s at 2,000,000 base pairs and 10
+to 14 minutes at 4,000,000 on the old page, measured on 30 September
+2026 on a file of 1,000 individuals with a variant every 100 bp.
+
+So that the user knows what the next change will cost, beside its
+button the tab says how long the last run took and at what distance,
+"The last run, pairs up to 100,000 base pairs, took 3:42.", as the
+session recommended and the owner accepted with the decision above.
+The time runs from the page's request to its answer, and includes the
+start of a new calculation worker when the one before was ended, as it
+is after every LD decay and every large PCA. It is in whole seconds,
+rounded down, and about 1 s less than the time from Run to the table
+shown.
+
+On the plot each population has its colour and its mark, as in the
+diversity's plots and the PCA, and its fitted curve and the mark of its
+half distance are drawn in a dash of its own, so that two populations
+are told apart without their colours. A long name is cut in the middle
+of the legend, and two names that would still read alike are followed
+by the number of their row of the table. After popnei refuses the LD
+decay for lack of memory, it no longer starts by itself (section 5).
+
 ## 7. Between populations
 
 - A matrix of distances between the populations, with Hudson's Fst as the
@@ -939,6 +1050,50 @@ individuals, because r² is then biased upwards.
   gave it (point 14 there, decided by the owner on 30 September 2026;
   the option not taken was the order of the metadata file whenever a
   distance is negative).
+
+On `popgen2.html` the distances are the Distances tab
+(`docs/specs/steps/popgen2-distances.md`). They were built on the
+branch `distances-tab` on 12 October 2026 and joined with the LD decay
+on the branch `case4-ld-distances` on 13 October 2026, and the owner
+has not yet tried them. The tab shows the heatmap and the table above,
+each with its "Download…" (section 9): the heatmap's data are the
+square matrix of the measure it draws, in its order, and the table's
+CSV gives each pair as two fields, "First population" and "Second
+population", so that a program that reads it finds each population in
+a field of its own.
+
+They run on the populations of the column chosen in the box headed
+"Individuals". The unclassified individuals kept are left out, and a
+line says how many, since they are no population and have no distance
+to the others. While fewer than two populations have individuals kept,
+the tab is greyed with the reason, so the one population
+"Unclassified" of the diversity never reaches it. The minimum of
+individuals with a called genotype is the distances' own: the
+diversity has its own field.
+
+Once their Run has been pressed, the distances are calculated again by
+themselves a second after each change of what they read, the filters
+of the Variants tab, their minimum and the populations, after the PCA
+and the diversity and before the LD decay (section 5). While they run,
+what they read is greyed with the reason, for a fraction of a second:
+118 ms on 20,000 variants of 1,000 individuals and 17 ms on
+`panel.nei`, 1,200 variants of 200 individuals, in Chromium 153 and
+WebKit 26.6 on 30 September 2026. The choice of the measure redraws
+the heatmap from the same result and calculates nothing, so it is never
+greyed and starts nothing.
+
+The review of the tab, on 12 October 2026, added four things a user
+sees. Under the choice of the measure, a paragraph in the words of
+popnei's documentation says what each one measures and when to read
+Jost's D rather than Hudson's Fst, on markers of many alleles such as
+microsatellites; the owner is asked to check it. A negative distance
+is painted in the colour of 0, and the legend writes "or below" under
+its 0. Where the cells are too small to hold their values, as on a
+screen 320 pixels wide with four populations, a line under the heatmap
+says that the table gives them, and, when one of them is negative,
+that a negative distance has the colour of 0. And the caption of the
+table names each population with the number of individuals it was
+calculated over.
 
 ## 8. The GWAS
 
