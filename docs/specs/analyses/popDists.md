@@ -55,6 +55,16 @@ Revised on 12 October 2026 for the Distances tab of `popgen2.html`
 unclassified are left out, its locks and its words (below, "On
 popgen2.html"). The old page changes in nothing.
 
+Its section "On popgen2.html" was built on the branch `distances-tab`
+on 12 October 2026 and joined with the LD decay on the branch
+`case4-ld-distances` on 13 October 2026, and is not yet tried by the
+owner. Its review changed, each where this spec says so with its date:
+no script and no count of check numbers on this page, where it gave the
+old page's script; popnei's refusals end "and the distances are then
+calculated again by themselves." in the plural and once; and the
+minimum named "the individuals needed per variant" in its locks and
+warnings.
+
 The owner decided on 30 September 2026, before this spec was written
 (`docs/specs/stage-5-open-points.md`, decisions 1 and 2):
 
