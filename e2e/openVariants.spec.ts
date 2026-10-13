@@ -952,7 +952,7 @@ async function thresholdFields(page: Page): Promise<
       const box = input.getBoundingClientRect();
       return [
         {
-          label: (label.textContent ?? "").split(" max:")[0] ?? "",
+          label: label.textContent.split(" max:")[0] ?? "",
           clear: words.right <= box.left + 0.5 || words.bottom <= box.top + 0.5,
           beside: box.top < words.bottom && box.left >= words.right - 0.5,
         },
