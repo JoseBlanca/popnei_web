@@ -509,6 +509,8 @@ function Words({
     <span className={classOf(styles, "words")}>
       {narrow ? (
         <WideShort full={words.full} short={words.short} />
+      ) : words.shownWide !== undefined ? (
+        <WideShort full={words.full} short={words.shownWide} />
       ) : (
         words.full
       )}

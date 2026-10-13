@@ -1316,6 +1316,11 @@ describe("the band with the four live analyses (the merge of the LD decay and th
       "The PCA, the diversity, the LD decay and the distances start in a moment",
     );
     expect(short(band())).toBe("Analyses soon");
+    // More than two: the first and the count of the others shown, so
+    // that the line keeps to one row at 45 em; the whole list read.
+    expect(lineWords(band().line, 0)?.shownWide).toBe(
+      "The PCA and 3 more start in a moment",
+    );
     expect(buttons(band())).toEqual([
       null,
       "Stop all: the PCA, the diversity, the LD decay and the distances",
@@ -1328,8 +1333,13 @@ describe("the band with the four live analyses (the merge of the LD decay and th
     moveThreshold(running, 0.05);
     await flush();
     await quietSecond();
+    // A screen reader is given the whole list; the line shows the next
+    // and counts the others, so that it keeps to one row at 1280 px.
     expect(words(runningBand(), 12)).toBe(
       "PCA running · 0:12 · then the diversity, the distances and the LD decay",
+    );
+    expect(lineWords(runningBand().line, 12)?.shownWide).toBe(
+      "PCA running · 0:12 · then the diversity and 2 more",
     );
     expect(buttons(runningBand())).toEqual([
       "Stop the PCA",

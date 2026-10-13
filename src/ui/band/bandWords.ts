@@ -43,6 +43,13 @@ export interface LineWords {
       kept whole: "Statistics of ", "panel.vcf.gz", " · 45%"; `null` for
       words that hold no file's name. */
   readonly aroundName: AroundName | null;
+  /** The words shown at 45 em and wider when they are not the whole
+      words, which a screen reader is then still given: with two or more
+      analyses waiting after the one running, the next and the count of
+      the others, "PCA running · 0:00 · then the diversity and 2 more",
+      so that the line keeps to one row (13 October 2026); absent when
+      the whole words are shown. */
+  readonly shownWide?: string;
 }
 
 /** The whole words of a line split around the name of a file. */
@@ -103,15 +110,22 @@ export function lineWords(line: BandLine, seconds: number): LineWords | null {
     case "running": {
       const title = titleOf(line.named);
       const clock = clockText(seconds);
-      const then =
-        line.then.length === 0
-          ? ""
-          : ` · then ${joined(line.then.map((one) => one.name))}`;
-      return {
-        full: `${title} running · ${clock}${then}`,
+      const start = `${title} running · ${clock}`;
+      const [next, ...others] = line.then;
+      const words = {
+        full:
+          next === undefined
+            ? start
+            : `${start} · then ${joined(line.then.map((one) => one.name))}`,
         short: `${title} · ${clock}`,
         aroundName: null,
       };
+      return next === undefined || others.length === 0
+        ? words
+        : {
+            ...words,
+            shownWide: `${start} · then ${next.name} and ${String(others.length)} more`,
+          };
     }
     case "writing":
       return namedWords(
@@ -231,28 +245,29 @@ function aboutToStartWords(
   // of several.
   const verb = one && !only.plural ? "starts" : "start";
   const who = one ? titleOf(only) : "Analyses";
+  const [first, ...others] = named;
+  // More than two: the first and the count of the others shown, so that
+  // the line keeps to one row at 45 em (13 October 2026).
+  const counted =
+    first !== undefined && others.length >= 2
+      ? `${capitalized(first.name)} and ${String(others.length)} more`
+      : null;
+  const words = (rest: string, shortRest: string): LineWords => ({
+    full: `${subject} ${verb} ${rest}`,
+    short: `${who} ${shortRest}`,
+    aroundName: null,
+    ...(counted !== null && { shownWide: `${counted} ${verb} ${rest}` }),
+  });
   switch (waitsFor) {
     case "download":
-      return {
-        full: `${subject} ${verb} after the download`,
-        short: `${who} later`,
-        aroundName: null,
-      };
+      return words("after the download", "later");
     case "afterCrash":
-      return {
-        full: `${subject} ${verb} after the next change`,
-        short: `${who} later`,
-        aroundName: null,
-      };
+      return words("after the next change", "later");
     // Behind another calculation the line names the one running; the
     // band says so only when that one is not live, as the one pass.
     case "behind":
     case "changes":
-      return {
-        full: `${subject} ${verb} in a moment`,
-        short: `${who} soon`,
-        aroundName: null,
-      };
+      return words("in a moment", "soon");
   }
 }
 

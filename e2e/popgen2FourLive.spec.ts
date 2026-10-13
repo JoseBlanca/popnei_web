@@ -357,15 +357,59 @@ test.describe("the four live analyses of popgen2.html (the merge of the LD decay
       expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
     }
     await page.emulateMedia({ colorScheme: "light", reducedMotion: null });
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await expect
-      .poll(async () => (await bandFit(page))?.text)
-      .toMatch(
-        /^Popnei PCA running · 0:\d\d · then the diversity, the distances and the LD decay Stop Stop all$/u,
-      );
+    // At 720 px, 45 em, and at 1280 px, the next and the count of the
+    // others, on one row (13 October 2026); a screen reader is given the
+    // whole list.
+    for (const width of [720, 1280]) {
+      await page.setViewportSize({ width, height: 720 });
+      await expect
+        .poll(async () => (await bandFit(page))?.text)
+        .toMatch(
+          /^Popnei PCA running · 0:\d\d · then the diversity and 2 more Stop Stop all$/u,
+        );
+      expect(await bandFit(page), `${String(width)} px`).toMatchObject({
+        oneLine: true,
+        inWindow: true,
+        wordsCut: false,
+        noSidewaysScroll: true,
+      });
+    }
+    await expect(band(page)).toContainText(
+      "then the diversity, the distances and the LD decay",
+    );
     await release(page, "pca");
     await expect
       .poll(() => timeline(page, from), { timeout: RESULT_TIMEOUT })
       .toContain("result ldDecay");
+  });
+
+  test("the four about to start after a threshold moved, the clock of the page stopped: the line and Stop all on one row at 320, 720 and 1280 px (13 October 2026)", async ({
+    page,
+  }) => {
+    // Narrow first: with the page's clock stopped the plots are not
+    // drawn again at a narrower window, and would scroll sideways.
+    await page.setViewportSize({ width: 320, height: 720 });
+    await page.clock.install();
+    await holdSummary(page);
+    await fourLive(page);
+    await page.clock.pauseAt(Date.now() + 1000);
+    await setMissing(page, "0.05");
+    for (const [width, words] of [
+      [320, /^Popnei Analyses soon Stop all$/u],
+      [720, /^Popnei The PCA and 3 more start in a moment Stop all$/u],
+      [1280, /^Popnei The PCA and 3 more start in a moment Stop all$/u],
+    ] as const) {
+      await page.setViewportSize({ width, height: 720 });
+      await expect.poll(async () => (await bandFit(page))?.text).toMatch(words);
+      expect(await bandFit(page), `${String(width)} px`).toMatchObject({
+        oneLine: true,
+        inWindow: true,
+        wordsCut: false,
+        noSidewaysScroll: true,
+      });
+    }
+    await expect(band(page)).toContainText(
+      "The PCA, the diversity, the LD decay and the distances start in a moment",
+    );
   });
 });

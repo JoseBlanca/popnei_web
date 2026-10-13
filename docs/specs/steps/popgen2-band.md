@@ -59,6 +59,18 @@ and 16 presses of the Tab key away, so the band keeps the LD decay's Stop and
 Stop recalculating while the Populations tab is shown ("The LD decay",
 "The tab shown").
 
+Revised on 13 October 2026, the merge of the LD decay and the
+distances: with four live analyses, "PCA running · 0:00 · then the
+diversity, the distances and the LD decay" with Stop and Stop all took
+two rows at 1280 px, Stop all on the second. When more than one
+analysis waits after the one running, the line names the next and
+counts the others, "PCA running · 0:00 · then the diversity and 2
+more", "… and 1 more" for one; and when more than two are about to
+start, the line names the first and counts the others, "The PCA and 3
+more start in a moment", which at 720 px, 45 em, took two rows too; a
+screen reader is still given the whole list ("Several live
+analyses").
+
 Revised on 12 October 2026 for the Distances tab
 (`docs/plans/distances-tab.md`): the band names the distances between
 populations as a further live analysis, "Distances", with its verbs in
@@ -339,9 +351,9 @@ PCA name any live analysis, in the words of its tab, "PCA", "PCoA",
 
 | what holds | the words | the controls after them |
 |---|---|---|
-| a live analysis runs and others wait after it | "PCA running · 1:20 · then the diversity"; with two waiting, "… · then the diversity and the LD decay" | Stop, of the one running, and Stop all |
+| a live analysis runs and others wait after it | "PCA running · 1:20 · then the diversity"; with two or more waiting, the next and the count of the others, "… · then the diversity and 1 more", "… · then the diversity and 2 more", while a screen reader is given the whole list, "… · then the diversity, the distances and the LD decay" (13 October 2026) | Stop, of the one running, and Stop all |
 | a live analysis runs and none waits | "Diversity running · 0:12" | Stop; and Stop all while another analysis is live |
-| two or more are about to start | "The PCA and the diversity start in a moment"; while the dialog of the download holds them, "The PCA and the diversity start after the download" | Stop all |
+| two or more are about to start | "The PCA and the diversity start in a moment"; while the dialog of the download holds them, "The PCA and the diversity start after the download"; more than two, the first and the count of the others, "The PCA and 3 more start in a moment", while a screen reader is given the whole list (13 October 2026) | Stop all |
 | one is about to start | "The diversity starts in a moment", as the PCA's row; held after a crash, "The diversity starts after the next change" | Stop recalculating, that analysis's; and Stop all while another analysis is live, then alone at 320 px (below) |
 | a Stop of the diversity under way | "Stopping the diversity…" | none |
 | results with warnings, or failed, in tabs not shown | the first in the order of the tabs: "Diversity: 2 warnings, in the Populations tab"; "Diversity: could not be calculated, in the Populations tab" | none |

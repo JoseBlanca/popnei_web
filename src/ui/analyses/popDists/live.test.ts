@@ -174,6 +174,14 @@ describe("DT1 D2 the distances, a live analysis of popgen2.html", () => {
     expect(lineWords(running, 80)?.full).toBe(
       "PCA running · 1:20 · then the diversity and the distances",
     );
+    expect(lineWords(running, 80)?.shownWide).toBe(
+      "PCA running · 1:20 · then the diversity and 1 more",
+    );
+    expect(lineWords({ ...running, then: [diversity] }, 80)).toEqual({
+      full: "PCA running · 1:20 · then the diversity",
+      short: "PCA · 1:20",
+      aroundName: null,
+    });
     expect(stopAllOf(running)?.name).toBe(
       "Stop all: the PCA, the diversity and the distances",
     );
