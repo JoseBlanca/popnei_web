@@ -10,17 +10,15 @@
  */
 
 import { describe, expect, test } from "vitest";
+import { halfDistText, ldDecayRows, threeSignificant } from "./ldDecay.ts";
 import {
-  halfDistText,
   ldBinRows,
   ldBinsCsv,
   ldDecayCsv,
   ldDecayDescription,
-  ldDecayRows,
   ldLegendEnd,
   ldLegendName,
-  threeSignificant,
-} from "./ldDecay.ts";
+} from "./ldDecayPanel.ts";
 import type { LdDecayResult } from "../../worker/protocol.ts";
 
 const NAN = Number.NaN;

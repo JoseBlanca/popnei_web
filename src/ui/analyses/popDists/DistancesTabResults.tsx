@@ -20,13 +20,15 @@ import { memo, useEffect, useMemo } from "react";
 import type { HeatmapData } from "../../../charts/heatmap.ts";
 import {
   MEASURE_NAMES,
+  popDistsOptions,
+} from "../../../core/analyses/popDists.ts";
+import {
   orderText,
   popDistsDescription,
   popDistsHeatmap,
-  popDistsOptions,
   popDistsRows,
   tooManyPopulationsText,
-} from "../../../core/analyses/popDists.ts";
+} from "../../../core/analyses/popDistsPanel.ts";
 import { downloadName, variantsStem } from "../../../core/fileNames.ts";
 import type { PopDistsResult } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";

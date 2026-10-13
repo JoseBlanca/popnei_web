@@ -12,14 +12,16 @@
 
 import {
   LD_PLOT_MAX_POPS,
+  LD_LEGEND_NAME_LENGTH,
+  valueAt,
+} from "../../../core/analyses/ldDecay.ts";
+import {
   ldDecayCurve,
   ldDecayDescription,
   ldHalfMark,
-  LD_LEGEND_NAME_LENGTH,
   ldLegendEnd,
   ldLegendName,
-  valueAt,
-} from "../../../core/analyses/ldDecay.ts";
+} from "../../../core/analyses/ldDecayPanel.ts";
 import type { LineData, LineSeries } from "../../../charts/line.ts";
 import type { LdDecayResult, Pops } from "../../../worker/protocol.ts";
 import { populationGroups } from "../populationGroups.ts";

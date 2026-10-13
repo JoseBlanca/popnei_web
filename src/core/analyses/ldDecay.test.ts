@@ -2,28 +2,30 @@ import { describe, expect, test } from "vitest";
 import {
   LD_CURVE_POINTS,
   LD_DECAY_DEFAULTS,
-  fittedR2,
-  ldBinRows,
-  ldBinsCsv,
   ldDecay,
-  ldDecayCsv,
-  ldDecayCurve,
-  ldDecayDescription,
   ldDecayFilters,
   ldDecayOptions,
   ldDecayRows,
-  ldHalfMark,
   crashText,
   ldDecayOnPopgen2,
   ldDecayPageOf,
-  ldDecayPointsCsv,
-  ldLegendEnd,
-  ldLegendName,
-  ldPlotOmittedText,
   maxDistFor,
   maxDistReason,
   refusalText,
 } from "./ldDecay.ts";
+import {
+  fittedR2,
+  ldBinRows,
+  ldBinsCsv,
+  ldDecayCsv,
+  ldDecayCurve,
+  ldDecayDescription,
+  ldHalfMark,
+  ldDecayPointsCsv,
+  ldLegendEnd,
+  ldLegendName,
+  ldPlotOmittedText,
+} from "./ldDecayPanel.ts";
 import { countsOf, individualStatsOf } from "../apps.ts";
 import { filterCounts } from "./filterCounts.ts";
 import { individualChecks } from "./individualChecks.ts";

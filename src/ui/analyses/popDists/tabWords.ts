@@ -14,10 +14,12 @@
 import {
   MEASURE_NAMES,
   neededPerVariant,
-  popDistsHeatmap,
   popDistsOptions,
-  popDistsRows,
 } from "../../../core/analyses/popDists.ts";
+import {
+  popDistsHeatmap,
+  popDistsRows,
+} from "../../../core/analyses/popDistsPanel.ts";
 import { tableCsv } from "../../../core/csv.ts";
 import type { IndividualsKept } from "../../../core/individualsKept.ts";
 import {

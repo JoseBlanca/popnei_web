@@ -122,6 +122,20 @@ describe("what the pages load first", () => {
     );
   });
 
+  test("popgen2.html loads the definitions of the LD decay and of the distances first, and the tables, CSVs, plots and descriptions of their results with the code of their tabs (the review of the merge, 13 October 2026)", () => {
+    const reached = reachedFrom("ui/popgen2.tsx");
+    expect(reached).toContain("core/analyses/ldDecay.ts");
+    expect(reached).toContain("core/analyses/popDists.ts");
+    expect(reached).not.toContain("core/analyses/ldDecayPanel.ts");
+    expect(reached).not.toContain("core/analyses/popDistsPanel.ts");
+    expect(
+      reachedFrom("ui/analyses/diversity/PopulationsTabView.tsx"),
+    ).toContain("core/analyses/ldDecayPanel.ts");
+    expect(reachedFrom("ui/analyses/popDists/DistancesTabView.tsx")).toContain(
+      "core/analyses/popDistsPanel.ts",
+    );
+  });
+
   test("popgen2.html loads the rows, the lines and the CSV of the spectrum with the code of the Populations tab, not first, and its warning first, for the band", () => {
     expect(
       reachedFrom("ui/analyses/diversity/PopulationsTabView.tsx"),

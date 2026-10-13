@@ -35,13 +35,15 @@ import type { LineData } from "../../../charts/line.ts";
 import {
   ldDecay,
   ldDecayPageOf,
+  ldDecayOptions,
+  ldDecayRows,
+} from "../../../core/analyses/ldDecay.ts";
+import {
   ldBinRows,
   ldBinsCsv,
   ldDecayCsv,
-  ldDecayOptions,
-  ldDecayRows,
   ldPlotOmittedText,
-} from "../../../core/analyses/ldDecay.ts";
+} from "../../../core/analyses/ldDecayPanel.ts";
 import { populationsOf } from "../../../core/project.ts";
 import type { AnalysisDef } from "../../../core/store.ts";
 import type {

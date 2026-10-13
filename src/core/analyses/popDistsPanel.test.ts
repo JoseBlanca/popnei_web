@@ -15,7 +15,7 @@ import {
   popDistsHeatmap,
   popDistsRows,
   tooManyPopulationsText,
-} from "./popDists.ts";
+} from "./popDistsPanel.ts";
 import type {
   HeatmapOrder,
   PopDistsResult,

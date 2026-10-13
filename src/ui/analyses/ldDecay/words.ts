@@ -9,15 +9,16 @@
  * downloads. Pure, so that a test in node checks them; the panel draws
  * them.
  */
-import type { LdBinRow, LdDecayRow } from "../../../core/analyses/ldDecay.ts";
+import type { LdDecayRow } from "../../../core/analyses/ldDecay.ts";
+import type { LdBinRow } from "../../../core/analyses/ldDecayPanel.ts";
 import {
-  ldDecayPointsCsv,
   MAX_MAX_ALLOWED_MAF,
   MIN_MAX_ALLOWED_MAF,
   MIN_MAX_DIST,
   halfDistText,
   threeSignificant,
 } from "../../../core/analyses/ldDecay.ts";
+import { ldDecayPointsCsv } from "../../../core/analyses/ldDecayPanel.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
 import { downloadName, variantsStem } from "../../../core/fileNames.ts";
 import type { CellValue } from "../../../core/csv.ts";

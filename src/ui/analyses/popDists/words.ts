@@ -15,7 +15,7 @@ import {
 } from "../../../core/analyses/popDists.ts";
 import type { AnalysisStatus } from "../../../core/store.ts";
 import type { JobResult, ShownMeasure } from "../../../worker/protocol.ts";
-import type { PopDistsRow } from "../../../core/analyses/popDists.ts";
+import type { PopDistsRow } from "../../../core/analyses/popDistsPanel.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import { counted, escaped, grouped } from "../../../core/project.ts";
