@@ -3371,7 +3371,9 @@ what it waits for and the lock of its Run by the one pass, given the
 analysis's own words, and an `aside` after its button, the time of the
 LD decay's last run. The lines of a live analysis that reads the
 populations, in its tab and in the status region, are written once
-from its name, its tab and its number, in `liveLines.ts`, and the
+from its name, its tab and its number, in `liveLines.ts`, those of
+the status region, and `liveTabLines.ts`, those of its tab, downloaded
+with the tabs, and the
 words of the unclassified left out once for the three, in
 `unclassifiedWords.ts` (section 9). Until the two branches were
 joined each analysis had its own loader, its own part and its own
@@ -3554,7 +3556,10 @@ src/core/
                     from 12 October 2026 the distances between
                     populations and the LD decay given popgen2.html,
                     popDistsOnPopgen2 of popDists.ts and
-                    ldDecayOnPopgen2 of ldDecay.ts; and in words.ts
+                    ldDecayOnPopgen2 of ldDecay.ts, and from 13 October
+                    2026 what their panels show of a result apart in
+                    popDistsPanel.ts and ldDecayPanel.ts, which only the
+                    panels load; and in words.ts
                     isMemoryRefusal, whether a refusal of popnei is its
                     refusal for lack of memory, which ends the LD
                     decay's live state
@@ -3665,7 +3670,10 @@ src/charts/
                     text cut to a width, for the names of bars.ts and the
                     legend of line.ts; from 12 October 2026 distinctCuts,
                     the names of both cut in the middle and numbered by
-                    their place when two would read alike
+                    their place when two would read alike; from 13
+                    October 2026 the fonts of an exported plot apart in
+                    fonts.ts, which export.ts reads, so that the page
+                    does not load the measure before a plot
   marks.ts          the colour and the symbol of each group of points, and
                     the colours of a column of numbers, for the 2D and 3D
                     plots of the PCA (docs/specs/charts/scatter.md)
@@ -3959,7 +3967,9 @@ src/ui/
                     its button; liveLines.ts, the lines of a live
                     analysis that reads the populations, written once
                     from its name and its number, the distances in the
-                    plural; unclassifiedWords.ts, the words of the
+                    plural, those of its tab apart in
+                    liveTabLines.ts, downloaded with the tabs;
+                    unclassifiedWords.ts, the words of the
                     unclassified left out and of the populations the
                     thresholds empty, one set for the three analyses of
                     the populations; and tabOrder.ts, the live analyses
@@ -4623,20 +4633,41 @@ tests of the application are the same with it.
   tab, and on `main` since the band of 10 October 2026; found by the
   review of work package 4 of `docs/plans/population-tab.md`, 12
   October 2026, and not seen in a browser.
-- **The first load of `popgen2.html`** is 337.19 KB gzipped, the sum of
+- **The first load of `popgen2.html`** is 334.22 KB gzipped, the sum of
   the gzip sizes `vite build` reports for the files the page loads
-  before it draws, the HTML included, at commit 48bfa8a0 of the branch
-  `case4-ld-distances` on 13 October 2026, against 332.37 KB on `main`
-  before the distances and the LD decay, 4.82 KB more. The bundle
-  review of each branch found 0.86 KB for the LD decay and 0.94 KB for
-  the distances on 12 October 2026; the other 3.02 KB came with the
-  joining of the two branches and its fixes, and were not measured part
-  by part. The rest of their code is downloaded with their tabs. Measured the same day by the same count, at that commit, after
-  the plots of the Variants tab, which come with the first variants
-  file: the Populations tab's code, the LD decay's among it, is 25.90
-  KB at its first show; the Distances tab's is 17.21 KB when it is
-  shown first, and 9.20 KB after the Populations tab, with which it
-  shares the rest. Before these pieces the first load was 331.72 KB, at
+  before it draws, the HTML included, at commit ccee97be of the branch
+  `case4-ld-distances` on 13 October 2026, against 333.16 KB on `main`
+  at 405e4295, before the distances and the LD decay, 1.06 KB more. It
+  was 337.19 KB at commit 48bfa8a0, 4.03 KB more than `main`: 1.49 KB
+  for the LD decay at the tip of its branch, 1.37 KB for the distances
+  at the tip of theirs, 0.11 KB for the joining of the two, and 1.06 KB
+  for what followed it, chiefly `liveLines.ts`, the lines of a live
+  analysis written once, which replaced three copies of fewer lines.
+  (The 332.37 KB that `main` was given until then was measured before
+  the fixes of round 1 of the Populations tab, which added 0.79 KB on
+  `main`; and the 0.86 and 0.94 KB the bundle reviews of the two
+  branches found were measured before their own fixes, which added 0.63
+  and 0.43 KB.) The review of the joining moved out of the first load
+  what only the tabs need: the measure and the cut of the text of the
+  plots, `src/charts/textWidth.ts`, which came with the fonts of an
+  exported plot, now in `src/charts/fonts.ts`; the lines of a live
+  analysis's tab, now in `liveTabLines.ts`; and what the panels of the
+  LD decay and of the distances show of a result, now in
+  `ldDecayPanel.ts` and `popDistsPanel.ts` of `src/core/analyses/`,
+  2.97 KB in all. What stays is what the page uses before a tab is
+  shown: the definitions of the two analyses, which the store reads for
+  their keys, locks and warnings; the clock of the LD decay's last run,
+  which times a run started while the tab was never shown; the words
+  the status region and the band say of each; the frame of the
+  Distances tab, its loader and the order of the tabs. The rest of their
+  code is downloaded with their tabs. Measured the same day by the same
+  count, at commit ccee97be, after the plots of the Variants tab, which
+  come with the first variants file, 25.48 KB (24.84 at 48bfa8a0, the
+  measure of the text joining them): the Populations tab's code, the LD
+  decay's among it, is 27.54 KB at its first show (25.90 at 48bfa8a0);
+  the Distances tab's is 18.99 KB when it is shown first (17.21), and
+  10.37 KB after the Populations tab (9.20), with which it shares the
+  rest. Before these pieces the first load was 331.72 KB, at
   commit 590caf53 of the branch
   `population-tab` on 12 October 2026, against 321.62 KB before that
   branch's work, 10.10 KB more. Of the 10.10 KB, work package 1 added
