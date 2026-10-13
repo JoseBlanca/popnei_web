@@ -881,6 +881,18 @@ not wrap, and at 200% text at 320 px Stop all stood 109 px past the
 window, out of reach, and the words shrank to nothing (the review of
 work package 4). At 100% text every line is on one row from 320 px up.
 
+One case is known only from an emulation, for the owner to try in
+Safari (the review of the merge of the LD decay and the distances, 13
+October 2026). WebKit, as Playwright drives it, has no size of text of
+the browser to set, so its flows enlarge the text by the page's own,
+the font size of its root at 200%. The width under which the band is
+narrow, 45 em, is compared with the size of text of the browser and not
+the page's, so at 720 px with the page's text at 200% WebKit kept the
+whole form of the line and cut it, "… then the diversity and 2 …";
+Chromium, with the browser's text at 32 px, showed
+the short form at that width and nothing cut. Safari's Cmd-+ at 720 px
+is the case to try; not seen.
+
 In light and dark it takes the page's background
 and the colour of its text, with the border of the page under it
 always; its error, the colour of danger of each theme.
