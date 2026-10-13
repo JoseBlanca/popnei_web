@@ -49,6 +49,14 @@ the same id for that page, with its populations, its locks and its
 words, in the new section "On popgen2.html"; nothing of the old page
 changes.
 
+Its section "On popgen2.html" was built on the branch `ld-decay-tab` on
+12 October 2026 and joined with the distances on the branch
+`case4-ld-distances` on 13 October 2026, and is not yet tried by the
+owner. Its review changed, each where this spec says so with its date:
+the script of this page's own populations, where it had the old page's;
+"The LD decay is then calculated again by itself." after a refusal only
+while it is live; and "ρ per base pair, 4Nₑr" for "4Nr per base pair".
+
 The words of the documents used here, as `docs/specs/analyses/diversity.md`
 defines them: the **key** of a result, a hash of everything it was
 calculated from, under which the store shows it; the **load** of the
