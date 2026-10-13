@@ -24,6 +24,7 @@ import {
 } from "./heatmap.ts";
 import { MAX_HEATMAP_NAMES } from "./limits.ts";
 import { viridisColour } from "./marks.ts";
+import { measureWithFake, stopFakeMeasure } from "./testSupport.ts";
 
 /**
  * Hudson's Fst of the three pairs of panel.nei, popcat of panel_pops.csv,
@@ -250,6 +251,27 @@ describe("PA4 D2 the heatmap without a DOM: its numbers, steps and classes", () 
     expect(long.bottom).toBeCloseTo(8 + 0.71 * 180 + 8, 9);
     // The legend is still counted at 7.2 pixels a character: "0.1000".
     expect(long.right).toBeCloseTo(16 + 12 + 4 + 6 * 7.2, 9);
+  });
+
+  test("the numbers of the legend measured narrower than 7.2 pixels a character, as in the Mac's system font, 38.3 pixels for 0.1823: the right margin as counted, 75.2", () => {
+    try {
+      // 5.5 pixels a character: "0.1096" 33 pixels, under the 43.2 counted.
+      measureWithFake();
+      expect(heatmapMargin(panel()).right).toBeCloseTo(75.2, 9);
+    } finally {
+      stopFakeMeasure();
+    }
+  });
+
+  test("the numbers of the legend measured wider than 7.2 pixels a character, as in DejaVu Sans on GitHub's Linux, 44 pixels for 0.1823 in Chromium: the right margin holds them as measured (13 October 2026)", () => {
+    try {
+      // 5.5 pixels a character, the export's fonts 1.6 times wider: "0.1096"
+      // 52.8 pixels, over the 43.2 counted.
+      measureWithFake(1.6);
+      expect(heatmapMargin(panel()).right).toBeCloseTo(16 + 12 + 4 + 52.8, 9);
+    } finally {
+      stopFakeMeasure();
+    }
   });
 
   test("PA10 the margins in an element whose bands are too narrow for the names are made without them: 8 pixels left and below", () => {

@@ -1668,7 +1668,7 @@ withAxe(
 
 test("PA4 D3 in DejaVu Sans, names of up to 26 characters under the columns and left of the rows, and the legend, lie inside the SVG, each slanted name ending under its column", async ({
   page,
-}) => {
+}, testInfo) => {
   await openPlots(page);
   await useWideFont(page);
   await drawHeatmap(page, 640, 640, "long");
@@ -1744,8 +1744,18 @@ test("PA4 D3 in DejaVu Sans, names of up to 26 characters under the columns and 
   for (const { text, box } of [...found.columns, ...found.rows]) {
     expect(inside(box), `${text} at ${box.join(", ")}`).toBe(true);
   }
-  for (const box of found.legend) {
-    expect(inside(box), `legend at ${box.join(", ")}`).toBe(true);
+  // Firefox's box of a text of the legend reaches past the text itself:
+  // on GitHub's runner, Firefox 155, "Hudson's Fst", which ends at the
+  // right edge of the SVG, 640, had a box from 562.3 to 641.6, 79.3 pixels
+  // wide, where its letters take 77 in DejaVu Sans; Chromium's box of it
+  // lay inside the SVG, and Firefox's screenshot shows its "t" whole (13
+  // October 2026). So in Firefox the box may pass the right edge by 2.
+  const slack = testInfo.project.name === "firefox" ? 2 : 0;
+  for (const [left = 0, top = 0, right = 0, bottom = 0] of found.legend) {
+    expect(
+      inside([left, top, right - slack, bottom]),
+      `legend at ${[left, top, right, bottom].join(", ")}`,
+    ).toBe(true);
   }
   // The two numbers of the legend start right of its bar.
   const barRight = Math.max(...found.bars.map(([, , right = 0]) => right));

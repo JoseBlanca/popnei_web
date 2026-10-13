@@ -193,7 +193,12 @@ legend is; the two values at its ends, in `heatmapNumber`; the name of
 the value, `valueName`, above it, in the top margin or, when the frame
 is higher than the grid, in the room left over above the grid. The
 right margin is 16 pixels, the bar and 4 pixels, and 7.2
-pixels for each character of the longer of the two numbers at the ends.
+pixels for each character of the longer of the two numbers at the ends,
+or the width of that number measured where it is wider (since 13
+October 2026: in DejaVu Sans on GitHub's Linux, Chromium lays each digit
+out 8 pixels wide, and "0.1823", 44 pixels, ended 0.8 pixels outside the
+SVG; in the Mac's system font it measures 38.3, so the count stands
+there).
 The name of the value ends where the numbers end, right-aligned, and
 reaches left over the room above the grid, so that it takes no width
 from the grid (since 12 October 2026, the review of the Distances tab

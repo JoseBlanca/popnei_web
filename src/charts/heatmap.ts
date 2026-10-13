@@ -28,6 +28,7 @@ import {
   type Plot2dDefinition,
   type PlotText,
 } from "./plot2d.ts";
+import { measuredWidth } from "./textWidth.ts";
 import type { Chart } from "./types.ts";
 
 /** The data of the heatmap: the names and the values of each pair of them. */
@@ -66,6 +67,9 @@ const NAMES_MIN = 12;
  * texts are numbers and the name of a measure.
  */
 const CHARACTER_WIDTH = 7.2;
+
+/** The size of the text of the legend, charts.css's `.chart-legend`. */
+const LEGEND_FONT_SIZE = 12;
 
 /**
  * The width counted for a character of a name of the axes, at 12 pixels:
@@ -269,7 +273,11 @@ function legendValues(data: HeatmapData): string[] {
 /**
  * The width of the legend right of the gap after the grid: the bar, 4
  * pixels, and the longest of the texts at the ends of the bar, at 7.2
- * pixels a character. The name of the value, above the bar, ends where
+ * pixels a character or as wide as it is measured (textWidth.ts), the
+ * larger. The count holds the numbers in the Mac's system font, "0.1823"
+ * 38.3 pixels; in DejaVu Sans on GitHub's Linux, whose digits Chromium
+ * lays out 8 pixels wide, it took 44, and its last 0.8 pixels lay
+ * outside the SVG (13 October 2026). The name of the value, above the bar, ends where
  * the legend ends and reaches left over the room above the grid, so it
  * takes none of this width: "Hudson's Fst", wider than its numbers, left
  * the cells of three populations 55.7 pixels on a page of 320, too
@@ -277,14 +285,21 @@ function legendValues(data: HeatmapData): string[] {
  * of the Distances tab, 12 October 2026).
  */
 function legendWidth(data: HeatmapData): number {
-  const longest = Math.max(...legendValues(data).map((text) => text.length));
-  return BAR_WIDTH + BAR_TEXT_GAP + longest * CHARACTER_WIDTH;
+  const longest = Math.max(
+    ...legendValues(data).map((text) =>
+      Math.max(
+        Array.from(text).length * CHARACTER_WIDTH,
+        measuredWidth(text, LEGEND_FONT_SIZE) ?? 0,
+      ),
+    ),
+  );
+  return BAR_WIDTH + BAR_TEXT_GAP + longest;
 }
 
 /**
- * The margins of the heatmap for `data` with its names written, fixed
- * numbers made from the data, since nothing in a plot measures text:
- * left, 8 pixels and the longest name as written, at 9 pixels a
+ * The margins of the heatmap for `data` with its names written, numbers
+ * made from the data, the names counted and the numbers of the legend
+ * counted or measured: left, 8 pixels and the longest name as written, at 9 pixels a
  * character; bottom, 8 pixels, 0.71 of that width, the slant of 45°, and
  * 8 more; top, 24; right, 16 pixels and the legend, `legendWidth`
  * (heatmap.md, "The names on the axes" and "The legend").
