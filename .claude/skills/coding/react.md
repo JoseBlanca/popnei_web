@@ -467,11 +467,21 @@ ends, results removed, is heard only through a live region.
   keys (the gate of `src/ui/variants/thresholdRun.ts`, which the widgets
   hold through `RunGateProvider`). A widget added to that page takes the
   same hold, from the press to the commit, or the PCA starts under the
-  user's hand. Stop ends the live state until the next Run. Since 11
-  October 2026 the PCA and the diversity are both live, the list of them
-  is `POPGEN2_LIVE` of `src/core/apps.ts`, and the calculation worker runs
-  one at a time, in the order of the tabs: the second waits, and the band
-  and its tab say so. Every table keyed by a live analysis, its tab, its
+  user's hand. Stop ends the live state until the next Run. Since 13
+  October 2026 four analyses are live, the PCA, the diversity, the
+  distances and the LD decay; the list of them is `POPGEN2_LIVE` of
+  `src/core/apps.ts`, in the order of calculation, and the calculation
+  worker runs one at a time in that order: the others wait, and the band
+  and their tabs say so. The LD decay is last, so that the others never
+  wait for a run that can take minutes; a list said without "then" (Stop
+  all, the link to warnings) follows the order of the tabs instead,
+  `src/ui/analyses/tabOrder.ts`. Only a change of what a live analysis
+  is calculated from, its key, or of why it is locked, counts as a change
+  for the automatic runs: an option that only changes what is drawn (the
+  heatmap's measure, the PCA's colours and axes) restarts nothing (the
+  review of the Distances tab, 12 October 2026). The lines of a live
+  analysis are built once from its name, `liveLines.ts`, and its panel
+  is `LivePart`; a fifth analysis adds its name, not a copy of them. Every table keyed by a live analysis, its tab, its
   words, its end said in the status region, is a `Record` over
   `Popgen2LiveId`, so that a third does not compile without them; a list
   of the live analyses written again by hand, an `if` on `"pca"` and
