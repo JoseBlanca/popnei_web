@@ -40,6 +40,14 @@ the draw against the
 frequency of the commonest allele, and no marks. Nothing of this spec
 changes for it.
 
+Revised and built on 12 October 2026 for the LD decay on
+`popgen2.html`, on the branch `ld-decay-tab`, joined on the branch
+`case4-ld-distances` on 13 October 2026, and not yet tried by the
+owner: from the review of the LD decay, each series is drawn in the
+dash of its group as well as its colour ("Its dashes"), and the names
+of the legend are cut in the middle and numbered when two would read
+alike, by `distinctCuts` of `textWidth.ts`, as the bar plot's are.
+
 ## What it does
 
 ### What the user sees
