@@ -12,6 +12,18 @@ of the three pieces of that case, and shows section 7 of
 owner decided on 12 October 2026 that this piece is built without
 stopping for the approval of its specs, and that they try the result.
 
+Built on the branch `distances-tab` on 12 October 2026 and joined with
+the LD decay on the branch `case4-ld-distances` on 13 October 2026, and
+not yet tried by the owner. Its review changed, each where this spec
+says so with its date: the distances named in the plural everywhere; a
+paragraph under the measure that says what each one measures; the
+legend's "or below" and a line under the heatmap when its cells cannot
+hold their values; the caption of the table naming each population
+with its individuals, the lines of the populations shown only before a
+result; and one name for the minimum, "the individuals needed per
+variant". The joining of the branches put the distances before the LD
+decay in the order of calculation.
+
 The tab is the panel of the distances of the old page, `popgen.html`,
 which is built and which the owner tried and accepted on 1 October
 2026: its screen spec is the second half of
