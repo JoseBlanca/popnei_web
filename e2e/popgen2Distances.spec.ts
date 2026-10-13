@@ -737,22 +737,37 @@ test.describe("DT1 D5 the Distances tab", () => {
     await expect(
       band.getByRole("button", { name: "Stop all: the PCA and the distances" }),
     ).toBeVisible();
+    // On one row where "Popnei", the words, Stop and Stop all, with the
+    // gaps between them, fit the line, as in the Mac's system font; in
+    // DejaVu Sans, Ubuntu's, they do not, and Stop all takes a second row
+    // (GitHub's runners, 13 October 2026). Every part within the window
+    // either way, and the page not scrolled sideways.
     await expect
       .poll(() =>
         band.getByRole("heading", { level: 1 }).evaluate((h1) => {
           const line = h1.parentElement;
-          if (line === null) return false;
+          const words = h1.nextElementSibling;
+          if (line === null || !(words instanceof HTMLElement)) return false;
           const parts = [
             h1,
+            words,
             ...line.querySelectorAll<HTMLElement>("button"),
-          ].filter((element) => element.getClientRects().length > 0);
-          const top = Math.min(
-            ...parts.map((part) => part.getBoundingClientRect().top),
-          );
+          ]
+            .filter((element) => element.getClientRects().length > 0)
+            .map((element) => element.getBoundingClientRect());
+          const top = Math.min(...parts.map((part) => part.top));
+          const oneLine = parts.every((part) => Math.abs(part.top - top) < 8);
+          const gapValue = parseFloat(getComputedStyle(line).columnGap);
+          const style = getComputedStyle(words);
+          const used =
+            parts.reduce((sum, part) => sum + part.width, 0) +
+            (Number.isNaN(gapValue) ? 0 : gapValue) * (parts.length - 1) -
+            parseFloat(style.paddingInlineStart) -
+            parseFloat(style.paddingInlineEnd);
           return (
-            parts.every(
-              (part) => Math.abs(part.getBoundingClientRect().top - top) < 8,
-            ) &&
+            oneLine === used <= line.getBoundingClientRect().width + 0.5 &&
+            parts.every((part) => part.right <= window.innerWidth + 0.5) &&
+            words.scrollWidth <= words.clientWidth &&
             document.documentElement.scrollWidth <=
               document.documentElement.clientWidth
           );

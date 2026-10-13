@@ -271,11 +271,17 @@ async function holdWithAKeyTyped(page: Page): Promise<void> {
     whether every part drawn is on one row of the line and within it,
     whether the page scrolls sideways, the room of the line and the
     width its parts take, the words and the buttons shown, with the
-    gaps between them, the words' padding taken back by their margins. */
+    gaps between them, the words' padding taken back by their margins;
+    and whether the line is on one row exactly when its parts fit its
+    room, which depends on the font: "Popnei", "Diversity · 0:05", Stop
+    and Stop all fit the 288 px of the line at 320 px in the Mac's
+    system font and not in DejaVu Sans, Ubuntu's, where Stop all takes a
+    second row (GitHub's runners, 13 October 2026). */
 async function lineFit(page: Page): Promise<{
   readonly buttons: readonly string[];
   readonly wordsCut: boolean;
   readonly oneLine: boolean;
+  readonly oneLineWhereItFits: boolean;
   readonly inLine: boolean;
   readonly inWindow: boolean;
   readonly noSidewaysScroll: boolean;
@@ -299,23 +305,23 @@ async function lineFit(page: Page): Promise<{
       parseFloat(getComputedStyle(words).paddingInlineStart) +
       parseFloat(getComputedStyle(words).paddingInlineEnd);
     const top = Math.min(...parts.map((box) => box.top));
+    const oneLine = parts.every((box) => Math.abs(box.top - top) < 8);
+    const used =
+      parts.reduce((sum, box) => sum + box.width, 0) +
+      gap * (parts.length - 1) -
+      wordsPadding;
     return {
       buttons: shownButtons.map((button) => button.textContent),
       wordsCut: words.scrollWidth > words.clientWidth,
-      oneLine: parts.every((box) => Math.abs(box.top - top) < 8),
+      oneLine,
+      oneLineWhereItFits: oneLine === used <= lineBox.width + 0.5,
       inLine: parts.every((box) => box.right <= lineBox.right + 0.5),
       inWindow: parts.every((box) => box.right <= window.innerWidth + 0.5),
       noSidewaysScroll:
         document.documentElement.scrollWidth <=
         document.documentElement.clientWidth,
       room: Math.round(lineBox.width * 10) / 10,
-      used:
-        Math.round(
-          (parts.reduce((sum, box) => sum + box.width, 0) +
-            gap * (parts.length - 1) -
-            wordsPadding) *
-            10,
-        ) / 10,
+      used: Math.round(used * 10) / 10,
     };
   });
 }
@@ -785,12 +791,14 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
       .poll(() => lineText(page))
       .toMatch(/^Popnei Diversity · 0:\d\d Stop Stop all$/u);
     // Measured until it holds: the plots under the band are drawn again
-    // at the new width a moment after it.
+    // at the new width a moment after it. On one row where the parts fit,
+    // as in the Mac's system font; in a wider font, Stop all on a second
+    // row, whole and in the window (lineFit).
     await expect
       .poll(async () => lineFit(page))
       .toMatchObject({
         wordsCut: false,
-        oneLine: true,
+        oneLineWhereItFits: true,
         inLine: true,
         noSidewaysScroll: true,
       });
@@ -801,7 +809,7 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     expect(fit).toMatchObject({
       buttons: ["Stop", "Stop all"],
       wordsCut: false,
-      oneLine: true,
+      oneLineWhereItFits: true,
       inLine: true,
       noSidewaysScroll: true,
     });

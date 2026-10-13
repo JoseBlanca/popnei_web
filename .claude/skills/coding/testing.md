@@ -440,6 +440,16 @@ What differs on the runners, and what the tests of a plot hold to:
   hides the labels over it in its screenshot, and a width that holds
   words is checked with DejaVu Sans, whose files are not in the
   repository: on the Mac, a page of a test given them by `@font-face`.
+  Any flow runs in it on the Mac with `POPNEI_WIDE_FONT=1` before
+  `npx playwright test`, which `e2e/axe.ts` turns into DejaVu Sans as
+  the page's `--font-body` before its styles load. A flow that asserts
+  one line, or a number of lines, measures whether the parts fit and
+  asserts the line only then: the band at 320 px and the five tabs, on
+  one line and on two in the Mac's font, took two and three in DejaVu
+  Sans on GitHub's runners, and failed the deploy from 9 to 13 October
+  2026. Chromium on Linux also lays DejaVu Sans out with whole-pixel
+  advances, "0.1823" 44 pixels at 12 where the Mac gives 42, which
+  `POPNEI_WIDE_FONT` does not reproduce.
 - Firefox gives the page no text from a `DataTransfer` passed to a
   `ClipboardEvent` made by a script, and Playwright 1.63 knows no
   permission to read its clipboard; and when the Tab key leaves the last

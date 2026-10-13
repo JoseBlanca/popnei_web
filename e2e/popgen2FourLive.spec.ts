@@ -197,10 +197,15 @@ function heading(page: Page): Locator {
 
 /** The line of the band as the eye reads it, and how it lies in the
     window: on one row, within the window, no sideways scroll, its
-    words not cut. */
+    words not cut; and on one row exactly when its parts, with the gaps
+    between them, fit its room, which depends on the font: "PCA running
+    · 0:05 · then the diversity and 2 more", Stop and Stop all fit at 720
+    px in the Mac's system font and not in DejaVu Sans, Ubuntu's, where
+    Stop all takes a second row (GitHub's runners, 13 October 2026). */
 async function bandFit(page: Page): Promise<{
   readonly text: string;
   readonly oneLine: boolean;
+  readonly oneLineWhereItFits: boolean;
   readonly inWindow: boolean;
   readonly wordsCut: boolean;
   readonly noSidewaysScroll: boolean;
@@ -228,9 +233,19 @@ async function bandFit(page: Page): Promise<{
       element.getBoundingClientRect(),
     );
     const top = Math.min(...parts.map((box) => box.top));
+    const oneLine = parts.every((box) => Math.abs(box.top - top) < 8);
+    const gapValue = parseFloat(getComputedStyle(line).columnGap);
+    const style = getComputedStyle(words);
+    const used =
+      parts.reduce((sum, box) => sum + box.width, 0) +
+      (Number.isNaN(gapValue) ? 0 : gapValue) * (parts.length - 1) -
+      parseFloat(style.paddingInlineStart) -
+      parseFloat(style.paddingInlineEnd);
     return {
       text: texts.join(" ").replace(/\s+/gu, " ").trim(),
-      oneLine: parts.every((box) => Math.abs(box.top - top) < 8),
+      oneLine,
+      oneLineWhereItFits:
+        oneLine === used <= line.getBoundingClientRect().width + 0.5,
       inWindow: parts.every((box) => box.right <= window.innerWidth + 0.5),
       wordsCut: words.scrollWidth > words.clientWidth,
       noSidewaysScroll:
@@ -342,7 +357,7 @@ test.describe("the four live analyses of popgen2.html (the merge of the LD decay
       .toMatch(/^Popnei PCA · 0:\d\d Stop Stop all$/u);
     const fit = await bandFit(page);
     expect(fit).toMatchObject({
-      oneLine: true,
+      oneLineWhereItFits: true,
       inWindow: true,
       wordsCut: false,
       noSidewaysScroll: true,
@@ -368,7 +383,7 @@ test.describe("the four live analyses of popgen2.html (the merge of the LD decay
           /^Popnei PCA running · 0:\d\d · then the diversity and 2 more Stop Stop all$/u,
         );
       expect(await bandFit(page), `${String(width)} px`).toMatchObject({
-        oneLine: true,
+        oneLineWhereItFits: true,
         inWindow: true,
         wordsCut: false,
         noSidewaysScroll: true,

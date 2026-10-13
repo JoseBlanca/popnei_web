@@ -69,6 +69,29 @@ function tab(page: Page, name: Label): Locator {
   return row(page).getByRole("tab", { name, exact: true });
 }
 
+/** The lines the labels of the row take when each line holds as many as
+    fit it, from their widths, the gap between them and the room of the
+    row, as measured in the page: as many as the font of the page needs. */
+async function linesTheLabelsNeed(page: Page): Promise<number> {
+  return row(page).evaluate((list) => {
+    const room = list.clientWidth;
+    const gapValue = parseFloat(getComputedStyle(list).columnGap);
+    const gap = Number.isNaN(gapValue) ? 0 : gapValue;
+    let lines = 0;
+    let used = 0;
+    for (const label of list.querySelectorAll('[role="tab"]')) {
+      const width = label.getBoundingClientRect().width;
+      if (lines > 0 && used + gap + width <= room + 0.5) {
+        used += gap + width;
+      } else {
+        lines += 1;
+        used = width;
+      }
+    }
+    return lines;
+  });
+}
+
 /** The panel of the tab shown. */
 function shownPanel(page: Page): Locator {
   return page.getByRole("tabpanel");
@@ -439,7 +462,13 @@ test("AP1 D4 at 320 pixels the five labels on two lines, the tab shown with its 
       expect(box.x + box.width).toBeLessThanOrEqual(320);
       tops.add(Math.round(box.y));
     }
-    expect(tops.size).toBe(2);
+    // The lines the labels take as wide as they are in the font of the
+    // page: two in the Mac's system font, three in DejaVu Sans, Ubuntu's,
+    // where "Variants", "Individuals" and "PCA" do not fit 288 px (GitHub's
+    // runners, 13 October 2026). Each line holds as many labels as fit it,
+    // so that the row breaks only where it must.
+    expect(tops.size).toBe(await linesTheLabelsNeed(page));
+    expect(tops.size).toBeGreaterThanOrEqual(2);
     const look = await tab(page, shown).evaluate((element) => {
       const style = getComputedStyle(element);
       return {
@@ -536,23 +565,42 @@ test("AP1 D4 on a short window the arrow key onto a greyed tab of the second lin
 }) => {
   await page.setViewportSize({ width: 320, height: 500 });
   await openPage(page);
+  // The first tab of the second line, greyed with no file: Populations in
+  // the Mac's system font, PCA in DejaVu Sans, Ubuntu's, whose wider
+  // labels leave PCA no room on the first line (GitHub's runners, 13
+  // October 2026).
+  const tops = await Promise.all(
+    LABELS.map(async (name) => (await tab(page, name).boundingBox())?.y ?? 0),
+  );
+  const place = tops.findIndex((top) => top > (tops[0] ?? 0) + 1);
+  const first = LABELS[place];
+  if (first === undefined || !(first in NO_VARIANTS)) {
+    throw new Error(`the second line starts with ${String(first)}`);
+  }
+  const reason = NO_VARIANTS[first as keyof typeof NO_VARIANTS];
   // The window ends just above the bottom of the second line of tabs,
-  // so that the arrow key onto Populations scrolls it into view, however
-  // high the boxes above are.
-  const second = await tab(page, "Populations").boundingBox();
-  if (second === null) throw new Error("the tab Populations is not drawn");
+  // so that the arrow key onto its first tab scrolls it into view,
+  // however high the boxes above are.
+  const second = await tab(page, first).boundingBox();
+  if (second === null) throw new Error(`the tab ${first} is not drawn`);
   await page.setViewportSize({
     width: 320,
     height: Math.floor(second.y + second.height) - 2,
   });
   await tab(page, "Variants").focus();
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("tooltip")).toHaveText(NO_VARIANTS.PCA);
+  for (let step = 1; step < place; step += 1) {
+    await page.keyboard.press("ArrowRight");
+  }
+  const previous = LABELS[place - 1];
+  if (previous !== undefined && previous in NO_VARIANTS) {
+    await expect(page.getByRole("tooltip")).toHaveText(
+      NO_VARIANTS[previous as keyof typeof NO_VARIANTS],
+    );
+  }
   const before = await page.evaluate(() => window.scrollY);
   await page.keyboard.press("ArrowRight");
-  await expect(tab(page, "Populations")).toBeFocused();
-  await expect(page.getByRole("tooltip")).toHaveText(NO_VARIANTS.Populations);
+  await expect(tab(page, first)).toBeFocused();
+  await expect(page.getByRole("tooltip")).toHaveText(reason);
   // The browser scrolled the tab into view, which closed every tooltip
   // before.
   // WebKit may scroll after the focus has moved, so the scroll is waited
@@ -560,7 +608,7 @@ test("AP1 D4 on a short window the arrow key onto a greyed tab of the second lin
   await expect
     .poll(() => page.evaluate(() => window.scrollY))
     .toBeGreaterThan(before);
-  await expect(page.getByRole("tooltip")).toHaveText(NO_VARIANTS.Populations);
+  await expect(page.getByRole("tooltip")).toHaveText(reason);
 });
 
 test("AP1 D4 the arrows resting on a greyed tab, Tab out and Shift+Tab back put the focus on the tab shown", async ({
