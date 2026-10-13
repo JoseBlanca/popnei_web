@@ -74,6 +74,17 @@ before the code, which the owner decided on 12 October 2026 to build
 without stopping for the approval of the spec, and to check in the
 running page.
 
+Its section "The LD decay" was built on the branch `ld-decay-tab` on 12
+October 2026 and joined with the Distances tab on the branch
+`case4-ld-distances` on 13 October 2026, and is not yet tried by the
+owner. Its review changed, each where this spec says so with its date:
+after popnei's refusal for memory, the line says what brings Run back;
+the time of the last run names its distance and counts the start of a
+new calculation worker; 2 rem before the heading "LD decay"; a change
+of another analysis's options while the LD decay runs waits for it,
+where this said the others never wait; and the joining of the branches
+put the LD decay last in the order of calculation, after the distances.
+
 The tab is the diversity panel of the old page, `popgen.html`, which is
 built and which the owner tried and accepted on 1 October 2026: its
 screen spec is the second half of `docs/specs/analyses/diversity.md`,
