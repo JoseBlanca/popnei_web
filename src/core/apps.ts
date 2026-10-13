@@ -97,8 +97,9 @@ export const POPGEN2_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
     LD decay of the Populations tab (docs/specs/steps/popgen2-pca.md, "The
     PCA calculated again by itself" and "Several analyses calculated again
     by themselves"). This is the order of calculation, not that of the
-    tabs, which `LIVE_TABS` of the band and the words that name several
-    analyses follow: the LD decay, which may take minutes and which
+    tabs, `POPGEN2_LIVE_IN_TABS` of src/ui/analyses/tabOrder.ts, which
+    the words that name several analyses with no "then" follow: the LD
+    decay, which may take minutes and which
     nothing interrupts, runs last, so that the others, the distances
     among them, never wait for it.
     The one list of them: the store of the page and the words of its
