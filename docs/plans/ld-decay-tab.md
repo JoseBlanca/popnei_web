@@ -212,3 +212,38 @@ seconds rounded down. So decision (a) costs a user under a minute of
 greyed filters per change up to 1 Mb on 1,000 individuals, with the PCA
 and the diversity answering within 3 s; the minutes of section 11 begin
 above 2 Mb.
+
+### The merge with the other piece, 13 October 2026
+
+The branches `ld-decay-tab` and `distances-tab` were merged on the branch
+`case4-ld-distances` (6731967c, conflicts in 20 files resolved by the
+session's notes). The order of calculation of the live analyses became
+PCA, diversity, distances, LD decay, so that the distances never wait for
+a long LD decay, the owner's reason for letting it recalculate by itself;
+lists said without "then" (Stop all, the link to warnings, "start in a
+moment") follow the tabs, `src/ui/analyses/tabOrder.ts`. After the merge,
+code the two branches had written twice or three times became one:
+`createTabLoader`, `LivePart`, `liveLines.ts` (the band's and the status
+region's) and `liveTabLines.ts` (a tab's), `unclassifiedWords.ts`;
+`liveStatesOf` maps over the live analyses. The band says "then the
+diversity and 2 more" and "The PCA and 3 more start in a moment", the
+whole list for a screen reader, so that it keeps one row at 320, 720 and
+1280 px with four live analyses. The distances' refusal words name no
+Run that is not there.
+
+A review of the merge (`stale`, `browser`): no stale result, time or
+word with four live analyses in every order tried on the real store, and
+852 lines of words the same before and after the shared code but the
+distances' Stop and failure lines, as intended; the four run in order in
+both engines and the band keeps one row. Known, not fixed: in WebKit at
+720 px with the page's own text at 200% (WebKit has no text size of the
+browser) the band's words are cut, as the media query follows the
+browser's text size; Chromium with its real text size shows the short
+form; for the owner to try in Safari. The documents of both pieces
+(13 commits) and the first load: `popgen2.html` 334.22 KB, against
+333.16 KB on main at 405e4295 measured the same way, after the code each
+tab alone needs was moved into the tab (d3f48f49, ccee97be).
+
+One flow of the 3D PCA in WebKit (AP6 D3 kept drawn) failed once in
+three under load and passed 6 of 6 after; neither it nor the 3D code
+changed in these pieces.
