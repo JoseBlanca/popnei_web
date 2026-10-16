@@ -413,9 +413,16 @@ for (const scheme of ["light", "dark"] as const) {
           borderWidth: style.borderTopWidth,
         };
       });
-    const background = await page.evaluate(
-      () => getComputedStyle(document.body).backgroundColor,
-    );
+    // The colour behind the plot: that of the first element around the
+    // handle with a background of its own, the panel of the tab since the
+    // look of docs/plans/visual-design.md, where it was the page's.
+    const background = await maf.thumb.evaluate((thumb) => {
+      for (let at = thumb.parentElement; at !== null; at = at.parentElement) {
+        const colour = getComputedStyle(at).backgroundColor;
+        if (colour !== "rgba(0, 0, 0, 0)") return colour;
+      }
+      return getComputedStyle(document.body).backgroundColor;
+    });
 
     const grey = await lineLook(maf);
     expect(grey.dashes.split(/[\s,]+/u).map(Number.parseFloat)).toEqual([1, 3]);
