@@ -949,6 +949,17 @@ describe("AP6 the boundary of the PCA tab", () => {
   });
 });
 
+/** Gives the zone of the tab of `pasteLabel` a drop of a folder, as a
+    user does; jsdom has no drag and drop. */
+async function dropFolderOn(pasteLabel: string): Promise<void> {
+  const zone = inject.zones.get(pasteLabel);
+  if (zone === undefined) throw new Error(`no zone ${pasteLabel}`);
+  await act(async () => {
+    zone.onNotFiles("folder");
+    await Promise.resolve();
+  });
+}
+
 describe("the ends of the tabs of the files and the boundaries around them", () => {
   test("a throw in the zone at the end of the Individuals tab leaves Remove beside the zone's heading", async () => {
     const { store } = await drawPage();
@@ -985,4 +996,54 @@ describe("the ends of the tabs of the files and the boundaries around them", () 
     expect(buttonOf("Open another variants file…")).not.toBeNull();
     expect(buttonOf("Open another individuals file…")).not.toBeNull();
   });
+
+  test.each([
+    // The words of the Variants tab are in the zone's boundary, which
+    // draws its heading in their place.
+    ["Paste a variants file", "Open another variants file…", false],
+    // Those of the Individuals tab, under the zone and Remove, in one of
+    // their own, which draws nothing: the zone stays.
+    ["Paste an individuals file", "Open another individuals file…", true],
+  ])(
+    "a throw in the words of a file refused by %s at the end of its tab costs the zone or the words, not the row of tabs",
+    async (pasteLabel, button, zoneStays) => {
+      const { store } = await drawPage();
+      await open(store, "a".repeat(32), "first.nei");
+      await openPopulationsKeepingI1(store);
+      inject.scrollThrows = true;
+      await dropFolderOn(pasteLabel);
+      // React draws a part that threw in an effect once more under
+      // StrictMode before it gives up, so the same error may come twice.
+      expect(caught.length).toBeGreaterThan(0);
+      expect(
+        new Set(
+          caught.map((error) =>
+            error instanceof Error ? error.message : String(error),
+          ),
+        ),
+      ).toEqual(new Set(["the words of a file refused could not be scrolled"]));
+      expect(container.querySelector('[role="tablist"]')).not.toBeNull();
+      expect(tabOf("Variants")).not.toBeNull();
+      expect(buttonOf(button) !== null).toBe(zoneStays);
+      expect(
+        [...container.querySelectorAll("h2")].some(
+          (h) => h.textContent === "Opening a variants file",
+        ),
+      ).toBe(!zoneStays);
+    },
+  );
+
+  test.each(["Paste a variants file", "Paste an individuals file"])(
+    "the same words refused twice in a row by %s at the end of its tab are scrolled into the window twice",
+    async (pasteLabel) => {
+      const { store } = await drawPage();
+      await open(store, "a".repeat(32), "first.nei");
+      await openPopulationsKeepingI1(store);
+      await dropFolderOn(pasteLabel);
+      const once = inject.scrolls;
+      expect(once).toBeGreaterThan(0);
+      await dropFolderOn(pasteLabel);
+      expect(inject.scrolls).toBeGreaterThan(once);
+    },
+  );
 });

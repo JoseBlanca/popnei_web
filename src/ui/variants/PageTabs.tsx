@@ -134,7 +134,7 @@ export function PageTabs({
   // zone at the end of the Variants tab, the only one then, refused.
   const variantsRefused =
     fileId !== null && variantsRefusal?.forLoad === fileId
-      ? variantsRefusal.text
+      ? variantsRefusal
       : null;
   // Remove pressed: the row goes with the file, and the focus goes to the
   // box's button, which comes back in the same change.
@@ -173,7 +173,9 @@ export function PageTabs({
                 )}
                 <StatsSection openButton={openButton} onShown={onStatsShown} />
                 {/* Drawn again at a turn of the tabs after a throw, as the
-                    zone of the box. */}
+                    zone of the box; the words of a file it refused are in
+                    its boundary, so that a throw in them costs the zone
+                    and not the row of tabs. */}
                 <div className={classOf(styles, "tabEnd")}>
                   <ErrorBoundary
                     heading={OPENING_ZONE_NAME}
@@ -184,10 +186,10 @@ export function PageTabs({
                       buttonRef={openButton}
                       onRefusal={onVariantsRefusal}
                     />
+                    {variantsRefused !== null && (
+                      <RefusedInTab refusal={variantsRefused} />
+                    )}
                   </ErrorBoundary>
-                  {variantsRefused !== null && (
-                    <RefusedInTab text={variantsRefused} />
-                  )}
                 </div>
               </div>
             ),
@@ -226,8 +228,12 @@ export function PageTabs({
                     </ErrorBoundary>
                   </div>
                   {/* With a file open the zone of the tab is the only one,
-                      so the words of a file not opened are its own. */}
-                  <IndividualsRefusedInTab />
+                      so the words of a file not opened are its own; under
+                      the zone and Remove, in a boundary of their own, so
+                      that a throw in them costs them alone. */}
+                  <ErrorBoundary heading={null} resetOn={tab}>
+                    <IndividualsRefusedInTab />
+                  </ErrorBoundary>
                 </div>
               )}
             </div>
@@ -278,21 +284,28 @@ export function PageTabs({
   );
 }
 
-/** The words `text` of a file refused by the zone at the end of a tab,
-    under it. The zone is at the end of the page, often at the bottom of
-    the window, and the words lengthen the page under it, so they are
-    brought into the window as they come, by the least scroll that shows
-    them whole: their last line stood 23 pixels below a window of 900 in
-    Chromium on 16 October 2026, the page scrolled to its end. A tab not
-    shown is hidden, and its words scroll nothing. */
-function RefusedInTab({ text }: { readonly text: string }): React.JSX.Element {
+/** The words of a file refused, `refusal`, by the zone at the end of a
+    tab, under it. The zone is at the end of the page, often at the bottom
+    of the window, and the words lengthen the page under it, so they are
+    brought into the window at each refusal, by the least scroll that
+    shows them whole: their last line stood 23 pixels below a window of
+    900 in Chromium on 16 October 2026, the page scrolled to its end. Each
+    refusal is a new object, so that the same words refused twice in a
+    row, two folders dropped, scroll twice: the user may have scrolled
+    away between them. A tab not shown is hidden, and its words scroll
+    nothing. */
+function RefusedInTab({
+  refusal,
+}: {
+  readonly refusal: { readonly text: string };
+}): React.JSX.Element {
   const element = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     element.current?.scrollIntoView({ block: "nearest" });
-  }, [text]);
+  }, [refusal]);
   return (
     <div ref={element} className={classOf(styles, "refusedInTab")}>
-      <Problem>{text}</Problem>
+      <Problem>{refusal.text}</Problem>
     </div>
   );
 }
@@ -302,7 +315,7 @@ function RefusedInTab({ text }: { readonly text: string }): React.JSX.Element {
     lock of the populations, draws it again and not the row of tabs. */
 function IndividualsRefusedInTab(): React.JSX.Element | null {
   const { refusal } = useIndividualsOpening();
-  return refusal === null ? null : <RefusedInTab text={refusal} />;
+  return refusal === null ? null : <RefusedInTab refusal={refusal} />;
 }
 
 /** A tab of the analyses: greyed with the words of `reason`, which then

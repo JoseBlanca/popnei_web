@@ -56,8 +56,10 @@ interface Refusal {
 export interface IndividualsOpening {
   /** The words of the last drop, paste or pick not opened, until the
       next opening or removal, or, refused by the lock, until the lock
-      ends; `null` with none. */
-  readonly refusal: string | null;
+      ends; `null` with none. A new object at each refusal, the same
+      words or not, so that what shows them can tell a second refusal
+      from the first. */
+  readonly refusal: { readonly text: string } | null;
   /** Opens the one file of `files`, or says why not. */
   readonly onFiles: (files: readonly File[]) => void;
   /** Says why a folder, a piece of text or several things were not
@@ -140,7 +142,7 @@ function useMadeOpening(): IndividualsOpening {
   };
 
   return {
-    refusal: refusal?.text ?? null,
+    refusal,
     onFiles: (picked) => {
       const [file, ...others] = picked;
       if (file === undefined) return;

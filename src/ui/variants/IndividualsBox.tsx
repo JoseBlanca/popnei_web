@@ -131,7 +131,7 @@ export function IndividualsBox({
     populations, draws it again and not the box. */
 function RefusalLine(): React.JSX.Element | null {
   const { refusal } = useIndividualsOpening();
-  return refusal === null ? null : <Problem>{refusal}</Problem>;
+  return refusal === null ? null : <Problem>{refusal.text}</Problem>;
 }
 
 /** What the lines of the file are drawn with. */
