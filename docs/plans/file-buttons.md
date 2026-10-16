@@ -121,3 +121,56 @@ tab too, where the user's eyes are when they decide to change it.
 - A served font, a decision of the owner still open.
 
 ## What was done
+
+Phase 1, 16 October 2026, in three commits on file-buttons:
+
+- `FileZone` takes `buttonLabel: null` for a zone with no button, no
+  picker and no dashed frame, around what it holds; `useFocusOnGone`
+  (`src/ui/variants/focusOnGone.ts`) hands the focus on when a part that
+  holds it leaves the page, with a test in jsdom under StrictMode.
+- The boxes: before a file, the zone at the bottom of each box, a column
+  of flex whose end takes the room left, so that the two buttons stand
+  at the same height; with a file, the whole box is a zone with no frame
+  around its heading and lines. The ends of the tabs: "Open another
+  variants file…" after `StatsSection`; "Open another individuals
+  file…" with Remove as its `actions`, both outside the boundaries made
+  for each file. The individuals file has one opening,
+  `useIndividualsOpening` of `OpenIndividuals.tsx`, made by the page and
+  shared by the box and the tab; Remove is `RemoveIndividuals.tsx`.
+- The focus: an opening by a box's button goes to the box's heading
+  (`tabIndex={-1}`); Remove, when it had the focus, gives it to the box's
+  "Open individuals file…"; the lines of a variants file that go with the
+  focus give it to the box's heading, and the statistics to "Open another
+  variants file…", each ref read when the part goes.
+- The words that sent the user to open a file again "in the box
+  Variants" or "in the box Individuals", with a file of that kind open,
+  name its tab now (a commit of its own). "Start again in the box
+  Variants" stays.
+- The flows find the buttons through `e2e/openFiles.ts`; those that open
+  a second file while another tab is shown drop it on the box
+  (`dropOnBox`). New flows in `e2e/popgen2FileButtons.spec.ts`, 9, which
+  all failed on the code before the change in Chromium; EN30 of
+  `e2e/strayDrops.spec.ts` changed, and a flow added for a drop on a box
+  with a file.
+- Checks: type check, lint, format, Vitest 5,716 tests; Playwright on the
+  built site, Chromium 921 passed, WebKit 919 passed and 2 skipped; the
+  flows `e2e/popgen2*` in Chromium with `POPNEI_WIDE_FONT=1`, 287 passed.
+  Firefox not run, as it does not launch on this Mac.
+
+Choices the plan did not settle, made in phase 1:
+
+- "Open another individuals file…" comes first and Remove after it, in
+  the zone, as the zone's actions: Remove is inside the dashed zone.
+- The words of a file not opened, dropped or picked in a tab, are shown
+  in the box, as before, and said in the status region; the tab shows
+  none.
+- The box of a file open and the zone of its tab each have a hidden
+  button "Paste a variants file" (or "an individuals file"), so the page
+  has two of each name, in two regions.
+
+For phase 3, the documents also need: `docs/specs/entry.md` and the
+input spec on the two paste buttons; the specs of the analyses whose
+words now name the tab (`pca.md`, `diversity.md`, `ldDecay.md`,
+`popDists.md`, the PCA lock); and `individualsBoxWords` of
+`src/core/project.ts`, which still says "open it with Open variants file
+in the box Variants" when a variants file is open, to decide.
