@@ -71,6 +71,10 @@ const inject = vi.hoisted(() => ({
   pcaTabThrows: false,
   pcaOptionsThrow: false,
   factsThrow: false,
+  individualsZoneThrows: false,
+  zones: new Map<string, FileZoneProps>(),
+  scrolls: 0,
+  scrollThrows: false,
 }));
 
 vi.mock("../../core/analyses/pca.ts", async (importOriginal) => {
@@ -129,6 +133,15 @@ vi.mock("../widgets/FileZone.tsx", async (importOriginal) => {
       if (inject.zoneThrows && props.pasteLabel === "Paste a variants file") {
         throw new Error("the zone could not be drawn");
       }
+      if (
+        inject.individualsZoneThrows &&
+        props.pasteLabel === "Paste an individuals file"
+      ) {
+        throw new Error("the zone of the individuals file could not be drawn");
+      }
+      // The last zone drawn of each kind, whose drops a test gives by
+      // hand: jsdom has no drag and drop.
+      inject.zones.set(props.pasteLabel, props);
       return real.FileZone(props);
     },
   };
@@ -203,6 +216,18 @@ beforeEach(() => {
   inject.pcaTabThrows = false;
   inject.pcaOptionsThrow = false;
   inject.factsThrow = false;
+  inject.individualsZoneThrows = false;
+  inject.zones.clear();
+  inject.scrolls = 0;
+  inject.scrollThrows = false;
+  // jsdom lays nothing out and has no scrollIntoView, which the words
+  // of a file refused in a tab call: counted here, or made to throw.
+  Element.prototype.scrollIntoView = () => {
+    if (inject.scrollThrows) {
+      throw new Error("the words of a file refused could not be scrolled");
+    }
+    inject.scrolls += 1;
+  };
   container = document.createElement("div");
   document.body.append(container);
   caught = [];
@@ -921,5 +946,27 @@ describe("AP6 the boundary of the PCA tab", () => {
     expect(region("Variants")).not.toBeNull();
     expect(region("Individuals")).not.toBeNull();
     expect(container.querySelector('[role="tablist"]')).not.toBeNull();
+  });
+});
+
+describe("the ends of the tabs of the files and the boundaries around them", () => {
+  test("a throw in the zone at the end of the Individuals tab leaves Remove beside the zone's heading", async () => {
+    const { store } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+    await openPopulationsKeepingI1(store);
+    expect(buttonOf("Remove pops.csv")).not.toBeNull();
+    inject.individualsZoneThrows = true;
+    await act(async () => {
+      tabOf("Individuals").click();
+      await Promise.resolve();
+    });
+    expect(caught).toEqual([
+      new Error("the zone of the individuals file could not be drawn"),
+    ]);
+    expect(buttonOf("Open another individuals file…")).toBeNull();
+    expect(
+      [...container.querySelectorAll("h2")].map((h) => h.textContent),
+    ).toContain("Opening an individuals file");
+    expect(buttonOf("Remove pops.csv")).not.toBeNull();
   });
 });

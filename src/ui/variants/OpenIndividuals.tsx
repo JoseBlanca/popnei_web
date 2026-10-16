@@ -179,14 +179,11 @@ function useMadeOpening(): IndividualsOpening {
 export interface OpenIndividualsProps {
   /** The element of the button, for the page to move the focus to it. */
   readonly buttonRef: React.RefObject<HTMLButtonElement | null>;
-  /** What can be done with the file, after the button: Remove. */
-  readonly actions?: React.ReactNode;
 }
 
 /** A zone that opens the individuals file, with its button. */
 export function OpenIndividuals({
   buttonRef,
-  actions,
 }: OpenIndividualsProps): React.JSX.Element {
   const opening = useIndividualsOpening();
   const individualsOpen = useAppState((s) => s.project.individuals !== null);
@@ -200,7 +197,6 @@ export function OpenIndividuals({
       onFiles={opening.onFiles}
       onNotFiles={opening.onNotFiles}
       buttonRef={buttonRef}
-      {...(actions !== undefined && { actions })}
       waiting={opening.waiting}
     />
   );

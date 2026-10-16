@@ -22,8 +22,9 @@
  * The tabs of the two files end, once a file is open, with the zone that
  * opens another: the Variants tab with "Open another variants file…"
  * under "Download filtered variants…", the Individuals tab with "Open
- * another individuals file…" and Remove side by side, which wrap on a
- * narrow window (docs/plans/file-buttons.md, 16 October 2026). A file
+ * another individuals file…" and Remove side by side, the zone around
+ * the first and Remove beside it, out of the zone's boundary, which wrap
+ * on a narrow window (docs/plans/file-buttons.md, 16 October 2026). A file
  * refused there has its words under the zone too, where the user is, as
  * well as in the box and, once, in the status region (the review of the
  * phase, 16 October 2026). Each is
@@ -207,16 +208,23 @@ export function PageTabs({
               </ErrorBoundary>
               {individualsName !== null && (
                 <div ref={individualsEnd} className={classOf(styles, "tabEnd")}>
-                  <ErrorBoundary
-                    heading={OPENING_INDIVIDUALS_ZONE_NAME}
-                    level={2}
-                    resetOn={tab}
-                  >
-                    <OpenIndividuals
-                      buttonRef={individualsOpenButton}
-                      actions={<RemoveIndividuals name={individualsName} />}
-                    />
-                  </ErrorBoundary>
+                  {/* Remove beside the zone and outside its boundary, so
+                      that a defect in the zone leaves it; in a boundary
+                      of its own, whose error bar says what happened. */}
+                  <div className={classOf(styles, "zoneAndRemove")}>
+                    <div className={classOf(styles, "zoneBesideRemove")}>
+                      <ErrorBoundary
+                        heading={OPENING_INDIVIDUALS_ZONE_NAME}
+                        level={2}
+                        resetOn={tab}
+                      >
+                        <OpenIndividuals buttonRef={individualsOpenButton} />
+                      </ErrorBoundary>
+                    </div>
+                    <ErrorBoundary heading={null} resetOn={tab}>
+                      <RemoveIndividuals name={individualsName} />
+                    </ErrorBoundary>
+                  </div>
                   {/* With a file open the zone of the tab is the only one,
                       so the words of a file not opened are its own. */}
                   <IndividualsRefusedInTab />

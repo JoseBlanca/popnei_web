@@ -82,6 +82,23 @@
   min-inline-size: 0;
 }
 
+/* The zone that opens another individuals file and Remove, side by
+   side while they fit and Remove under the zone on a narrow window: the
+   zone as wide as its button, so that the two buttons stand together.
+   Remove is outside the zone and its boundary (PageTabs.tsx). */
+.zoneAndRemove {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.zoneBesideRemove {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+}
+
 /* The words of a file refused by the zone of a tab, which are scrolled
    into the window as they come (PageTabs.tsx): with the room of the
    panel's padding under them, not flush with the window's edge. */
