@@ -193,3 +193,32 @@ the way.
 
 Baseline at fe6c64ff, 16 October 2026: typecheck, lint and format
 clean; Vitest 190 files, 5,643 tests passed.
+
+### Phases 1 and 2, 16 October 2026
+
+Built at the same time by two subagents. Phase 2 (item 1) in 7058b7fe
+(the spec first), 9d521f29 and 890d017a; phase 1 (items 3 and 4) in
+2fd86438, with the documents and specs in 04811a57 and 88e81869 (a
+first-reader pass on `docs/functionality.md` and `docs/use-cases.md`).
+Phase 1's screens of `e2e/screens.spec.ts` went into 890d017a, since the
+two shared the file.
+
+Choices of the builders, in the specs: the summary line counts only the
+populations with an individual kept; "No individual is kept by the
+filters of individuals" when none is; while the counts wait, "…
+individuals classified in 3 populations"; the line of the waiting
+counts also under the tab's table; with no individuals file the tab
+keeps only "No individuals file open."; an emptied distance field on
+`popgen2.html` is now no distance and greys Run (before, it showed its
+old number again, so the reason could not be reached once a default
+existed); the reason under an emptied field says "Type a distance in
+base pairs, 100,000 to start with, …". The keys are unchanged: the
+default and 100,000 typed give one key. popnei 0.2.2 under node gives
+the same PCA of `panel.nei` within 100,000 bp as within 50,000: 548
+variants, PC1 3.55%.
+
+Checks at 88e81869, run by the session: typecheck, lint, format clean;
+Vitest 190 files, 5,654 tests. The builders' Playwright runs, Chromium
+and WebKit: every popgen2 flow passed (popgen2Input with
+`POPNEI_WIDE_FONT=1` too); screens of both phases at 1280 and 320 px,
+light and dark.
