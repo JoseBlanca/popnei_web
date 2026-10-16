@@ -31,10 +31,12 @@
  * status region says what changes away from the focus, whichever tab is
  * shown. The tab "Individuals" is in a boundary made again for
  * each individuals file, as the statistics are for each variants file.
- * The page holds the words of the last file not opened, which the
- * opening says and the box shows; the one opening of the individuals
- * file, whose zones are in the box and at the end of the Individuals
- * tab; and the buttons that open a file, the box's before a file and
+ * The page holds the words of the last variants file not opened, which
+ * the opening says and the box and the Variants tab show; the provider
+ * of the one opening of the individuals file, whose zones are in the box
+ * and at the end of the Individuals tab, and which follows the lock of
+ * the populations without drawing the page again; and the buttons that
+ * open a file, the box's before a file and
  * the tab's after, one at a time under each ref, which Remove and the
  * statistics give the focus to. The tab shown, the screen's and not
  * the project's, is the page's store of it, `pageTab`, which the band at
@@ -51,7 +53,7 @@ import type { PageTabStore } from "../pageTab.ts";
 import { ANALYSES_TABS_LABEL } from "./analysisTabsWords.ts";
 import { useFocusOnGone } from "./focusOnGone.ts";
 import { IndividualsBox } from "./IndividualsBox.tsx";
-import { useIndividualsOpening } from "./OpenIndividuals.tsx";
+import { IndividualsOpeningProvider } from "./OpenIndividuals.tsx";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
 import type { StatsShown } from "./announceChanges.ts";
@@ -83,7 +85,6 @@ export function VariantsPage({
   const individualsOpenButton = useRef<HTMLButtonElement>(null);
   const variantsHeading = useRef<HTMLHeadingElement>(null);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
-  const individualsOpening = useIndividualsOpening();
   const tab = usePageTab(pageTab);
   const variantsHeadingId = useId();
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
@@ -93,72 +94,76 @@ export function VariantsPage({
   return (
     <>
       <main className={classOf(styles, "page")}>
-        <div className={classOf(styles, "boxes")}>
-          <section
-            aria-labelledby={variantsHeadingId}
-            className={classOf(styles, "box")}
-          >
-            {/* It takes the focus after an opening by the box's button,
+        <IndividualsOpeningProvider>
+          <div className={classOf(styles, "boxes")}>
+            <section
+              aria-labelledby={variantsHeadingId}
+              className={classOf(styles, "box")}
+            >
+              {/* It takes the focus after an opening by the box's button,
                 and when the lines of a file go with it; it is not a stop
                 of the Tab key. */}
-            <h2
-              ref={variantsHeading}
-              id={variantsHeadingId}
-              tabIndex={-1}
-              className={classOf(styles, "boxHeading")}
-            >
-              {OPENING_NAME}
-            </h2>
-            {/* Another load is another boundary, which has caught
+              <h2
+                ref={variantsHeading}
+                id={variantsHeadingId}
+                tabIndex={-1}
+                className={classOf(styles, "boxHeading")}
+              >
+                {OPENING_NAME}
+              </h2>
+              {/* Another load is another boundary, which has caught
                 nothing, so that a throw while the lines of one file are
                 drawn leaves the next file its lines, its Stop and its
                 Start again. */}
-            <ErrorBoundary key={fileId ?? "none"} heading={INFO_NAME} level={3}>
-              <VariantsSummary
-                focusTarget={variantsHeading}
-                onCountButton={onCountButton}
-                refusal={refusal}
-              />
-            </ErrorBoundary>
-            {fileId === null && (
-              <div ref={zoneEnd} className={classOf(styles, "boxEnd")}>
-                {/* Its own boundary, drawn again at each turn of the tabs
+              <ErrorBoundary
+                key={fileId ?? "none"}
+                heading={INFO_NAME}
+                level={3}
+              >
+                <VariantsSummary
+                  focusTarget={variantsHeading}
+                  onCountButton={onCountButton}
+                  refusal={refusal}
+                />
+              </ErrorBoundary>
+              {fileId === null && (
+                <div ref={zoneEnd} className={classOf(styles, "boxEnd")}>
+                  {/* Its own boundary, drawn again at each turn of the tabs
                     after a throw: after a throw the zone is gone, and with
                     it the one way to open a file, so a turn of the tab
                     draws it again, as a turn of the step draws the step on
                     popgen.html. */}
-                <ErrorBoundary
-                  heading={OPENING_ZONE_NAME}
-                  level={3}
-                  resetOn={tab}
-                >
-                  <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
-                </ErrorBoundary>
-              </div>
-            )}
-          </section>
-          <IndividualsBox
-            tab={tab}
-            opening={individualsOpening}
-            openButton={individualsOpenButton}
-          />
-        </div>
-        {/* A defect in the reasons of the tabs costs the row alone, not
+                  <ErrorBoundary
+                    heading={OPENING_ZONE_NAME}
+                    level={3}
+                    resetOn={tab}
+                  >
+                    <OpenVariants
+                      buttonRef={openButton}
+                      onRefusal={setRefusal}
+                    />
+                  </ErrorBoundary>
+                </div>
+              )}
+            </section>
+            <IndividualsBox tab={tab} openButton={individualsOpenButton} />
+          </div>
+          {/* A defect in the reasons of the tabs costs the row alone, not
             the boxes of the files. */}
-        <ErrorBoundary heading={ANALYSES_TABS_LABEL} level={2}>
-          <PageTabs
-            tab={tab}
-            onTabChange={(next) => {
-              pageTab.show(next);
-            }}
-            openButton={openButton}
-            variantsRefusal={refusal}
-            onVariantsRefusal={setRefusal}
-            individualsOpenButton={individualsOpenButton}
-            individualsOpening={individualsOpening}
-            onStatsShown={onStatsShown}
-          />
-        </ErrorBoundary>
+          <ErrorBoundary heading={ANALYSES_TABS_LABEL} level={2}>
+            <PageTabs
+              tab={tab}
+              onTabChange={(next) => {
+                pageTab.show(next);
+              }}
+              openButton={openButton}
+              variantsRefusal={refusal}
+              onVariantsRefusal={setRefusal}
+              individualsOpenButton={individualsOpenButton}
+              onStatsShown={onStatsShown}
+            />
+          </ErrorBoundary>
+        </IndividualsOpeningProvider>
       </main>
       <StatusRegion />
     </>

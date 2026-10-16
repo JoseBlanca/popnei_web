@@ -50,7 +50,7 @@ import {
   waitingCount,
 } from "./IndividualsCounts.tsx";
 import { OpenIndividuals } from "./OpenIndividuals.tsx";
-import type { IndividualsOpening } from "./OpenIndividuals.tsx";
+import { useIndividualsOpening } from "./OpenIndividuals.tsx";
 import pageStyles from "./VariantsPage.module.css";
 import {
   chosenColumnItem,
@@ -72,8 +72,6 @@ import type { SummaryLine } from "./individualsWords.ts";
 export interface IndividualsBoxProps {
   /** The tab shown, whose turn draws the zone again after a throw. */
   readonly tab: PageTab;
-  /** The page's one opening of the individuals file. */
-  readonly opening: IndividualsOpening;
   /** The zone's button, before a file is open, which Remove in the
       Individuals tab gives the focus to. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
@@ -82,7 +80,6 @@ export interface IndividualsBoxProps {
 /** The box of the individuals file. */
 export function IndividualsBox({
   tab,
-  opening,
   openButton,
 }: IndividualsBoxProps): React.JSX.Element {
   const headingId = useId();
@@ -111,7 +108,7 @@ export function IndividualsBox({
       >
         <FileLines individuals={individuals} />
       </ErrorBoundary>
-      {opening.refusal !== null && <Problem>{opening.refusal}</Problem>}
+      <RefusalLine />
       {individuals === null && (
         <div ref={zoneEnd} className={classOf(pageStyles, "boxEnd")}>
           {/* Its own boundary, drawn again at each turn of the tabs after
@@ -121,12 +118,20 @@ export function IndividualsBox({
             level={3}
             resetOn={tab}
           >
-            <OpenIndividuals opening={opening} buttonRef={openButton} />
+            <OpenIndividuals buttonRef={openButton} />
           </ErrorBoundary>
         </div>
       )}
     </section>
   );
+}
+
+/** The words of the last individuals file not opened, or nothing: a
+    part of its own, so that the opening, which follows the lock of the
+    populations, draws it again and not the box. */
+function RefusalLine(): React.JSX.Element | null {
+  const { refusal } = useIndividualsOpening();
+  return refusal === null ? null : <Problem>{refusal}</Problem>;
 }
 
 /** What the lines of the file are drawn with. */

@@ -7,14 +7,14 @@
  * individuals file…" beside Remove at the end of the Individuals tab once
  * one is; the box of a file open takes no drop, as the owner decided on
  * 16 October 2026. The two are one opening, `useIndividualsOpening`,
- * which the page makes once: the same path for a file picked, dropped or pasted,
+ * which `IndividualsOpeningProvider` makes once for the page: the same path for a file picked, dropped or pasted,
  * the same words of the last one not opened, which the box shows, and
  * the same wait while an analysis that reads the populations runs, when
  * the zones are greyed with the reason of the lock of the populations and
  * a file then opens nothing (popgen2-input.md, "While the diversity
  * runs").
  */
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 
 import { usePopulationsLock, usePopulationsRunning } from "./filtersLock.ts";
 import { openIndividualsCommand } from "./individualsCommands.ts";
@@ -68,8 +68,53 @@ export interface IndividualsOpening {
   readonly waiting: ZoneWaiting | null;
 }
 
-/** The opening of the individuals file of the page, made once. */
+/** The page's one opening of the individuals file, which its provider
+    gives. */
+const OpeningContext = createContext<IndividualsOpening | null>(null);
+
+/** What the provider of the opening is drawn with. */
+export interface IndividualsOpeningProviderProps {
+  /** The page, whose zones and words of the individuals file read the
+      opening. */
+  readonly children: React.ReactNode;
+}
+
+/**
+ * Makes the page's one opening of the individuals file and gives it to
+ * what it holds. The opening follows the lock of the populations, which
+ * every start and end of the diversity, the LD decay and the distances
+ * changes; held here, around the page's children, a change of it draws
+ * again only what reads it, the two zones and the words of a file
+ * refused, and not the page with its five tabs, which it drew again at
+ * each of them when the page held it (the review of phase 1 of
+ * docs/plans/file-buttons.md, 16 October 2026): React keeps the children
+ * it was given, made by the page, unless the page draws again.
+ */
+export function IndividualsOpeningProvider({
+  children,
+}: IndividualsOpeningProviderProps): React.JSX.Element {
+  const opening = useMadeOpening();
+  return (
+    <OpeningContext.Provider value={opening}>
+      {children}
+    </OpeningContext.Provider>
+  );
+}
+
+/** The page's one opening of the individuals file, from its provider. */
 export function useIndividualsOpening(): IndividualsOpening {
+  const opening = useContext(OpeningContext);
+  if (opening === null) {
+    throw new Error(
+      "popnei_web defect: useIndividualsOpening outside an IndividualsOpeningProvider",
+    );
+  }
+  return opening;
+}
+
+/** The opening of the individuals file of the page, made once, by its
+    provider. */
+function useMadeOpening(): IndividualsOpening {
   const store = usePopgen2Store();
   const files = useFiles();
   const announcer = useAnnouncer();
@@ -132,8 +177,6 @@ export function useIndividualsOpening(): IndividualsOpening {
 
 /** What a zone of the individuals file is drawn with. */
 export interface OpenIndividualsProps {
-  /** The page's one opening of the individuals file. */
-  readonly opening: IndividualsOpening;
   /** The element of the button, for the page to move the focus to it. */
   readonly buttonRef: React.RefObject<HTMLButtonElement | null>;
   /** What can be done with the file, after the button: Remove. */
@@ -142,10 +185,10 @@ export interface OpenIndividualsProps {
 
 /** A zone that opens the individuals file, with its button. */
 export function OpenIndividuals({
-  opening,
   buttonRef,
   actions,
 }: OpenIndividualsProps): React.JSX.Element {
+  const opening = useIndividualsOpening();
   const individualsOpen = useAppState((s) => s.project.individuals !== null);
   return (
     <FileZone

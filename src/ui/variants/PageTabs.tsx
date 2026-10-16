@@ -69,7 +69,7 @@ import { IndividualsTab } from "./IndividualsTab.tsx";
 import { INDIVIDUALS_TAB_CONTENT_NAME } from "./individualsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
 import { OpenIndividuals } from "./OpenIndividuals.tsx";
-import type { IndividualsOpening } from "./OpenIndividuals.tsx";
+import { useIndividualsOpening } from "./OpenIndividuals.tsx";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
 import { RemoveIndividuals } from "./RemoveIndividuals.tsx";
@@ -102,8 +102,6 @@ export interface PageTabsProps {
       is open, which takes the focus when Remove goes, and at the end of
       the Individuals tab after. */
   readonly individualsOpenButton: React.RefObject<HTMLButtonElement | null>;
-  /** The page's one opening of the individuals file. */
-  readonly individualsOpening: IndividualsOpening;
   /** Told when the section of the statistics of a load is drawn, and when
       it goes. */
   readonly onStatsShown: StatsShown;
@@ -117,7 +115,6 @@ export function PageTabs({
   variantsRefusal,
   onVariantsRefusal,
   individualsOpenButton,
-  individualsOpening,
   onStatsShown,
 }: PageTabsProps): React.JSX.Element {
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
@@ -216,16 +213,13 @@ export function PageTabs({
                     resetOn={tab}
                   >
                     <OpenIndividuals
-                      opening={individualsOpening}
                       buttonRef={individualsOpenButton}
                       actions={<RemoveIndividuals name={individualsName} />}
                     />
                   </ErrorBoundary>
                   {/* With a file open the zone of the tab is the only one,
                       so the words of a file not opened are its own. */}
-                  {individualsOpening.refusal !== null && (
-                    <RefusedInTab text={individualsOpening.refusal} />
-                  )}
+                  <IndividualsRefusedInTab />
                 </div>
               )}
             </div>
@@ -293,6 +287,14 @@ function RefusedInTab({ text }: { readonly text: string }): React.JSX.Element {
       <Problem>{text}</Problem>
     </div>
   );
+}
+
+/** The words of an individuals file refused by the zone of its tab, or
+    nothing: a part of its own, so that the opening, which follows the
+    lock of the populations, draws it again and not the row of tabs. */
+function IndividualsRefusedInTab(): React.JSX.Element | null {
+  const { refusal } = useIndividualsOpening();
+  return refusal === null ? null : <RefusedInTab text={refusal} />;
 }
 
 /** A tab of the analyses: greyed with the words of `reason`, which then

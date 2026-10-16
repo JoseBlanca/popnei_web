@@ -55,6 +55,8 @@ import {
   openIndividualsCommand,
 } from "./individualsCommands.ts";
 import type * as IndividualsWordsModule from "./individualsWords.ts";
+import type * as PageTabsModule from "./PageTabs.tsx";
+import type { PageTabsProps } from "./PageTabs.tsx";
 import { RunGateProvider } from "./runGate.tsx";
 import { AutoRunsProvider } from "../autoRunsContext.ts";
 import { createRunGate } from "./thresholdRun.ts";
@@ -72,6 +74,7 @@ declare global {
     whether its counts or its table of the file throw one. */
 const drawn = vi.hoisted(() => ({
   counts: 0,
+  tabRows: 0,
   tabThrows: false,
   countsThrow: false,
   tableThrows: false,
@@ -110,6 +113,17 @@ vi.mock("./individualsWords.ts", async (importOriginal) => {
         throw new Error("popnei_web defect: a defect of the test");
       }
       return real.tableSizeText(...args);
+    },
+  };
+});
+
+vi.mock("./PageTabs.tsx", async (importOriginal) => {
+  const real = await importOriginal<typeof PageTabsModule>();
+  return {
+    ...real,
+    PageTabs: (props: PageTabsProps): React.JSX.Element => {
+      drawn.tabRows += 1;
+      return real.PageTabs(props);
     },
   };
 });
@@ -1403,6 +1417,20 @@ describe("PT3 D2 the box Individuals and the Individuals tab greyed while the di
     await settled();
     expect(greyed(box())).toEqual([]);
     expect(greyed(tab())).toEqual([]);
+  });
+
+  test("the start and the end of the diversity, which lock and unlock the populations, do not draw the row of five tabs again, only what shows the lock (the review of phase 1 of docs/plans/file-buttons.md, 16 October 2026)", async () => {
+    const { store } = await bothRead();
+    const before = drawn.tabRows;
+    await running(store, "diversity");
+    expect(greyed(box())).toEqual(["popcat"]);
+    await act(async () => {
+      store.cancelRun("diversity");
+      await Promise.resolve();
+    });
+    await settled();
+    expect(greyed(box())).toEqual([]);
+    expect(drawn.tabRows).toBe(before);
   });
 
   test("while the PCA runs: nothing of the box or of the tab greyed", async () => {
