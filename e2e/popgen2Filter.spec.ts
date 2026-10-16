@@ -238,6 +238,10 @@ test("SF7 D2 a click gives no notice, changes no plot and sends nothing to the w
   await expect(filterBox(page)).not.toBeChecked();
   await expect(notice(page)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
+  // The plots compared after the first click too, once they no longer
+  // change: a plot that the first click changed and the second restored
+  // would pass a comparison after the second alone.
+  expect(await plotsSettled(page)).toEqual(plots);
 
   await clickBox(page);
   await expect(filterBox(page)).toBeChecked();
