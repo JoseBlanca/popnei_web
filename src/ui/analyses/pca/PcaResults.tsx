@@ -113,6 +113,7 @@ import {
   pcoaVarianceLine,
   rowCells,
   sortedRows,
+  ldPruningOf,
   tableCaption,
   tableCsvName,
   varianceCaption,
@@ -357,6 +358,13 @@ function PcaResultOf({
     );
   }
   const variantsName = variants.name;
+  // The result is shown under the key of the project now, so its LD
+  // pruning is that of the options now.
+  const caption = tableCaption(
+    result,
+    variantsName,
+    ldPruningOf(project, page),
+  );
   const stem = variantsStem(variantsName);
   const method = result.method;
   const loadFailed3d = onPopgen2
@@ -665,13 +673,11 @@ function PcaResultOf({
         )}
       </div>
       <div className={classOf(styles, "part")}>
-        <p className={classOf(styles, "line")}>
-          {tableCaption(result, variantsName)}
-        </p>
+        <p className={classOf(styles, "line")}>{caption}</p>
         <div ref={tableRef} className={classOf(styles, "table")}>
           {onPopgen2 ? (
             <SortableTable
-              label={tableCaption(result, variantsName)}
+              label={caption}
               columns={tableColumns}
               rows={tableRows}
               sort={sort}
@@ -686,7 +692,7 @@ function PcaResultOf({
             />
           ) : (
             <SortableTable
-              label={tableCaption(result, variantsName)}
+              label={caption}
               columns={tableColumns}
               rows={tableRows}
               sort={sort}

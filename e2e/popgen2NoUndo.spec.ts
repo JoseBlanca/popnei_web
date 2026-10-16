@@ -449,9 +449,12 @@ test("NU2 D3 the PCA done, the missing rate of the variants moved and moved back
   await typeMissing(page, "0.1");
   await tab(page, "PCA").click();
 
-  await expect(tableCaptionOf(page)).toContainText("from 548 variants.", {
-    timeout: RESULT_TIMEOUT,
-  });
+  await expect(tableCaptionOf(page)).toContainText(
+    "from 548 variants, after the LD pruning",
+    {
+      timeout: RESULT_TIMEOUT,
+    },
+  );
   expect(await runsPosted(page)).toBe(posted + 1);
   expect(await pcaTabSeen(page)).toEqual({
     run: 0,

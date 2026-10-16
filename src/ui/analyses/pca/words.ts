@@ -11,8 +11,17 @@
  * core's, in src/core/analyses/pca.ts.
  */
 
-import { PCA2_LD_MAX_DIST } from "../../../core/analyses/pca.ts";
-import type { PcaColours, PcaRow } from "../../../core/analyses/pca.ts";
+import {
+  PCA2_LD_MAX_DIST,
+  pcaFilters,
+  pcaOptions,
+} from "../../../core/analyses/pca.ts";
+import type {
+  PcaColours,
+  PcaPage,
+  PcaRow,
+} from "../../../core/analyses/pca.ts";
+import { filtersApplied } from "../../../core/filtersApplied.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import type { IndividualsKept } from "../../../core/individualsKept.ts";
 import { counted, escaped, grouped, shown } from "../../../core/project.ts";
@@ -456,16 +465,50 @@ export function varianceCells(
   ]);
 }
 
+/** The PCA's own LD pruning of popgen2.html as the caption of the table
+    names it. */
+export interface LdPruning {
+  /** Its largest r² between two variants kept. */
+  readonly maxAllowedR2: number;
+  /** Its window, in base pairs. */
+  readonly maxDist: number;
+}
+
+/** The LD pruning the PCA of `p` applies on the page `page`, from the
+    options of the project, which for a result shown are those of its
+    key: on popgen2.html the PCA's own when it is on and has a distance;
+    `null` with it off, and on the old page, whose caption does not name
+    it. */
+export function ldPruningOf(p: Project, page: PcaPage): LdPruning | null {
+  if (page === "popgen") return null;
+  const ld = pcaFilters(filtersApplied(p), pcaOptions(p, page), page).find(
+    (filter) => filter.kind === "ld",
+  );
+  return ld?.kind === "ld" && ld.maxDist !== null
+    ? { maxAllowedR2: ld.maxAllowedR2, maxDist: ld.maxDist }
+    : null;
+}
+
 /** The caption of the table of the individuals: "The place of each of the
     200 individuals of panel.nei on the first 10 of the 199 components,
-    from 548 variants." */
-export function tableCaption(r: PcaResult, variantsName: string): string {
+    from 548 variants.", with ", after the LD pruning at r² 0.1 within
+    100,000 bp" before the full stop for `pruning`, the PCA's own on
+    popgen2.html, so that the result says the pruning ran. */
+export function tableCaption(
+  r: PcaResult,
+  variantsName: string,
+  pruning: LdPruning | null = null,
+): string {
   const numVars = r.numVarsUsed ?? r.passStats.numVars;
   const first =
     r.numComps === r.numCompsFound
       ? `the ${counted(r.numComps, "component")}`
       : `the first ${grouped(r.numComps)} of the ${counted(r.numCompsFound, "component")}`;
-  return `The place of each of the ${counted(r.individuals.length, "individual")} of ${escaped(variantsName)} on ${first}, from ${counted(numVars, "variant")}.`;
+  const after =
+    pruning === null
+      ? ""
+      : `, after the LD pruning at r² ${String(pruning.maxAllowedR2)} within ${grouped(pruning.maxDist)} bp`;
+  return `The place of each of the ${counted(r.individuals.length, "individual")} of ${escaped(variantsName)} on ${first}, from ${counted(numVars, "variant")}${after}.`;
 }
 
 /** A coordinate of the table, to four decimals with the minus sign:

@@ -1132,7 +1132,10 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
   }) => {
     test.setTimeout(90_000);
     // popnei 0.2.2 under node gives the same numbers within 100,000 base
-    // pairs as within 50,000: 548 variants are kept either way.
+    // pairs as within any distance from 2,000: 548 variants are kept at
+    // all of them, so the numbers alone tell only that the pruning ran at
+    // r² 0.1 within some such distance. The caption of the table, built
+    // from the options the run was made with, says it was 100,000.
     await openReady(page, null);
     await runToResult(page);
     await expect(
@@ -1158,7 +1161,7 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
       shown(page).getByRole("heading", { name: /warning/u }),
     ).toHaveCount(0);
     await expect(tableCaptionOf(page)).toHaveText(
-      "The place of each of the 200 individuals of panel.nei on the first 10 of the 199 components, from 548 variants.",
+      "The place of each of the 200 individuals of panel.nei on the first 10 of the 199 components, from 548 variants, after the LD pruning at r² 0.1 within 100,000 bp.",
     );
     await expect(
       varianceTable(page).getByRole("row", { name: /^PC3 / }),
@@ -1246,13 +1249,19 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     await missing.press("End");
     await expect(tableCaptionOf(page)).toHaveCount(0);
     await expect(run(page)).toHaveCount(0);
-    await expect(tableCaptionOf(page)).toContainText("from 548 variants.", {
-      timeout: RESULT_TIMEOUT,
-    });
+    await expect(tableCaptionOf(page)).toContainText(
+      "from 548 variants, after the LD pruning",
+      {
+        timeout: RESULT_TIMEOUT,
+      },
+    );
     await moveTo(missing, "ArrowLeft", "0.05");
-    await expect(tableCaptionOf(page)).toContainText("from 532 variants.", {
-      timeout: RESULT_TIMEOUT,
-    });
+    await expect(tableCaptionOf(page)).toContainText(
+      "from 532 variants, after the LD pruning",
+      {
+        timeout: RESULT_TIMEOUT,
+      },
+    );
     await expect(axisLabels(page).first()).toHaveText("PC1 (3.58%)");
     const posted = await runsPosted(page);
 
@@ -1284,9 +1293,12 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     await expect(missing).toHaveAttribute("aria-valuetext", "0.05");
     // The key of 0.05 again, whose result was not kept: calculated again
     // by itself.
-    await expect(tableCaptionOf(page)).toContainText("from 532 variants.", {
-      timeout: RESULT_TIMEOUT,
-    });
+    await expect(tableCaptionOf(page)).toContainText(
+      "from 532 variants, after the LD pruning",
+      {
+        timeout: RESULT_TIMEOUT,
+      },
+    );
     expect(await runsPosted(page)).toBe(posted + 2);
 
     await missing.focus();
@@ -1295,21 +1307,30 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
       "aria-valuetext",
       "0.1, as in the Variants tab",
     );
-    await expect(tableCaptionOf(page)).toContainText("from 548 variants.", {
-      timeout: RESULT_TIMEOUT,
-    });
+    await expect(tableCaptionOf(page)).toContainText(
+      "from 548 variants, after the LD pruning",
+      {
+        timeout: RESULT_TIMEOUT,
+      },
+    );
     const maf = pcaSlider(page, "maf");
     await moveTo(maf, "ArrowLeft", "0.9");
-    await expect(tableCaptionOf(page)).toContainText("from 510 variants.", {
-      timeout: RESULT_TIMEOUT,
-    });
+    await expect(tableCaptionOf(page)).toContainText(
+      "from 510 variants, after the LD pruning",
+      {
+        timeout: RESULT_TIMEOUT,
+      },
+    );
     await expect(axisLabels(page).first()).toHaveText("PC1 (3.68%)");
 
     await maf.focus();
     await maf.press("End");
-    await expect(tableCaptionOf(page)).toContainText("from 548 variants.", {
-      timeout: RESULT_TIMEOUT,
-    });
+    await expect(tableCaptionOf(page)).toContainText(
+      "from 548 variants, after the LD pruning",
+      {
+        timeout: RESULT_TIMEOUT,
+      },
+    );
     await shown(page)
       .locator("label")
       .filter({ hasText: "Prune the variants by linkage disequilibrium (LD)" })

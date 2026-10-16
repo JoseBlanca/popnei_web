@@ -1415,7 +1415,15 @@ answer 2a to `docs/designs/population-tab.md`).
   was needed, the old panel's line that says so.
 - **The table of the individuals**, as the old panel's, the second
   column headed "Population" or the column's name, "Unclassified" for an
-  individual with no population. While columns are cut off at its right, a fade
+  individual with no population. Its caption, when the PCA's LD pruning
+  is on, says it was applied, with the r² and the distance of the run,
+  which are those of the key the result is shown under: "The place of
+  each of the 200 individuals of panel.nei on the first 10 of the 199
+  components, from 548 variants, after the LD pruning at r² 0.1 within
+  100,000 bp." (since 16 October 2026, by the review of the piece, which
+  found that nothing in the result said the default pruning had run);
+  with the pruning off, the old panel's caption, "… from 548
+  variants.". While columns are cut off at its right, a fade
   over its right edge and the words under it, "More columns: scroll
   sideways.", which also describe the table to a screen reader, say
   that there are more, since macOS draws no scrollbar until a scroll;
@@ -1632,6 +1640,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | its menu | "Table as CSV"; "Image as SVG"; "Image as PNG"; "Data as CSV" |
 | a histogram's menu waiting | "Download once panel.nei is read to the end."; once the user stopped the one pass, "Download once panel.nei is read to the end: its reading was stopped; start it again in the box Variants."; once it failed, "Nothing to download: panel.nei could not be read to the end; the box Variants says why." |
 | the PCA's menu while three.js downloads | "Download once the 3D view is drawn." |
+| the caption of the table of the individuals | "The place of each of the 200 individuals of panel.nei on the first 10 of the 199 components, from 548 variants, after the LD pruning at r² 0.1 within 100,000 bp."; with the LD pruning off, "… from 548 variants." |
 | the table of the individuals cut off at its right | "More columns: scroll sideways." |
 | the result while its code downloads | "Loading the result…" |
 | the result whose code could not be downloaded | "The result of the PCA could not be loaded. Press Try again. If it fails again, the site may have been updated since this page was opened: reload the page, open panel.nei again and run the PCA again; what the page has calculated is lost."; "PCoA" under the PCoA; its button "Try again" (worded so on 11 October 2026: Try again first, the reload second with what it costs) |
@@ -1923,7 +1932,9 @@ engines that start on the owner's Mac, on `panel.nei`,
   "PC2 (3.40%)", the same as within 50,000, 548 variants kept either
   way (popnei 0.2.2 under node, 16 October 2026),
   on the 2D plot's axes, PC3 1.89% in the explained variance, `s000` at
-  −0.7139 and 7.6765 in the table, the caption "… from 548 variants",
+  −0.7139 and 7.6765 in the table, the caption "… from 548 variants,
+  after the LD pruning at r² 0.1 within 100,000 bp.", which shows that
+  the run was made with the default distance,
   no warning; the legend with "Unclassified (200)" alone, and, after
   `panel_pops.csv` is opened, p0 (48), p2 (84), p1 (68), with no
   request to the worker.

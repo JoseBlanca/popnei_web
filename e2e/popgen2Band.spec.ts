@@ -386,9 +386,12 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       timeout: RESULT_TIMEOUT,
     });
     await runPca(page);
-    await expect(caption(page)).toContainText("from 548 variants.", {
-      timeout: RESULT_TIMEOUT,
-    });
+    await expect(caption(page)).toContainText(
+      "from 548 variants, after the LD pruning",
+      {
+        timeout: RESULT_TIMEOUT,
+      },
+    );
     // Live, and nothing runs nor is about to start: Popnei alone.
     await expect.poll(() => lineText(page)).toBe("Popnei");
     await tab(page, "Variants").click();

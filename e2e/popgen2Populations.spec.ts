@@ -355,7 +355,9 @@ async function runPca(page: Page, wait = true): Promise<void> {
   if (wait) {
     await expect(
       page.getByText(/^The place of each of the 200 individuals/u),
-    ).toContainText("from 548 variants.", { timeout: RESULT_TIMEOUT });
+    ).toContainText("from 548 variants, after the LD pruning", {
+      timeout: RESULT_TIMEOUT,
+    });
   }
 }
 
@@ -1457,7 +1459,9 @@ test.describe("PT2 D3 the Populations tab while the diversity waits, and what th
     await release(page, "pca");
     await expect(
       page.getByText(/^The place of each of the 200 individuals/u),
-    ).toContainText("from 548 variants.", { timeout: RESULT_TIMEOUT });
+    ).toContainText("from 548 variants, after the LD pruning", {
+      timeout: RESULT_TIMEOUT,
+    });
     expect(await saidWith(page, WAITS_FOR_DIVERSITY)).toHaveLength(1);
   });
 

@@ -7,8 +7,10 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  PCA2_DEFAULTS,
   pca,
   pcaColours,
+  pcaOnPopgen2,
   pcaOptions,
   pcaRows,
 } from "../../../core/analyses/pca.ts";
@@ -48,6 +50,7 @@ import {
   readyLines,
   rowCells,
   sortedRows,
+  ldPruningOf,
   tableCaption,
   tableCsvName,
   valueText,
@@ -381,6 +384,30 @@ describe("IP8 panel: the data of the plots", () => {
 });
 
 describe("IP8 panel: the explained variance and the table", () => {
+  test("the LD pruning of the caption: popgen2.html's own, with the PCA's options; none when it is off, and none on the old page", () => {
+    const p = sampleProject();
+    expect(ldPruningOf(p, "popgen2")).toEqual({
+      maxAllowedR2: 0.1,
+      maxDist: 100_000,
+    });
+    const typed = setAnalysisOptions(p, pcaOnPopgen2, {
+      ...PCA2_DEFAULTS,
+      ld: { follow: false, maxAllowedR2: 0.3, maxDist: 20_000 },
+      axes: [1, 2, 3],
+    });
+    expect(ldPruningOf(typed, "popgen2")).toEqual({
+      maxAllowedR2: 0.3,
+      maxDist: 20_000,
+    });
+    const off = setAnalysisOptions(p, pcaOnPopgen2, {
+      ...PCA2_DEFAULTS,
+      ld: { follow: true, maxAllowedR2: 0.1, maxDist: 100_000 },
+      axes: [1, 2, 3],
+    });
+    expect(ldPruningOf(off, "popgen2")).toBeNull();
+    expect(ldPruningOf(typed, "popgen")).toBeNull();
+  });
+
   test("the captions, the line of the PCoA, the cells and the names of the downloads", () => {
     const r = result({ numCompsFound: 199 });
     expect(varianceCaption(r)).toBe(
@@ -401,6 +428,13 @@ describe("IP8 panel: the explained variance and the table", () => {
       "The percentages are of the Kosman distances after Lingoes' correction, which added 0.047 to the square of every distance, as the warning says; over all the 198 components of the PCoA they add up to 100.",
     );
     expect(tableCaption(pcoa, "panel.nei")).toMatch(/from 600 variants\.$/);
+    // On popgen2.html, with the PCA's LD pruning on, the caption says it
+    // was applied, with the r² and the distance of the run.
+    expect(
+      tableCaption(r, "panel.nei", { maxAllowedR2: 0.1, maxDist: 100_000 }),
+    ).toBe(
+      "The place of each of the 4 individuals of panel.nei on the first 3 of the 199 components, from 548 variants, after the LD pruning at r² 0.1 within 100,000 bp.",
+    );
     expect(
       pcoaVarianceLine(
         result({ method: "pcoa", numCompsFound: 39, lingoesConstant: 0 }),
