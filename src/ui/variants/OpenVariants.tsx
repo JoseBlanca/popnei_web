@@ -4,10 +4,9 @@
  * October 2026): one widget, a zone that also takes a dropped or pasted
  * file, with the button "Open variants file…" at the end of the box
  * Variants before a file is open, and "Open another variants file…" at
- * the end of the Variants tab once one is; or, around the box of a file
- * open, a zone with no button and no frame, which takes a dropped or
- * pasted file by the same path (docs/plans/file-buttons.md, 16 October
- * 2026). A VCF is opened with no
+ * the end of the Variants tab once one is (docs/plans/file-buttons.md, 16
+ * October 2026); the box of a file open takes no drop, as the owner
+ * decided that day. A VCF is opened with no
  * ploidy, which popnei reads from the file, and with every variant,
  * whatever its FILTER column, which a filter is to choose among later;
  * so the page asks nothing of how a file is read. The words of a file it
@@ -57,36 +56,19 @@ export interface Refusal {
   readonly forLoad: string | null;
 }
 
-/** What the opening is drawn with: its button, or what its zone with no
-    button holds. */
-export type OpenVariantsProps = OpenVariantsBaseProps &
-  (
-    | {
-        /** The element of the open button, for the page to move the
-            focus to it. */
-        readonly buttonRef: React.RefObject<HTMLButtonElement | null>;
-        readonly children?: never;
-      }
-    | {
-        readonly buttonRef?: never;
-        /** What the zone with no button holds, the box of the file
-            open. */
-        readonly children: React.ReactNode;
-      }
-  );
-
-/** What every opening is drawn with. */
-interface OpenVariantsBaseProps {
+/** What the opening is drawn with. */
+export interface OpenVariantsProps {
+  /** The element of the open button, for the page to move the focus to
+      it. */
+  readonly buttonRef: React.RefObject<HTMLButtonElement | null>;
   /** Called with the words of a file not opened, and with `null` when an
       opening makes them out of date. */
   readonly onRefusal: (refusal: Refusal | null) => void;
 }
 
-/** The zone that opens the variants file, with its button, or around
-    `children` with none. */
+/** The zone that opens the variants file, with its button. */
 export function OpenVariants({
   buttonRef,
-  children,
   onRefusal,
 }: OpenVariantsProps): React.JSX.Element {
   const store = useStore();
@@ -130,18 +112,6 @@ export function OpenVariants({
   const onNotFiles = (dropped: keyof typeof NOT_FILES_WORDS): void => {
     refuse(NOT_FILES_WORDS[dropped]);
   };
-  if (buttonRef === undefined) {
-    return (
-      <FileZone
-        pasteLabel={PASTE_LABEL}
-        buttonLabel={null}
-        onFiles={onFiles}
-        onNotFiles={onNotFiles}
-      >
-        {children}
-      </FileZone>
-    );
-  }
   return (
     <FileZone
       pasteLabel={PASTE_LABEL}

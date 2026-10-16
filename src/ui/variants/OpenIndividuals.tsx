@@ -5,9 +5,9 @@
  * dropped or pasted file, with the button "Open individuals file…" at
  * the end of the box Individuals before a file is open, and "Open another
  * individuals file…" beside Remove at the end of the Individuals tab once
- * one is; or, around the box of a file open, a zone with no button and no
- * frame. The three are one opening, `useIndividualsOpening`, which the
- * page makes once: the same path for a file picked, dropped or pasted,
+ * one is; the box of a file open takes no drop, as the owner decided on
+ * 16 October 2026. The two are one opening, `useIndividualsOpening`,
+ * which the page makes once: the same path for a file picked, dropped or pasted,
  * the same words of the last one not opened, which the box shows, and
  * the same wait while an analysis that reads the populations runs, when
  * the zones are greyed with the reason of the lock of the populations and
@@ -130,50 +130,23 @@ export function useIndividualsOpening(): IndividualsOpening {
   };
 }
 
-/** What a zone of the individuals file is drawn with: the opening, and
-    its button with what follows it, or what it holds with none. */
-export type OpenIndividualsProps = {
+/** What a zone of the individuals file is drawn with. */
+export interface OpenIndividualsProps {
   /** The page's one opening of the individuals file. */
   readonly opening: IndividualsOpening;
-} & (
-  | {
-      /** The element of the button, for the page to move the focus to
-          it. */
-      readonly buttonRef: React.RefObject<HTMLButtonElement | null>;
-      /** What can be done with the file, after the button: Remove. */
-      readonly actions?: React.ReactNode;
-      readonly children?: never;
-    }
-  | {
-      readonly buttonRef?: never;
-      readonly actions?: never;
-      /** What the zone with no button holds, the box of the file open. */
-      readonly children: React.ReactNode;
-    }
-);
+  /** The element of the button, for the page to move the focus to it. */
+  readonly buttonRef: React.RefObject<HTMLButtonElement | null>;
+  /** What can be done with the file, after the button: Remove. */
+  readonly actions?: React.ReactNode;
+}
 
-/** A zone that opens the individuals file, with its button, or around
-    `children` with none. */
+/** A zone that opens the individuals file, with its button. */
 export function OpenIndividuals({
   opening,
   buttonRef,
   actions,
-  children,
 }: OpenIndividualsProps): React.JSX.Element {
   const individualsOpen = useAppState((s) => s.project.individuals !== null);
-  if (buttonRef === undefined) {
-    return (
-      <FileZone
-        pasteLabel={PASTE_INDIVIDUALS_FILE}
-        buttonLabel={null}
-        onFiles={opening.onFiles}
-        onNotFiles={opening.onNotFiles}
-        waiting={opening.waiting}
-      >
-        {children}
-      </FileZone>
-    );
-  }
   return (
     <FileZone
       pasteLabel={PASTE_INDIVIDUALS_FILE}

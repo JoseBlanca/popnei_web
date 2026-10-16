@@ -6,8 +6,9 @@
  * panel.nei opens, once it is open, and with panel_pops.csv; a greyed tab
  * reached by the arrow keys, its tooltip, Escape, and its refusal of a
  * click, Enter, Space and the arrows, with aria-disabled and its reason
- * as its description, and the tab shown still selected; the PCA tab shown
- * while another variants file is opened, its reason in its place; the
+ * as its description, and the tab shown still selected; the PCA tab
+ * greyed while another variants file is opened in the Variants tab, and
+ * the Distances tab greyed while shown, its reason in its place; the
  * labels on two lines at 320 pixels with no sideways scroll; axe with
  * each tab shown, light and dark. And, from the review of the work
  * package: a tooltip gone when its tab opens under the focus; the reason
@@ -25,7 +26,7 @@ import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
-import { dropOnBox, pickFile } from "./openFiles.ts";
+import { dropInTab, fileBox, pickFile } from "./openFiles.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -430,7 +431,7 @@ test("AP1 D4 panel.nei open: PCA and Populations open and Distances asks for an 
   }
 });
 
-test("AP1 D4 the PCA tab shown, another variants file opened: the tab stays shown, greyed, with its reason in its place, and comes back when the file is open", async ({
+test("AP1 D4 another variants file opened in the Variants tab: the PCA tab greyed with its reason, a click on it refused, and it opens again when the file is open", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -443,48 +444,94 @@ test("AP1 D4 the PCA tab shown, another variants file opened: the tab stays show
     shownPanel(page).getByRole("heading", { level: 2, name: "PCA" }),
   ).toBeVisible();
 
-  // Dropped on the box, which keeps the PCA tab shown; the button that
-  // opens another file is in the Variants tab (16 October 2026).
-  await dropOnBox(page, "variants", join(FIXTURES, "panel.vcf.gz"));
+  // Since 16 October 2026 another file is opened at the end of the
+  // Variants tab, which is then shown.
+  await dropInTab(page, "variants", join(FIXTURES, "panel.vcf.gz"));
   const reason = "The PCA needs a variants file: panel.vcf.gz is being opened.";
   await expectGreyed(page, "PCA", reason);
-  await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
-  await expectShown(page, reason);
+  // Playwright waits for a tab marked aria-disabled to be enabled before
+  // it clicks; the user's click is not held so.
+  await tab(page, "PCA").click({ force: true });
+  await expect(tab(page, "Variants")).toHaveAttribute("aria-selected", "true");
+  await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "false");
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+
+  await page.unrouteAll({ behavior: "wait" });
+  await dropInTab(page, "variants", join(FIXTURES, "panel.nei"));
+  await expectOpen(page, "PCA");
+  await tab(page, "PCA").click();
+  await expect(
+    shownPanel(page).getByRole("heading", { level: 2, name: "PCA" }),
+  ).toBeVisible();
+});
+
+/** The reason of Distances with no column of the populations chosen. */
+const NO_COLUMN =
+  "The distances between populations need at least two populations, and no column of the populations is chosen. Choose one in the box Individuals.";
+
+/** Opens panel.nei and panel_pops.csv, shows the Distances tab, and
+    chooses no column of the populations in the box Individuals, which
+    greys the Distances tab while it is shown: since 16 October 2026 the
+    one way left to grey a tab of the analyses while it is shown, the
+    files being opened in their own tabs. */
+async function greyDistancesWhileShown(page: Page): Promise<void> {
+  await pick(page, "panel.nei");
+  await pickIndividuals(page, "panel_pops.csv");
+  await expectOpen(page, "Distances");
+  await tab(page, "Distances").click();
+  const column = fileBox(page, "individuals").getByRole("button", {
+    name: "Column of the populations",
+  });
+  await expect(column).toContainText("popcat", { timeout: 20_000 });
+  await column.click();
+  await page
+    .getByRole("option", {
+      name: "None: every individual unclassified",
+      exact: true,
+    })
+    .click();
+  await expectGreyed(page, "Distances", NO_COLUMN);
+  await expect(tab(page, "Distances")).toHaveAttribute("aria-selected", "true");
+}
+
+test("AP1 D4 the Distances tab shown, no column of the populations chosen in the box Individuals: the tab stays shown, greyed, with its reason in its place, and comes back when a column is chosen", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPage(page);
+  await greyDistancesWhileShown(page);
+  await expectShown(page, NO_COLUMN);
   // Its bar kept, in the greyed colour, its words not in bold, so that
   // the user can tell which tab they are on.
-  const look = await tabLook(page, "PCA");
+  const look = await tabLook(page, "Distances");
   expect(look.weight).toBe("400");
   expect(look.barAt).toBe("top");
   expect(look.barWidth).toBe("3px");
   expect(look.bar).toBe(look.colour);
   await expectAxeBothSchemes(page, makeAxeBuilder);
 
-  await page.unrouteAll({ behavior: "wait" });
-  await dropOnBox(page, "variants", join(FIXTURES, "panel.nei"));
-  await expectOpen(page, "PCA");
-  await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
+  const column = fileBox(page, "individuals").getByRole("button", {
+    name: "Column of the populations",
+  });
+  await column.click();
+  await page.getByRole("option", { name: "popcat", exact: true }).click();
+  await expectOpen(page, "Distances");
+  await expect(tab(page, "Distances")).toHaveAttribute("aria-selected", "true");
   await expect(
-    shownPanel(page).getByRole("heading", { level: 2, name: "PCA" }),
-  ).toBeVisible();
+    shownPanel(page).getByRole("heading", {
+      level: 2,
+      name: DISTANCES_HEADING,
+    }),
+  ).toBeVisible({ timeout: 20_000 });
 });
 
-test("at 320 pixels the PCA tab shown, another variants file opened: the tab keeps a bar of 3 px under it in the greyed colour", async ({
+test("at 320 pixels the Distances tab greyed while shown keeps a bar of 3 px under it in the greyed colour", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 900 });
-  await holdOpening(page, "panel.vcf.gz");
   await openPage(page);
-  await pick(page, "panel.nei");
-  await expectOpen(page, "PCA");
-  await tab(page, "PCA").click();
-  await dropOnBox(page, "variants", join(FIXTURES, "panel.vcf.gz"));
-  await expectGreyed(
-    page,
-    "PCA",
-    "The PCA needs a variants file: panel.vcf.gz is being opened.",
-  );
-  await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
-  const look = await tabLook(page, "PCA");
+  await greyDistancesWhileShown(page);
+  const look = await tabLook(page, "Distances");
   expect(look.weight).toBe("400");
   expect(look.background).toBe("rgba(0, 0, 0, 0)");
   expect(look.barAt).toBe("bottom");
@@ -492,7 +539,7 @@ test("at 320 pixels the PCA tab shown, another variants file opened: the tab kee
   expect(look.bar).toBe(look.colour);
 });
 
-test("at 1280 pixels the PCA tab greyed while shown has its greyed bar at its top, no background, and under it the row's line, not a line in the greyed colour", async ({
+test("at 1280 pixels the Distances tab greyed while shown has its greyed bar at its top, no background, and under it the row's line, not a line in the greyed colour", async ({
   page,
 }) => {
   // The rule of a tab greyed while shown in the rows inside a result,
@@ -501,23 +548,13 @@ test("at 1280 pixels the PCA tab greyed while shown has its greyed bar at its to
   // tab that the row's other tabs do not have (the review of the look, 16
   // October 2026).
   await page.setViewportSize({ width: 1280, height: 900 });
-  await holdOpening(page, "panel.vcf.gz");
   await openPage(page);
-  await pick(page, "panel.nei");
-  await expectOpen(page, "PCA");
-  await tab(page, "PCA").click();
-  await dropOnBox(page, "variants", join(FIXTURES, "panel.vcf.gz"));
-  await expectGreyed(
-    page,
-    "PCA",
-    "The PCA needs a variants file: panel.vcf.gz is being opened.",
-  );
-  await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
-  const look = await tabLook(page, "PCA");
+  await greyDistancesWhileShown(page);
+  const look = await tabLook(page, "Distances");
   expect(look.barAt).toBe("top");
   expect(look.bar).toBe(look.colour);
   expect(look.background).toBe("rgba(0, 0, 0, 0)");
-  const under = await tab(page, "PCA").evaluate(
+  const under = await tab(page, "Distances").evaluate(
     (element) => getComputedStyle(element).borderBottomColor,
   );
   const rowLine = await row(page).evaluate(

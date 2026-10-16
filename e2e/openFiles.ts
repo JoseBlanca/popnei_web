@@ -5,7 +5,9 @@
  * at the bottom of its box; once one is, "Open another variants file…"
  * at the end of the Variants tab, or "Open another individuals file…"
  * at the end of the Individuals tab, which the flow shows first when
- * another tab is shown, as a user would.
+ * another tab is shown, as a user would. A file is dropped there too: the
+ * box of a file open takes no drop (the owner's decision of 16 October
+ * 2026).
  */
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
@@ -93,18 +95,20 @@ export async function pickFile(
   await (await chooser).setFiles(files);
 }
 
-/** Drops the file at `path` on the heading of the box of `kind`, as a
-    drag from the desktop does: the whole box of a file open takes a
-    drop, whatever tab is shown, which a user who stays on another tab
-    does to open another file. */
-export async function dropOnBox(
+/** Drops the file at `path` on the zone at the end of the tab of
+    `kind`, beside its button "Open another … file…", as a drag from the
+    desktop does, after showing that tab when another is shown, as a user
+    does: since 16 October 2026 the box of a file open takes no drop, and
+    the zone in its tab is where another file is dropped. The tab of the
+    file stays shown. */
+export async function dropInTab(
   page: Page,
   kind: FileKind,
   path: string,
 ): Promise<void> {
-  await dropFiles(
-    page,
-    fileBox(page, kind).getByRole("heading", { name: NAME[kind], exact: true }),
-    [{ name: basename(path), bytes: [...(await readFile(path))] }],
-  );
+  const tab = fileTab(page, kind);
+  if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
+  await dropFiles(page, anotherOpenButton(page, kind), [
+    { name: basename(path), bytes: [...(await readFile(path))] },
+  ]);
 }

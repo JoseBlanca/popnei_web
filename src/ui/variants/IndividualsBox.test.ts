@@ -1330,10 +1330,23 @@ async function pasteText(text: string): Promise<void> {
   });
 }
 
+/** The hidden button that takes a pasted individuals file: the zone's
+    of the box with no file open, and with one, since the box has no zone
+    then, the zone's at the end of the tab. */
+function pasteButton(): HTMLButtonElement {
+  const named = (b: HTMLButtonElement): boolean =>
+    nameOf(b) === "Paste an individuals file";
+  const found =
+    [...box().querySelectorAll("button")].find(named) ??
+    [...tab().querySelectorAll("button")].find(named);
+  if (found === undefined) throw new Error("no button that takes a paste");
+  return found;
+}
+
 /** Pastes `clipboardData` into the zone's hidden button, which takes a
     paste while it has the focus, as React Aria reads a paste. */
 async function paste(clipboardData: object): Promise<void> {
-  const paste = buttonNamed(box(), "Paste an individuals file");
+  const paste = pasteButton();
   await act(async () => {
     paste.focus();
     await Promise.resolve();
@@ -1348,12 +1361,13 @@ async function paste(clipboardData: object): Promise<void> {
 }
 
 describe("PT3 D2 the box Individuals and the Individuals tab greyed while the diversity runs", () => {
-  test("while the diversity runs: the list, the paste button and the zone's button of the box, and Remove and the three lists of the tab, greyed with the reason as description; after its Stop, none", async () => {
+  test("while the diversity runs: the list of the box, and the paste button, the zone's button, Remove and the three lists of the tab, greyed with the reason as description; after its Stop, none", async () => {
     const { store } = await bothRead();
     expect(greyed(box())).toEqual([]);
     expect(greyed(tab())).toEqual([]);
     await running(store, "diversity");
-    expect(greyed(box())).toEqual(["Paste an individuals file", "popcat"]);
+    // The box of a file open has no zone since 16 October 2026.
+    expect(greyed(box())).toEqual(["popcat"]);
     for (const button of box().querySelectorAll(
       'button[aria-disabled="true"]',
     )) {
@@ -1481,23 +1495,14 @@ describe("PT3 D2 the box Individuals and the Individuals tab greyed while the di
   test("the paste button loses the reason as its description when the diversity ends", async () => {
     const { store } = await bothRead();
     await running(store, "diversity");
-    const paste = buttonNamed(box(), "Paste an individuals file");
-    expect(descriptionOf(paste)).toBe(POPULATIONS_LOCKED);
+    expect(descriptionOf(pasteButton())).toBe(POPULATIONS_LOCKED);
     await act(async () => {
       store.cancelRun("diversity");
       await Promise.resolve();
     });
     await settled();
-    expect(
-      buttonNamed(box(), "Paste an individuals file").hasAttribute(
-        "aria-describedby",
-      ),
-    ).toBe(false);
-    expect(
-      buttonNamed(box(), "Paste an individuals file").hasAttribute(
-        "aria-disabled",
-      ),
-    ).toBe(false);
+    expect(pasteButton().hasAttribute("aria-describedby")).toBe(false);
+    expect(pasteButton().hasAttribute("aria-disabled")).toBe(false);
   });
 
   test("the zone's button empties its input before it opens the picker, so that the same file picked again opens it again", async () => {

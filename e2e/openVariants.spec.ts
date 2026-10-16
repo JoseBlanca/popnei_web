@@ -25,7 +25,7 @@ import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
-import { pickFile } from "./openFiles.ts";
+import { anotherOpenButton, pickFile } from "./openFiles.ts";
 import { STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
 import { announced, recordAnnouncements } from "./announced.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
@@ -84,16 +84,18 @@ async function pick(page: Page, path: string): Promise<void> {
   await pickFile(page, "variants", path);
 }
 
-/** Drops `files` on the box of the variants file, as a drag from the
-    desktop does: on its button with no file, on its heading with one,
-    since the whole box of a file open takes a drop. */
+/** Drops `files` on the zone that opens a variants file now, as a drag
+    from the desktop does: on the box's button with no file, and with one
+    on the button at the end of the Variants tab, shown when the page
+    opens, since the box of a file open takes no drop (16 October 2026).
+    A drop moves no focus. */
 async function drop(page: Page, files: readonly DroppedFile[]): Promise<void> {
   const button = opening(page).getByRole("button", {
     name: "Open variants file…",
   });
   await dropFiles(
     page,
-    (await button.count()) > 0 ? button : boxHeading(page),
+    (await button.count()) > 0 ? button : anotherOpenButton(page, "variants"),
     files,
   );
 }

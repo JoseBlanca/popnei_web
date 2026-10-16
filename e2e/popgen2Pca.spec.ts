@@ -35,7 +35,7 @@ import type { Download, Locator, Page, Route } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
-import { dropOnBox, pickFile } from "./openFiles.ts";
+import { dropInTab, pickFile } from "./openFiles.ts";
 import { openParameters } from "./parameters.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 
@@ -792,8 +792,13 @@ test("AP6 D3 while a PCA runs Ctrl+Z changes nothing; the column of the populati
   await expect(column).toContainText("None");
   await expect(stop(page)).toBeVisible();
 
-  // Dropped on the box, which keeps the PCA tab shown (16 October 2026).
-  await dropOnBox(page, "variants", join(FIXTURES, "panel.vcf.gz"));
+  // Opened at the end of the Variants tab since 16 October 2026; the
+  // PCA tab shown again once the file is open.
+  await dropInTab(page, "variants", join(FIXTURES, "panel.vcf.gz"));
+  await expect(tab(page, "PCA")).not.toHaveAttribute("aria-disabled", {
+    timeout: 30_000,
+  });
+  await tab(page, "PCA").click();
   await expect(stop(page)).toHaveCount(0);
   await release(page, "allSoFar");
   await release(page, "result");
@@ -956,7 +961,7 @@ test('AP6 D3 "PCA of panel.nei calculated." in the status region while the Varia
   await expect(stop(page)).toHaveCount(0);
 });
 
-test("AP6 D3 the PCA tab shown, another variants file opened: its reason in place of the options, which come back as they were once it is open", async ({
+test("AP6 D3 another variants file opened in the Variants tab, the PCA tab greyed, and the options of the PCA as they were once it is open", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -975,16 +980,24 @@ test("AP6 D3 the PCA tab shown, another variants file opened: its reason in plac
   await expect(run(page)).toBeEnabled({ timeout: 30_000 });
   await typeDistance(page, "50000");
 
-  // Dropped on the box, which keeps the PCA tab shown (16 October 2026).
-  await dropOnBox(page, "variants", join(FIXTURES, "panel.vcf.gz"));
+  // Opened at the end of the Variants tab since 16 October 2026: the PCA
+  // tab cannot be shown while the file is being opened.
+  await dropInTab(page, "variants", join(FIXTURES, "panel.vcf.gz"));
   const reason = "The PCA needs a variants file: panel.vcf.gz is being opened.";
-  await expect(shown(page).getByText(reason, { exact: true })).toBeVisible();
-  await expect(distance(page)).toBeHidden();
-  await expect(run(page)).toBeHidden();
+  await expect(tab(page, "PCA")).toHaveAttribute("aria-disabled", "true");
+  await expect(tab(page, "PCA")).toHaveAccessibleDescription(reason);
+  // Playwright waits for a tab marked aria-disabled to be enabled before
+  // it clicks; the user's click is not held so.
+  await tab(page, "PCA").click({ force: true });
+  await expect(tab(page, "Variants")).toHaveAttribute("aria-selected", "true");
   await expectAxeBothSchemes(page, makeAxeBuilder);
 
   await page.unrouteAll({ behavior: "wait" });
-  await dropOnBox(page, "variants", join(FIXTURES, "panel.nei"));
+  await dropInTab(page, "variants", join(FIXTURES, "panel.nei"));
+  await expect(tab(page, "PCA")).not.toHaveAttribute("aria-disabled", {
+    timeout: 30_000,
+  });
+  await tab(page, "PCA").click();
   await expect(distance(page)).toBeVisible({ timeout: 30_000 });
   await expect(distance(page)).toHaveValue("50000");
   await expect(run(page)).toBeEnabled({ timeout: 30_000 });

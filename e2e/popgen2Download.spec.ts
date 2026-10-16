@@ -827,7 +827,5 @@ test("DL7 D2 a file dropped on the page or pasted while the dialog is open opens
       .getByText(/^low_qual\.vcf\.gz/u)
       .first(),
   ).toBeVisible();
-  // The box's and the one of the zone at the end of the Variants tab,
-  // since 16 October 2026.
-  await expect(page.getByRole("button", { name: PASTE })).toHaveCount(2);
+  await expect(page.getByRole("button", { name: PASTE })).toHaveCount(1);
 });

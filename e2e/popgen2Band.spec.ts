@@ -736,8 +736,10 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
         ).toBeGreaterThanOrEqual(where.bandBottom - 1);
       }
       // With a PCA running the controls it reads are greyed, and fewer
-      // are reached.
-      expect(seen.length).toBeGreaterThan(running ? 3 : 10);
+      // are reached: from the Variants tab, "Open individuals file…" and
+      // its paste, the box Variants of a file open holding no control
+      // since 16 October 2026.
+      expect(seen.length).toBeGreaterThan(running ? 2 : 10);
       if (running) await bandButton(page, "Stop the PCA").click();
       await workersListening(page);
     });

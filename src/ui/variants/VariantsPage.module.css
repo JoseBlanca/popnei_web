@@ -32,40 +32,26 @@
 
 /* The box of a file: its look, a solid border, where the zone's is
    dashed. The two boxes of a row stretch to the same height, the row's.
-   What it holds is laid out by boxInner, or, with a file open, by
-   boxDrop around the zone that takes a dropped file. */
+   What it holds is one under the other: its heading, what it shows of the
+   file, and, with no file, the zone that opens one at its bottom. A
+   column of flex, so that the end of the box, boxEnd, takes the room left
+   above it, and the buttons of the two boxes stand at the same height
+   whatever the lines above them. */
 .box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   min-inline-size: 0;
+  padding: var(--space-4);
   border: 1px solid var(--color-rule);
   border-radius: var(--radius-md);
   background: var(--color-box);
   box-shadow: var(--shadow-box);
 }
 
-/* What the box holds, one under the other: its heading, what it shows of
-   the file, and, with no file, the zone that opens one at its bottom. A
-   column of flex, so that the end of the box, boxEnd, takes the room left
-   above it, and the buttons of the two boxes stand at the same height
-   whatever the lines above them. */
-.boxInner {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-inline-size: 0;
-  padding: var(--space-4);
-}
-
 /* The zone at the bottom of a box with no file. */
 .boxEnd {
   margin-block-start: auto;
-}
-
-/* The box of a file open: the zone with no button and no frame fills it,
-   to its border, so that a file dropped anywhere on the box is taken,
-   and boxInner inside it holds what the box shows. */
-.boxDrop {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
 }
 
 .boxHeading {

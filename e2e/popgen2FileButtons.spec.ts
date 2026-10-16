@@ -8,7 +8,9 @@
  * filtered variants…", and "Open another individuals file…" with
  * "Remove panel_pops.csv" at the end of the Individuals tab, side by side
  * at 1280 pixels and one under the other at 320, with no sideways scroll;
- * a file dropped on the box of a file open opens it; the focus after an
+ * a file dropped on the zone at the end of a tab opens it, where the box
+ * of a file open takes no drop since the owner's decision of 16 October
+ * 2026 (e2e/strayDrops.spec.ts); the focus after an
  * opening by the box's button, on the box's heading, and after Remove, on
  * the box's button; axe, light and dark, on each of these states.
  */
@@ -181,10 +183,12 @@ test("FB1 with both files open, at 1280 pixels: the boxes of the same height, wi
   await openPage(page);
   await openVariants(page);
   await openIndividuals(page);
+  // No zone: neither its button nor the hidden button that takes a
+  // paste (the owner's decision of 16 October 2026).
   for (const kind of ["variants", "individuals"] as const) {
     await expect(
       fileBox(page, kind).getByRole("button", {
-        name: /^Open .*file…$/u,
+        name: /^(Open .*file…|Paste an? .* file)$/u,
       }),
     ).toHaveCount(0);
   }
@@ -254,32 +258,29 @@ for (const width of [1280, 320]) {
   });
 }
 
-test("FB1 a file dropped on the heading of the box Variants with a file open opens it, and one dropped on the box Individuals with a file open opens that", async ({
+test("FB1 a file dropped on the zone at the end of the Variants tab opens it, and one dropped on the zone at the end of the Individuals tab opens that", async ({
   page,
 }) => {
   await openPage(page);
   await openVariants(page);
   await openIndividuals(page);
-  const variants = fileBox(page, "variants");
-  await dropFiles(page, variants.getByRole("heading", { name: "Variants" }), [
+  await dropFiles(page, anotherOpenButton(page, "variants"), [
     {
       name: "second.nei",
       bytes: [...(await readFile(join(FIXTURES, "panel.nei")))],
     },
   ]);
-  await expect(variants.getByText("second.nei", { exact: true })).toBeVisible({
-    timeout: 20_000,
-  });
-
-  const individuals = fileBox(page, "individuals");
-  const pops = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
-  await dropFiles(
-    page,
-    individuals.getByText("200 individuals classified in 3 populations"),
-    [{ name: "other_pops.csv", text: pops }],
-  );
   await expect(
-    individuals.getByText("other_pops.csv", { exact: true }),
+    fileBox(page, "variants").getByText("second.nei", { exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
+
+  await fileTab(page, "individuals").click();
+  const pops = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+  await dropFiles(page, anotherOpenButton(page, "individuals"), [
+    { name: "other_pops.csv", text: pops },
+  ]);
+  await expect(
+    fileBox(page, "individuals").getByText("other_pops.csv", { exact: true }),
   ).toBeVisible({ timeout: 20_000 });
 });
 

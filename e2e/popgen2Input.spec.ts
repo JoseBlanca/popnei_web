@@ -23,7 +23,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
-import { pickFile } from "./openFiles.ts";
+import { anotherOpenButton, pickFile } from "./openFiles.ts";
 import { dropFiles } from "./dropFiles.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 
@@ -1398,14 +1398,17 @@ async function dropFolder(page: Page): Promise<void> {
     transfer.items.add(new File([], "metadata"));
     return transfer;
   });
-  // On the zone's button with no file, on the box's heading with one.
+  // On the zone's button of the box with no file; with one, on the zone
+  // at the end of the Individuals tab, shown first, since the box of a
+  // file open takes no drop (16 October 2026).
   const button = individualsBox(page).getByRole("button", {
     name: "Open individuals file…",
   });
-  const target =
-    (await button.count()) > 0
-      ? button
-      : individualsBox(page).getByRole("heading", { name: "Individuals" });
+  let target = button;
+  if ((await button.count()) === 0) {
+    await tab(page, "Individuals").click();
+    target = anotherOpenButton(page, "individuals");
+  }
   for (const type of ["dragenter", "dragover", "drop"]) {
     await target.dispatchEvent(type, { dataTransfer });
   }
@@ -1452,14 +1455,13 @@ test("IN6 D2 a folder, then two files, dropped on the box of the individuals fil
   await dropFiles(page, zoneButton, [{ name: "panel_pops.csv", text: pops }]);
   await expect(columnList(page)).toContainText("popcat", { timeout: 20_000 });
   await expect(individualsBox(page).getByText(several)).toHaveCount(0);
-  // With a file open, the box holds no button that opens one, and takes
-  // a drop anywhere on it, its heading among.
+  // With a file open, the box holds no button that opens one; the zone
+  // is at the end of the Individuals tab.
   await expect(zoneButton).toHaveCount(0);
 
   await dropFolder(page);
   await expect(individualsBox(page).getByText(folder)).toBeVisible();
   await expect(columnList(page)).toContainText("popcat");
-  await tab(page, "Individuals").click();
   await page
     .getByRole("tabpanel", { name: "Individuals" })
     .getByRole("button", { name: "Remove panel_pops.csv" })

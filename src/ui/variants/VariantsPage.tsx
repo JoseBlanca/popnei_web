@@ -20,10 +20,12 @@
  * drawn again at each turn of the tabs after a throw, so that a throw in
  * it leaves the page a way to open a file without a reload. An opening
  * by its button, which goes with the zone, gives the focus to the box's
- * heading. Once a file is open the whole box takes a file dropped or
- * pasted, with no button and no frame drawn, and "Open another variants
- * file…" is at the end of the Variants tab, under "Download filtered
- * variants…" (docs/plans/file-buttons.md, 16 October 2026). The tab
+ * heading. Once a file is open the box has no zone and takes no drop,
+ * which is stopped as one anywhere outside a zone, and "Open another
+ * variants file…" is at the end of the Variants tab, under "Download
+ * filtered variants…", where a file is dropped
+ * (docs/plans/file-buttons.md; the owner's decisions of 16 October 2026).
+ * The tab
  * "Variants" holds the statistics of the file open
  * (docs/plans/file-stats.md), and the
  * status region says what changes away from the focus, whichever tab is
@@ -88,42 +90,37 @@ export function VariantsPage({
   // An opening by the box's button: the button goes with its zone, and
   // the focus goes to the box's heading.
   const zoneEnd = useFocusOnGone(() => variantsHeading.current);
-  const lines = (
-    <>
-      {/* It takes the focus after an opening by the box's button, and
-          when the lines of a file go with it; it is not a stop of the Tab
-          key. */}
-      <h2
-        ref={variantsHeading}
-        id={variantsHeadingId}
-        tabIndex={-1}
-        className={classOf(styles, "boxHeading")}
-      >
-        {OPENING_NAME}
-      </h2>
-      {/* Another load is another boundary, which has caught
-          nothing, so that a throw while the lines of one file are
-          drawn leaves the next file its lines, its Stop and its
-          Start again. */}
-      <ErrorBoundary key={fileId ?? "none"} heading={INFO_NAME} level={3}>
-        <VariantsSummary
-          focusTarget={variantsHeading}
-          onCountButton={onCountButton}
-          refusal={refusal}
-        />
-      </ErrorBoundary>
-    </>
-  );
   return (
     <>
       <main className={classOf(styles, "page")}>
         <div className={classOf(styles, "boxes")}>
-          {fileId === null ? (
-            <section
-              aria-labelledby={variantsHeadingId}
-              className={`${classOf(styles, "box")} ${classOf(styles, "boxInner")}`}
+          <section
+            aria-labelledby={variantsHeadingId}
+            className={classOf(styles, "box")}
+          >
+            {/* It takes the focus after an opening by the box's button,
+                and when the lines of a file go with it; it is not a stop
+                of the Tab key. */}
+            <h2
+              ref={variantsHeading}
+              id={variantsHeadingId}
+              tabIndex={-1}
+              className={classOf(styles, "boxHeading")}
             >
-              {lines}
+              {OPENING_NAME}
+            </h2>
+            {/* Another load is another boundary, which has caught
+                nothing, so that a throw while the lines of one file are
+                drawn leaves the next file its lines, its Stop and its
+                Start again. */}
+            <ErrorBoundary key={fileId ?? "none"} heading={INFO_NAME} level={3}>
+              <VariantsSummary
+                focusTarget={variantsHeading}
+                onCountButton={onCountButton}
+                refusal={refusal}
+              />
+            </ErrorBoundary>
+            {fileId === null && (
               <div ref={zoneEnd} className={classOf(styles, "boxEnd")}>
                 {/* Its own boundary, drawn again at each turn of the tabs
                     after a throw: after a throw the zone is gone, and with
@@ -138,20 +135,8 @@ export function VariantsPage({
                   <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
                 </ErrorBoundary>
               </div>
-            </section>
-          ) : (
-            <section
-              aria-labelledby={variantsHeadingId}
-              className={`${classOf(styles, "box")} ${classOf(styles, "boxDrop")}`}
-            >
-              {/* A throw in the zone leaves the box its heading. */}
-              <ErrorBoundary heading={OPENING_NAME} level={2} resetOn={tab}>
-                <OpenVariants onRefusal={setRefusal}>
-                  <div className={classOf(styles, "boxInner")}>{lines}</div>
-                </OpenVariants>
-              </ErrorBoundary>
-            </section>
-          )}
+            )}
+          </section>
           <IndividualsBox
             tab={tab}
             opening={individualsOpening}

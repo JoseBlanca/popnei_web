@@ -13,7 +13,7 @@ import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
-import { dropOnBox, pickFile } from "./openFiles.ts";
+import { fileBox, pickFile } from "./openFiles.ts";
 import { PARAMETERS, openParameters, parametersButton } from "./parameters.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -217,18 +217,6 @@ test("the words that stand in the place of the 3D view of the PCA while it loads
   release3d();
 });
 
-/** Serves every calculation worker with the opening of the file `name`
-    kept from its runner, so that the file stays being opened; to call
-    before the page is opened (as in popgen2Tabs.spec.ts). */
-async function holdOpening(page: Page, name: string): Promise<void> {
-  await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
-    const response = await route.fetch();
-    const script = await response.text();
-    const front = `self.addEventListener("message", (event) => { if (event.data !== null && typeof event.data === "object" && event.data.kind === "open" && event.data.file.name === ${JSON.stringify(name)}) { event.stopImmediatePropagation(); } });\n`;
-    await route.fulfill({ response, body: front + script });
-  });
-}
-
 /** The colour the page gives the system's colour `name`, Highlight,
     GrayText, Canvas. */
 async function systemColour(page: Page, name: string): Promise<string> {
@@ -269,7 +257,6 @@ test.describe("in the forced colours of Windows", () => {
     page,
   }) => {
     await page.emulateMedia({ forcedColors: "active" });
-    await holdOpening(page, "panel.vcf.gz");
     await page.goto("popgen2.html");
     await expect(
       page.getByRole("heading", { level: 1, name: "Popnei" }),
@@ -277,6 +264,16 @@ test.describe("in the forced colours of Windows", () => {
     const highlight = await systemColour(page, "Highlight");
     const grey = await systemColour(page, "GrayText");
     expect(highlight).not.toBe(grey);
+    // Before a file the PCA tab is greyed and not shown: no bar in
+    // GrayText.
+    await expect(tab(page, "PCA")).toHaveAttribute("aria-disabled", "true");
+    for (const [width, side] of [
+      [1280, "top"],
+      [639, "bottom"],
+    ] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      expect((await bar(tab(page, "PCA"), side)).colour).not.toBe(grey);
+    }
     await pickInto(page, "Variants", "panel.nei");
     await expect(tab(page, "PCA")).not.toHaveAttribute("aria-disabled");
 
@@ -297,15 +294,34 @@ test.describe("in the forced colours of Windows", () => {
       );
     }
 
-    // The PCA shown, another variants file opened: the PCA greyed while
-    // shown, and Distances, with no individuals file, greyed and not
+    // Distances shown, then no column of the populations chosen in the
+    // box Individuals: Distances greyed while shown, since 16 October
+    // 2026 the one way left to grey a tab of the analyses while it is
     // shown.
     await page.setViewportSize({ width: 1280, height: 900 });
-    await tab(page, "PCA").click();
-    // Dropped on the box, which keeps the PCA tab shown (16 October 2026).
-    await dropOnBox(page, "variants", join(FIXTURES, "panel.vcf.gz"));
-    await expect(tab(page, "PCA")).toHaveAttribute("aria-disabled", "true");
-    await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
+    await pickInto(page, "Individuals", "panel_pops.csv");
+    await expect(tab(page, "Distances")).not.toHaveAttribute("aria-disabled", {
+      timeout: RESULT_TIMEOUT,
+    });
+    await tab(page, "Distances").click();
+    const column = fileBox(page, "individuals").getByRole("button", {
+      name: "Column of the populations",
+    });
+    await column.click();
+    await page
+      .getByRole("option", {
+        name: "None: every individual unclassified",
+        exact: true,
+      })
+      .click();
+    await expect(tab(page, "Distances")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await expect(tab(page, "Distances")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     for (const [width, side] of [
       [1280, "top"],
       [640, "top"],
@@ -313,11 +329,11 @@ test.describe("in the forced colours of Windows", () => {
       [320, "bottom"],
     ] as const) {
       await page.setViewportSize({ width, height: 900 });
-      expect(await bar(tab(page, "PCA"), side)).toEqual({
+      expect(await bar(tab(page, "Distances"), side)).toEqual({
         width: "3px",
         colour: grey,
       });
-      expect((await bar(tab(page, "Distances"), side)).colour).not.toBe(grey);
+      expect((await bar(tab(page, "PCA"), side)).colour).not.toBe(grey);
     }
   });
 

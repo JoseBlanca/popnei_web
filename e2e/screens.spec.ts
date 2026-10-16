@@ -6305,11 +6305,11 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("tablist", { name: "Files and analyses" })
           .getByRole("tab", { name: "Individuals", exact: true })
           .click();
-        const box = page.getByRole("region", {
-          name: "Individuals",
-          exact: true,
-        });
-        const open = box.getByRole("button", {
+        // "Open another individuals file…" and Remove at the end of the
+        // Individuals tab since 16 October 2026; the box of a file open
+        // has no zone.
+        const tabPanel = page.getByRole("tabpanel", { name: "Individuals" });
+        const open = tabPanel.getByRole("button", {
           name: "Open another individuals file…",
         });
         await expect(open).toHaveAttribute("aria-disabled", "true");
@@ -6318,7 +6318,7 @@ for (const theme of ["light", "dark"] as const) {
         // Reached by the Tab key from the zone's hidden button of the
         // paste, since React Aria shows the tooltip of a button on the
         // focus of the keyboard.
-        await box
+        await tabPanel
           .getByRole("button", {
             name: "Paste an individuals file",
             exact: true,
@@ -6331,17 +6331,10 @@ for (const theme of ["light", "dark"] as const) {
           page,
           `popgen2-individuals-box-locked-tooltip${at}-${theme}`,
         );
-        // Remove, first in the Individuals tab since 16 October 2026,
-        // reached by the Tab key from the tab's label, with its reason.
-        await page
-          .getByRole("tablist", { name: "Files and analyses" })
-          .getByRole("tab", { name: "Individuals", exact: true })
-          .focus();
+        // Remove, after it, with its reason.
         await page.keyboard.press("Tab");
         await expect(
-          page
-            .getByRole("tabpanel", { name: "Individuals" })
-            .getByRole("button", { name: /^Remove / }),
+          tabPanel.getByRole("button", { name: /^Remove / }),
         ).toBeFocused();
         await expect(page.getByRole("tooltip")).toBeVisible();
         await save(page, `popgen2-individuals-remove-locked${at}-${theme}`);

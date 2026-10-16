@@ -16,9 +16,10 @@
  * "Open individuals file…", at the bottom of the box, at the height of
  * the button of the box Variants; an opening by that button, which goes
  * with the zone, gives the focus to the box's heading. With a file, the
- * whole box takes a file dropped or pasted, with no button and no frame
- * drawn, and "Open another individuals file…" and Remove are at the end
- * of the Individuals tab (docs/plans/file-buttons.md, 16 October 2026).
+ * box has no zone and takes no drop, which is stopped as one anywhere
+ * outside a zone, and "Open another individuals file…" and Remove are at
+ * the end of the Individuals tab, where a file is dropped
+ * (docs/plans/file-buttons.md; the owner's decisions of 16 October 2026).
  * The zones are those of the page's one opening, `useIndividualsOpening`,
  * which waits while an analysis that reads the populations runs, and
  * the list of the column waits with it, so that no change leaves the
@@ -27,8 +28,7 @@
  * The lines of the file are in a boundary of errors made again for each
  * file, as those of the variants file are; the zone has a boundary of its
  * own, drawn again at each turn of the tabs after a throw, as the zone of
- * the variants file has; around the box of a file open, its boundary
- * draws the box's heading alone in its place.
+ * the variants file has.
  */
 import { useId, useRef } from "react";
 
@@ -91,8 +91,8 @@ export function IndividualsBox({
   // An opening by the box's button: the button goes with its zone, and
   // the focus goes to the box's heading.
   const zoneEnd = useFocusOnGone(() => heading.current);
-  const lines = (
-    <>
+  return (
+    <section aria-labelledby={headingId} className={classOf(pageStyles, "box")}>
       {/* It takes the focus after an opening by the box's button, and is
           not a stop of the Tab key. */}
       <h2
@@ -112,41 +112,19 @@ export function IndividualsBox({
         <FileLines individuals={individuals} />
       </ErrorBoundary>
       {opening.refusal !== null && <Problem>{opening.refusal}</Problem>}
-    </>
-  );
-
-  if (individuals !== null) {
-    return (
-      <section
-        aria-labelledby={headingId}
-        className={`${classOf(pageStyles, "box")} ${classOf(pageStyles, "boxDrop")}`}
-      >
-        {/* A throw in the zone leaves the box its heading. */}
-        <ErrorBoundary heading={INDIVIDUALS_BOX_NAME} level={2} resetOn={tab}>
-          <OpenIndividuals opening={opening}>
-            <div className={classOf(pageStyles, "boxInner")}>{lines}</div>
-          </OpenIndividuals>
-        </ErrorBoundary>
-      </section>
-    );
-  }
-  return (
-    <section
-      aria-labelledby={headingId}
-      className={`${classOf(pageStyles, "box")} ${classOf(pageStyles, "boxInner")}`}
-    >
-      {lines}
-      <div ref={zoneEnd} className={classOf(pageStyles, "boxEnd")}>
-        {/* Its own boundary, drawn again at each turn of the tabs after a
-            throw, as the zone of the variants file has. */}
-        <ErrorBoundary
-          heading={OPENING_INDIVIDUALS_ZONE_NAME}
-          level={3}
-          resetOn={tab}
-        >
-          <OpenIndividuals opening={opening} buttonRef={openButton} />
-        </ErrorBoundary>
-      </div>
+      {individuals === null && (
+        <div ref={zoneEnd} className={classOf(pageStyles, "boxEnd")}>
+          {/* Its own boundary, drawn again at each turn of the tabs after
+              a throw, as the zone of the variants file has. */}
+          <ErrorBoundary
+            heading={OPENING_INDIVIDUALS_ZONE_NAME}
+            level={3}
+            resetOn={tab}
+          >
+            <OpenIndividuals opening={opening} buttonRef={openButton} />
+          </ErrorBoundary>
+        </div>
+      )}
     </section>
   );
 }

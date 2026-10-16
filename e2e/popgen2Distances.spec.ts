@@ -25,7 +25,7 @@ import type AxeBuilder from "@axe-core/playwright";
 import type { Download, Locator, Page, Route } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
-import { dropOnBox, pickFile } from "./openFiles.ts";
+import { dropInTab, pickFile } from "./openFiles.ts";
 import { openParameters } from "./parameters.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 
@@ -550,22 +550,15 @@ test.describe("DT1 D5 the Distances tab", () => {
     );
     const populationsWords =
       "Stop the distances in the Distances tab to change the populations; then press Run there to calculate them again.";
-    for (const control of [
-      individualsBox(page).getByRole("button", {
-        name: "Column of the populations",
-      }),
-      // The box of a file open takes a paste, by its hidden button;
-      // "Open another individuals file…" is in the Individuals tab since
-      // 16 October 2026.
-      individualsBox(page).getByRole("button", {
-        name: "Paste an individuals file",
-      }),
-    ]) {
-      await expect(control).toHaveAttribute("aria-disabled", "true");
-      await expect(control).toHaveAccessibleDescription(
-        new RegExp(populationsWords.replaceAll(".", "\\."), "u"),
-      );
-    }
+    // The box of a file open has no zone; "Open another individuals
+    // file…" is in the Individuals tab since 16 October 2026.
+    const column = individualsBox(page).getByRole("button", {
+      name: "Column of the populations",
+    });
+    await expect(column).toHaveAttribute("aria-disabled", "true");
+    await expect(column).toHaveAccessibleDescription(
+      new RegExp(populationsWords.replaceAll(".", "\\."), "u"),
+    );
     await release(page, "popDists");
     await tab(page, "Distances").click();
     await expect(table(page, CAPTION)).toBeVisible({ timeout: RESULT_TIMEOUT });
@@ -696,8 +689,18 @@ test.describe("DT1 D5 the Distances tab", () => {
     await expect(line).toHaveCount(0);
 
     // The distances are live: the other file is calculated by itself.
-    // Dropped on the box, which keeps the Distances tab shown.
-    await dropOnBox(page, "individuals", join(FIXTURES, "panel_split.csv"));
+    // Opened at the end of the Individuals tab since 16 October 2026,
+    // and Distances shown again once the file is read.
+    await dropInTab(page, "individuals", join(FIXTURES, "panel_split.csv"));
+    await expect(
+      page
+        .getByRole("region", { name: "Individuals", exact: true })
+        .getByText("panel_split.csv", { exact: true }),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(tab(page, "Distances")).not.toHaveAttribute("aria-disabled", {
+      timeout: RESULT_TIMEOUT,
+    });
+    await tab(page, "Distances").click();
     await expect
       .poll(() => heatmapRows(page), { timeout: RESULT_TIMEOUT })
       .toEqual(["p0b", "p0a", "p2", "p1"]);
