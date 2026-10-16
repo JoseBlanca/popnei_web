@@ -1,0 +1,156 @@
+/**
+ * The look of popgen2.html, "Instrument, blue", of 16 October 2026
+ * (docs/plans/visual-design.md), where a flow can see it: what sits on
+ * the white panels of the tabs and of the two boxes of the files is not
+ * drawn in the page's blue-grey but for the fields, the buttons and the
+ * controls, tinted on purpose.
+ *
+ * panel.nei holds 1,200 variants of 200 diploid individuals, s000 to
+ * s199; panel_pops.csv puts them in p0, p2 and p1.
+ */
+import { join } from "node:path";
+
+import type { Locator, Page } from "@playwright/test";
+
+import { expect, test } from "./axe.ts";
+
+const FIXTURES = join(import.meta.dirname, "fixtures");
+
+/** A calculation of panel.nei takes a few seconds in either engine. */
+const RESULT_TIMEOUT = 30_000;
+
+/** The row of tabs of the page. */
+function tab(page: Page, name: string): Locator {
+  return page
+    .getByRole("tablist", { name: "Files and analyses" })
+    .getByRole("tab", { name, exact: true });
+}
+
+/** The panel of the tab shown. */
+function shown(page: Page): Locator {
+  return page.getByRole("tabpanel");
+}
+
+/** The button `name` of the panel of the tab shown. */
+function button(page: Page, name: string): Locator {
+  return shown(page).getByRole("button", { name, exact: true });
+}
+
+/** Picks the fixture `name` with the button of the box `box`. */
+async function pickInto(
+  page: Page,
+  box: "Variants" | "Individuals",
+  name: string,
+): Promise<void> {
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: box, exact: true })
+    .getByRole("button", {
+      name: new RegExp(`^Open (another )?${box.toLowerCase()} file…$`, "u"),
+    })
+    .click();
+  await (await chooser).setFiles(join(FIXTURES, name));
+}
+
+/** What is drawn in the page's background colour, the body's, inside the
+    panel of the tab shown and the two boxes: its fill, a gradient through
+    it, or a border in it; leaving out the fields, the buttons and the
+    controls, which are tinted on the white on purpose, and what is
+    inside them: a radio's circle, a select's button, the toggle of 2D
+    and 3D; and the dashed zone that opens a file. Each as "role or tag, its words". */
+async function drawnInPageColour(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const background = getComputedStyle(document.body).backgroundColor;
+    const roots = document.querySelectorAll(
+      // The panel of the tab shown and the two boxes, sections named
+      // by their headings.
+      '[role="tabpanel"], section[aria-labelledby]',
+    );
+    const found = new Set<string>();
+    for (const root of roots) {
+      for (const element of root.querySelectorAll("*")) {
+        if (!(element instanceof HTMLElement) || element.offsetParent === null)
+          continue;
+        if (
+          element.closest(
+            'button, input, textarea, select, label, [role="radiogroup"], [role="radio"]',
+          ) !== null
+        )
+          continue;
+        const style = getComputedStyle(element);
+        // The zone that opens a file, dashed, is tinted on purpose, in
+        // --color-zone, the page's colour in the light theme.
+        if (style.borderTopStyle === "dashed") continue;
+        if (
+          style.backgroundColor === background ||
+          style.backgroundImage.includes(background) ||
+          (parseFloat(style.borderTopWidth) > 0 &&
+            style.borderTopColor === background)
+        ) {
+          const words = (element.textContent ?? "").trim().slice(0, 30);
+          found.add(
+            `${element.getAttribute("role") ?? element.tagName.toLowerCase()}, "${words}"`,
+          );
+        }
+      }
+    }
+    return [...found];
+  });
+}
+
+test("on the white panels the tables, their headers, their fades, the legend of the PCA and the ring of a slider's handle are in the panel's colour, not the page's, at 320 px where the tables scroll, light and dark", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.goto("popgen2.html");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Popnei" }),
+  ).toBeVisible();
+  await pickInto(page, "Variants", "panel.nei");
+  await pickInto(page, "Individuals", "panel_pops.csv");
+  await expect(
+    page.getByRole("button", {
+      name: "Download the missing genotypes and heterozygosity of each individual (CSV)",
+    }),
+  ).toBeVisible({ timeout: RESULT_TIMEOUT });
+
+  // The PCA, with its legend over the 2D plot and its table of many
+  // columns, whose fade shows at its right edge.
+  await tab(page, "PCA").click();
+  const distance = shown(page).getByRole("textbox", {
+    name: "Distance within which variants are compared, in base pairs, from 1",
+  });
+  await distance.fill("50000");
+  await distance.press("Enter");
+  await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+  await button(page, "Run").click();
+  await expect(
+    page.getByText(/^The place of each of the 200 individuals/u),
+  ).toContainText("from 548 variants.", { timeout: RESULT_TIMEOUT });
+  // The diversity, whose table is wider than 288 px and scrolls.
+  await tab(page, "Populations").click();
+  await expect(button(page, "Run").first()).toBeEnabled({
+    timeout: RESULT_TIMEOUT,
+  });
+  await button(page, "Run").first().click();
+  await expect(
+    shown(page).getByRole("table", {
+      name: /^The diversity of each population/u,
+    }),
+  ).toBeVisible({ timeout: RESULT_TIMEOUT });
+
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    for (const name of [
+      "Variants",
+      "Individuals",
+      "PCA",
+      "Populations",
+    ] as const) {
+      await tab(page, name).click();
+      await expect(tab(page, name)).toHaveAttribute("aria-selected", "true");
+      expect(await drawnInPageColour(page), `${name}, ${scheme}`).toEqual([]);
+    }
+  }
+});

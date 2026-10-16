@@ -28,13 +28,16 @@
    with the table, `local`, and hides the shadow when the table is
    scrolled to its end on that side. The directions are left and right,
    those of a table written from left to right. The cover is as wide as
-   --space-8, and the shadow as --space-3. */
+   --space-8, and the shadow as --space-3. The cover and the frame are
+   in the colour of the panel the tables of popgen2.html stand on, white
+   in the light theme, where the page's blue-grey showed as a block (the
+   review of the look, 16 October 2026). */
 .scroll[data-scrolls] {
   background:
-    linear-gradient(to right, var(--color-background) 30%, transparent) left
-      center / var(--space-8) 100% no-repeat local,
-    linear-gradient(to left, var(--color-background) 30%, transparent) right
-      center / var(--space-8) 100% no-repeat local,
+    linear-gradient(to right, var(--color-panel) 30%, transparent) left center /
+      var(--space-8) 100% no-repeat local,
+    linear-gradient(to left, var(--color-panel) 30%, transparent) right center /
+      var(--space-8) 100% no-repeat local,
     radial-gradient(
         farthest-side at 0 50%,
         var(--color-scroll-shadow),
@@ -47,7 +50,7 @@
         transparent
       )
       right center / var(--space-3) 100% no-repeat scroll;
-  background-color: var(--color-background);
+  background-color: var(--color-panel);
 }
 
 .scroll:focus-visible {
@@ -67,7 +70,8 @@
 }
 
 /* The headers of such a table stay at the top of the frame while the
-   rows scroll under them, so each has the background that hides the rows.
+   rows scroll under them, so each has the background that hides the rows,
+   the panel's.
    The line under a header is a shadow inside it and not its border: with
    the borders of the table collapsed, the border of a header that stays
    in place scrolls away with the rows. */
@@ -75,7 +79,7 @@
   position: sticky;
   inset-block-start: 0;
   border-block-end: 0;
-  background: var(--color-background);
+  background: var(--color-panel);
   box-shadow: inset 0 -1px 0 var(--color-rule);
 }
 

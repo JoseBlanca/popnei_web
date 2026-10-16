@@ -84,13 +84,15 @@
   place-items: center;
   margin: 0;
   padding: var(--space-4);
-  background: var(--color-background);
+  background: var(--color-panel);
   text-align: center;
 }
 
 /* The legend over the top right corner of the frame of the plot, on the
-   background of the page, so that the points under it do not cross its
-   words; it scrolls when it is higher than the frame. */
+   colour of the panel the plot stands on, so that the points under it do
+   not cross its words; it scrolls when it is higher than the frame. The
+   words over the 3D view, above, on the same colour (the review of the
+   look, 16 October 2026). */
 .legend {
   position: absolute;
   display: grid;
@@ -101,7 +103,7 @@
   padding: var(--space-1);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-background);
+  background: var(--color-panel);
 }
 
 /* On popgen2.html, on a page narrower than 30rem, a phone, the legend

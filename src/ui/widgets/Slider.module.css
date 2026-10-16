@@ -69,12 +69,15 @@
   transform: translateY(-50%);
 }
 
-/* React Aria places it at the value and centres it there. */
+/* React Aria places it at the value and centres it there. Its ring is
+   in the colour of the panel the slider stands on, a cut between the
+   handle and the track, as the hollow handle of a threshold has (the
+   review of the look, 16 October 2026). */
 .thumb {
   inset-block-start: 50%;
   inline-size: var(--target-min);
   block-size: var(--target-min);
-  border: 2px solid var(--color-background);
+  border: 2px solid var(--color-panel);
   border-radius: var(--radius-full);
   background: var(--color-accent);
   cursor: ew-resize;

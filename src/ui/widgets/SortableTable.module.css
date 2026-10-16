@@ -32,13 +32,16 @@
    the headers standing out of it, so a background or a line of that row
    paints nothing. It places each header in a box as high as the tallest
    header, and each header fills its box, so that the backgrounds meet
-   and the lines stand at one height. */
+   and the lines stand at one height. The background is the panel's,
+   which the table stands on, and so are those of the rows and the fade,
+   below: in the page's blue-grey they showed as a block on the white
+   panel (the review of the look, 16 October 2026). */
 .header {
   display: flex;
   block-size: 100%;
   align-items: flex-end;
   border-block-end: 1px solid var(--color-rule);
-  background: var(--color-background);
+  background: var(--color-panel);
   padding-block: var(--space-1);
   padding-inline: var(--space-3);
   font-weight: 600;
@@ -68,7 +71,7 @@
 }
 
 .row {
-  background: var(--color-background);
+  background: var(--color-panel);
 }
 
 .rowHeader {
@@ -171,7 +174,7 @@
   inset-block: 1px;
   inset-inline-end: 1px;
   inline-size: var(--space-8);
-  background: linear-gradient(to right, transparent, var(--color-background));
+  background: linear-gradient(to right, transparent, var(--color-panel));
   pointer-events: none;
 }
 
