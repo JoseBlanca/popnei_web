@@ -111,22 +111,26 @@
      or, auto, in its middle, and the room between the column and the
      window's edges; the content of a tab of the page on a panel of its
      own, or on the page as the rest. On a narrow window the panel runs
-     to the window's edges with the page's room inside it at its sides
-     (Tabs.module.css), so that its words do not touch its border and the
-     plots keep the column's width */
+     to the window's edges with the page's room inside it at its sides,
+     so that its words do not touch its border and the plots keep the
+     column's width, and --space-3 above and below (Tabs.module.css).
+     The room above and below was a clamp of 3vw, left from a first form
+     whose room shrank with the window; fixed, it is the same at 320 and
+     1280 px, the widths the look was seen at, 12 and 24 px, and 24 px
+     rather than 19 px at 640 */
   --page-margin-inline: auto;
   --page-padding: var(--space-4);
-  --panel-padding: clamp(0.75rem, 3vw, 1.5rem) var(--space-6);
+  --panel-padding: var(--space-6);
   --panel-border: 1px solid var(--color-rule);
   /* the selected tab of the page's row joined to its panel: the line
      under the tab, and the bar and sides drawn inside it */
   --color-tab-under: var(--color-panel);
   --shadow-tab-selected:
-    inset 0 3px 0 var(--color-accent), inset 1px 0 0 var(--color-rule),
-    inset -1px 0 0 var(--color-rule);
+    inset 0 var(--tab-bar) 0 var(--color-accent),
+    inset 1px 0 0 var(--color-rule), inset -1px 0 0 var(--color-rule);
   /* the bar of a tab of that row greyed while it is shown, in the colour
      of its words, so that the user still sees which tab they are on */
-  --shadow-tab-greyed: inset 0 3px 0 var(--color-text-disabled);
+  --shadow-tab-greyed: inset 0 var(--tab-bar) 0 var(--color-text-disabled);
   --focus-ring: 2px solid var(--color-focus);
   --focus-offset: 2px;
   --target-min: 1.5rem;
