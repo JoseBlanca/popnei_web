@@ -395,9 +395,24 @@ function listValue(): string | null {
   return values.length === 1 ? (values[0] ?? null) : null;
 }
 
-/** The rows of the table of the counts, each a header and a cell. */
+/** The heading of the counts in the Individuals tab. */
+const COUNTS_HEADING =
+  "Individuals per population, after the filters of individuals";
+
+/** The part of the Individuals tab headed by the counts, or null when it
+    is not drawn. */
+function countsPart(): HTMLElement | null {
+  const heading = [...tab().querySelectorAll("h2")].find(
+    (h) => h.textContent === COUNTS_HEADING,
+  );
+  return heading?.closest("section") ?? null;
+}
+
+/** The rows of the table of the counts in the Individuals tab, each a
+    header and a cell; none when it is not drawn. */
 function countRows(): string[][] {
-  const table = box().querySelector("table");
+  expect(box().querySelector("table")).toBeNull();
+  const table = countsPart()?.querySelector("table") ?? null;
   if (table === null) return [];
   return [...table.querySelectorAll("tr")].map((tr) =>
     [...tr.querySelectorAll("th, td")].map((cell) => cell.textContent),
@@ -426,13 +441,14 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(buttons(box()).some((b) => b.startsWith("Remove"))).toBe(false);
   });
 
-  test("a file opened by the zone, its read pending: its name and Reading, the zone's button Open another, and Remove", async () => {
+  test("a file opened by the zone, its read pending: its name and Reading, the zone's button Open another, and Remove in the tab and not in the box", async () => {
     const { store } = await drawPage();
     await pickIndividuals("pops.csv");
     expect(store.getState().project.individuals?.fileId).toBe(FILE_ID);
     expect(paragraphs(box())).toEqual(["pops.csv", "Reading pops.csv."]);
     expect(buttons(box())).toContain("Open another individuals file…");
-    expect(buttons(box())).toContain("Remove pops.csv");
+    expect(buttons(box()).some((b) => b.startsWith("Remove"))).toBe(false);
+    expect(buttons(tab())[0]).toBe("Remove pops.csv");
   });
 
   test("a file refused: its name and the words of the refusal", async () => {
@@ -462,26 +478,34 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     );
   });
 
-  test("NU8 R1 both files read and a column chosen: the counts with no caption and no Download, the line of the unclassified; the line of the rows not used in the tab", async () => {
+  test("NU8 R1 both files read and a column chosen: the summary line in the box; in the tab the counts under their heading, with no caption and no Download, the line of the unclassified and the line of the rows not used", async () => {
     const { store } = await drawPage();
     await openVariants(store);
     await pickIndividuals("pops.csv");
     await recorded(store, readOf(POPS));
     await choose(store, "popcat");
     expect(undoNames(store)).toBe("the column of the populations changed");
+    expect(paragraphs(box())).toEqual([
+      "pops.csv",
+      "3 individuals classified in 2 populations, 2 unclassified",
+    ]);
     // The table's own caption names it for a screen reader alone.
-    expect(box().querySelector("table > caption")?.textContent).toBe(
+    expect(countsPart()?.querySelector("table > caption")?.textContent).toBe(
       "Individuals of panel.nei after the filters of individuals",
     );
     expect(downloadsOfBox()).toEqual([]);
+    expect(
+      buttons(countsPart() ?? tab()).filter((b) => b.startsWith("Download")),
+    ).toEqual([]);
     expect(countRows()).toEqual([
       ["Population", "Individuals"],
       ["p0", "2"],
       ["p1", "1"],
     ]);
-    expect(paragraphs(box())).toContain(
+    expect(paragraphs(countsPart() ?? tab())).toEqual([
       "Unclassified, left out of the analyses per population: 2 individuals kept, 1 with an empty cell in popcat and 1 that is not in pops.csv. Not in pops.csv: s004.",
-    );
+    ]);
+    expect(box().textContent).not.toContain("Unclassified, left out");
     expect(box().textContent).not.toContain("but not in panel.nei");
     expect(paragraphs(tab())).toContain(
       "Individuals in pops.csv but not in panel.nei: 1",
@@ -496,11 +520,15 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     await choose(store, "popcat");
     await choose(store, null);
     expect(listValue()).toBe("None: every individual unclassified");
+    expect(paragraphs(box())).toEqual([
+      "pops.csv",
+      "5 individuals, all unclassified",
+    ]);
     expect(countRows()).toEqual([
       ["Population", "Individuals"],
       ["Unclassified", "5"],
     ]);
-    expect(box().textContent).not.toContain("are unclassified");
+    expect(paragraphs(countsPart() ?? tab())).toEqual([]);
   });
 
   test("a grouping whose column the table does not have: the list on None", async () => {
@@ -516,7 +544,7 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(listValue()).toBe("None: every individual unclassified");
   });
 
-  test("no name of the variants file in the individuals file: the warning, no table", async () => {
+  test("no name of the variants file in the individuals file: the warning in the box, no summary line, no table", async () => {
     const { store } = await drawPage();
     await openVariants(store);
     await pickIndividuals("pops.csv");
@@ -535,9 +563,10 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(box().textContent).toContain(
       "Warning: none of the 5 individuals of panel.nei is in pops.csv, so all of them are unclassified. The first column of pops.csv has to hold their names as panel.nei writes them: panel.nei starts with s000, and pops.csv with S-000.",
     );
+    expect(box().textContent).not.toContain("classified in");
   });
 
-  test("a column of 21 values: its warning, no table, the line of the rows not used in the tab", async () => {
+  test("a column of 21 values: its warning in the box, no summary line, no table, the line of the rows not used in the tab", async () => {
     const { store } = await drawPage();
     await openVariants(store);
     await pickIndividuals("pops.csv");
@@ -556,6 +585,8 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(box().textContent).toContain(
       "Warning: accession has 21 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
     );
+    expect(box().textContent).not.toContain("classified in");
+    expect(countsPart()).toBeNull();
     expect(paragraphs(tab())).toContain(
       "Individuals in pops.csv but not in panel.nei: 16",
     );
@@ -574,7 +605,7 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     );
   });
 
-  test("a threshold of the individuals on and the pass not finished: … in each count, read as not counted yet, and the line of waiting; after a Stop, the line of a Stop; after a failure, the line of a failure", async () => {
+  test("a threshold of the individuals on and the pass not finished: … in the summary line and in each count, read as not counted yet, and the line of waiting under each; after a Stop, the line of a Stop; after a failure, the line of a failure", async () => {
     const { store, requests, autoRuns } = await drawPage();
     await openVariants(store);
     await pickIndividuals("pops.csv");
@@ -592,9 +623,21 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
       ["p0", "…not counted yet"],
       ["p1", "…not counted yet"],
     ]);
-    expect(paragraphs(box())).toContain(
+    expect(paragraphs(box())).toEqual([
+      "pops.csv",
+      "…not counted yet individuals classified in 2 populations, …not counted yet unclassified",
       "The individuals the filters keep are counted once panel.nei is read to the end.",
-    );
+    ]);
+    expect(paragraphs(countsPart() ?? tab())).toEqual([
+      "The individuals the filters keep are counted once panel.nei is read to the end.",
+    ]);
+    // The "…" is hidden from a screen reader, which reads the words
+    // beside it.
+    expect(
+      [...box().querySelectorAll('[aria-hidden="true"]')].map(
+        (span) => span.textContent,
+      ),
+    ).toContain("…");
     expect(downloadsOfBox()).toEqual([]);
 
     await act(async () => {
@@ -624,14 +667,12 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     );
   });
 
-  test("NU8 R1 no individuals file and a variants file read: the counts of one row, Unclassified, with … while the pass is not finished and a threshold on, then the individuals kept", async () => {
+  test("NU8 R1 no individuals file and a variants file read: the summary line, all unclassified, with … while the pass is not finished and a threshold on, then the individuals kept; no table in the tab", async () => {
     const { store, requests } = await drawPage();
     await openVariants(store);
-    expect(countRows()).toEqual([
-      ["Population", "Individuals"],
-      ["Unclassified", "5"],
-    ]);
-    expect(paragraphs(box())).toEqual([]);
+    expect(paragraphs(box())).toEqual(["5 individuals, all unclassified"]);
+    expect(countRows()).toEqual([]);
+    expect(paragraphs(tab())).toEqual(["No individuals file open."]);
     expect(downloadsOfBox()).toEqual([]);
     await act(async () => {
       store.apply("the threshold of the missing genotypes changed", (p) =>
@@ -640,11 +681,8 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
       await Promise.resolve();
     });
     await settled();
-    expect(countRows()).toEqual([
-      ["Population", "Individuals"],
-      ["Unclassified", "…not counted yet"],
-    ]);
     expect(paragraphs(box())).toEqual([
+      "…not counted yet individuals, all unclassified",
       "The individuals the filters keep are counted once panel.nei is read to the end.",
     ]);
     await act(async () => {
@@ -661,11 +699,10 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
       kept?.kind === "known"
         ? (kept.individuals ?? INDIVIDUALS).length
         : Number.NaN;
-    expect(countRows()).toEqual([
-      ["Population", "Individuals"],
-      ["Unclassified", String(numKept)],
+    expect(numKept).toBeGreaterThan(0);
+    expect(paragraphs(box())).toEqual([
+      `${String(numKept)} individuals, all unclassified`,
     ]);
-    expect(paragraphs(box())).toEqual([]);
   });
 
   test("a progress of the one pass draws the box no more", async () => {
@@ -793,9 +830,10 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
     expect(paragraphs(tab())).toEqual(["No individuals file open."]);
   });
 
-  test("the first read under way: Reading alone, no options", async () => {
+  test("the first read under way: Remove, then Reading alone, no options", async () => {
     await drawPage();
     await pickIndividuals("pops.csv");
+    expect(buttons(tab())).toEqual(["Remove pops.csv"]);
     expect(paragraphs(tab())).toEqual(["Reading pops.csv."]);
     expect(tab().querySelectorAll("select")).toHaveLength(0);
   });
@@ -810,7 +848,8 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
       "Detected: comma",
       "Detected: point",
     ]);
-    expect(buttons(tab()).slice(0, 3)).toEqual([
+    expect(buttons(tab()).slice(0, 4)).toEqual([
+      "Remove pops.csv",
       "Detected: UTF-8",
       "Detected: comma",
       "Detected: point",
@@ -865,7 +904,7 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
     );
   });
 
-  test("an xlsx refused: the line alone", async () => {
+  test("an xlsx refused: Remove and the line alone", async () => {
     const { store } = await drawPage();
     await pickIndividuals("pops.xlsx");
     await recorded(store, {
@@ -874,6 +913,7 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
       format: "xlsx",
     });
     expect(tab().querySelectorAll("select")).toHaveLength(0);
+    expect(buttons(tab())).toEqual(["Remove pops.xlsx"]);
     expect(paragraphs(tab())).toEqual([
       "pops.xlsx could not be read; the box Individuals says why.",
     ]);
@@ -927,7 +967,9 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
       }),
     );
     expect(paragraphs(tab())).toContain("5 rows, 3 columns");
-    expect(tab().querySelector("h2")).toBeNull();
+    expect([...tab().querySelectorAll("h2")].map((h) => h.textContent)).toEqual(
+      [COUNTS_HEADING],
+    );
     expect(tab().textContent).not.toContain("but not in pops.csv");
     // Every row of the file names an individual of panel.nei.
     expect(tab().textContent).not.toContain("but not in panel.nei");
@@ -995,12 +1037,12 @@ describe("AP3 D3 the changes of the individuals file are no steps of Undo; the c
     expect(state.historyMoves).toBe(moves + 1);
   });
 
-  test("Remove leaves nothing to undo, and puts the focus on the zone's button", async () => {
+  test("Remove, in the tab, leaves nothing to undo, and puts the focus on the zone's button in the box", async () => {
     const { store } = await drawPage();
     await pickIndividuals("pops.csv");
     await recorded(store, readOf(POPS));
     await thresholdStep(store);
-    const remove = [...box().querySelectorAll("button")].find(
+    const remove = [...tab().querySelectorAll("button")].find(
       (b) => b.textContent === "Remove pops.csv",
     );
     if (remove === undefined) throw new Error("no Remove");
@@ -1011,6 +1053,7 @@ describe("AP3 D3 the changes of the individuals file are no steps of Undo; the c
     expect(store.getState().project.individuals).toBeNull();
     expect(undoNames(store)).toBeNull();
     expect(document.activeElement?.textContent).toBe("Open individuals file…");
+    expect(box().contains(document.activeElement)).toBe(true);
   });
 
   test("a separator chosen in the tab reads the file again and leaves nothing to undo", async () => {
@@ -1189,15 +1232,15 @@ async function paste(clipboardData: object): Promise<void> {
 }
 
 describe("PT3 D2 the box Individuals and the Individuals tab greyed while the diversity runs", () => {
-  test("while the diversity runs: the list, the paste button, the zone's button and Remove of the box, and the three lists of the tab, greyed with the reason as description; after its Stop, none", async () => {
+  test("while the diversity runs: the list, the paste button and the zone's button of the box, and Remove and the three lists of the tab, greyed with the reason as description; after its Stop, none", async () => {
     const { store } = await bothRead();
     expect(greyed(box())).toEqual([]);
+    expect(greyed(tab())).toEqual([]);
     await running(store, "diversity");
     expect(greyed(box())).toEqual([
       "popcat",
       "Paste an individuals file",
       "Open another individuals file…",
-      "Remove pops.csv",
     ]);
     for (const button of box().querySelectorAll(
       'button[aria-disabled="true"]',
@@ -1205,6 +1248,7 @@ describe("PT3 D2 the box Individuals and the Individuals tab greyed while the di
       expect(descriptionOf(button)).toContain(POPULATIONS_LOCKED);
     }
     expect(greyed(tab())).toEqual([
+      "Remove pops.csv",
       "Detected: UTF-8",
       "Detected: comma",
       "Detected: point",
@@ -1250,7 +1294,7 @@ describe("PT3 D2 the box Individuals and the Individuals tab greyed while the di
     await pickInSelect(box(), 0, "none");
     await pickInSelect(tab(), 1, ";");
     await act(async () => {
-      buttonNamed(box(), "Remove pops.csv").click();
+      buttonNamed(tab(), "Remove pops.csv").click();
       buttonNamed(box(), "Open another individuals file…").click();
       await Promise.resolve();
     });

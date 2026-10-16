@@ -62,6 +62,9 @@ export interface PageTabsProps {
   readonly onTabChange: (tab: PageTab) => void;
   /** The button that opens a variants file, in its box. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
+  /** The button that opens an individuals file, in its box, which Remove
+      of the Individuals tab gives the focus to. */
+  readonly individualsOpenButton: React.RefObject<HTMLButtonElement | null>;
   /** Told when the section of the statistics of a load is drawn, and when
       it goes. */
   readonly onStatsShown: StatsShown;
@@ -72,6 +75,7 @@ export function PageTabs({
   tab,
   onTabChange,
   openButton,
+  individualsOpenButton,
   onStatsShown,
 }: PageTabsProps): React.JSX.Element {
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
@@ -130,7 +134,10 @@ export function PageTabs({
               heading={INDIVIDUALS_TAB_CONTENT_NAME}
               level={2}
             >
-              <IndividualsTab shown={tab === "individuals"} />
+              <IndividualsTab
+                shown={tab === "individuals"}
+                openButton={individualsOpenButton}
+              />
             </ErrorBoundary>
           ),
         },

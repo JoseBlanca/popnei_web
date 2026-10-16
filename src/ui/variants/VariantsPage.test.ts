@@ -511,24 +511,18 @@ describe("IN3 the page in two boxes and the row of tabs", () => {
     );
   });
 
-  test("NU8 R1 with a variants file read and no individuals file, the box of the individuals has the counts of one row, Unclassified, with no caption and no Download", async () => {
+  test("NU8 R1 with a variants file read and no individuals file, the box of the individuals has the summary line of its individuals, all unclassified, no table and no Download", async () => {
     const { store } = await drawPage();
     await open(store, "a".repeat(32), "first.nei");
     const individualsBox = region("Individuals");
-    const rows = [...(individualsBox?.querySelectorAll("tr") ?? [])].map((tr) =>
-      [...tr.querySelectorAll("th, td")].map((cell) => cell.textContent),
-    );
-    expect(rows).toEqual([
-      ["Population", "Individuals"],
-      ["Unclassified", "2"],
-    ]);
-    // No words on the screen but the table's: its own caption names it
-    // for a screen reader alone, hidden by its style, which jsdom does
-    // not apply.
-    expect(individualsBox?.querySelectorAll("p")).toHaveLength(0);
-    expect(individualsBox?.querySelector("table > caption")?.textContent).toBe(
-      "Individuals of first.nei after the filters of individuals",
-    );
+    // A summary since 16 October 2026: the table of the counts is in
+    // the Individuals tab, which says nothing of it with no file.
+    expect(individualsBox?.querySelectorAll("table")).toHaveLength(0);
+    expect(
+      [...(individualsBox?.querySelectorAll("p") ?? [])].map(
+        (p) => p.textContent,
+      ),
+    ).toEqual(["2 individuals, all unclassified"]);
     expect(
       [...(individualsBox?.querySelectorAll("button") ?? [])].some((b) =>
         (b.getAttribute("aria-label") ?? b.textContent).startsWith("Download"),
