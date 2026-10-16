@@ -222,3 +222,60 @@ Vitest 190 files, 5,654 tests. The builders' Playwright runs, Chromium
 and WebKit: every popgen2 flow passed (popgen2Input with
 `POPNEI_WIDE_FONT=1` too); screens of both phases at 1280 and 320 px,
 light and dark.
+
+### Phase 3, 16 October 2026
+
+Built in 0c0ee8ab (the specs first) and 00b67048: the options in a
+`Disclosure` "Parameters" on `popgen2.html` alone (`AnalysisPanel.tsx`),
+closed when the page opens and kept as the user left it across tabs;
+the reasons beside Run that pointed to an option name Parameters;
+`e2e/parameters.ts` opens the sections for the flows. Every reason that
+greys Run was already drawn as visible text beside Run, outside the
+section. In WebKit, Playwright reads text in a closed section as
+visible, so the flow checks the panel's `hidden` attribute.
+
+### The review, 16 October 2026
+
+Nine categories over fe6c64ff..00b67048: spec, tests, stale, errors,
+api, react, accessibility, ux, browser. Stale and react found nothing;
+accessibility found nothing (axe 0 violations in Chromium and WebKit,
+light and dark; the keyboard reaches Remove greyed and every option of
+an open section). The 17 findings taken went to one subagent and were
+fixed in 1c9978cb to 83c6555c: the counts and the table of the
+Individuals tab in error boundaries of their own, so a throw there
+leaves Remove; every popgen2 text that pointed to "the options" or
+"above" names Parameters, and "as the box Individuals says" became "as
+the Individuals tab says"; the name Parameters and the two 100,000 bp
+of the lines under the fields taken from constants; the counts of the
+box a discriminated union; while the counts wait, the number of
+populations also "…"; the PCA's table caption says "after the LD
+pruning at r² 0.1 within 100,000 bp" when its pruning is on, which is
+also how the flow with no option typed now checks that the default
+reaches popnei (548 variants at every distance from 2,000 bp up on
+`panel.nei`); the line under the PCA's distance says to read the LD
+decay where its curve has flattened, well beyond the half distance; a
+flow of the PCA tab's line at 116 of 200 individuals kept; two flow
+titles corrected; the Parameters button drawn as a header, not as an
+underlined link.
+
+Not taken: the two sections of the Populations tab both named
+"Parameters" (each is in a region named by its analysis, as its two Run
+buttons are); `hidden="until-found"`, by which Find in page opens a
+closed section, which Safari before 26 and Firefox before 139 lack, so
+there the user opens the section first. Seen outside the scope, left:
+the tooltip of a greyed control covers what is under it, and whether
+Escape closes it was not checked.
+
+Not specified: what the PCA tab says of the individuals while their
+count waits for the one pass with a threshold of individuals on; it
+shows no line, as with every individual used.
+
+The first load of `popgen2.html` grew by 2.0 KB gzipped (329,304 to
+331,295 bytes, +0.6%), the Disclosure among it.
+
+Checks at 83c6555c, run by the session: typecheck, lint, format clean;
+Vitest 190 files, 5,663 tests. The fixer's Playwright runs, Chromium and
+WebKit: every popgen2 flow (542 tests in four chunks), the old page's
+flows that share the changed modules (344), and with
+`POPNEI_WIDE_FONT=1` popgen2Input, popgen2Parameters and popgen2Pca
+(140); 48 screens again at 1280 and 320 px, light and dark.
