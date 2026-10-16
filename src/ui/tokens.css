@@ -39,6 +39,7 @@
   --color-zone: #f4f5f7;
   --color-heading: #1a1d21;
   --color-tab-selected: transparent;
+  --color-panel: transparent;
 
   /* the plots (charts.md): the seven colours of Okabe and Ito without
      black, the axes and their text, the lines of the thresholds */
@@ -100,6 +101,12 @@
   --shadow-box: none;
   --zone-border-style: dashed;
   --tab-bar: 3px;
+  /* the column of the page and of the band at the left of the window,
+     or, auto, in its middle; the content of a tab of the page on a panel
+     of its own, or on the page as the rest */
+  --page-margin-inline: 0;
+  --panel-padding: 0;
+  --panel-border: none;
   --focus-ring: 2px solid var(--color-focus);
   --focus-offset: 2px;
   --target-min: 1.5rem;
@@ -129,6 +136,7 @@
     --color-zone: #202328;
     --color-heading: #e8eaed;
     --color-tab-selected: transparent;
+    --color-panel: transparent;
     --chart-bar: #56b4e9;
     --chart-axis: #a3abb5;
     --chart-threshold: #ff8a80;
@@ -157,6 +165,7 @@
   --color-zone: #202328;
   --color-heading: #e8eaed;
   --color-tab-selected: transparent;
+  --color-panel: transparent;
   --chart-bar: #56b4e9;
   --chart-axis: #a3abb5;
   --chart-threshold: #ff8a80;

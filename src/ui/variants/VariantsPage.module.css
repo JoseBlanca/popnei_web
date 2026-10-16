@@ -8,6 +8,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-8);
   max-inline-size: 48rem;
+  margin-inline: var(--page-margin-inline);
   padding: var(--space-4);
 }
 
@@ -61,6 +62,11 @@
   display: grid;
   gap: var(--space-2);
   min-inline-size: 0;
+  padding: var(--panel-padding);
+  border: var(--panel-border);
+  border-radius: var(--radius-md);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-box);
 }
 
 .tabContent[hidden] {
