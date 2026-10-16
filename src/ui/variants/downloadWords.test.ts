@@ -139,7 +139,7 @@ describe("DL6 D2 the words of the download", () => {
     const failed = (error: AnalysisError): string =>
       writeFailedText(error, false, p, name);
     expect(failed({ kind: "refused", message: "memory could not grow." })).toBe(
-      'low_qual.filtered.vcf.gz could not be written: popnei stopped with "memory could not grow". If the message speaks of memory, the file may be too large for this tab: leave out more variants or individuals with the filters, or write the file with popnei in Python, which writes files of any size. If it names a line of the VCF, correct the file, or fetch it again, and open it again.',
+      'low_qual.filtered.vcf.gz could not be written: popnei stopped with "memory could not grow". If the message speaks of memory, the file may be too large for this tab: leave out more variants or individuals with the filters, or write the file with popnei in Python, which writes files of any size. If it names a line of the VCF, correct the file, or fetch it again, and open it again with Open another variants file… in the Variants tab.',
     );
     expect(
       failed({

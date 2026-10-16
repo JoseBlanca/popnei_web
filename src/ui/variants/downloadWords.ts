@@ -12,7 +12,10 @@
 import { bothOf, escaped, counted, grouped } from "../../core/project.ts";
 import type { Project } from "../../core/project.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
-import { VARIANT_FILTER_ORDER } from "../../core/project.ts";
+import {
+  VARIANT_FILTER_ORDER,
+  WITH_ANOTHER_VARIANTS,
+} from "../../core/project.ts";
 import type { AnalysisError } from "../../core/store.ts";
 import { sizeText } from "../../core/writeEstimate.ts";
 import type {
@@ -137,7 +140,7 @@ export function writeFailedText(
   }
   const file = escaped(name);
   if (error.kind === "refused") {
-    return `${file} could not be written: popnei stopped with "${withoutStop(error.message)}". If the message speaks of memory, the file may be too large for this tab: leave out more variants or individuals with the filters, or write the file with popnei in Python, which writes files of any size. If it names a line of the VCF, correct the file, or fetch it again, and open it again.`;
+    return `${file} could not be written: popnei stopped with "${withoutStop(error.message)}". If the message speaks of memory, the file may be too large for this tab: leave out more variants or individuals with the filters, or write the file with popnei in Python, which writes files of any size. If it names a line of the VCF, correct the file, or fetch it again, and open it again ${WITH_ANOTHER_VARIANTS}.`;
   }
   const failure = error.error;
   switch (failure.kind) {
