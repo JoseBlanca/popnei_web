@@ -20,8 +20,10 @@
   border-block-end: 1px solid var(--color-rule);
 }
 
-/* The tab shown is marked by a bar under its label and by the weight of
-   its words, not by colour alone (WCAG 1.4.1). */
+/* The tab shown is marked by a bar and by the weight of its words, not
+   by colour alone (WCAG 1.4.1): in the rows inside a result the bar is
+   under its label; in the page's row from 40em it is at its top, by the
+   rules of that row below. */
 .tab {
   display: inline-flex;
   align-items: center;
@@ -44,9 +46,13 @@
   font-weight: 600;
 }
 
-/* The row of the page's tabs (pageRow of Tabs.tsx): a tab that opens in
-   the colour of the text, 3.39:1 from a greyed one in the light theme and
-   3.26:1 in the dark, where the muted colour was 1.34:1 and 1.69:1. */
+/* The row of the page's tabs (pageRow of Tabs.tsx). A tab that opens is
+   in the colour of the text, 3.13:1 from a greyed one in the light theme
+   and 3.03:1 in the dark, where the muted colour would be 1.51:1 and
+   1.54:1 (tokens.css, 16 October 2026). The line under each tab is 1 px,
+   the row's line, which the tab shown covers in the panel's colour to
+   join it from 40em, its bar at its top; under 40em the bar under the
+   tab shown is 3 px again (the rules of a narrow window, below). */
 .pageRow .tab {
   border-block-end-width: var(--tab-bar-page);
   color: var(--color-text);
