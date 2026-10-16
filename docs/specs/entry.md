@@ -1151,6 +1151,13 @@ rules of accessibility that the tests run on the page:
   and dropped there: the `dragover` and the `drop` have their defaults
   prevented, and the page, its file and its heading are as before; the
   same file dropped on the zone of the variants file still opens it.
+- On `popgen2.html`, in Chromium and WebKit, with both files open
+  (`e2e/strayDrops.spec.ts`, EN30): a file dropped on the heading or the
+  lines of the box Variants and of the box Individuals is stopped, as on
+  any part of the page outside a zone, and opens nothing, said neither
+  on the page nor in the status region; the address of the page stays;
+  a variants file dropped then on the zone at the end of the Variants
+  tab opens, and the individuals file stays open.
 
 - A throw while React draws the Variants step, made by an
   `Intl.NumberFormat` that throws, which its number field calls, shows

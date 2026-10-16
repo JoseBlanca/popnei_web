@@ -196,7 +196,8 @@ and to write them up.
    it stood in the box. The buttons that change the file, "Open another
    individuals file…" and "Remove panel_pops.csv", stand together at the
    end of that tab, as the owner decided later the same day; the box
-   holds a button only to open the first file.
+   holds "Open individuals file…" only while no individuals file is
+   open.
 3. They compute the diversity of each population: the expected and the
    observed heterozygosity, the inbreeding coefficient, the proportion of
    polymorphic variants, the number of alleles and of private alleles,
