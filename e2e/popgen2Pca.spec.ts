@@ -58,6 +58,11 @@ const NO_DISTANCE_FULL =
   "The LD pruning of the PCA needs the distance within which variants are compared. Type a distance in base pairs, 100,000 to start with, or turn the LD pruning off.";
 
 /** The line under the field of the distance, on how to choose it. */
+/** The box of the threshold of the missing data of the individuals, in
+    the Variants tab. */
+const INDIVIDUALS_MISSING =
+  "Missing GTs max: maximum proportion of missing genotypes of an individual";
+
 const DISTANCE_HINT =
   "100,000 bp is a start that suits many genomes but not all. The LD decay of the Populations tab shows how far LD extends in your data: choose a distance where its curve has flattened, well beyond the half distance.";
 
@@ -446,6 +451,39 @@ test("AP6 D3 the PCA tab opened during the one pass, held: Run disabled with the
   await typeDistance(page, "50000");
   await expect(run(page)).toHaveAccessibleDescription("");
   await expectAxeBothSchemes(page, makeAxeBuilder);
+});
+
+test("AP6 D3 the missing rate of the individuals at 0.03 keeps 116 of the 200: the PCA tab's line names them, and none once every individual is used again", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await openReady(page, null);
+  const line = shown(page).getByText(
+    "116 of the 200 individuals of panel.nei, those the filters of individuals keep",
+    { exact: true },
+  );
+  await expect(line).toHaveCount(0);
+  // 116 kept, as the box Individuals and the download of the filtered
+  // variants count them at 0.03 (e2e/popgen2Input.spec.ts, IN6 D3).
+  await tab(page, "Variants").click();
+  const individualsMissing = stats(page).getByRole("textbox", {
+    name: INDIVIDUALS_MISSING,
+  });
+  await individualsMissing.fill("0.03");
+  await individualsMissing.press("Enter");
+  await tab(page, "PCA").click();
+  await expect(line).toBeVisible();
+  await expect(run(page)).toBeEnabled();
+
+  await tab(page, "Variants").click();
+  // At 1 the threshold keeps every individual.
+  await individualsMissing.fill("1");
+  await individualsMissing.press("Enter");
+  await tab(page, "PCA").click();
+  await expect(run(page)).toBeEnabled();
+  await expect(
+    shown(page).getByText(/those the filters of individuals keep$/u),
+  ).toHaveCount(0);
 });
 
 test.describe("AP6 D3 the locks while a PCA runs", () => {
