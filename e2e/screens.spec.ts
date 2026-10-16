@@ -14,6 +14,7 @@ import type { Locator, Page, Route } from "@playwright/test";
 import { writeBigVcf } from "./bigVcf.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
+import { openParameters } from "./parameters.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const SCREENS = join(import.meta.dirname, "..", "screens");
@@ -5877,14 +5878,37 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("button", { name: "Run", exact: true })
           .first();
         await expect(run).toBeEnabled({ timeout: 20_000 });
+        await openParameters(panel);
         const field = panel.getByRole("textbox", {
           name: /^Distance within which variants are compared/u,
         });
         await field.fill("");
         await field.press("Enter");
         await expect(run).toHaveAccessibleDescription(/^Type the LD distance/u);
+        // The section closed again: the reason beside Run is what is
+        // left to see (the owner, 16 October 2026).
+        await panel
+          .getByRole("button", { name: "Parameters", exact: true })
+          .click();
         await page.mouse.move(0, 0);
         await save(page, `popgen2-pca-locked-ld${at}-${theme}`);
+      });
+
+      test("the PCA tab with its section Parameters open, the defaults", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "PCA", exact: true })
+          .click();
+        const panel = page.getByRole("tabpanel");
+        await expect(
+          panel.getByRole("button", { name: "Run", exact: true }).first(),
+        ).toBeEnabled({ timeout: 20_000 });
+        await openParameters(panel);
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-pca-parameters${at}-${theme}`);
       });
 
       for (const shot of ["loading", "load-failed"] as const) {
@@ -5911,6 +5935,7 @@ for (const theme of ["light", "dark"] as const) {
             .getByRole("button", { name: "Run", exact: true })
             .first();
           await expect(run).toBeEnabled({ timeout: 20_000 });
+          await openParameters(panel);
           const field = panel.getByRole("textbox", {
             name: /^Distance within which variants are compared/u,
           });
@@ -5974,6 +5999,7 @@ for (const theme of ["light", "dark"] as const) {
           await expect(
             panel.getByRole("button", { name: "Run", exact: true }).first(),
           ).toBeEnabled({ timeout: 20_000 });
+          await openParameters(panel);
           if (shot === "empty-range") {
             await expect(
               panel.getByText(
@@ -6023,6 +6049,7 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("button", { name: "Run", exact: true })
           .first();
         await expect(run).toBeEnabled({ timeout: 20_000 });
+        await openParameters(panel);
         const field = panel.getByRole("textbox", {
           name: /^Distance within which variants are compared/u,
         });
@@ -6099,6 +6126,7 @@ for (const theme of ["light", "dark"] as const) {
           }),
         ).toBeEnabled({ timeout: 20_000 });
         if (distance !== null) {
+          await openParameters(part);
           const field = part.getByRole("textbox", {
             name: /^Largest distance between the two variants/u,
           });
@@ -6114,9 +6142,22 @@ for (const theme of ["light", "dark"] as const) {
         const part = await ldDecayReady(page, "");
         await expect(
           part.getByRole("button", { name: "Run", exact: true }),
-        ).toHaveAccessibleDescription("Type the largest distance, above.");
+        ).toHaveAccessibleDescription(
+          "Type the largest distance in Parameters.",
+        );
         await page.mouse.click(1, 1);
         await save(page, `popgen2-ld-decay-locked${at}-${theme}`);
+        // Its section closed again: the lock beside Run stays.
+        await part
+          .getByRole("button", { name: "Parameters", exact: true })
+          .click();
+        await expect(
+          part.getByText("Type the largest distance in Parameters.", {
+            exact: true,
+          }),
+        ).toBeVisible();
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-ld-decay-locked-closed${at}-${theme}`);
       });
 
       test("the LD decay ready with no option typed: the largest distance at 100,000, Run", async ({
@@ -6209,6 +6250,15 @@ for (const theme of ["light", "dark"] as const) {
           await save(page, `popgen2-populations-${shot}${at}-${theme}`);
         });
       }
+
+      test("the Populations tab with both sections Parameters open, the defaults", async ({
+        page,
+      }) => {
+        const panel = await populationsReady(page);
+        await openParameters(panel);
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-populations-parameters${at}-${theme}`);
+      });
 
       test("the Populations tab running: the diversity held, Stop and the bar", async ({
         page,
@@ -6375,6 +6425,7 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("tab", { name: "Populations", exact: true })
           .click();
         const panel = page.getByRole("tabpanel");
+        await openParameters(panel);
         const minimum = panel.getByRole("textbox", {
           name: /^Individuals with a called genotype needed in each population, per variant/u,
         });
@@ -6435,6 +6486,7 @@ for (const theme of ["light", "dark"] as const) {
         const tabs = page.getByRole("tablist", { name: "Files and analyses" });
         await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
         const panel = page.getByRole("tabpanel");
+        await openParameters(panel);
         const field = panel.getByRole("textbox", {
           name: /^Distance within which variants are compared/u,
         });
@@ -6478,6 +6530,7 @@ for (const theme of ["light", "dark"] as const) {
         await expect(panel.locator("svg.chart")).toHaveCount(6, {
           timeout: 20_000,
         });
+        await openParameters(panel);
         const minimum = panel.getByRole("textbox", {
           name: /^Individuals with a called genotype needed in each population, per variant/u,
         });
@@ -6635,6 +6688,15 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-distances-ready${at}-${theme}`);
       });
 
+      test("the Distances tab with its section Parameters open, the defaults", async ({
+        page,
+      }) => {
+        const panel = await distancesReady(page);
+        await openParameters(panel);
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-distances-parameters${at}-${theme}`);
+      });
+
       test("the Distances tab ready with 7 unclassified individuals left out", async ({
         page,
       }) => {
@@ -6661,6 +6723,7 @@ for (const theme of ["light", "dark"] as const) {
         page,
       }) => {
         const panel = await distancesReady(page);
+        await openParameters(panel);
         const minimum = panel.getByRole("textbox", {
           name: /^Individuals with a called genotype needed in each population, per variant/u,
         });
@@ -6721,6 +6784,7 @@ for (const theme of ["light", "dark"] as const) {
             timeout: 20_000,
           });
           if (shot === "done-dest") {
+            await openParameters(panel);
             const group = panel.getByRole("radiogroup", {
               name: "Distance in the heatmap",
             });
@@ -6771,6 +6835,7 @@ for (const theme of ["light", "dark"] as const) {
         const tabs = page.getByRole("tablist", { name: "Files and analyses" });
         await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
         const panel = page.getByRole("tabpanel");
+        await openParameters(panel);
         const field = panel.getByRole("textbox", {
           name: /^Distance within which variants are compared/u,
         });
@@ -6803,6 +6868,7 @@ for (const theme of ["light", "dark"] as const) {
         await expect(panel.locator("svg.chart")).toHaveCount(1, {
           timeout: 20_000,
         });
+        await openParameters(panel);
         const minimum = panel.getByRole("textbox", {
           name: /^Individuals with a called genotype needed in each population, per variant/u,
         });
@@ -6903,6 +6969,7 @@ for (const theme of ["light", "dark"] as const) {
           page,
         }) => {
           const panel = await pcaLive(page);
+          await openParameters(panel);
           // The page's timers stand still, so that the quiet second does
           // not run out before the picture.
           await page.clock.install();
@@ -6965,6 +7032,7 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("button", { name: "Run", exact: true })
           .first();
         await expect(run).toBeEnabled({ timeout: 20_000 });
+        await openParameters(panel);
         const field = panel.getByRole("textbox", {
           name: /^Distance within which variants are compared/u,
         });
@@ -6995,6 +7063,7 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("button", { name: "Run", exact: true })
           .first();
         await expect(run).toBeEnabled({ timeout: 20_000 });
+        await openParameters(panel);
         const field = panel.getByRole("textbox", {
           name: /^Distance within which variants are compared/u,
         });
@@ -7043,6 +7112,7 @@ for (const theme of ["light", "dark"] as const) {
             .getByRole("button", { name: "Run", exact: true })
             .first();
           await expect(run).toBeEnabled({ timeout: 20_000 });
+          await openParameters(panel);
           if (shot === "pcoa") {
             await panel.getByRole("button", { name: /Method$/u }).click();
             await page
@@ -7116,6 +7186,7 @@ for (const theme of ["light", "dark"] as const) {
         const tabs = page.getByRole("tablist", { name: "Files and analyses" });
         await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
         const panel = page.getByRole("tabpanel");
+        await openParameters(panel);
         const field = panel.getByRole("textbox", {
           name: /^Distance within which variants are compared/u,
         });
@@ -7216,6 +7287,7 @@ for (const theme of ["light", "dark"] as const) {
           });
           await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
           const panel = page.getByRole("tabpanel");
+          await openParameters(panel);
           const field = panel.getByRole("textbox", {
             name: /^Distance within which variants are compared/u,
           });
@@ -7298,6 +7370,7 @@ for (const theme of ["light", "dark"] as const) {
         const tabs = page.getByRole("tablist", { name: "Files and analyses" });
         await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
         const panel = page.getByRole("tabpanel");
+        await openParameters(panel);
         await expect(
           panel.getByRole("button", { name: /Method$/u }),
         ).toBeVisible({ timeout: 20_000 });
@@ -7366,6 +7439,7 @@ for (const theme of ["light", "dark"] as const) {
           });
           const panel = page.getByRole("tabpanel");
           await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+          await openParameters(panel);
           const field = panel.getByRole("textbox", {
             name: /^Distance within which variants are compared/u,
           });
@@ -7417,6 +7491,7 @@ for (const theme of ["light", "dark"] as const) {
             await tabs
               .getByRole("tab", { name: "Populations", exact: true })
               .click();
+            await openParameters(panel);
             const minimum = panel.getByRole("textbox", {
               name: /^Individuals with a called genotype needed in each population, per variant/u,
             });
@@ -7452,6 +7527,7 @@ for (const theme of ["light", "dark"] as const) {
         const tabs = page.getByRole("tablist", { name: "Files and analyses" });
         const panel = page.getByRole("tabpanel");
         await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+        await openParameters(panel);
         const field = panel.getByRole("textbox", {
           name: /^Distance within which variants are compared/u,
         });
@@ -7477,6 +7553,7 @@ for (const theme of ["light", "dark"] as const) {
             name: /^The diversity of each population/u,
           }),
         ).toBeVisible({ timeout: 30_000 });
+        await openParameters(ldPart(page));
         const distance = ldPart(page).getByRole("textbox", {
           name: /^Largest distance between the two variants/u,
         });
@@ -7577,6 +7654,7 @@ for (const theme of ["light", "dark"] as const) {
         const tabs = page.getByRole("tablist", { name: "Files and analyses" });
         const panel = page.getByRole("tabpanel");
         await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+        await openParameters(panel);
         const field = panel.getByRole("textbox", {
           name: /^Distance within which variants are compared/u,
         });
@@ -7655,6 +7733,7 @@ for (const theme of ["light", "dark"] as const) {
           .click();
         // p0 holds 48 individuals: under a minimum of 60 it is a
         // population of too few, a warning of the result.
+        await openParameters(panel);
         const minimum = panel.getByRole("textbox", {
           name: /^Individuals with a called genotype needed in each population, per variant/u,
         });
@@ -7751,6 +7830,7 @@ for (const theme of ["light", "dark"] as const) {
           ).toBeVisible();
           if (shot === "held-after-crash") {
             await tabs.getByRole("tab", { name: "PCA", exact: true }).click();
+            await openParameters(panel);
             const field = panel.getByRole("textbox", {
               name: /^Distance within which variants are compared/u,
             });

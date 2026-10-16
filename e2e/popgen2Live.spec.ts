@@ -39,6 +39,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { openParameters } from "./parameters.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 import { pcaTabSeen, watchPcaTab } from "./pcaSeen.ts";
 
@@ -237,6 +238,7 @@ async function openLive(page: Page): Promise<void> {
   await page.goto("popgen2.html");
   await pick(page, "panel.nei");
   await tab(page, "PCA").click();
+  await openParameters(shown(page));
   const distance = shown(page).getByRole("textbox", { name: DISTANCE });
   await expect(distance).toBeVisible({ timeout: RESULT_TIMEOUT });
   await distance.fill("50000");
@@ -686,6 +688,7 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     await release(page, "allSoFar");
     await release(page, "result");
     await tab(page, "PCA").click();
+    await openParameters(shown(page));
     const distance = shown(page).getByRole("textbox", { name: DISTANCE });
     await distance.fill("50000");
     await distance.press("Enter");

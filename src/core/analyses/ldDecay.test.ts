@@ -307,6 +307,9 @@ function pairsIn(bins: readonly number[]): number[] {
 
 /** The reason under Run while no largest distance is typed. */
 const NO_DISTANCE_RUN = "Type the largest distance, above.";
+/** The same on popgen2.html, whose options are in the section
+    "Parameters" (the owner, 16 October 2026). */
+const NO_DISTANCE_RUN_2 = "Type the largest distance in Parameters.";
 
 /** Why the largest distance has to be typed, beside its field. */
 const NO_DISTANCE =
@@ -2027,7 +2030,7 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
       "The LD decay waits for ld_pops.csv to be read.",
     );
     const emptied = page2({ ld: { maxDist: null } });
-    expect(ldDecayOnPopgen2.needs(emptied)).toBe(NO_DISTANCE_RUN);
+    expect(ldDecayOnPopgen2.needs(emptied)).toBe(NO_DISTANCE_RUN_2);
     expect(maxDistReason(emptied, "popgen2")).toBe(NO_DISTANCE_2);
     expect(ldDecayOnPopgen2.needs(page2({ ld: { maxDist: 12_500_001 } }))).toBe(
       "With 2 populations, the largest distance can be at most 12,500,000 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.",

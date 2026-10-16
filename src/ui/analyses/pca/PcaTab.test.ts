@@ -73,7 +73,8 @@ const STOPPED_WITH_RESULT =
     of docs/plans/no-undo.md). */
 const LIVE_DONE =
   "The PCA is calculated again after each change of the filters or of its options.";
-const NO_DISTANCE = "Type the LD distance above, or turn the LD pruning off.";
+const NO_DISTANCE =
+  "Type the LD distance in Parameters, or turn the LD pruning off.";
 
 let container: HTMLDivElement;
 let root: Root;
@@ -322,6 +323,63 @@ async function wait(ms: number): Promise<void> {
   });
   await settle();
 }
+
+/** The button that opens and closes the section "Parameters", and the
+    group it opens, which it names. */
+function parameters(): {
+  readonly trigger: HTMLButtonElement;
+  readonly section: HTMLElement;
+} {
+  const trigger = [...container.querySelectorAll("button")].find(
+    (b) => b.textContent === "Parameters",
+  );
+  if (trigger === undefined) throw new Error("no button Parameters");
+  const section = container.querySelector<HTMLElement>(
+    `[role="group"][aria-labelledby="${trigger.id}"]`,
+  );
+  if (section === null) throw new Error("no section Parameters");
+  return { trigger, section };
+}
+
+describe("PT3 the section Parameters of the PCA tab (the owner, 16 October 2026)", () => {
+  test("closed when drawn: the method and the filters inside it, hidden, and Run and the line of the distance's lock outside it; a press opens it", async () => {
+    const page = await drawTab();
+    const { trigger, section } = parameters();
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(section.hidden).toBe(true);
+    expect(section.textContent).toContain("Method");
+    expect(section.textContent).toContain(
+      "Filters of the variants for the PCA",
+    );
+    const run = button("Run");
+    expect(run).not.toBeNull();
+    expect(section.contains(run)).toBe(false);
+
+    await act(async () => {
+      page.store.apply("the LD distance changed", (p) =>
+        setAnalysisOptions(p, pcaOnPopgen2, {
+          ...pcaOptions(p, "popgen2"),
+          ld: { follow: false, maxAllowedR2: 0.1, maxDist: null },
+        }),
+      );
+      await Promise.resolve();
+    });
+    await settle();
+    const locked = button("Run");
+    expect(locked?.disabled).toBe(true);
+    expect(descriptionOf(locked)).toBe(NO_DISTANCE);
+    const reason = [...container.querySelectorAll("span")].find(
+      (span) => span.textContent === NO_DISTANCE,
+    );
+    expect(reason).toBeDefined();
+    expect(section.contains(reason ?? null)).toBe(false);
+    expect(parameters().section.hidden).toBe(true);
+
+    await press(trigger);
+    expect(parameters().trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(parameters().section.hidden).toBe(false);
+  });
+});
 
 describe("NU4 D2 the PCA tab with the PCA calculated again by itself", () => {
   test("Run makes the PCA live and starts it, through autoRuns; Stop ends the live state", async () => {

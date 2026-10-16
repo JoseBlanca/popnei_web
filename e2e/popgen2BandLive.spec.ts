@@ -24,6 +24,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { openParameters } from "./parameters.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -356,6 +357,7 @@ async function diversityHeldRunning(page: Page): Promise<void> {
   await release(page, "result");
   await pick(page, "Individuals", "panel_pops.csv");
   await tab(page, "PCA").click();
+  await openParameters(shown(page));
   const distance = shown(page).getByRole("textbox", { name: DISTANCE });
   await expect(distance).toBeVisible({ timeout: RESULT_TIMEOUT });
   await distance.fill("50000");
@@ -391,6 +393,7 @@ async function bothLive(page: Page, pcoa = false): Promise<void> {
   await release(page, "result");
   await pick(page, "Individuals", "panel_pops.csv");
   await tab(page, "PCA").click();
+  await openParameters(shown(page));
   if (pcoa) {
     await shown(page)
       .getByRole("button", { name: /Method$/u })
@@ -587,6 +590,7 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     await page.clock.install();
     await bothLive(page);
     await tab(page, "Populations").click();
+    await openParameters(shown(page));
     const minimum = shown(page).getByRole("textbox", {
       name: /^Individuals with a called genotype needed in each population, per variant/u,
     });
@@ -669,6 +673,7 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     await page.clock.install();
     await bothLive(page);
     await tab(page, "Populations").click();
+    await openParameters(shown(page));
     const minimum = shown(page).getByRole("textbox", {
       name: /^Individuals with a called genotype needed in each population, per variant/u,
     });
@@ -758,6 +763,7 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
     await page.clock.install();
     await bothLive(page);
     await tab(page, "Populations").click();
+    await openParameters(shown(page));
     const minimum = shown(page).getByRole("textbox", {
       name: /^Individuals with a called genotype needed in each population, per variant/u,
     });
@@ -841,6 +847,7 @@ test.describe("PT4 D3 the band with the PCA and the diversity live", () => {
       content: "#defects > header { inset-inline-end: 15px; }",
     });
     await tab(page, "Populations").click();
+    await openParameters(shown(page));
     const minimum = shown(page).getByRole("textbox", {
       name: /^Individuals with a called genotype needed in each population, per variant/u,
     });
@@ -1032,6 +1039,7 @@ test("review of round 1: warnings of the result and the spectrum's, the Variants
   await maf.fill("0.95");
   await maf.press("Enter");
   await tab(page, "Populations").click();
+  await openParameters(shown(page));
   // p0 holds 48 individuals: under a minimum of 60 it is a population of
   // too few, and the result has two warnings of its own.
   const minimum = shown(page).getByRole("textbox", {

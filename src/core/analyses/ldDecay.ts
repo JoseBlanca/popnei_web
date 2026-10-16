@@ -237,8 +237,13 @@ const NO_DISTANCE: Readonly<Record<LdDecayPage, string>> = Object.freeze({
 });
 
 /** The reason beside the Run button while the largest distance is not
-    typed: where to type it, the field saying why. */
-const NO_DISTANCE_RUN = "Type the largest distance, above.";
+    typed, on each page: where to type it, the field saying why. On
+    popgen2.html the field is in the section "Parameters", which may be
+    closed (the owner, 16 October 2026). */
+const NO_DISTANCE_RUN: Readonly<Record<LdDecayPage, string>> = Object.freeze({
+  popgen: "Type the largest distance, above.",
+  popgen2: "Type the largest distance in Parameters.",
+});
 
 /** A name of a population is written whole in the legend of the plot up
     to this many characters, and cut in the middle about "…" above them,
@@ -647,7 +652,7 @@ function needs(p: Project): string | null {
     return populations;
   }
   return ldDecayOptions(p, "popgen").maxDist === null
-    ? NO_DISTANCE_RUN
+    ? NO_DISTANCE_RUN.popgen
     : maxDistReason(p, "popgen");
 }
 
@@ -668,7 +673,7 @@ function popgen2Needs(p: Project): string | null {
     throw defect("the LD decay was given a project of association.");
   }
   return ldDecayOptions(p, "popgen2").maxDist === null
-    ? NO_DISTANCE_RUN
+    ? NO_DISTANCE_RUN.popgen2
     : maxDistReason(p, "popgen2");
 }
 

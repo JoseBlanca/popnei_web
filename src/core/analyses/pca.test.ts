@@ -751,7 +751,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
   test("the distance emptied: needs gives the short line of popgen2.html beside Run, the reason in full under the field by the method; 50000 typed: none", () => {
     const emptied = project({ options: LD_EMPTIED });
     expect(pcaOnPopgen2.needs(emptied)).toBe(
-      "Type the LD distance above, or turn the LD pruning off.",
+      "Type the LD distance in Parameters, or turn the LD pruning off.",
     );
     expect(pruningDistanceReason(emptied, "popgen2")).toBe(PRUNING_DISTANCE_2);
     const pcoa = project({
@@ -761,7 +761,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
       },
     });
     expect(pcaOnPopgen2.needs(pcoa)).toBe(
-      "Type the LD distance above, or turn the LD pruning off.",
+      "Type the LD distance in Parameters, or turn the LD pruning off.",
     );
     expect(pruningDistanceReason(pcoa, "popgen2")).toBe(
       "The LD pruning of the PCoA needs the distance within which variants are compared. Type a distance in base pairs, 100,000 to start with, or turn the LD pruning off.",

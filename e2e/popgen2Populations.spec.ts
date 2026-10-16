@@ -34,6 +34,7 @@ import type { Download, Locator, Page, Route } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { openParameters } from "./parameters.ts";
 import { dropFiles } from "./dropFiles.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 
@@ -334,6 +335,7 @@ async function expectNoAxeViolations(
     end, Run enabled, presses Run and waits for the table of `caption`. */
 async function runDiversity(page: Page, caption = CAPTION): Promise<void> {
   await tab(page, "Populations").click();
+  await openParameters(shown(page));
   await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
   await button(page, "Run").click();
   await expect(table(page, caption)).toBeVisible({ timeout: RESULT_TIMEOUT });
@@ -343,6 +345,7 @@ async function runDiversity(page: Page, caption = CAPTION): Promise<void> {
     presses it; with `wait`, waits for its result, of 548 variants. */
 async function runPca(page: Page, wait = true): Promise<void> {
   await tab(page, "PCA").click();
+  await openParameters(shown(page));
   const distance = shown(page).getByRole("textbox", { name: DISTANCE });
   await expect(distance).toBeVisible({ timeout: RESULT_TIMEOUT });
   await distance.fill("50000");
@@ -929,6 +932,7 @@ test.describe("PT1 D7 the filters and the download while the diversity runs", ()
     // The PCA's options stay open while the diversity runs: a distance
     // typed, and its Run, which waits after the diversity.
     await tab(page, "PCA").click();
+    await openParameters(shown(page));
     await expect(
       shown(page).getByRole("button", { name: /Method$/u }),
     ).not.toHaveAttribute("aria-disabled");
@@ -1136,6 +1140,7 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
 
     // The options of the diversity, with the words of the filters; the
     // LD decay's, after them in the tab, are not its own.
+    await openParameters(diversity(page));
     const options = diversity(page).getByRole("textbox");
     expect(await options.count()).toBeGreaterThan(0);
     for (const option of await options.all()) {
@@ -1228,6 +1233,7 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
 
     // The PCA's options stay open.
     await tab(page, "PCA").click();
+    await openParameters(shown(page));
     await expect(
       shown(page).getByRole("button", { name: /Method$/u }),
     ).not.toHaveAttribute("aria-disabled");
@@ -1988,6 +1994,7 @@ test.describe("PT7 R1.1 the bar plots of the table", () => {
     await pick(page, "panel.nei");
     await pickIndividuals(page, "panel_pops.csv");
     await tab(page, "Populations").click();
+    await openParameters(shown(page));
     const minimum = shown(page).getByRole("textbox", {
       name: /^Individuals with a called genotype needed in each population, per variant/u,
     });
@@ -2093,6 +2100,7 @@ async function runTwenty(page: Page): Promise<void> {
   await pick(page, "panel.nei");
   await pickIndividuals(page, twentyPopulations());
   await tab(page, "Populations").click();
+  await openParameters(shown(page));
   const minimum = shown(page).getByRole("textbox", {
     name: /^Individuals with a called genotype needed in each population, per variant/u,
   });

@@ -399,6 +399,25 @@ async function withPopulations(page: Page, read = true): Promise<void> {
 
 const ID = popDistsOnPopgen2.id;
 
+describe("DT3 the section Parameters of the Distances tab (the owner, 16 October 2026)", () => {
+  test("closed when drawn, with the minimum and the measure inside and Run outside", async () => {
+    await readyTab();
+    const trigger = [...container.querySelectorAll("button")].find(
+      (b) => b.textContent === "Parameters",
+    );
+    expect(trigger?.getAttribute("aria-expanded")).toBe("false");
+    const section = container.querySelector<HTMLElement>(
+      `[role="group"][aria-labelledby="${trigger?.id ?? ""}"]`,
+    );
+    expect(section?.hidden).toBe(true);
+    expect(section?.textContent).toContain(
+      "Individuals with a called genotype needed in each population, per variant",
+    );
+    expect(section?.textContent).toContain("Distance in the heatmap");
+    expect(section?.contains(button("Run"))).toBe(false);
+  });
+});
+
 describe("DT1 D4 the Distances tab", () => {
   test("its heading and the lines of the populations: A and B with the minimum, the unclassified s008 and s009 left out", async () => {
     await readyTab();
@@ -451,7 +470,7 @@ describe("DT1 D4 the Distances tab", () => {
     const run = button("Run");
     expect(run?.disabled).toBe(true);
     expect(descriptionOf(run)).toBe(
-      "No population has 5 individuals or more, and a variant counts for a pair of populations only where both have 5 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, or merge populations in pops.csv.",
+      "No population has 5 individuals or more, and a variant counts for a pair of populations only where both have 5 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant in Parameters, or merge populations in pops.csv.",
     );
     const field = container.querySelector("input");
     expect(field?.getAttribute("aria-disabled")).toBeNull();

@@ -675,9 +675,11 @@ function needs(p: Project, page: PcaPage): string | null {
 }
 
 /** The line beside Run of popgen2.html while the PCA's LD pruning has no
-    distance, whose reason in full stands under the field. */
+    distance, whose reason in full stands under the field, in the section
+    "Parameters" of the tab, which may be closed (the owner, 16 October
+    2026). */
 const PRUNING_DISTANCE_SHORT =
-  "Type the LD distance above, or turn the LD pruning off.";
+  "Type the LD distance in Parameters, or turn the LD pruning off.";
 
 /** The words of the PCA's limit on the individuals of the variants file
     `fileName`, which has `numIndividuals`. */

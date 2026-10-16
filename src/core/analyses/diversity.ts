@@ -855,7 +855,7 @@ function drawNeeds(
       individuals.length === 1
         ? `the one individual ${words.individuals} holds`
         : `the ${grouped(individuals.length)} individuals ${words.individuals} hold`;
-    return `${start} ${hold} ${grouped(chromosomes)} ${ploidy}. ${atMost(chromosomes, words)}`;
+    return `${start} ${hold} ${grouped(chromosomes)} ${ploidy}. ${atMost(chromosomes, words, page)}`;
   }
   const chromosomes = size * read.ploidy;
   if (draw <= chromosomes) {
@@ -864,13 +864,21 @@ function drawNeeds(
   const its =
     size === 1 ? "its one individual" : `its ${grouped(size)} individuals`;
   const which = onePopulation ? "the one population" : "the largest population";
-  return `${start} ${which}${words.population}, ${namesOf([largest[0]])}, holds ${grouped(chromosomes)}, those of ${its} ${ploidy}. ${atMost(chromosomes, words)}`;
+  return `${start} ${which}${words.population}, ${namesOf([largest[0]])}, holds ${grouped(chromosomes)}, those of ${its} ${ploidy}. ${atMost(chromosomes, words, page)}`;
 }
 
-/** What a lock of the draw tells the user to do: "Type a number of
-    chromosomes of at most 168 in the options of the diversity." */
-function atMost(chromosomes: number, words: DrawWords): string {
-  return `Type a number of chromosomes of at most ${grouped(chromosomes)} in the options of the diversity${words.orElse}.`;
+/** What a lock of the draw tells the user to do on the page `page`:
+    "Type a number of chromosomes of at most 168 in the options of the
+    diversity."; on popgen2.html "… in Parameters.", the section of the
+    options, which may be closed (the owner, 16 October 2026). */
+function atMost(
+  chromosomes: number,
+  words: DrawWords,
+  page: DiversityPage,
+): string {
+  const place =
+    page === "popgen" ? "the options of the diversity" : "Parameters";
+  return `Type a number of chromosomes of at most ${grouped(chromosomes)} in ${place}${words.orElse}.`;
 }
 
 /** Builds the request, with the individuals the filters keep that the

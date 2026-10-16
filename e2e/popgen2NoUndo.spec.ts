@@ -27,6 +27,7 @@ import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { openParameters } from "./parameters.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 import { pcaTabSeen, watchPcaTab } from "./pcaSeen.ts";
 
@@ -199,6 +200,7 @@ function pcaCaption(page: Page): Locator {
     the LD pruning, 50000, presses Run and waits for the result. */
 async function runPca(page: Page): Promise<void> {
   await tab(page, "PCA").click();
+  await openParameters(shown(page));
   const distance = shown(page).getByRole("textbox", {
     name: "Distance within which variants are compared, in base pairs, from 1",
   });

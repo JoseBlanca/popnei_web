@@ -310,10 +310,10 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
 
   test("fewer than two populations with the minimum, over every individual", () => {
     expect(popDistsOnPopgen2.needs(sizedProject([30, 10, 5], 20))).toBe(
-      "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, or merge populations in panel_pops.csv.",
+      "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant in Parameters, or merge populations in panel_pops.csv.",
     );
     expect(popDistsOnPopgen2.needs(sizedProject([10, 5], 20))).toBe(
-      "No population has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, or merge populations in panel_pops.csv.",
+      "No population has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant in Parameters, or merge populations in panel_pops.csv.",
     );
     expect(popDistsOnPopgen2.needs(sizedProject([20, 20], 20))).toBeNull();
   });
@@ -334,7 +334,7 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
       (_, i) => `s${String(i).padStart(3, "0")}`,
     );
     expect(keptNeeds(p, knownKept(all, ["s000", "s001", "s003", "s006"]))).toBe(
-      "Only p0 has 2 individuals or more among the individuals the thresholds keep, and a variant counts for a pair of populations only where both have 2 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, merge populations in panel_pops.csv, or loosen the thresholds of the individuals in the Variants tab.",
+      "Only p0 has 2 individuals or more among the individuals the thresholds keep, and a variant counts for a pair of populations only where both have 2 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant in Parameters, merge populations in panel_pops.csv, or loosen the thresholds of the individuals in the Variants tab.",
     );
   });
 

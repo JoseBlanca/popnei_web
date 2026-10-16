@@ -1,9 +1,15 @@
 /* The tokens are those of src/ui/tokens.css. */
 
+/* As wide as its parent gives it, the line that opens it at the start
+   and what it opens across it: the options of an analysis of popgen2.html
+   take the whole width of their panel, whose grid sets its items at the
+   start, as wide as their content. */
 .disclosure {
   display: grid;
   gap: var(--space-2);
   justify-items: start;
+  justify-self: stretch;
+  min-inline-size: 0;
 }
 
 .trigger {
@@ -49,5 +55,7 @@
 }
 
 .panel {
+  justify-self: stretch;
+  min-inline-size: 0;
   padding-inline-start: var(--space-6);
 }

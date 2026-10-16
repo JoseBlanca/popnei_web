@@ -1872,8 +1872,9 @@ focus is on a threshold of the Variants tab.
 - From 16 October 2026, in jsdom: the PCA tab draws its options inside
   the section "Parameters", closed, its button with
   `aria-expanded="false"`, and the line of the distance's lock beside
-  Run outside it; the panel of an analysis of `popgen.html` draws its
-  options with no section.
+  Run outside it. That the panels of `popgen.html` draw their options
+  with no section is checked by its flows, which reach the options with
+  no section opened.
 
 **In Playwright, on the built site, in Chromium and WebKit**, the two
 engines that start on the owner's Mac, on `panel.nei`,

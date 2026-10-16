@@ -17,7 +17,13 @@
  * line of the individuals the PCA will run on before the button, in the
  * locked state as well as the ready one
  * (docs/specs/steps/popgen2-pca.md, "The PCA tab"). popgen.html gives
- * none of it, and its panels are drawn as before.
+ * none of it, and its panels are drawn as before. popgen2.html also
+ * draws the options inside a section that opens and closes,
+ * "Parameters", closed when the page opens, so that Run stands near the
+ * top of the tab; whether it is open is the screen's, and stays while
+ * the tabs, which stay drawn, are hidden and shown (the owner, 16
+ * October 2026; popgen2-pca.md, "The PCA tab"). A lock beside Run is
+ * outside it, so it is seen with the section closed.
  *
  * - locked: Run, disabled, with the reason beside it as its description;
  * - ready: Run, and what it will run on, the individuals the filters
@@ -61,6 +67,7 @@ import styles from "./AnalysisPanel.module.css";
 import { Failed } from "./Failed.tsx";
 import type { AnalysisUi } from "./panels.ts";
 import { Button } from "../widgets/Button.tsx";
+import { Disclosure } from "../widgets/Disclosure.tsx";
 import { RunButton } from "./RunButton.tsx";
 import { Running } from "./Running.tsx";
 import { buttonOf, statusOf, stoppedNotice } from "./status.ts";
@@ -132,6 +139,10 @@ export const PANEL_ANALYSIS_ATTRIBUTE = "data-panel-analysis";
 /** The attribute of the heading of a panel, by which the band's link to
     an error of the PCA on popgen2.html finds the PCA tab's. */
 export const PANEL_HEADING_ATTRIBUTE = "data-panel-heading";
+
+/** The words of the button of the section that holds the options of an
+    analysis on popgen2.html, which are also its name. */
+export const PARAMETERS = "Parameters";
 
 /** The words of the button that ends the automatic runs of a live
     analysis while none runs. */
@@ -262,7 +273,14 @@ export function AnalysisPanel({
           {stoppedText(ui.name, stoppedBy)}
         </p>
       )}
-      {ui.Options !== null && <ui.Options />}
+      {ui.Options !== null &&
+        (page === undefined ? (
+          <ui.Options />
+        ) : (
+          <Disclosure label={PARAMETERS}>
+            <ui.Options />
+          </Disclosure>
+        ))}
       {linesFirst && <Ready ui={ui} />}
       <Above ui={ui} status={status} live={page?.live.kind === "live"} />
       {stopButton === null && aside === null ? (

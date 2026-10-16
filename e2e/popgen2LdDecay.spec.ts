@@ -26,6 +26,7 @@ import type AxeBuilder from "@axe-core/playwright";
 import type { Download, Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { openParameters } from "./parameters.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -195,6 +196,7 @@ function distance(page: Page): Locator {
 
 /** Types `value` into the field of the largest distance and commits it. */
 async function typeDistance(page: Page, value: string): Promise<void> {
+  await openParameters(ldDecay(page));
   await distance(page).fill(value);
   await distance(page).press("Enter");
 }
@@ -252,6 +254,7 @@ async function ready(
   }
   if (individuals) await pickIndividuals(page, "ld_pops.csv");
   await tab(page, "Populations").click();
+  await openParameters(page.getByRole("tabpanel"));
   await expect(button(diversity(page), "Run")).toBeEnabled({
     timeout: RESULT_TIMEOUT,
   });
@@ -344,7 +347,7 @@ test.describe("LT1 D5 the LD decay in the Populations tab", () => {
     await typeDistance(page, "");
     await expect(button(part, "Run")).toBeDisabled();
     await expect(button(part, "Run")).toHaveAccessibleDescription(
-      "Type the largest distance, above.",
+      "Type the largest distance in Parameters.",
     );
     await expect(distance(page)).toHaveAccessibleDescription(
       /The LD decay needs the largest distance between the two variants of a pair\. Type a distance in base pairs, 100,000 to start with\./u,

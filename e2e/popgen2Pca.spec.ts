@@ -35,6 +35,7 @@ import type { Download, Locator, Page, Route } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { openParameters } from "./parameters.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -48,7 +49,8 @@ const READING =
   "Run once panel.nei is read to the end: the reading under way in the box Variants and the PCA cannot run at once.";
 
 /** The words beside Run locked by the LD pruning with no distance. */
-const NO_DISTANCE = "Type the LD distance above, or turn the LD pruning off.";
+const NO_DISTANCE =
+  "Type the LD distance in Parameters, or turn the LD pruning off.";
 
 /** The reason of the LD pruning with its distance emptied, in full,
     under the field of the distance. */
@@ -216,11 +218,13 @@ async function openHeld(page: Page, file: string): Promise<void> {
   await release(page, "allSoFar");
   await release(page, "result");
   await tab(page, "PCA").click();
+  await openParameters(shown(page));
   await expect(run(page)).toBeEnabled({ timeout: 30_000 });
 }
 
 /** Types the distance of the LD pruning and gives it with Enter. */
 async function typeDistance(page: Page, value: string): Promise<void> {
+  await openParameters(shown(page));
   await distance(page).fill(value);
   await distance(page).press("Enter");
   await expect(run(page)).toBeEnabled();
@@ -372,6 +376,7 @@ test("AP6 D3 the PCA tab opened during the one pass, held: Run disabled with the
 
   await release(page, "allSoFar");
   await release(page, "result");
+  await openParameters(shown(page));
   // The LD pruning starts within 100,000 base pairs, so Run is free with
   // no option typed (the owner, 16 October 2026).
   await expect(run(page)).toBeEnabled({ timeout: 30_000 });
@@ -934,6 +939,7 @@ test("AP6 D3 the PCA tab shown, another variants file opened: its reason in plac
   await page.goto("popgen2.html");
   await pick(page, "panel.nei");
   await tab(page, "PCA").click();
+  await openParameters(shown(page));
   await expect(run(page)).toBeEnabled({ timeout: 30_000 });
   await typeDistance(page, "50000");
 
@@ -1013,6 +1019,7 @@ async function openReady(
   await page.goto("popgen2.html");
   await pick(page, "panel.nei");
   await tab(page, "PCA").click();
+  await openParameters(shown(page));
   await expect(run(page)).toBeEnabled({ timeout: 30_000 });
   if (distance !== null) await typeDistance(page, distance);
 }

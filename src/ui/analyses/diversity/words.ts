@@ -10,6 +10,7 @@
  */
 
 import { holdNoDraw } from "../../../core/analyses/diversity.ts";
+import type { DiversityPage } from "../../../core/analyses/diversity.ts";
 import {
   MAX_NAMED,
   ONE_POPULATION,
@@ -217,6 +218,7 @@ export interface DrawFacts {
 function shortOfDrawText(
   withMinimum: readonly (readonly [string, readonly string[]])[],
   draw: DrawFacts,
+  page: DiversityPage,
 ): string | null {
   const short = withMinimum
     .map(([pop, members]) => [pop, members.length * draw.ploidy] as const)
@@ -224,7 +226,12 @@ function shortOfDrawText(
   const [only] = short;
   if (only === undefined) return null;
   const drawn = `the ${grouped(draw.numCalledAlleles)} the rarefaction draws`;
-  const advice = "Lower the number of chromosomes, above, to have them.";
+  // On popgen2.html the field is in the section "Parameters", which may
+  // be closed (the owner, 16 October 2026).
+  const advice =
+    page === "popgen"
+      ? "Lower the number of chromosomes, above, to have them."
+      : "Lower the number of chromosomes in Parameters to have them.";
   if (short.length === 1) {
     return `${namesOf([only[0]])} holds ${counted(only[1], "chromosome")}, fewer than ${drawn}, so it will have no rarefied values and no spectrum. ${advice}`;
   }
@@ -272,7 +279,13 @@ export function readyLines(
         ? [populationsText(kept.pops)]
         : []),
     ...(kind === "noFile" ? [NO_METADATA_TEXT] : []),
-    ...minimumAndDrawLines(kept.pops, minNumIndividuals, onePopulation, draw),
+    ...minimumAndDrawLines(
+      kept.pops,
+      minNumIndividuals,
+      onePopulation,
+      draw,
+      "popgen",
+    ),
     ...(kept.emptied.length > 0 ? [emptiedText(kept.emptied)] : []),
     ...(waitsForStatistics ? [WAITS_FOR_STATISTICS_TEXT] : []),
   ];
@@ -285,13 +298,14 @@ export function readyLines(
  * hold fewer chromosomes than it, unless the populations hold fewer than
  * 2 between them, when no draw is taken. `onePopulation`, whether `pops`
  * is every individual as one population, which counts no private
- * alleles.
+ * alleles; `page`, whose words say where the field of the draw is.
  */
 export function minimumAndDrawLines(
   pops: PopulationsKept["pops"],
   minNumIndividuals: number,
   onePopulation: boolean,
   draw: DrawFacts | null,
+  page: DiversityPage,
 ): readonly string[] {
   const { withMinimum, under } = populationsWithMinimum(
     pops,
@@ -307,7 +321,7 @@ export function minimumAndDrawLines(
       draw.ploidy,
     )
       ? null
-      : shortOfDrawText(withMinimum, draw);
+      : shortOfDrawText(withMinimum, draw, page);
   return [
     ...(under.length > 0
       ? [

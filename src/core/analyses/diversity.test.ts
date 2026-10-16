@@ -3393,7 +3393,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       counts: [],
     };
     expect(keptNeeds2(withDiversity(project(), 2, 5), all)).toBe(
-      "The rarefaction draws 5 chromosomes, and the largest population, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity.",
+      "The rarefaction draws 5 chromosomes, and the largest population, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in Parameters.",
     );
     expect(keptNeeds2(withDiversity(project(), 2, 4), all)).toBeNull();
   });
@@ -3405,7 +3405,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       counts: [],
     };
     expect(keptNeeds2(withDiversity(noneProject(), 2, 9), all)).toBe(
-      "The rarefaction draws 9 chromosomes, and the one population, Unclassified, holds 8, those of its 4 individuals at a ploidy of 2. Type a number of chromosomes of at most 8 in the options of the diversity.",
+      "The rarefaction draws 9 chromosomes, and the one population, Unclassified, holds 8, those of its 4 individuals at a ploidy of 2. Type a number of chromosomes of at most 8 in Parameters.",
     );
     expect(keptNeeds2(withDiversity(noneProject(), 2, 8), all)).toBeNull();
   });
@@ -3436,7 +3436,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       counts: [],
     };
     expect(keptNeeds2(p, kept)).toBe(
-      "The rarefaction draws 5 chromosomes, and the largest population the thresholds of the individuals keep, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity, or loosen the thresholds of the individuals in the Variants tab.",
+      "The rarefaction draws 5 chromosomes, and the largest population the thresholds of the individuals keep, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in Parameters, or loosen the thresholds of the individuals in the Variants tab.",
     );
     const none = withDiversity(
       deepFreeze<Project>({
@@ -3451,7 +3451,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       list: { kind: "known", individuals: ["i1"] },
     };
     expect(keptNeeds2(none, one)).toBe(
-      "The rarefaction draws 3 chromosomes, and the one population the thresholds of the individuals keep, Unclassified, holds 2, those of its one individual at a ploidy of 2. Type a number of chromosomes of at most 2 in the options of the diversity, or loosen the thresholds of the individuals in the Variants tab.",
+      "The rarefaction draws 3 chromosomes, and the one population the thresholds of the individuals keep, Unclassified, holds 2, those of its one individual at a ploidy of 2. Type a number of chromosomes of at most 2 in Parameters, or loosen the thresholds of the individuals in the Variants tab.",
     );
   });
 
