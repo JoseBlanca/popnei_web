@@ -23,24 +23,33 @@ import type { HeatmapKind, LineKind } from "./plotsPage.ts";
 const LIGHT_BAR = "rgb(0, 114, 178)";
 /** The same in the dark theme, #56b4e9. */
 const DARK_BAR = "rgb(86, 180, 233)";
-/** The background of the light theme, --color-background, #ffffff. */
-const LIGHT_BACKGROUND = "rgb(255, 255, 255)";
-/** The text of the light theme, --color-text, #1a1d21. */
-const LIGHT_TEXT = "rgb(26, 29, 33)";
-/** The outline of a bar in the light theme, --chart-axis, #555d68. */
-const LIGHT_AXIS = "rgb(85, 93, 104)";
+/**
+ * The panel of the light theme, --color-panel, #ffffff: the plots of
+ * popgen2.html stand on the panel, and the background rectangle of an
+ * exported plot and of the scatter's legend is in its colour (charts.css).
+ */
+const LIGHT_PANEL = "rgb(255, 255, 255)";
+/** The panel of the dark theme, --color-panel, #19212c. */
+const DARK_PANEL = "rgb(25, 33, 44)";
+/** The text of the light theme, --color-text, #16202b. */
+const LIGHT_TEXT = "rgb(22, 32, 43)";
+/** The outline of a bar in the light theme, --chart-axis, #47525e. */
+const LIGHT_AXIS = "rgb(71, 82, 94)";
+/** The axes of the dark theme, --chart-axis, #a0acb9. */
+const DARK_AXIS = "rgb(160, 172, 185)";
 /** The threshold in the light theme, --chart-threshold, #b3261e. */
 const LIGHT_THRESHOLD = "rgb(179, 38, 30)";
 /**
  * The colours of the dark theme of src/ui/tokens.css that the light one
- * does not have: --color-text, --color-background, --chart-bar,
- * --chart-axis and --chart-threshold.
+ * does not have: --color-text, #e8edf3, --color-background, #121821,
+ * --color-panel, --chart-bar, --chart-axis and --chart-threshold, #ff8a80.
  */
 const DARK_ONLY = [
-  "rgb(232, 234, 237)",
-  "rgb(22, 24, 27)",
+  "rgb(232, 237, 243)",
+  "rgb(18, 24, 33)",
+  DARK_PANEL,
   DARK_BAR,
-  "rgb(163, 171, 181)",
+  DARK_AXIS,
   "rgb(255, 138, 128)",
 ];
 /** The fonts the exported SVG names (charts.md, "Fonts"). */
@@ -308,7 +317,7 @@ test("VS4 D3 the SVG of toSVG holds no var( and no overlay, has a first backgrou
       "600",
       "375",
     ]);
-    expect(found.firstRect.style).toContain(`fill: ${LIGHT_BACKGROUND}`);
+    expect(found.firstRect.style).toContain(`fill: ${LIGHT_PANEL}`);
     expect(found.numKept).toBe(18);
     for (const style of found.keptStyles) {
       expect(style).toContain(`fill: ${LIGHT_BAR}`);
@@ -1272,7 +1281,7 @@ test("IP7 D3 toSVG of the scatter has no overlay, no mark of the hover and no va
   // A point in no population is a ring: its middle is the background.
   expect(near(found.png.ringPixel, WHITE)).toBe(true);
   expect(found.backgroundStyle).toContain("fill-opacity: 0.85");
-  expect(found.backgroundStyle).toContain(`fill: ${LIGHT_BACKGROUND}`);
+  expect(found.backgroundStyle).toContain(`fill: ${LIGHT_PANEL}`);
 });
 
 test("IP10 D3 a change of theme while the scatter is on the screen draws nothing again, and a later toSVG is in the light theme", async ({
@@ -1324,7 +1333,7 @@ test("IP10 D3 a change of theme while the scatter is on the screen draws nothing
   });
   // The outline of the marks is --chart-axis, which the dark theme changes.
   expect(found.lightStroke).toBe(LIGHT_AXIS);
-  expect(found.darkStroke).toBe("rgb(163, 171, 181)");
+  expect(found.darkStroke).toBe(DARK_AXIS);
   expect(found.mutations).toBe(0);
   expect(found.exported).toHaveLength(1);
   for (const style of found.exported) {
@@ -2054,7 +2063,7 @@ test("PA4 D5 toSVG of the LD decay of ld.nei, from a dark page, is in the light 
     };
   });
   // The page is dark: the axis on the screen is in the dark theme.
-  expect(found.screenAxisStroke).toBe("rgb(163, 171, 181)");
+  expect(found.screenAxisStroke).toBe(DARK_AXIS);
   expect(found.text).not.toContain("var(");
   // No colour of the dark theme but the sky blue of its bars, which is
   // pop_b's in both themes.
@@ -2163,7 +2172,7 @@ test("PA4 D5 toPNG(2) of the LD decay in 600 by 375 pixels is a PNG of 1,200 by 
   expect(Math.abs((blue ?? -99) - ORANGE[2])).toBeLessThanOrEqual(8);
 });
 
-test("PA4 D5 the lines of the four colours without a casing, green, blue, vermilion and reddish purple, are 3:1 or more on the background of the light and the dark theme", async ({
+test("PA4 D5 the lines of the four colours without a casing, green, blue, vermilion and reddish purple, are 3:1 or more on the panel of the light and the dark theme", async ({
   page,
 }) => {
   for (const theme of ["light", "dark"] as const) {
@@ -2175,9 +2184,13 @@ test("PA4 D5 the lines of the four colours without a casing, green, blue, vermil
       if (plots === undefined) throw new Error("e2e/plots.html has not run.");
       const marks = plots.element().querySelector("g.chart-marks");
       if (marks === null) throw new Error("The plot has no marks.");
-      // The background of the theme, resolved by the browser as rgb().
+      // The panel of the theme, resolved by the browser as rgb(): the
+      // plots of popgen2.html stand on the panel, --color-panel, not on
+      // the page's background, and an exported plot's background
+      // rectangle is the panel's colour too (charts.css), so the panel is
+      // what the lines must be told from.
       const probe = document.createElement("div");
-      probe.style.color = "var(--color-background)";
+      probe.style.color = "var(--color-panel)";
       document.body.append(probe);
       const background = getComputedStyle(probe).color;
       probe.remove();
@@ -2190,9 +2203,7 @@ test("PA4 D5 the lines of the four colours without a casing, green, blue, vermil
         casings: marks.querySelectorAll(".chart-line-casing").length,
       };
     });
-    expect(found.background).toBe(
-      theme === "light" ? LIGHT_BACKGROUND : "rgb(22, 24, 27)",
-    );
+    expect(found.background).toBe(theme === "light" ? LIGHT_PANEL : DARK_PANEL);
     expect(found.casings).toBe(0);
     expect(found.lines.map((line) => line.className)).toEqual([
       "chart-line chart-line-colour-2 chart-dash-2",

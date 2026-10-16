@@ -15,13 +15,18 @@ import type { ViewName } from "../src/charts/pca3d.ts";
 import type { Pca3dKind, ViewportPoint } from "./plotsPage.ts";
 import { keepDrawingBuffer } from "./drawingBuffer.ts";
 
-/** --chart-axis of the light theme, #555d68, and of the dark, #a3abb5. */
-const LIGHT_AXIS = [85, 93, 104] as const;
-const DARK_AXIS = [163, 171, 181] as const;
+/** --chart-axis of the light theme, #47525e, and of the dark, #a0acb9. */
+const LIGHT_AXIS = [71, 82, 94] as const;
+const DARK_AXIS = [160, 172, 185] as const;
 /** --chart-cat-1, the colour of the first group, #e69f00, and --chart-cat-2, #56b4e9. */
 const ORANGE = [230, 159, 0] as const;
 const SKY_BLUE = [86, 180, 233] as const;
-/** The background of the light theme, --color-background, #ffffff. */
+/**
+ * The white under the canvas, which draws no background of its own: the
+ * page of the tests of the plots takes the tokens but not base.css, so
+ * its body keeps the browser's white; on popgen2.html the 3D view stands
+ * on the panel, --color-panel, also #ffffff in the light theme.
+ */
 const WHITE = [255, 255, 255] as const;
 /** The name of point 0 of the cloud: markup, which must show as text. */
 const MARKUP_NAME = '<img src=x onerror="window.plotsInjected = true">';
