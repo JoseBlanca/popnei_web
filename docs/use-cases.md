@@ -139,10 +139,17 @@ the coordinates of the individuals as a table.
 
 1. They open the variants file, and, if they have it, a file of the
    individuals with their metadata.
-2. They run a PCA. Because linked regions weigh too much in it, they
-   first set an LD pruning, which needs a distance in base pairs that
-   depends on their genome and that they type, from what they know of
-   their species or from the LD decay of case 4.
+2. They run a PCA. Because linked regions weigh too much in it, it
+   prunes the variants by LD first, which needs a distance in base pairs
+   that depends on their genome. On `popgen2.html` the pruning starts
+   within 100,000 base pairs, a start that suits many genomes and not
+   all, so a user who keeps the defaults runs the PCA with one press;
+   one who knows their species, or has seen its LD decay in case 4,
+   types their own. The owner decided the default on 16 October 2026;
+   until then the user had to type a distance before the first PCA.
+   The options, the method and the filters of the PCA, are folded in a
+   section "Parameters", closed when the page opens, with Run near the
+   top of the tab, as the owner decided the same day.
 3. They look at the first components, coloured by a column of the
    metadata when they have one, and turn the plot in three dimensions.
 4. They download the plot and the coordinates.
@@ -181,7 +188,13 @@ and to write them up.
 
 1. They open the variants file and the file of the populations.
 2. They see how many individuals each population has, since a small one
-   gives values that cannot be compared with the others.
+   gives values that cannot be compared with the others. On
+   `popgen2.html` the box of the individuals file says it in one line,
+   "180 individuals classified in 3 populations, 20 unclassified", and
+   the table of the individuals of each population is at the top of the
+   Individuals tab, with the button that removes the file, as the owner
+   decided on 16 October 2026; until then the table and the button
+   stood in the box.
 3. They compute the diversity of each population: the expected and the
    observed heterozygosity, the inbreeding coefficient, the proportion of
    polymorphic variants, the number of alleles and of private alleles,
@@ -190,7 +203,12 @@ and to write them up.
    variants falls with the distance between them, up to a largest
    distance they type, and read the distance at which r² falls to half
    its maximum. The owner put the LD decay in this case on 5 October
-   2026.
+   2026. On `popgen2.html` the largest distance starts at 100,000 base
+   pairs, as the owner decided on 16 October 2026, so that it runs with
+   no option typed; a half distance close to it, which a warning
+   reports, says the default was too short for their genome. The
+   options of the diversity, of the LD decay and of the distances are
+   each in a section "Parameters", closed when the page opens.
 5. They compute the distances between the populations, Hudson's Fst or
    Jost's D, and look at them as a heatmap.
 6. They download the tables and the plots.

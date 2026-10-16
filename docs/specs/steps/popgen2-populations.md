@@ -791,7 +791,11 @@ as the diversity is. The owner's decisions it takes, of 12 October
   or the user presses Stop; the owner accepted that cost.
 - **The time of its last run** stands beside its button, so that the
   user knows what a change will cost them.
-- **No default distance**: until a distance is typed it is locked, with
+- **A default distance**: the largest distance starts at 100,000 base
+  pairs, so that the LD decay runs with no option typed, as the owner
+  decided on 16 October 2026; until then it had no default, by the rule
+  of no default that depends on the genome, and was locked until a
+  distance was typed. Once the user empties the field it is locked, with
   the reason, and never started by itself.
 
 Everything else is the old panel's: its options and their bounds, the
@@ -822,20 +826,29 @@ its own below it.
 The two fields of the old panel (`ldDecay.md`, "What it shows", the
 options), with their labels, their lines, the reason beside the field
 of the distance and their refusals: "Largest distance between the two
-variants of a pair, in base pairs, from 50", empty until typed, and
+variants of a pair, in base pairs, from 50", at 100,000, and
 "Maximum major allele frequency in each population, from 0.5 to 1",
 0.95. Each is a command of `setAnalysisOptions` sent with `store.apply`,
 with the old descriptions. A change of either while the LD decay is
 live starts it again a second later; while it runs both are greyed with
 the words of the lock of the filters (below, "While it runs").
 
-Beside the field of the distance, while no distance is typed, the line
-of help of the old panel says why it has to be typed: "The LD decay
-needs the largest distance between the two variants of a pair. It has
-no default, because it depends on how far linkage disequilibrium
-extends in the genome of your species. Type a distance in base pairs.";
-and for a distance the memory does not allow, the reason of that lock,
-drawn as an error. The populations it counts are those of this page,
+Under the field of the distance, its line says that the default is a
+start and not a value for every genome: "How far to look for pairs.
+100,000 bp is a start that suits many genomes but not all. The result
+gives each population's half distance, where its fitted curve falls to
+half its r² at distance 0; a half distance close to the largest
+distance means it was not far enough." The old panel's line says
+"Choose a distance beyond which you expect little LD in your species."
+in place of the second sentence. The warning of a half distance close
+to the largest distance is then also the sign of a default too short
+for the user's genome. The field emptied by the user is no distance
+(`onEmptied` of the number field; on the old page an emptied field shows
+its number again), and beside it a line of help says why one is needed:
+"The LD decay needs the largest distance between the two variants of a
+pair. Type a distance in base pairs, 100,000 to start with."; and for a
+distance the memory does not allow, the reason of that lock, drawn as
+an error. The populations it counts are those of this page,
 below.
 
 ### The populations it runs on
@@ -946,7 +959,7 @@ disabled, or beside Stop recalculating while it is live:
 |---|---|
 | the one pass running or about to start, stopped, or refused | the three of the diversity's table with "the LD decay": "Run once ld.nei is read to the end: the reading under way in the box Variants and the LD decay cannot run at once." and the two others |
 | the individuals file being read | "The LD decay waits for ld_pops.csv to be read." |
-| no distance typed | "Type the largest distance, above.", with the line of help beside the field |
+| the distance emptied by the user | "Type the largest distance, above.", with the line of help beside the field |
 | a distance whose counts would take more than 1 GB for the populations of the variants file | "With 2 populations, the largest distance can be at most 12,500,000 base pairs: the pairs are counted at every distance up to it, …", the old words, also beside the field; "The largest distance can be at most 25,000,000 base pairs: …" for one |
 | the thresholds of the individuals keep no individual at all | the store's words of `keptNoneReason`, as for the diversity |
 | the thresholds of the individuals keep no individual of any population | the diversity's words of this page, "… Loosen the thresholds of the individuals in the Variants tab to keep them." |
@@ -1124,7 +1137,8 @@ another variants file.
 `e2e/fixtures/ld.nei` and `ld_pops.csv`, the thresholds as a new page
 has them, the missing data at 0.1, which keeps all 500 variants:
 
-- **The numbers**: 100000 typed and Run: the rows pop_a and pop_b, 50
+- **The numbers**: Run with no option typed, the distance at 100000:
+  the rows pop_a and pop_b, 50
   individuals, 432 variants, 29,367 pairs and half distances "7,548"
   and "7,340"; no warning; "The last run, pairs up to 100,000 base
   pairs, took less than a second."; the
@@ -1132,7 +1146,8 @@ has them, the missing data at 0.1, which keeps all 500 variants:
   "7,416", with no Run pressed. With no individuals file, the one row
   Unclassified, 100 individuals, 432 variants, 29,367 pairs, "7,151"
   (7150.803607577506, popnei 0.2.2 under node on 12 October 2026).
-- **The locks**: before a distance, Run disabled with "Type the largest
+- **The locks**: the field at 100000 and Run enabled when the tab
+  opens; the field emptied, Run disabled with "Type the largest
   distance, above." and the line of help beside the field; 30000000
   typed, the lock of the memory with "With 2 populations, the largest
   distance can be at most 12,500,000 base pairs".
@@ -1153,8 +1168,9 @@ has them, the missing data at 0.1, which keeps all 500 variants:
 - axe with the LD decay ready, running and done, light and dark.
 
 **The screens**, `--project=screens`, at 1280 and 320 px, light and
-dark: `popgen2-ld-decay-locked` (no distance typed), `-ready`,
-`-running`, `-waiting` (the diversity running), `-done`, `-stopped`.
+dark: `popgen2-ld-decay-locked` (the distance emptied), `-ready` (no
+option typed), `-done` (run with no option typed),
+`-running`, `-waiting` (the diversity running), `-stopped`.
 
 ## Choices made by the session
 

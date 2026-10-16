@@ -2024,10 +2024,12 @@ step", which the page does not have.
   beside Run, "Type the LD distance above, or turn the LD pruning off.",
   since the reason in full, `pruningDistanceReason` with that page's
   words, stands under the field of the distance: "The LD pruning of the
-  PCA needs the distance within which variants are compared. It has no
-  default, because it depends on how far linkage disequilibrium extends
-  in the genome of your species. Type a distance in base pairs, or turn
-  the LD pruning off.", "the PCoA" by the method. Until 10 October 2026
+  PCA needs the distance within which variants are compared. Type a
+  distance in base pairs, 100,000 to start with, or turn the LD pruning
+  off.", "the PCoA" by the method. Until 16 October 2026, with no
+  default, it said "It has no default, because it depends on how far
+  linkage disequilibrium extends in the genome of your species." in
+  place of "100,000 to start with", as the old page still does. Until 10 October 2026
   `needs` gave the words in full, drawn twice on the screen and read
   twice by a screen reader (`docs/specs/steps/popgen2-pca.md`, "Its
   filters").
@@ -2213,7 +2215,7 @@ filter and the missing data at 0.1:
 
 | the Variants tab | the PCA's options | the filters given |
 |---|---|---|
-| missing data 0.1 | `PCA2_DEFAULTS` | missing data 0.1, LD r² 0.1 with no distance |
+| missing data 0.1 | `PCA2_DEFAULTS` | missing data 0.1, LD r² 0.1 within 100,000 |
 | missing data 0.1 | own missing data 0.05 | missing data 0.05, LD |
 | missing data 0.03 | own missing data 0.05 | missing data 0.03, LD |
 | missing data off | own missing data 0.05 | missing data 0.05, LD |
@@ -2235,9 +2237,10 @@ the old rows of "How it is verified", above, unchanged.
   The Variants tab's MAF from 0.95 to 0.92 while the PCA's own is 0.9,
   the same key; to 0.85, another.
 - **`needs`** of `pcaOnPopgen2`: an individuals file pending, refused,
-  or lacking individuals of the variants file, no reason; `PCA2_DEFAULTS`
-  with no distance, the words above; 50000, none; 9,382 individuals,
-  the limit.
+  or lacking individuals of the variants file, no reason; `PCA2_DEFAULTS`,
+  within 100,000, none, and the key of 100,000 typed; the distance
+  emptied, `maxDist` `null`, the words above; 50000, none; 9,382
+  individuals, the limit.
 - **`pcaColours`** with page `"popgen2"`, on `panel.nei` and
   `panel_pops.csv`: no individuals file, one group "Unclassified" of 200
   and no note; the file pending, the same; `popcat`, p0 48, p2 84, p1

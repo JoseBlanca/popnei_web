@@ -1174,14 +1174,25 @@ Then three, in this order:
   disequilibrium (LD)", on when the page opens, with two number fields
   under it while on: "Maximum r² with a variant kept before it, from 0
   to 1", at 0.1, and "Distance within which variants are compared, in
-  base pairs, from 1", empty. The Variants tab has no LD pruning, so the
-  PCA's is its own alone. Under the distance, a line says what it is in
-  terms of the data, with no number, since no distance holds for every
-  genome (the owner's rule of no default that depends on the genome):
-  "Choose the distance beyond which the r² between two variants falls
-  to its background level in your species, as studies of its LD decay
-  report." While the distance is empty, the reason of the lock, in
+  base pairs, from 1", at 100,000, so that the PCA runs with no option
+  typed. The owner decided the default on 16 October 2026, reversing for
+  this distance the rule of no default that depends on the genome of 27
+  and 28 September 2026; the option not taken, the field empty and Run
+  locked until the user typed a distance, made every user stop before
+  their first PCA for a number many of them would not know. The Variants
+  tab has no LD pruning, so the PCA's is its own alone. Under the
+  distance, a line says what it is and that the start is not right for
+  every genome: "The window within which pairs of variants are compared.
+  100,000 bp is a start that suits many genomes but not all; the LD
+  decay of the Populations tab shows how far LD extends in your data."
+  Until 16 October 2026 it said "Choose the distance beyond which the r²
+  between two variants falls to its background level in your species,
+  as studies of its LD decay report." The field emptied by the user is
+  no distance, which locks Run: the field calls `onEmptied` of the
+  number field, where on the old page an emptied field shows its number
+  again. While the distance is empty, the reason of the lock, in
   full, stands under that field and describes it to a screen reader,
+  is announced in the status region,
   drawn as a line of what is needed, in the colour of the lines of help
   and with no mark of a problem, since the user caused no error; beside
   Run a short line points to it (below). Until 10 October 2026 the same
@@ -1199,9 +1210,13 @@ a whole number from 1 to 9007199254740991 for the distance, written
 with no comma between thousands; the empty distance field sends nothing
 on the arrow keys, Page Up, Page Down, Home and End.
 
-**The line of what it will run on**, as on the old panel: "200
-individuals of panel.nei", or "111 of the 200 individuals of panel.nei,
-those the filters of individuals keep".
+**The line of what it will run on**, only when the filters of
+individuals remove some: "111 of the 200 individuals of panel.nei,
+those the filters of individuals keep". When the PCA uses every
+individual of the variants file the tab says nothing of them, since the
+boxes at the top already count them; the owner decided it on 16 October
+2026. Until then the tab said "200 individuals of panel.nei", as the
+old panel still does.
 
 **Run and Stop**, one button, with the lock beside it as text that
 describes it. Run makes the PCA live for the file and starts it at
@@ -1559,8 +1574,8 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | a filter whose slider would have no range | "0, as in the Variants tab. The PCA cannot be stricter than the Variants tab here." |
 | the Variants tab stricter than the PCA's own | "The Variants tab keeps at most 0.03, stricter than the 0.05 set here, so the PCA uses 0.03." |
 | the lock and the help of the one pass | the table of "Run and Stop" |
-| under the field of the distance | "Choose the distance beyond which the r² between two variants falls to its background level in your species, as studies of its LD decay report." |
-| under the field of the distance, while it is empty | "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off."; "PCoA" under the PCoA |
+| under the field of the distance | "The window within which pairs of variants are compared. 100,000 bp is a start that suits many genomes but not all; the LD decay of the Populations tab shows how far LD extends in your data." |
+| under the field of the distance, once the user emptied it | "The LD pruning of the PCA needs the distance within which variants are compared. Type a distance in base pairs, 100,000 to start with, or turn the LD pruning off."; "PCoA" under the PCoA |
 | beside Run, while the distance is empty | "Type the LD distance above, or turn the LD pruning off." |
 | an error, a refusal of the variants file itself, which the one pass would have met first | the words of the box Variants (`src/core/analyses/fileRefusals.ts`), with "in the box Variants" after "open it again" and "Open another variants file", and "so the PCA cannot be calculated" where the box says the variants cannot be counted: "panel.nei has no variants. Open another variants file in the box Variants."; "panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again in the box Variants.", for a gzipped file cut short or a damaged batch of a `.nei` file; a variant at position 0, a position beyond 2,147,483,647, a genotype of another ploidy, and a line of the VCF popnei cannot read, each ending "and open it again in the box Variants." |
 | an error, the statistics of each individual refused | "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the PCA was not run.", or "… so the PCA cannot run." when its own Run did not wait for them, followed by the row above with "so the statistics of each individual cannot be calculated", or, for another refusal, "popnei could not read panel.nei: ‹popnei's words›. Open the file again in the box Variants, or another file." |
@@ -1845,8 +1860,12 @@ engines that start on the owner's Mac, on `panel.nei`,
   them, the missing rate of the variants at 0.1: the PCA tab opened
   during the one pass, held (`e2e/holdWorker.ts`), shows Run disabled
   with "Run once panel.nei is read to the end: the reading under way
-  …"; after the pass, Run disabled with the reason of the LD pruning
-  with no distance; 50000 typed: Run; "PC1 (3.55%)" and "PC2 (3.40%)"
+  …", and no line of the individuals; after the pass, Run enabled with
+  the distance at 100000; the distance emptied, Run disabled with the
+  reason of the LD pruning with no distance; 50000 typed: Run. With no
+  option typed, the LD pruning within 100,000 bp: "PC1 (3.55%)" and
+  "PC2 (3.40%)", the same as within 50,000, 548 variants kept either
+  way (popnei 0.2.2 under node, 16 October 2026),
   on the 2D plot's axes, PC3 1.89% in the explained variance, `s000` at
   −0.7139 and 7.6765 in the table, the caption "… from 548 variants",
   no warning; the legend with "Unclassified (200)" alone, and, after
@@ -1951,8 +1970,9 @@ the PCoA, 198 components, PC1 3.679886264523731, `lingoesConstant`
 these values.
 
 **The screens**, `--project=screens`: the row with greyed tabs and a
-tooltip shown; the PCA tab locked, locked by the empty distance once
-the file is read, `popgen2-pca-locked-ld`, ready, running, done in 3D
+tooltip shown; the PCA tab locked, locked by the distance emptied once
+the file is read, `popgen2-pca-locked-ld`, ready with no option typed,
+`popgen2-pca-ready`, running, done in 3D
 and in 2D, with the PCoA's warning, while the result's code downloads
 and after it could not be; a menu of a download open; about to start,
 `popgen2-pca-about-to-start`, and running started by itself with the

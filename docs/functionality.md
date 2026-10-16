@@ -445,6 +445,25 @@ whole file as a table sorted by any column
 `individuals-file` on 9 October 2026 and not yet tried by the owner).
 `popgen.html` keeps the rule above.
 
+Since 16 October 2026, by the owner's decision of that day, the box
+"Individuals" is a summary: the name of the file, the list "Column of
+the populations", and one line of the individuals the filters keep,
+such as "180 individuals classified in 3 populations, 20 unclassified",
+"200 individuals classified in 3 populations" when all are classified,
+or "200 individuals, all unclassified" with no file, with "None"
+chosen, or with a column that classifies none. The list stays in the
+box because every analysis of the populations reads it and the line
+counts by it; so do the warnings that say the line cannot be trusted, a
+column of more than 20 values, no individual of the variants file in
+the file, no column to choose. The table of the individuals per
+population, under the heading "Individuals per population, after the
+filters of individuals", with the line of the unclassified, and the
+button that removes the file, "Remove panel_pops.csv", move to the top
+of the Individuals tab, where the user goes for the detail of the
+file. Until then the box held the table and Remove, and the page
+opened taller than the window before the user reached the tabs. Built
+on the branch `popgen2-tidy` and not yet tried by the owner.
+
 ### The format
 
 Most users make these files in Excel, whose default file is `.xlsx`, and
@@ -590,8 +609,19 @@ give the principal components that go into the GWAS as covariates.
   Variants tab keeps, and its own missing data and MAF can only be
   stricter, two sliders whose range ends at the Variants tab's values; its LD
   pruning, which the Variants tab does not have, is on at an r² of 0.1
-  with no distance until the user types one or turns it off. The old
-  page keeps the rule above. The coordinates are downloaded from the
+  within 100,000 base pairs, so that the PCA runs with no option typed.
+  The owner decided the distance on 16 October 2026, reversing for this
+  distance alone the rule of no default that depends on the genome of
+  27 September 2026: 100,000 bp is a start that suits many genomes and
+  not all, the line under the field says so, and the LD decay of the
+  Populations tab shows how far LD extends in the user's data. The
+  option not taken was to keep the field empty and the PCA locked until
+  the user typed a distance, which stopped every user before their
+  first PCA for a number many do not know. A field the user empties is
+  no distance, and the PCA waits for one, with the reason beside the
+  field and beside Run. Until 16 October 2026 the pruning started with
+  no distance. The old page keeps the rule above, and the LD filter of
+  the Variants tab still has no default distance. The coordinates are downloaded from the
   plot itself, as the names and PC1 to PC10.
 - On `popgen2.html` the PCA has a tab of its own, built on the branches
   `pca-tab` (9 and 10 October 2026, `docs/plans/no-undo.md`) and
@@ -601,7 +631,32 @@ give the principal components that go into the GWAS as covariates.
   Variants, Individuals, Populations and Distances, and is greyed with
   its reason until a variants file is open. The user starts the PCA
   with the tab's button Run, which waits until the page has read the
-  variants file to the end for its plots.
+  variants file to the end for its plots. When the filters of
+  individuals remove some individuals the tab says how many it runs
+  on, "111 of the 200 individuals of panel.nei, those the filters of
+  individuals keep"; when it uses them all it says nothing of them,
+  since the boxes at the top count them, as the owner decided on 16
+  October 2026.
+
+  The options of each analysis, in the PCA, Populations and Distances
+  tabs, are in a section that opens and closes, "Parameters", closed
+  when the page opens, so that Run stands near the top of the tab and a
+  user who keeps the defaults runs the analysis with one press; the
+  owner decided it on 16 October 2026. There is one section for the
+  PCA, one each for the diversity and the LD decay, and one for the
+  distances, and each holds every option of its analysis, the method
+  and the filters of the PCA among them; the components on the axes
+  and the colour of the points belong to the result and stay out. The
+  header is the word alone: the option not taken, the values in force
+  shown in the closed header, the owner refused as too long. It is a
+  button that the keyboard reaches and opens with Enter or Space, and
+  that tells a screen reader whether it is open. A reason that keeps
+  Run from running because of an option stays beside Run, visible with
+  the section closed, "Type the LD distance in Parameters, or turn the
+  LD pruning off."; the full reason stays beside its field inside the
+  section. Whether a section is open is not saved, and stays as the
+  user left it while they move between tabs. Built on the branch
+  `popgen2-tidy` and not yet tried by the owner.
 
   While the PCA runs, the thresholds and the FILTER box of the Variants
   tab, the PCA's own options and the download of the filtered variants
@@ -938,7 +993,7 @@ individuals, because r² is then biased upwards.
   since what fits depends on the genome; the user types it, and the
   analysis cannot run until then, as with the distance of the LD pruning
   (section 3), by the owner's rule of no default that depends on the
-  genome.
+  genome. On `popgen2.html` it starts at 100,000 base pairs, below.
 - It reads the variants every filter of the Variants step keeps but the
   LD pruning, which would take out the very pairs it measures, as the
   owner decided on 30 September 2026. It has no LD filter of its own,
@@ -980,8 +1035,16 @@ As the owner decided on 12 October 2026, once its Run has been pressed
 the LD decay is calculated again by itself a second after each change
 of what it reads: the filters of the Variants tab, its two options and
 the populations. It is the last of the four analyses to start after a
-change (section 5). With no largest distance typed it cannot run, and
-it never starts by itself. While it runs, what it reads is greyed with
+change (section 5). Its largest distance starts at 100,000 base
+pairs, so that it runs with no option typed, as the owner decided on 16
+October 2026, reversing on this page the rule of no default that
+depends on the genome; the option not taken, the field empty until the
+user typed a distance, stopped every user before the analysis that is
+there to tell them that distance. 100,000 bp is a start that suits many
+genomes and not all: the line under the field says so, and the warning
+of a half distance close to the largest distance is then also the sign
+that the default is too short for the user's genome. With the field
+emptied by the user it cannot run, and it never starts by itself. While it runs, what it reads is greyed with
 the reason, as for the diversity, and with a long distance on a dense
 file that lasts minutes, until it ends or the user presses Stop; the
 owner accepted that cost on 12 October 2026. Measured on 13 October
@@ -1326,7 +1389,9 @@ and popnei's release `js-v0.1.0-dev.3` of 28 September 2026 has them.
    PCA's own LD filter starts at an r² of 0.1 with no default distance,
    which the user types, as the owner decided on 27 September 2026 for
    its pruning, which since 28 September 2026 follows the LD filter of
-   the dataset unless the user sets one for the PCA (section 5).
+   the dataset unless the user sets one for the PCA (section 5). On
+   `popgen2.html` it starts within 100,000 base pairs, as the owner
+   decided on 16 October 2026.
    The LD filter of the dataset is another thing, which starts at r² 0.3
    when the user turns it on, as the owner left it on 26 September 2026
    (`docs/specs/stage-3-open-points.md`), and with no distance, which

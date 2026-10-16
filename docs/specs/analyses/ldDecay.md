@@ -175,7 +175,7 @@ warnings").
 
 | option | what it is | default | from |
 |---|---|---|---|
-| `maxDist` | the largest distance between the two variants of a pair, in base pairs; `null` until the user types one | `null` | decision 10 of the owner, 30 September 2026 |
+| `maxDist` | the largest distance between the two variants of a pair, in base pairs; `null` until the user types one | `null`; 100,000 on popgen2.html (below, "On popgen2.html") | decision 10 of the owner, 30 September 2026; on popgen2.html the owner, 16 October 2026 |
 | `maxAllowedMaf` | the largest major allele frequency a variant has in a population and is still counted there | 0.95 | popnei's default of `calcLdAndDistPerPop` |
 
 **The largest distance has no default.** How far LD extends depends on
@@ -968,6 +968,23 @@ filters of individuals", which that page does not have.
 
 ### What differs
 
+- **The defaults**, `LD_DECAY2_DEFAULTS`, `{ maxDist: 100000,
+  maxAllowedMaf: 0.95 }`: the largest distance starts at 100,000 base
+  pairs, `LD_DECAY2_MAX_DIST`, so that the LD decay runs with no option
+  typed. The owner decided it on 16 October 2026, reversing on this
+  page decision 10 of 30 September 2026, "The largest distance has no
+  default", which the old page keeps; the option not taken, the field
+  empty and Run locked until a distance was typed, stopped every user
+  before their first LD decay for a number the LD decay is there to
+  find. 100,000 bp is a start that suits many genomes and not all: in a
+  species whose LD extends further, the warning of a half distance
+  close to the largest distance (above, "Its warnings") is the sign
+  that the default was too short. `ldDecayOptions(p, page)` reads the
+  options with the defaults of the page, and so do the commands of the
+  panel, so that a change of the frequency with none set keeps the
+  default distance. The key of the default is that of 100,000 typed,
+  and its version stays 1. The user who empties the field sets `maxDist`
+  `null`, which locks the analysis as below.
 - **The populations** are the diversity's of that page: the key holds
   `popgen2Populations(p)`, and `run` sends `popgen2PopulationsKept(p,
   c.individuals).pops`, the unclassified left out, or the one
@@ -976,7 +993,10 @@ filters of individuals", which that page does not have.
 - **`needs`**, without `individualsNeeds` and `populationsNeeds` of
   `docs/specs/core/project.md`, in this order: the individuals file being
   read, "The LD decay waits for ld_pops.csv to be read."; no distance,
-  "Type the largest distance, above."; a distance above what the memory
+  once the user emptied the field, "Type the largest distance, above.",
+  with beside the field "The LD decay needs the largest distance between
+  the two variants of a pair. Type a distance in base pairs, 100,000 to
+  start with." in place of the old page's "It has no default, …"; a distance above what the memory
   allows for the populations of `popgen2PopulationsToRun(p)`, the
   populations of every individual of the variants file before the
   thresholds of the individuals, in the old words. `maxDistReason`
@@ -1058,6 +1078,13 @@ export const ldDecayOnPopgen2: AnalysisDef<Job, JobResult>;
 
 /** The page of the definition a store runs; a defect for another. */
 export function ldDecayPageOf(def: AnalysisDef<Job, JobResult>): LdDecayPage;
+
+/** The defaults of popgen2.html: { maxDist: 100000, maxAllowedMaf: 0.95 }. */
+export const LD_DECAY2_MAX_DIST = 100_000;
+export const LD_DECAY2_DEFAULTS: LdDecayOptions;
+
+/** The options of the project, or the defaults of the page `page`. */
+export function ldDecayOptions(p: Project, page: LdDecayPage): LdDecayOptions;
 
 /** What stands beside the field of the largest distance, on the page `page`. */
 export function maxDistReason(p: Project, page: LdDecayPage): string | null;
