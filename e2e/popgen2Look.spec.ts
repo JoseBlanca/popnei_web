@@ -87,7 +87,7 @@ async function drawnInPageColour(page: Page): Promise<string[]> {
           (parseFloat(style.borderTopWidth) > 0 &&
             style.borderTopColor === background)
         ) {
-          const words = (element.textContent ?? "").trim().slice(0, 30);
+          const words = element.textContent.trim().slice(0, 30);
           found.add(
             `${element.getAttribute("role") ?? element.tagName.toLowerCase()}, "${words}"`,
           );
@@ -153,4 +153,132 @@ test("on the white panels the tables, their headers, their fades, the legend of 
       expect(await drawnInPageColour(page), `${name}, ${scheme}`).toEqual([]);
     }
   }
+});
+
+/** Serves every calculation worker with the opening of the file `name`
+    kept from its runner, so that the file stays being opened; to call
+    before the page is opened (as in popgen2Tabs.spec.ts). */
+async function holdOpening(page: Page, name: string): Promise<void> {
+  await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
+    const response = await route.fetch();
+    const script = await response.text();
+    const front = `self.addEventListener("message", (event) => { if (event.data !== null && typeof event.data === "object" && event.data.kind === "open" && event.data.file.name === ${JSON.stringify(name)}) { event.stopImmediatePropagation(); } });\n`;
+    await route.fulfill({ response, body: front + script });
+  });
+}
+
+/** The colour the page gives the system's colour `name`, Highlight,
+    GrayText, Canvas. */
+async function systemColour(page: Page, name: string): Promise<string> {
+  return page.evaluate((colour) => {
+    const probe = document.createElement("div");
+    probe.style.color = colour;
+    document.body.append(probe);
+    const value = getComputedStyle(probe).color;
+    probe.remove();
+    return value;
+  }, name);
+}
+
+/** The border of `side` of the tab `tab`: its width and its colour,
+    "none" when it is 0 px wide, since nothing is drawn. */
+async function bar(
+  tab: Locator,
+  side: "top" | "bottom",
+): Promise<{ readonly width: string; readonly colour: string }> {
+  return tab.evaluate((element, where) => {
+    const style = getComputedStyle(element);
+    const [width, colour] =
+      where === "top"
+        ? [style.borderTopWidth, style.borderTopColor]
+        : [style.borderBottomWidth, style.borderBottomColor];
+    return { width, colour: parseFloat(width) > 0 ? colour : "none" };
+  }, side);
+}
+
+test.describe("in the forced colours of Windows", () => {
+  // Playwright emulates forced colours in Chromium alone.
+  test.skip(
+    ({ browserName }) => browserName !== "chromium",
+    "forced colours are emulated in Chromium alone",
+  );
+
+  test("the tab shown of the page's row has a bar of 3 px in Highlight, at its top from 640 px and under it at 320 px; a tab greyed while shown has it in GrayText, apart from a greyed tab not shown", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await holdOpening(page, "panel.vcf.gz");
+    await page.goto("popgen2.html");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Popnei" }),
+    ).toBeVisible();
+    const highlight = await systemColour(page, "Highlight");
+    const grey = await systemColour(page, "GrayText");
+    expect(highlight).not.toBe(grey);
+    await pickInto(page, "Variants", "panel.nei");
+    await expect(tab(page, "PCA")).not.toHaveAttribute("aria-disabled");
+
+    for (const [width, side] of [
+      [1280, "top"],
+      [320, "bottom"],
+    ] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await tab(page, "Variants").click();
+      expect(await bar(tab(page, "Variants"), side)).toEqual({
+        width: "3px",
+        colour: highlight,
+      });
+      expect((await bar(tab(page, "Individuals"), side)).colour).not.toBe(
+        highlight,
+      );
+    }
+
+    // The PCA shown, another variants file opened: the PCA greyed while
+    // shown, and Distances, with no individuals file, greyed and not
+    // shown.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await tab(page, "PCA").click();
+    await pickInto(page, "Variants", "panel.vcf.gz");
+    await expect(tab(page, "PCA")).toHaveAttribute("aria-disabled", "true");
+    await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
+    for (const [width, side] of [
+      [1280, "top"],
+      [320, "bottom"],
+    ] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await bar(tab(page, "PCA"), side)).toEqual({
+        width: "3px",
+        colour: grey,
+      });
+      expect((await bar(tab(page, "Distances"), side)).colour).not.toBe(grey);
+    }
+  });
+
+  test("the tab shown of a row inside a result, Plot or Table of the spectrum, has its bar in Highlight, the other none", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await page.emulateMedia({ forcedColors: "active" });
+    await page.goto("popgen2.html");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Popnei" }),
+    ).toBeVisible();
+    const highlight = await systemColour(page, "Highlight");
+    await pickInto(page, "Variants", "panel.nei");
+    await pickInto(page, "Individuals", "panel_pops.csv");
+    await tab(page, "Populations").click();
+    await expect(button(page, "Run").first()).toBeEnabled({
+      timeout: RESULT_TIMEOUT,
+    });
+    await button(page, "Run").first().click();
+    const inner = shown(page).getByRole("tablist").first();
+    await expect(inner).toBeVisible({ timeout: RESULT_TIMEOUT });
+    const shownTab = inner.getByRole("tab", { selected: true });
+    const otherTab = inner.getByRole("tab", { selected: false }).first();
+    expect(await bar(shownTab, "bottom")).toEqual({
+      width: "3px",
+      colour: highlight,
+    });
+    expect((await bar(otherTab, "bottom")).colour).not.toBe(highlight);
+  });
 });

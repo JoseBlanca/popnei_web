@@ -174,6 +174,78 @@
   }
 }
 
+/* In the forced colours of Windows, High Contrast, every box-shadow is
+   erased, so the bar at the top of the tab shown of the page's row was
+   gone and a tab greyed while shown looked like any greyed tab; and a
+   border is drawn in a colour of the system even when transparent, so
+   every tab had the same line under it, in the page's row and in the
+   rows inside a result (seen in Chromium, 16 October 2026). There the
+   bars are real borders in the system's colours, which forced colours
+   keep: Highlight for the tab shown, GrayText for a tab greyed while
+   shown. A tab not shown has no border under it but room as high, so
+   that the line of its row shows under it and no label moves; the tabs
+   of the page's row all have a border at their top in Canvas, the
+   colour of the page, for the same reason; the tab shown there has
+   Canvas under it, open into its panel as the joined tab is. A greyed
+   tab's words are in GrayText, the system's colour of what cannot be
+   used. Checked by e2e/popgen2Look.spec.ts in Chromium. */
+@media (forced-colors: active) {
+  .tab {
+    border-block-end-width: 0;
+    padding-block-end: var(--tab-bar);
+  }
+
+  .tab[data-selected] {
+    border-block-end: var(--tab-bar) solid Highlight;
+    padding-block-end: 0;
+  }
+
+  .tab[data-greyed],
+  .tab[data-greyed][data-hovered] {
+    color: GrayText;
+  }
+
+  .tab[data-greyed][data-selected] {
+    border-block-end-color: GrayText;
+  }
+
+  .pageRow .tab {
+    border-block-start: var(--tab-bar) solid Canvas;
+    border-block-end-width: 0;
+    padding-block-end: var(--tab-bar-page);
+  }
+
+  .pageRow .tab[data-selected] {
+    border-block-start-color: Highlight;
+    border-block-end: var(--tab-bar-page) solid Canvas;
+    padding-block-end: 0;
+  }
+
+  .pageRow .tab[data-greyed][data-selected] {
+    border-block-start-color: GrayText;
+    border-block-end-color: Canvas;
+  }
+}
+
+/* The same on a narrow window, where the bar of the page's row is under
+   the tab shown, as above. */
+@media (forced-colors: active) and (width < 40em) {
+  .pageRow .tab {
+    border-block-start: 0;
+    border-block-end-width: 0;
+    padding-block-end: var(--tab-bar);
+  }
+
+  .pageRow .tab[data-selected] {
+    border-block-end: var(--tab-bar) solid Highlight;
+    padding-block-end: 0;
+  }
+
+  .pageRow .tab[data-greyed][data-selected] {
+    border-block-end-color: GrayText;
+  }
+}
+
 /* A panel not shown that is kept drawn (keepHidden of Tabs.tsx): React
    Aria marks it inert and data-inert, and it takes no room. */
 .panel[data-inert] {
