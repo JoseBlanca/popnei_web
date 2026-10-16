@@ -3,11 +3,32 @@
  * (docs/specs/analyses/ldDecay.md, "What it sends and reads"), on the
  * sample project of core.
  */
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
-import { ldDecayOptions } from "../../../core/analyses/ldDecay.ts";
+import {
+  ldDecay,
+  ldDecayOnPopgen2,
+  ldDecayOptions,
+} from "../../../core/analyses/ldDecay.ts";
+import type * as ProjectModule from "../../../core/project.ts";
 import { deepFreeze, sampleProject } from "../../../core/testSupport.ts";
 import { maxAllowedMafCommand, maxDistCommand } from "./commands.ts";
+
+/** The definitions the commands set their options through, in order. */
+const setThrough = vi.hoisted((): unknown[] => []);
+
+vi.mock("../../../core/project.ts", async (importOriginal) => {
+  const real = await importOriginal<typeof ProjectModule>();
+  return {
+    ...real,
+    setAnalysisOptions: (
+      ...args: Parameters<typeof real.setAnalysisOptions>
+    ): ReturnType<typeof real.setAnalysisOptions> => {
+      setThrough.push(args[1]);
+      return real.setAnalysisOptions(...args);
+    },
+  };
+});
 
 describe("PA8 the commands of the options of the LD decay", () => {
   test("the largest distance is set with the frequency kept, and names the change that removes the result", () => {
@@ -60,5 +81,19 @@ describe("PA8 the commands of the options of the LD decay", () => {
       maxDist: null,
       maxAllowedMaf: 0.8,
     });
+  });
+
+  test("each page sets the options through its own definition", () => {
+    const p = deepFreeze(sampleProject());
+    setThrough.length = 0;
+    maxDistCommand(5000, "popgen").command(p);
+    maxAllowedMafCommand(0.8, "popgen").command(p);
+    maxDistCommand(5000, "popgen2").command(p);
+    maxAllowedMafCommand(0.8, "popgen2").command(p);
+    expect(
+      setThrough.map((def) =>
+        def === ldDecay ? "popgen" : def === ldDecayOnPopgen2 ? "popgen2" : def,
+      ),
+    ).toEqual(["popgen", "popgen", "popgen2", "popgen2"]);
   });
 });
