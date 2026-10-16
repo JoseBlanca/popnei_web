@@ -382,12 +382,20 @@ test.describe("the four live analyses of popgen2.html (the merge of the LD decay
         .toMatch(
           /^Popnei PCA running · 0:\d\d · then the diversity and 2 more Stop Stop all$/u,
         );
-      expect(await bandFit(page), `${String(width)} px`).toMatchObject({
-        oneLineWhereItFits: true,
-        inWindow: true,
-        wordsCut: false,
-        noSidewaysScroll: true,
-      });
+      // Polled, since the histograms of the Variants tab are drawn again
+      // at the new width in the next frame, and in the frame between the
+      // two the plot drawn at 720 px still stood in its column, now in
+      // the middle of the window, 8 px past its right edge (1288 of 1280
+      // px in Chromium, on 16 October 2026, when the look centred the
+      // column); it was gone in the frame after.
+      await expect
+        .poll(() => bandFit(page), { message: `${String(width)} px` })
+        .toMatchObject({
+          oneLineWhereItFits: true,
+          inWindow: true,
+          wordsCut: false,
+          noSidewaysScroll: true,
+        });
     }
     await expect(band(page)).toContainText(
       "then the diversity, the distances and the LD decay",
