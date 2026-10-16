@@ -107,6 +107,12 @@
   --page-margin-inline: 0;
   --panel-padding: 0;
   --panel-border: none;
+  /* the selected tab of the page's row joined to its panel: the panel
+     moved up against the row, the line under the tab, and the bar and
+     sides drawn inside it */
+  --panel-join: 0;
+  --color-tab-under: var(--color-accent);
+  --shadow-tab-selected: none;
   --focus-ring: 2px solid var(--color-focus);
   --focus-offset: 2px;
   --target-min: 1.5rem;

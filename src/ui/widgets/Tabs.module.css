@@ -76,9 +76,11 @@
 /* A tab greyed while it is shown keeps its bar, in the greyed colour,
    its words not in bold, so that the user can tell which tab they are
    on. */
-.tab[data-greyed][data-selected] {
+.tab[data-greyed][data-selected],
+.pageRow .tab[data-greyed][data-selected] {
   border-block-end-color: var(--color-text-disabled);
   background: transparent;
+  box-shadow: none;
   color: var(--color-text-disabled);
   font-weight: normal;
   cursor: default;
@@ -100,11 +102,25 @@
 /* The content of a tab of the page's row, on a panel of its own where
    the look gives it one (tokens.css, the look of the page). */
 .pageRow ~ .panel {
+  margin-block-start: var(--panel-join);
   padding: var(--panel-padding);
   border: var(--panel-border);
   border-radius: var(--radius-md);
   background: var(--color-panel);
+  border-block-start: 0;
   box-shadow: var(--shadow-box);
+}
+
+/* The selected tab of the page's row, joined to its panel where the look
+   gives the tab the panel's background: its line under it in that
+   background, over the line of the row, and its bar at its top. The bar
+   and the sides are shadows inside the tab, which take no room, so that
+   the row's tabs keep their widths and wrap where they did. */
+.pageRow .tab[data-selected] {
+  border-block-end-color: var(--color-tab-under);
+  border-start-start-radius: var(--radius-sm);
+  border-start-end-radius: var(--radius-sm);
+  box-shadow: var(--shadow-tab-selected);
 }
 
 .panel[data-inert] {
