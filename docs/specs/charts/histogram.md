@@ -378,14 +378,17 @@ The colour of a threshold that keeps every value,
 `--chart-threshold-keeps-all`, is a grey with some of the blue of the
 bars, so that it reads as a threshold still to be moved, and not as the
 grey of a disabled control, which it was until the owner asked so on 8
-October 2026: #54758c in the light theme, 4.88:1 on the background, and
-#6387a1 in the dark, 4.67:1, above the 3:1 of a line (1.4.11) and the
-4.5:1 of the number in the box of popgen2.html, which takes the same
-colour; it is 3.46:1 and 3.16:1 from the text, so that such a number is
-told from a black one at a glance. `src/ui/tokens.test.ts` checks the
-four ratios. The handle of such a threshold over the plot is hollow, an
-outline of that colour over the background, where the red one is
-filled.
+October 2026: #4f6f86 in the light theme, 4.72:1 on the background of
+the page, and #6387a1 in the dark, 4.68:1, above the 3:1 of a line
+(1.4.11) and the 4.5:1 of the number in the box of popgen2.html, which
+takes the same colour and the page's background; it is 3.10:1 and 3.24:1
+from the text, so that such a number is told from a black one at a
+glance. `src/ui/tokens.test.ts` checks the four ratios, and the line's
+3:1 on the panel of the tab, on which the plots of popgen2.html stand
+since its look of 16 October 2026 (docs/plans/visual-design.md); the
+light value was #54758c, 4.88:1, before that look. The handle of such a
+threshold over the plot is hollow, an outline of that colour over the
+panel, where the red one is filled.
 
 The bars need a colour that the tokens do not have yet, `--chart-bar`,
 since the seven colours of Okabe and Ito name populations and a bar is
