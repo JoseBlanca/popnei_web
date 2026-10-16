@@ -112,11 +112,13 @@
 
 /* The content of a tab of the page's row (pageRow of Tabs.tsx), on a
    panel of its own where the look gives it one (tokens.css, the look of
-   the page), its top open against the row. */
+   the page), its top open against the row and square, so that the tab
+   shown meets it with no round corner under its side (the owner, 16
+   October 2026); its bottom corners round, as the boxes of the files. */
 .pagePanel {
   padding: var(--panel-padding);
   border: var(--panel-border);
-  border-radius: var(--radius-md);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
   background: var(--color-panel);
   border-block-start: 0;
   box-shadow: var(--shadow-box);

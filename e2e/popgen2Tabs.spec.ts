@@ -632,6 +632,11 @@ test("the panel of the tab shown on a narrow window runs to the window's edges w
         paddingEnd: style.paddingInlineEnd,
         borderStart: style.borderInlineStartWidth,
         borderEnd: style.borderInlineEndWidth,
+        topCorners: [style.borderTopLeftRadius, style.borderTopRightRadius],
+        bottomCorners: [
+          style.borderBottomLeftRadius,
+          style.borderBottomRightRadius,
+        ],
       };
     });
     // The tab shown, Variants, joined to the panel only where the row is
@@ -682,6 +687,9 @@ test("the panel of the tab shown on a narrow window runs to the window's edges w
         paddingEnd: "16px",
         borderStart: "0px",
         borderEnd: "0px",
+        // Square at every corner, edge to edge.
+        topCorners: ["0px", "0px"],
+        bottomCorners: ["0px", "0px"],
       });
     } else {
       expect(panel.left).toBeGreaterThanOrEqual(16);
@@ -690,6 +698,10 @@ test("the panel of the tab shown on a narrow window runs to the window's edges w
       expect(panel.paddingEnd).toBe("24px");
       expect(panel.borderStart).toBe("1px");
       expect(panel.borderEnd).toBe("1px");
+      // Its top corners square under the tab joined to it, its bottom
+      // ones round (the owner, 16 October 2026).
+      expect(panel.topCorners).toEqual(["0px", "0px"]);
+      expect(panel.bottomCorners).not.toContain("0px");
     }
     expect(
       await page.evaluate(
