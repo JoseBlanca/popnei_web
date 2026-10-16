@@ -82,6 +82,13 @@
   min-inline-size: 0;
 }
 
+/* The words of a file refused by the zone of a tab, which are scrolled
+   into the window as they come (PageTabs.tsx): with the room of the
+   panel's padding under them, not flush with the window's edge. */
+.refusedInTab {
+  scroll-margin-block-end: var(--space-6);
+}
+
 /* What a tab of the analyses shows, kept drawn and hidden while the tab
    is greyed and its reason stands in its place (PageTabs.tsx). */
 .tabContent {

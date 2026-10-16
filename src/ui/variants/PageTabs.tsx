@@ -283,7 +283,7 @@ function RefusedInTab({ text }: { readonly text: string }): React.JSX.Element {
     element.current?.scrollIntoView({ block: "nearest" });
   }, [text]);
   return (
-    <div ref={element}>
+    <div ref={element} className={classOf(styles, "refusedInTab")}>
       <Problem>{text}</Problem>
     </div>
   );
