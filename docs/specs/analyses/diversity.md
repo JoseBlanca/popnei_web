@@ -1930,18 +1930,21 @@ change nothing of the request, the key or the numbers.
   failures that are not popnei's refusals in the words of
   `popgen2FailureText` of `src/ui/analyses/words.ts`, as the PCA tab has
   them. So `tooFewIndividuals` ends "merge it with another population
-  in panel_pops.csv, or lower the minimum number of individuals in the
-  options of the diversity."; `tooFewIndividuals` of the one
+  in panel_pops.csv, or lower the minimum number of individuals in
+  Parameters."; `tooFewIndividuals` of the one
   population reads "The individuals of the one population,
   Unclassified, are 12, and a variant has a value in a population only
   when at least 20 of its individuals have a called genotype there, so
   they have no values. To have them, lower
-  the minimum number of individuals in the options of the
-  diversity.", with ", or loosen the thresholds of the individuals in
+  the minimum number of individuals in Parameters.", with ", or loosen the thresholds of the individuals in
   the Variants tab" before the full stop when the thresholds removed
   some (since 11 October 2026; it said "taken as one population since
   none has a population", false for a file that could not be read or
-  a column of more than 20 values); a refusal of popnei that does not
+  a column of more than 20 values); `variantsNotInDraw` of a
+  population in the draw at none of its variants ends "Lower the number
+  of chromosomes of the rarefaction in Parameters.", the section of the
+  options, which may be closed ("in the options of the diversity" until
+  16 October 2026); a refusal of popnei that does not
   ask to open the variants file again ends "The diversity is then
   calculated again by itself.", since the diversity stays live after
   it (since 11 October 2026), while it is live: after Stop

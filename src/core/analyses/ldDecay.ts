@@ -325,7 +325,7 @@ export function maxDistReason(p: Project, page: LdDecayPage): string | null {
     (page === "popgen" ? populationsByLists(p) : popgen2PopulationsToRun(p))
       ?.length ?? 0;
   return numPops > 0 && maxDist > maxDistFor(numPops)
-    ? memoryText(numPops)
+    ? memoryText(numPops, page)
     : null;
 }
 
@@ -690,14 +690,17 @@ function populationsKeptOf(
     : popgen2PopulationsKept(p, kept);
 }
 
-/** The reason of the lock of the memory for `numPops` populations. */
-function memoryText(numPops: number): string {
+/** The reason of the lock of the memory for `numPops` populations, on
+    the page `page`, which on popgen2.html names the section
+    "Parameters" the field is in, which may be closed (the owner, 16
+    October 2026). */
+function memoryText(numPops: number, page: LdDecayPage): string {
   const most = `can be at most ${grouped(maxDistFor(numPops))} base pairs`;
   const start =
     numPops === 1
       ? `The largest distance ${most}`
       : `With ${grouped(numPops)} populations, the largest distance ${most}`;
-  return `${start}: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.`;
+  return `${start}: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance${page === "popgen" ? "" : ` in ${PARAMETERS}`}, or calculate it with popnei in Python, outside the browser.`;
 }
 
 /** Builds the request, with the individuals the filters keep that the

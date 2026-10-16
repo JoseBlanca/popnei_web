@@ -1640,9 +1640,9 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
   variants in linkage disequilibrium, such as an inversion, can make a
   component of its own that separates the individuals by that region
   rather than by their ancestry. Turn on the LD pruning of the PCA in
-  its options above, unless such regions are what you are looking for."
+  Parameters, unless such regions are what you are looking for."
 - `fewVariants`: "… If the dataset has more, loosen the filters of the
-  PCA in its options above, or the thresholds of the Variants tab."
+  PCA in Parameters, or the thresholds of the Variants tab."
 - `lingoesCorrection`: the old panel's, unchanged: the share of the
   variance that lay in directions no space has, 7.87% on `panel.nei`;
   the amount added to every squared distance, 0.047, and its share of
@@ -1659,8 +1659,10 @@ VCF, and open it again in the box Variants, or turn the LD pruning
 off.", the end of the lock of the LD pruning with no distance. The row
 of no variant left: "No variant of
 panel.nei is left after the filters of the PCA, so there is no variant
-to do the PCA with. Loosen the filters of the PCA in its options above,
-or the thresholds of the Variants tab." The words of the 3D view are
+to do the PCA with. Loosen the filters of the PCA in Parameters, or the
+thresholds of the Variants tab." These three name the section
+"Parameters", which may be closed, in place of "in its options above"
+until 16 October 2026. The words of the 3D view are
 the old panel's, but for its failure to download, which ends "reload
 the page, open panel.nei again and run the PCA again", since this page
 saves no project and a reload leaves it with no file open.

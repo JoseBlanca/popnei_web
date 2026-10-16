@@ -2855,6 +2855,17 @@ describe("PA6 D4 the warnings of stage 5", () => {
         text: "p0 reaches 2 called chromosomes at none of the variants at which it has a value, so it has no rarefied values.",
       },
     ]);
+    // popgen2.html names the section the draw is in, which may be closed.
+    expect(
+      diversityOnPopgen2
+        .warnings(none(96), p, null)
+        .filter((w) => w.code === "variantsNotInDraw"),
+    ).toEqual([
+      {
+        code: "variantsNotInDraw",
+        text: "p0 reaches 96 called chromosomes at none of the variants at which it has a value, so it has no rarefied values. Lower the number of chromosomes of the rarefaction in Parameters.",
+      },
+    ]);
   });
 
   test("two populations short of the draw are listed with their counts and shares", () => {
@@ -3470,7 +3481,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     expect(diversityOnPopgen2.warnings(r, p, null)).toEqual([
       {
         code: "tooFewIndividuals",
-        text: "The individuals of the one population, Unclassified, are 12, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, lower the minimum number of individuals in the options of the diversity.",
+        text: "The individuals of the one population, Unclassified, are 12, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, lower the minimum number of individuals in Parameters.",
       },
     ]);
     const fourteen = deepFreeze<Project>({
@@ -3480,7 +3491,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     expect(diversityOnPopgen2.warnings(r, fourteen, null)).toEqual([
       {
         code: "tooFewIndividuals",
-        text: "The individuals of the one population, Unclassified, are 12, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, lower the minimum number of individuals in the options of the diversity, or loosen the thresholds of the individuals in the Variants tab.",
+        text: "The individuals of the one population, Unclassified, are 12, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, lower the minimum number of individuals in Parameters, or loosen the thresholds of the individuals in the Variants tab.",
       },
     ]);
   });
@@ -3585,7 +3596,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     expect(diversityOnPopgen2.warnings(r, p, null)).toEqual([
       {
         code: "tooFewIndividuals",
-        text: "Populations A and B have fewer than 20 individuals, 2 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in pops.csv, or lower the minimum number of individuals in the options of the diversity.",
+        text: "Populations A and B have fewer than 20 individuals, 2 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in pops.csv, or lower the minimum number of individuals in Parameters.",
       },
     ]);
     const aAlone = result({

@@ -324,7 +324,7 @@ describe("AP6 D2 the status region at the end of a run of the PCA, over the stor
       },
     });
     expect(pcaEndAnnouncement(running, store.getState())).toBe(
-      "The PCA of panel.nei could not be calculated: No variant of panel.nei is left after the filters of the PCA, so there is no variant to do the PCA with. Loosen the filters of the PCA in its options above, or the thresholds of the Variants tab.",
+      "The PCA of panel.nei could not be calculated: No variant of panel.nei is left after the filters of the PCA, so there is no variant to do the PCA with. Loosen the filters of the PCA in Parameters, or the thresholds of the Variants tab.",
     );
   });
 

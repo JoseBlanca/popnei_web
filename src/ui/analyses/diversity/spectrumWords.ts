@@ -13,7 +13,7 @@ import type {
   SpectrumLines,
   SpectrumOfPop,
 } from "../../../core/analyses/sfs.ts";
-import { fourDecimals } from "../../../core/analyses/words.ts";
+import { PARAMETERS, fourDecimals } from "../../../core/analyses/words.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import { counted, escaped, grouped, namesOf } from "../../../core/project.ts";
 import { MIN_DRAW } from "../../../worker/protocol.ts";
@@ -266,7 +266,7 @@ export function linesCaption(
   variantsName: string,
 ): string {
   const draw = grouped(numCalledAlleles);
-  return `The folded site frequency spectrum of each population, in a draw of ${draw} of its chromosomes at each variant, over the ${counted(numVars, "variant")} of ${escaped(variantsName)} the filters kept. Each line is a population: across, the frequency of the commonest allele in the draw, 1 \u2212 j/${draw} for j copies of the rarer allele; up, the proportion of the population's variants with both alleles in the draw that have that frequency. Variants with no copy of the rarer allele in the draw are left out of the plot and of the proportions; the table holds them. The number of chromosomes is set above the table, with the rarefaction.`;
+  return `The folded site frequency spectrum of each population, in a draw of ${draw} of its chromosomes at each variant, over the ${counted(numVars, "variant")} of ${escaped(variantsName)} the filters kept. Each line is a population: across, the frequency of the commonest allele in the draw, 1 \u2212 j/${draw} for j copies of the rarer allele; up, the proportion of the population's variants with both alleles in the draw that have that frequency. Variants with no copy of the rarer allele in the draw are left out of the plot and of the proportions; the table holds them. The number of chromosomes is set in ${PARAMETERS}, with the rarefaction.`;
 }
 
 /** The line under the plot of the variants of each population with a

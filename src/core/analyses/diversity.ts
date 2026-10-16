@@ -877,8 +877,7 @@ function atMost(
   words: DrawWords,
   page: DiversityPage,
 ): string {
-  const place = page === "popgen" ? "the options of the diversity" : PARAMETERS;
-  return `Type a number of chromosomes of at most ${grouped(chromosomes)} in ${place}${words.orElse}.`;
+  return `Type a number of chromosomes of at most ${grouped(chromosomes)} in ${optionsPlace(page)}${words.orElse}.`;
 }
 
 /** Builds the request, with the individuals the filters keep that the
@@ -1026,7 +1025,7 @@ function warnings(
     if (notInDraw.length > 0) {
       found.push({
         code: "variantsNotInDraw",
-        text: notInDrawText(notInDraw, r),
+        text: notInDrawText(notInDraw, r, page),
       });
     }
   }
@@ -1154,7 +1153,7 @@ function tooFewText(
     page === "popgen"
       ? "the metadata file"
       : escaped(p.individuals?.name ?? "");
-  const end = `in ${file}, ${LOWER_MINIMUM}${filtered ? loosenFilters(page) : "."}`;
+  const end = `in ${file}, or lower the minimum number of individuals in ${optionsPlace(page)}${filtered ? loosenFilters(page) : "."}`;
   const [first] = rows;
   if (rows.length === 1 && first !== undefined) {
     return `Population ${names} has ${counted(first.individuals, "individual")}, and ${rule}, so ${names} has no values. To have them, merge it with another population ${end}`;
@@ -1166,10 +1165,13 @@ function tooFewText(
   return `Populations ${names} have fewer than ${grouped(min)} individuals${counts}, and ${rule}, so they have no values. To have them, merge each with another population ${end}`;
 }
 
-/** What `tooFewIndividuals` offers from stage 5, after "To have them,
-    merge it with another population in the metadata file, ". */
-const LOWER_MINIMUM =
-  "or lower the minimum number of individuals in the options of the diversity";
+/** Where the options of the diversity are on the page `page`: "the
+    options of the diversity" on the old page, and on popgen2.html the
+    section "Parameters", which may be closed (the owner, 16 October
+    2026). */
+function optionsPlace(page: DiversityPage): string {
+  return page === "popgen" ? "the options of the diversity" : PARAMETERS;
+}
 
 /** The end of `tooFewIndividuals` on the page `page` when the filters
     of individuals took individuals from a population it names. */
@@ -1193,7 +1195,7 @@ function tooFewOfOneText(
   if (row === undefined || rows.length !== 1) {
     throw defect("the one population has another number of rows than one.");
   }
-  const end = `To have them, lower the minimum number of individuals in the options of the diversity${filtered ? loosenFilters(page) : "."}`;
+  const end = `To have them, lower the minimum number of individuals in ${optionsPlace(page)}${filtered ? loosenFilters(page) : "."}`;
   const rule = `a variant has a value in a population only when at least ${grouped(min)} of its individuals have a called genotype there`;
   if (page === "popgen") {
     return `${escaped(row.population)}, the one population, has ${counted(row.individuals, "individual")}, and ${rule}, so it has no values. ${end}`;
@@ -1249,8 +1251,9 @@ function notInDrawText(
     readonly inDraw: number;
   }[],
   r: DiversityResult,
+  page: DiversityPage,
 ): string {
-  const text = notInDrawFirst(pops, r.numCalledAlleles);
+  const text = notInDrawFirst(pops, r.numCalledAlleles, page);
   const everyPop = r.numVarsEveryPop;
   const everyPopInDraw = r.numVarsEveryPopInDraw;
   if (
@@ -1279,6 +1282,7 @@ function notInDrawFirst(
     readonly inDraw: number;
   }[],
   numCalledAlleles: number,
+  page: DiversityPage,
 ): string {
   const draw = grouped(numCalledAlleles);
   const names = namesOf(pops.map(({ row }) => row.population));
@@ -1287,7 +1291,7 @@ function notInDrawFirst(
     // At the smallest draw there is no smaller one to offer.
     const lower =
       numCalledAlleles > MIN_DRAW
-        ? " Lower the number of chromosomes of the rarefaction in the options of the diversity."
+        ? ` Lower the number of chromosomes of the rarefaction in ${optionsPlace(page)}.`
         : "";
     return pops.length === 1
       ? `${names} reaches ${draw} called chromosomes at none of the variants at which it has a value, so it has no rarefied values.${lower}`

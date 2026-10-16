@@ -1001,7 +1001,9 @@ filters of individuals", which that page does not have.
   start with." in place of the old page's "It has no default, …"; a distance above what the memory
   allows for the populations of `popgen2PopulationsToRun(p)`, the
   populations of every individual of the variants file before the
-  thresholds of the individuals, in the old words. `maxDistReason`
+  thresholds of the individuals, in the old words but for "Type a
+  smaller distance in Parameters, or calculate it …" (in place of "Type
+  a smaller distance, or …" until 16 October 2026). `maxDistReason`
   counts the same populations on this page, and none before the
   variants file is read, when the one pass locks the Run anyway.
   `keptNeeds` is the diversity's of this page, the individuals kept

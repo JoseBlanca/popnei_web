@@ -793,7 +793,7 @@ function warnings(
       text:
         page === "popgen"
           ? `No LD filter was applied, neither in the Variants step nor for the ${name}, ${region} Set an LD filter for the ${name} in its options above, or for every analysis in the Variants step, unless such regions are what you are looking for.`
-          : `No LD pruning was applied for the ${name}, ${region} Turn on the LD pruning of the ${name} in its options above, unless such regions are what you are looking for.`,
+          : `No LD pruning was applied for the ${name}, ${region} Turn on the LD pruning of the ${name} in ${PARAMETERS}, unless such regions are what you are looking for.`,
     });
   }
   const numUsed = r.method === "pca" ? r.numVarsUsed : r.passStats.numVars;
@@ -827,7 +827,7 @@ function fewVariantsText(
     method === "pca"
       ? `${counted(numUsed, "variant")} that ${numUsed === 1 ? "varies" : "vary"} among its ${individuals}`
       : `${counted(numUsed, "variant")} for its ${individuals}`;
-  return `The ${name} used ${used}, fewer variants than individuals, so each component rests on few variants and can show chance differences as structure. If the dataset has more, loosen the filters of the ${name} in its options above, or ${page === "popgen" ? "those of the Variants step that it follows" : "the thresholds of the Variants tab"}.`;
+  return `The ${name} used ${used}, fewer variants than individuals, so each component rests on few variants and can show chance differences as structure. If the dataset has more, loosen the filters of the ${name} ${page === "popgen" ? "in its options above, or those of the Variants step that it follows" : `in ${PARAMETERS}, or the thresholds of the Variants tab`}.`;
 }
 
 /**
@@ -1113,7 +1113,7 @@ export function refusalText(
   const nothingKept =
     page === "popgen"
       ? `No variant of ${fileName} is left after the filters of the ${name}, so ${nothingLeft}. Loosen the filters the ${name} has for itself in its options above, or those of the Variants step that it follows; the Count button of the Variants step shows how many each filter of the step keeps.`
-      : `No variant of ${fileName} is left after the filters of the ${name}, so ${nothingLeft}. Loosen the filters of the ${name} in its options above, or the thresholds of the Variants tab.`;
+      : `No variant of ${fileName} is left after the filters of the ${name}, so ${nothingLeft}. Loosen the filters of the ${name} in ${PARAMETERS}, or the thresholds of the Variants tab.`;
   if (message.startsWith(NO_VARIANTS)) {
     const counted0 =
       variants.read.kind === "read" && variants.read.numVars === 0;

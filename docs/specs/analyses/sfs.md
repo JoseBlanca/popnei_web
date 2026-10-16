@@ -615,8 +615,10 @@ same request, as on the old page. Four things differ, the plot since
     population's variants with both alleles in the draw that have that
     frequency. Variants with no copy of the rarer allele in the draw are
     left out of the plot and of the proportions; the table holds them.
-    The number of chromosomes is set above the
-    table, with the rarefaction." The warning of the MAF filter ends it,
+    The number of chromosomes is set in Parameters, with the
+    rarefaction.", the section of the options of the diversity, which
+    may be closed ("…set above the table, …" until 16 October 2026).
+    The warning of the MAF filter ends it,
     as before.
   - **Under the plot**, the variants of each population with both
     alleles in the draw, the sum of its bins 1 to n / 2, which the

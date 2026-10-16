@@ -813,7 +813,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
     ).toEqual([
       {
         code: "pruningOff",
-        text: "No LD pruning was applied for the PCA, so a region of the genome counts once for each of its variants, and a region of many variants in linkage disequilibrium, such as an inversion, can make a component of its own that separates the individuals by that region rather than by their ancestry. Turn on the LD pruning of the PCA in its options above, unless such regions are what you are looking for.",
+        text: "No LD pruning was applied for the PCA, so a region of the genome counts once for each of its variants, and a region of many variants in linkage disequilibrium, such as an inversion, can make a component of its own that separates the individuals by that region rather than by their ancestry. Turn on the LD pruning of the PCA in Parameters, unless such regions are what you are looking for.",
       },
     ]);
     expect(
@@ -825,7 +825,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
     ).toEqual([
       {
         code: "fewVariants",
-        text: "The PCA used 150 variants that vary among its 200 individuals, fewer variants than individuals, so each component rests on few variants and can show chance differences as structure. If the dataset has more, loosen the filters of the PCA in its options above, or the thresholds of the Variants tab.",
+        text: "The PCA used 150 variants that vary among its 200 individuals, fewer variants than individuals, so each component rests on few variants and can show chance differences as structure. If the dataset has more, loosen the filters of the PCA in Parameters, or the thresholds of the Variants tab.",
       },
     ]);
   });
@@ -835,7 +835,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
     expect(
       refusalText("there are no variants to do a PCA with", p, "popgen2"),
     ).toBe(
-      "No variant of panel.nei is left after the filters of the PCA, so there is no variant to do the PCA with. Loosen the filters of the PCA in its options above, or the thresholds of the Variants tab.",
+      "No variant of panel.nei is left after the filters of the PCA, so there is no variant to do the PCA with. Loosen the filters of the PCA in Parameters, or the thresholds of the Variants tab.",
     );
     expect(
       refusalText(

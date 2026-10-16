@@ -2033,7 +2033,7 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
     expect(ldDecayOnPopgen2.needs(emptied)).toBe(NO_DISTANCE_RUN_2);
     expect(maxDistReason(emptied, "popgen2")).toBe(NO_DISTANCE_2);
     expect(ldDecayOnPopgen2.needs(page2({ ld: { maxDist: 12_500_001 } }))).toBe(
-      "With 2 populations, the largest distance can be at most 12,500,000 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.",
+      "With 2 populations, the largest distance can be at most 12,500,000 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance in Parameters, or calculate it with popnei in Python, outside the browser.",
     );
     expect(
       ldDecayOnPopgen2.needs(page2({ ld: { maxDist: 12_500_000 } })),
@@ -2043,7 +2043,7 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
   test("maxDistReason of the page counts the one population of None, which the old page cannot make", () => {
     const none = page2({ column: null, ld: { maxDist: 25_000_001 } });
     expect(maxDistReason(none, "popgen2")).toBe(
-      "The largest distance can be at most 25,000,000 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.",
+      "The largest distance can be at most 25,000,000 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance in Parameters, or calculate it with popnei in Python, outside the browser.",
     );
     expect(maxDistReason(none, "popgen")).toBeNull();
     expect(

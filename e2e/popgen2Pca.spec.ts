@@ -1326,7 +1326,7 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
         /^Warning: No LD pruning was applied for the PCA,/u,
       ),
     ).toContainText(
-      "Turn on the LD pruning of the PCA in its options above, unless such regions are what you are looking for.",
+      "Turn on the LD pruning of the PCA in Parameters, unless such regions are what you are looking for.",
     );
     await expectAxeBothSchemes(page, makeAxeBuilder);
   });
