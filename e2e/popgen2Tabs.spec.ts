@@ -70,33 +70,53 @@ function tab(page: Page, name: Label): Locator {
 }
 
 /** The look of the label of the tab `name`: the weight of its words,
-    their colour, and its bar, the width and the colour of the first
-    shadow inside it, a line at its top, which the look of 16 October 2026
-    draws in place of a border under it (tokens.css,
-    --shadow-tab-selected; docs/plans/visual-design.md); width "0px" and
-    colour "none" when it has none. */
+    their colour, its background, and its bar, where it is, its width and
+    its colour. From 40em the look of 16 October 2026 joins the tab shown
+    to its panel and draws its bar at its top as the first shadow inside
+    it (tokens.css, --shadow-tab-selected; docs/plans/visual-design.md);
+    under 40em, where the row may wrap, the bar is a border under it, as
+    in the rows inside a result. Width "0px", colour "none" and place
+    "none" when it has none; a line under it thinner than 2 px, the
+    joined tab's line in the panel's colour, is no bar. */
 async function tabLook(
   page: Page,
   name: Label,
 ): Promise<{
   readonly weight: string;
   readonly colour: string;
+  readonly background: string;
+  readonly barAt: "top" | "bottom" | "none";
   readonly barWidth: string;
   readonly bar: string;
 }> {
   return tab(page, name).evaluate((element) => {
     const style = getComputedStyle(element);
+    const common = {
+      weight: style.fontWeight,
+      colour: style.color,
+      background: style.backgroundColor,
+    };
     // "rgb(29, 92, 150) 0px 3px 0px 0px inset, ...", as Chromium and
     // WebKit write it: the colour, then x, y, blur and spread.
     const first = /^(rgba?\([^)]*\)) 0px (\d+(?:\.\d+)?px) 0px 0px inset/u.exec(
       style.boxShadow,
     );
-    return {
-      weight: style.fontWeight,
-      colour: style.color,
-      barWidth: first?.[2] ?? "0px",
-      bar: first?.[1] ?? "none",
-    };
+    if (first?.[1] !== undefined && first[2] !== undefined) {
+      return { ...common, barAt: "top", barWidth: first[2], bar: first[1] };
+    }
+    const under = style.borderBottomColor;
+    if (
+      parseFloat(style.borderBottomWidth) >= 2 &&
+      under !== "rgba(0, 0, 0, 0)"
+    ) {
+      return {
+        ...common,
+        barAt: "bottom",
+        barWidth: style.borderBottomWidth,
+        bar: under,
+      };
+    }
+    return { ...common, barAt: "none", barWidth: "0px", bar: "none" };
   });
 }
 
@@ -449,6 +469,7 @@ test("AP1 D4 the PCA tab shown, another variants file opened: the tab stays show
   // the user can tell which tab they are on.
   const look = await tabLook(page, "PCA");
   expect(look.weight).toBe("400");
+  expect(look.barAt).toBe("top");
   expect(look.barWidth).toBe("3px");
   expect(look.bar).toBe(look.colour);
   await expectAxeBothSchemes(page, makeAxeBuilder);
@@ -460,6 +481,30 @@ test("AP1 D4 the PCA tab shown, another variants file opened: the tab stays show
   await expect(
     shownPanel(page).getByRole("heading", { level: 2, name: "PCA" }),
   ).toBeVisible();
+});
+
+test("at 320 pixels the PCA tab shown, another variants file opened: the tab keeps a bar of 3 px under it in the greyed colour", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await holdOpening(page, "panel.vcf.gz");
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await expectOpen(page, "PCA");
+  await tab(page, "PCA").click();
+  await pick(page, "panel.vcf.gz");
+  await expectGreyed(
+    page,
+    "PCA",
+    "The PCA needs a variants file: panel.vcf.gz is being opened.",
+  );
+  await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
+  const look = await tabLook(page, "PCA");
+  expect(look.weight).toBe("400");
+  expect(look.background).toBe("rgba(0, 0, 0, 0)");
+  expect(look.barAt).toBe("bottom");
+  expect(look.barWidth).toBe("3px");
+  expect(look.bar).toBe(look.colour);
 });
 
 test("AP1 D4 at 320 pixels the five labels on two lines, the tab shown with its bar and its weight, and no sideways scroll", async ({
@@ -492,8 +537,12 @@ test("AP1 D4 at 320 pixels the five labels on two lines, the tab shown with its 
     // so that the row breaks only where it must.
     expect(tops.size).toBe(await linesTheLabelsNeed(page));
     expect(tops.size).toBeGreaterThanOrEqual(2);
+    // Not joined to the panel, which a tab of the first line does not
+    // touch: no background of its own, and its bar of 3 px under it.
     const look = await tabLook(page, shown);
     expect(look.weight).toBe("600");
+    expect(look.background).toBe("rgba(0, 0, 0, 0)");
+    expect(look.barAt).toBe("bottom");
     expect(look.barWidth).toBe("3px");
     expect(look.bar).not.toMatch(/^(none|rgba\(0, 0, 0, 0\))$/u);
     expect(
@@ -507,7 +556,7 @@ test("AP1 D4 at 320 pixels the five labels on two lines, the tab shown with its 
   // heading's, apart from the greyed one's.
   const greyed = await tabLook(page, "Distances");
   expect(greyed.weight).toBe("400");
-  expect(greyed.bar).toBe("none");
+  expect(greyed.barAt).toBe("none");
   const textColour = await page
     .getByRole("heading", { level: 1, name: "Popnei" })
     .evaluate((element) => getComputedStyle(element).color);
@@ -518,12 +567,16 @@ test("AP1 D4 at 320 pixels the five labels on two lines, the tab shown with its 
   expect(greyed.colour).not.toBe(textColour);
 });
 
-test("the panel of the tab shown on a narrow window runs to the window's edges with the page's 16 px inside and no border at its sides; from 640 px it stands in the column with its border and 24 px inside", async ({
+test("the panel of the tab shown on a narrow window runs to the window's edges with the page's 16 px inside and no border at its sides, the tab shown not joined to it; from 640 px it stands in the column with its border and 24 px inside, the tab joined to it on a row of one line", async ({
   page,
 }) => {
   // 40em at the browser's 16 px: the width under which the panel runs to
-  // the edges (Tabs.module.css, the look of 16 October 2026). At 320 px
-  // the text and the buttons of the panel stood 0 px from its border.
+  // the edges and the tab shown is not joined to it (Tabs.module.css, the
+  // look of 16 October 2026). At 320 px the text and the buttons of the
+  // panel stood 0 px from its border, and the tab shown of the first of
+  // two lines was drawn joined to a panel it did not touch. The five
+  // labels take 477 px in the Mac's font and 541 px in DejaVu Sans, the
+  // font of GitHub's runners, and the row has 608 px at 640.
   for (const [width, narrow] of [
     [320, true],
     [639, true],
@@ -544,6 +597,20 @@ test("the panel of the tab shown on a narrow window runs to the window's edges w
         borderEnd: style.borderInlineEndWidth,
       };
     });
+    // The tab shown, Variants, joined to the panel only where the row is
+    // on one line, its bar at its top; under 40em its bar under it.
+    const look = await tabLook(page, "Variants");
+    expect(look.barAt).toBe(narrow ? "bottom" : "top");
+    expect(look.barWidth).toBe("3px");
+    if (!narrow) {
+      const tops = new Set<number>();
+      for (const name of LABELS) {
+        const box = await tab(page, name).boundingBox();
+        if (box === null) throw new Error(`the tab ${name} has no box`);
+        tops.add(Math.round(box.y));
+      }
+      expect(tops.size).toBe(1);
+    }
     if (narrow) {
       expect(panel).toEqual({
         left: 0,

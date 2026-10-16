@@ -116,23 +116,6 @@
   box-shadow: var(--shadow-box);
 }
 
-/* On a narrow window, under 40em, 640 px at the browser's 16 px, the
-   panel runs to the window's edges, over the page's room at the sides
-   (--page-padding, the padding of the page's column), with no border
-   nor corners at its sides and the page's room inside: with a border
-   and room of its own inside the column, the words and the buttons of
-   the panel stood 0 px from its border at 320 px, or the plots lost
-   width (the review of the look, 16 October 2026). 40em is also the
-   width under which the row of tabs may wrap, below. */
-@media (width < 40em) {
-  .pageRow ~ .panel {
-    margin-inline: calc(-1 * var(--page-padding));
-    padding-inline: var(--page-padding);
-    border-inline: 0;
-    border-radius: 0;
-  }
-}
-
 /* The selected tab of the page's row, joined to its panel where the look
    gives the tab the panel's background: its line under it in that
    background, over the line of the row, and its bar at its top. The bar
@@ -143,6 +126,52 @@
   border-start-start-radius: var(--radius-sm);
   border-start-end-radius: var(--radius-sm);
   box-shadow: var(--shadow-tab-selected);
+}
+
+/* On a narrow window, under 40em, 640 px at the browser's 16 px:
+
+   - The panel runs to the window's edges, over the page's room at the
+     sides (--page-padding, the padding of the page's column), with no
+     border nor corners at its sides and the page's room inside. With a
+     border and room of its own inside the column, the words and the
+     buttons of the panel stood 0 px from its border at 320 px, or the
+     plots lost width.
+   - The row of tabs may wrap there, and a tab of its first line does
+     not touch the panel, so the tab shown is not joined to it: no
+     background of its own, and its bar a line of 3 px under it in the
+     accent, as in the rows inside a result; a tab greyed while shown has
+     it in the greyed colour (the rule of such a tab, above). The panel
+     is not pulled up against the row, and has its line at its top.
+
+   The five labels take 477 px in the Mac's system font and 541 px in
+   DejaVu Sans, the font of GitHub's Linux runners (Chromium and WebKit,
+   16 October 2026); at 40em the row has 608 px, 591 with a scrollbar of
+   17 px that takes room, so it is on one line wherever the tab is
+   joined. The review of the look, 16 October 2026. */
+@media (width < 40em) {
+  .pageRow ~ .panel {
+    margin-block-start: 0;
+    margin-inline: calc(-1 * var(--page-padding));
+    padding-inline: var(--page-padding);
+    border-inline: 0;
+    border-block-start: var(--panel-border);
+    border-radius: 0;
+  }
+
+  .pageRow .tab {
+    border-block-end-width: var(--tab-bar);
+  }
+
+  .pageRow .tab[data-selected] {
+    border-block-end-color: var(--color-accent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .pageRow .tab[data-greyed][data-selected] {
+    box-shadow: none;
+  }
 }
 
 /* A panel not shown that is kept drawn (keepHidden of Tabs.tsx): React
