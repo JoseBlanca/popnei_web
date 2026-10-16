@@ -13,6 +13,7 @@ import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { PARAMETERS, openParameters, parametersButton } from "./parameters.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -57,9 +58,10 @@ async function pickInto(
     it, or a border in it; leaving out the fields, the buttons and the
     controls, which are tinted on the white on purpose, and what is
     inside them: a radio's circle, a select's button, the toggle of 2D
-    and 3D; and the dashed zone that opens a file. Each as "role or tag, its words". */
+    and 3D, but for the header of a section "Parameters", which is read;
+    and the dashed zone that opens a file. Each as "role or tag, its words". */
 async function drawnInPageColour(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
+  return page.evaluate((parameters) => {
     const background = getComputedStyle(document.body).backgroundColor;
     const roots = document.querySelectorAll(
       // The panel of the tab shown and the two boxes, sections named
@@ -71,11 +73,12 @@ async function drawnInPageColour(page: Page): Promise<string[]> {
       for (const element of root.querySelectorAll("*")) {
         if (!(element instanceof HTMLElement) || element.offsetParent === null)
           continue;
-        if (
-          element.closest(
-            'button, input, textarea, select, label, [role="radiogroup"], [role="radio"]',
-          ) !== null
-        )
+        // The header of a section "Parameters" is a button, and is read
+        // with what is inside it.
+        const control = element.closest(
+          'button, input, textarea, select, label, [role="radiogroup"], [role="radio"]',
+        );
+        if (control !== null && control.textContent.trim() !== parameters)
           continue;
         const style = getComputedStyle(element);
         // The zone that opens a file, dashed, is tinted on purpose, in
@@ -95,10 +98,10 @@ async function drawnInPageColour(page: Page): Promise<string[]> {
       }
     }
     return [...found];
-  });
+  }, PARAMETERS);
 }
 
-test("on the white panels the tables, their headers, their fades, the legend of the PCA and the ring of a slider's handle are in the panel's colour, not the page's, at 320 px where the tables scroll, light and dark", async ({
+test("on the white panels the tables, their headers, their fades, the table of the individuals per population, the header of a section Parameters under the pointer, the legend of the PCA and the ring of a slider's handle are in the panel's colour, not the page's, at 320 px where the tables scroll, light and dark", async ({
   page,
 }) => {
   test.setTimeout(120_000);
@@ -118,6 +121,7 @@ test("on the white panels the tables, their headers, their fades, the legend of 
   // The PCA, with its legend over the 2D plot and its table of many
   // columns, whose fade shows at its right edge.
   await tab(page, "PCA").click();
+  await openParameters(shown(page));
   const distance = shown(page).getByRole("textbox", {
     name: "Distance within which variants are compared, in base pairs, from 1",
   });
@@ -127,9 +131,10 @@ test("on the white panels the tables, their headers, their fades, the legend of 
   await button(page, "Run").click();
   await expect(
     page.getByText(/^The place of each of the 200 individuals/u),
-  ).toContainText("from 548 variants.", { timeout: RESULT_TIMEOUT });
+  ).toContainText("from 548 variants", { timeout: RESULT_TIMEOUT });
   // The diversity, whose table is wider than 288 px and scrolls.
   await tab(page, "Populations").click();
+  await openParameters(shown(page));
   await expect(button(page, "Run").first()).toBeEnabled({
     timeout: RESULT_TIMEOUT,
   });
@@ -150,6 +155,20 @@ test("on the white panels the tables, their headers, their fades, the legend of 
     ] as const) {
       await tab(page, name).click();
       await expect(tab(page, name)).toHaveAttribute("aria-selected", "true");
+      if (name === "Individuals") {
+        // The individuals per population, a table of the tab since 16
+        // October 2026.
+        await expect(
+          shown(page).getByRole("heading", {
+            name: "Individuals per population, after the filters of individuals",
+          }),
+        ).toBeVisible();
+      }
+      if (name === "PCA" || name === "Populations") {
+        // The header of the section "Parameters", open, under the
+        // pointer, when it has a background.
+        await parametersButton(shown(page)).first().hover();
+      }
       expect(await drawnInPageColour(page), `${name}, ${scheme}`).toEqual([]);
     }
   }

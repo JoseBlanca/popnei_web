@@ -124,3 +124,9 @@ decide, after the look.
     ones, passed in Chromium, 268 of 268, and in WebKit, 266 with the
     two of forced colours skipped, which Playwright emulates in Chromium
     alone. Firefox was not run.
+  - After the merge of main, with the sections "Parameters" closed by
+    default and the individuals per population in the Individuals tab,
+    the flow of the panels' colours opens the sections, reads their
+    header under the pointer and the table of the counts; it found
+    nothing in the page's colour there. 276 of 276 passed in Chromium,
+    274 in WebKit with the two of forced colours skipped.
