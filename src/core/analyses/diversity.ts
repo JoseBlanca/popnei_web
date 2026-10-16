@@ -1104,8 +1104,12 @@ function onePopulationPrivateText(p: Project, page: DiversityPage): string {
   }
   switch (cause.kind) {
     case "noFile":
-    case "refused":
       return `${first} Open an individuals file that assigns the individuals to populations in the box Individuals to count them.`;
+    // The box of a file open has no button that opens one since 16
+    // October 2026: it is at the end of the Individuals tab, as the line
+    // of the one population says (onePopulation.ts).
+    case "refused":
+      return `${first} ${escaped(p.individuals?.name ?? "")} could not be read, as the box Individuals says; open it again, or another file, in the Individuals tab to count them.`;
     case "noColumn":
     case "noSuchColumn":
     case "notOffered":

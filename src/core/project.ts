@@ -2090,8 +2090,10 @@ export function variantsStepNeeds(p: Project): string | null {
 }
 
 /** The ends of a reason of the variants file on the page that opens it,
-    popgen2.html, beside its button "Open another variants file…", which
-    has no project to save before a reload. */
+    popgen2.html, which has no project to save before a reload; shown in
+    the box Variants, whose button "Open another variants file…" is at the
+    end of the Variants tab since 16 October 2026, under the tab's line
+    that sends the user to the box. */
 const VARIANTS_OPEN_ENDS: ReasonEnds = {
   message: withoutBackquotes,
   refused: "Open another file.",
@@ -2522,7 +2524,12 @@ export function individualsBoxNeeds(p: Project): string | null {
           ? `${refused}the page could not start the part that reads files. Reload the page and open the file again.`
           : `${refused}the page stopped while it read it. Open the file again.`;
       }
-      const words = individualsBoxWords(error, p.app, read.format === "xlsx");
+      const words = individualsBoxWords(
+        error,
+        p.app,
+        read.format === "xlsx",
+        p.variants !== null,
+      );
       const end = boxRefusedEnd(error);
       return end === "" ? `${refused}${words}` : `${refused}${words} ${end}`;
     }
@@ -2534,15 +2541,21 @@ export function individualsBoxNeeds(p: Project): string | null {
     but for the four refusals whose words name what that page calls
     otherwise, a variants file, the size of an individuals file, the cells
     it can have and the reader of tables, which the box says in its own
-    words. */
+    words. A variants file is opened by the button of the box Variants
+    while none is open, and by the one at the end of the Variants tab
+    while one is, `variantsOpen` (docs/plans/file-buttons.md, 16 October
+    2026). */
 function individualsBoxWords(
   error: IndividualsFileError,
   app: AppId,
   xlsx: boolean,
+  variantsOpen: boolean,
 ): string {
   switch (error.kind) {
     case "variantsFile":
-      return "it is a variants file; open it with Open variants file in the box Variants.";
+      return variantsOpen
+        ? "it is a variants file; open it with Open another variants file… in the Variants tab."
+        : "it is a variants file; open it with Open variants file… in the box Variants.";
     case "tooLarge":
       return `it is ${megabytes(error.size)}, more than the ${grouped(error.max / BYTES_IN_MB)} MB an individuals file can have; check that it is the individuals file and not the variants file.`;
     case "readerNotLoaded":

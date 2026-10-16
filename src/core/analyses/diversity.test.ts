@@ -3534,6 +3534,28 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     ]);
   });
 
+  test("privateAllelesNeedTwoPopulations of the one population of an individuals file refused: opened again, or another, in the Individuals tab, where its button is since 16 October 2026, not in the box Individuals", () => {
+    const base = project();
+    if (base.individuals === null) throw new Error("no individuals file");
+    const refused = withDiversity(
+      deepFreeze<Project>({
+        ...base,
+        individuals: {
+          ...base.individuals,
+          read: { kind: "failed", error: { kind: "empty" }, format: "text" },
+        },
+      }),
+      2,
+      null,
+    );
+    expect(diversityOnPopgen2.warnings(oneResult(), refused, null)).toEqual([
+      {
+        code: "privateAllelesNeedTwoPopulations",
+        text: `${NO_PRIVATE_ONE} pops.csv could not be read, as the box Individuals says; open it again, or another file, in the Individuals tab to count them.`,
+      },
+    ]);
+  });
+
   test("privateAllelesNeedTwoPopulations of one classified population, with unclassified individuals left out and with none", () => {
     const r = result({ pops: ["A"], numIndividuals: [2], numVars: 1000 });
     const withUnclassified = withDiversity(

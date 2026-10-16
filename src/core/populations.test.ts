@@ -531,9 +531,16 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
     );
   });
 
-  test("individualsBoxNeeds says a variants file is opened in the box Variants", () => {
+  test("individualsBoxNeeds says a variants file is opened with Open another variants file… in the Variants tab while one is open, where that button is since 16 October 2026", () => {
     expect(individualsBoxNeeds(refused({ kind: "variantsFile" }))).toBe(
-      "panel_pops.csv could not be read: it is a variants file; open it with Open variants file in the box Variants.",
+      "panel_pops.csv could not be read: it is a variants file; open it with Open another variants file… in the Variants tab.",
+    );
+  });
+
+  test("individualsBoxNeeds says a variants file is opened with Open variants file… in the box Variants while none is open", () => {
+    const p = refused({ kind: "variantsFile" });
+    expect(individualsBoxNeeds(deepFreeze({ ...p, variants: null }))).toBe(
+      "panel_pops.csv could not be read: it is a variants file; open it with Open variants file… in the box Variants.",
     );
   });
 
