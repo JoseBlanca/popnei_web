@@ -2252,7 +2252,7 @@ test.describe("review of round 1: long names of populations", () => {
     });
   }
 
-  test("a population named with 46 characters at 320 px: no sideways scroll, and the plot of the spectrum 288 px wide", async ({
+  test("a population named with 46 characters at 320 px: no sideways scroll, and the plot of the spectrum 286 px wide", async ({
     page,
   }) => {
     test.setTimeout(120_000);
@@ -2272,7 +2272,11 @@ test.describe("review of round 1: long names of populations", () => {
         document.documentElement.clientWidth,
     );
     expect(sideways).toBe(0);
-    expect((await plot.boundingBox())?.width).toBe(288);
+    // The 288 px of the column at 320 px less the panel's border, 1 px on
+    // each side; the panel has no padding at the sides at that width
+    // (tokens.css, --panel-padding and --panel-border, the look of 16
+    // October 2026).
+    expect((await plot.boundingBox())?.width).toBe(286);
   });
 });
 
