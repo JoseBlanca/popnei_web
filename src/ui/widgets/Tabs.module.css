@@ -76,21 +76,14 @@
 
 /* A tab greyed while it is shown keeps its bar, in the greyed colour,
    its words not in bold, so that the user can tell which tab they are
-   on. */
-.tab[data-greyed][data-selected],
-.pageRow .tab[data-greyed][data-selected] {
+   on. In the page's row its bar is at its top, by the rule after the
+   selected tab of that row, below. */
+.tab[data-greyed][data-selected] {
   border-block-end-color: var(--color-text-disabled);
   background: transparent;
-  box-shadow: none;
   color: var(--color-text-disabled);
   font-weight: normal;
   cursor: default;
-}
-
-/* In the page's row, whose selected tab has its bar at its top, the bar
-   of a greyed tab shown is there too, in the greyed colour. */
-.pageRow .tab[data-greyed][data-selected] {
-  box-shadow: var(--shadow-tab-greyed);
 }
 
 .tab[data-focus-visible] {
@@ -128,6 +121,20 @@
   box-shadow: var(--shadow-tab-selected);
 }
 
+/* A tab of the page's row greyed while it is shown: its bar at its top
+   in the greyed colour, and not joined to the panel, since what it
+   shows is its reason and not its content: no background, and under it
+   no line of its own, so that the row's line shows through as under a
+   tab not shown. Without this rule the line of 1 px under it took the
+   greyed colour of the bar under a greyed tab of a row inside a result,
+   a dark mark the other tabs do not have (the review of the look, 16
+   October 2026). */
+.pageRow .tab[data-greyed][data-selected] {
+  border-block-end-color: transparent;
+  background: transparent;
+  box-shadow: var(--shadow-tab-greyed);
+}
+
 /* On a narrow window, under 40em, 640 px at the browser's 16 px:
 
    - The panel runs to the window's edges, over the page's room at the
@@ -140,7 +147,7 @@
      not touch the panel, so the tab shown is not joined to it: no
      background of its own, and its bar a line of 3 px under it in the
      accent, as in the rows inside a result; a tab greyed while shown has
-     it in the greyed colour (the rule of such a tab, above). The panel
+     it in the greyed colour (the last rule of this block). The panel
      is not pulled up against the row, and has its line at its top.
 
    The five labels take 477 px in the Mac's system font and 541 px in
@@ -170,6 +177,7 @@
   }
 
   .pageRow .tab[data-greyed][data-selected] {
+    border-block-end-color: var(--color-text-disabled);
     box-shadow: none;
   }
 }

@@ -507,6 +507,43 @@ test("at 320 pixels the PCA tab shown, another variants file opened: the tab kee
   expect(look.bar).toBe(look.colour);
 });
 
+test("at 1280 pixels the PCA tab greyed while shown has its greyed bar at its top, no background, and under it the row's line, not a line in the greyed colour", async ({
+  page,
+}) => {
+  // The rule of a tab greyed while shown in the rows inside a result,
+  // whose bar is the 3 px border under it, coloured the 1 px line under
+  // the tab of the page's row in the greyed colour, a dark mark under the
+  // tab that the row's other tabs do not have (the review of the look, 16
+  // October 2026).
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await holdOpening(page, "panel.vcf.gz");
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await expectOpen(page, "PCA");
+  await tab(page, "PCA").click();
+  await pick(page, "panel.vcf.gz");
+  await expectGreyed(
+    page,
+    "PCA",
+    "The PCA needs a variants file: panel.vcf.gz is being opened.",
+  );
+  await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
+  const look = await tabLook(page, "PCA");
+  expect(look.barAt).toBe("top");
+  expect(look.bar).toBe(look.colour);
+  expect(look.background).toBe("rgba(0, 0, 0, 0)");
+  const under = await tab(page, "PCA").evaluate(
+    (element) => getComputedStyle(element).borderBottomColor,
+  );
+  const rowLine = await row(page).evaluate(
+    (element) => getComputedStyle(element).borderBottomColor,
+  );
+  expect(under).not.toBe(look.colour);
+  // Transparent, so that the row's line shows through as under a tab not
+  // shown, or that line's colour.
+  expect(["rgba(0, 0, 0, 0)", rowLine]).toContain(under);
+});
+
 test("AP1 D4 at 320 pixels the five labels on two lines, the tab shown with its bar and its weight, and no sideways scroll", async ({
   page,
 }) => {
