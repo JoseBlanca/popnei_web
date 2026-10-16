@@ -25,10 +25,35 @@
   outline-offset: var(--focus-offset);
 }
 
+/* A zone with no button and no frame (FileZone.tsx), around what it
+   holds, the whole box of a file open on popgen2.html: it fills the
+   element it is in, so that a file dropped anywhere on that element is
+   taken, and draws nothing of its own until a file is dragged over it,
+   or its hidden button has the focus. */
+.bare {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-inline-size: 0;
+  border-radius: inherit;
+}
+
+/* A file dragged over it: an outline inside its edge, so that it is
+   not drawn over the frame of the box around it. */
+.bare[data-drop-target] {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.bare[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
 /* The zone's empty label slot (FileZone.tsx) names nothing and takes no
    row, so that the zone has the same space above the button as under
    what it holds. */
-.zone > [slot="label"]:empty {
+.zone > [slot="label"]:empty,
+.bare > [slot="label"]:empty {
   display: none;
 }
 

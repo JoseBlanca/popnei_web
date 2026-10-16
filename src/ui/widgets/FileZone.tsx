@@ -28,6 +28,12 @@
  * is opened from an input of the zone's own, and not from React Aria's
  * `FileTrigger`, whose press reaches the button through a context that a
  * button that waits cannot refuse.
+ *
+ * A zone may also have no button and no frame, `buttonLabel` `null`, as
+ * the box of a file open on popgen2.html is since 16 October 2026
+ * (docs/plans/file-buttons.md): what it holds takes a dropped or pasted
+ * file, by the same path as a zone with a button, and the button that
+ * picks a file is elsewhere, in the file's tab.
  */
 import { useId, useLayoutEffect, useRef } from "react";
 import { DropZone, Text } from "react-aria-components";
@@ -53,15 +59,38 @@ export interface ZoneWaiting {
   readonly onRefused: (name: string | null) => void;
 }
 
-/** What a zone to load a file is drawn with. */
-export interface FileZoneProps {
-  /** The name of the zone's hidden button that takes a pasted file,
-      "Paste a variants file". */
-  readonly pasteLabel: string;
+/** What a zone to load a file is drawn with: what every zone is drawn
+    with, and its button, or none. */
+export type FileZoneProps = FileZoneBaseProps &
+  (FileZoneButtonProps | FileZoneBareProps);
+
+/** What a zone with the button that opens the file picker is drawn
+    with. */
+export interface FileZoneButtonProps {
   /** The words of the button that opens the file picker. */
   readonly buttonLabel: string;
   /** The endings the file picker offers first, `.vcf`. */
   readonly accept: readonly string[];
+  /** The element of the button, for a screen that moves the focus to it. */
+  readonly buttonRef?: React.Ref<HTMLButtonElement>;
+  /** What can be done with the file, after the button. */
+  readonly actions?: React.ReactNode;
+}
+
+/** A zone with no button and no frame, around what it holds, which a
+    file is dropped or pasted on. */
+export interface FileZoneBareProps {
+  readonly buttonLabel: null;
+  readonly accept?: never;
+  readonly buttonRef?: never;
+  readonly actions?: never;
+}
+
+/** What every zone is drawn with. */
+interface FileZoneBaseProps {
+  /** The name of the zone's hidden button that takes a pasted file,
+      "Paste a variants file". */
+  readonly pasteLabel: string;
   /** Called with the files picked, dropped or pasted, of which there may
       be several when they are dropped or pasted. */
   readonly onFiles: (files: readonly File[]) => void;
@@ -70,12 +99,8 @@ export interface FileZoneProps {
       is then given to `onFiles`. React Aria gives a paste as a drop, so
       the two cannot be told apart. */
   readonly onNotFiles: (dropped: Exclude<Dropped, "files" | "nothing">) => void;
-  /** The element of the button, for a screen that moves the focus to it. */
-  readonly buttonRef?: React.Ref<HTMLButtonElement>;
   /** What the zone shows of the file, before the button. */
   readonly children?: React.ReactNode;
-  /** What can be done with the file, after the button. */
-  readonly actions?: React.ReactNode;
   /** Why the zone waits, while it opens no file, and what it does with a
       file refused; or `null`, when it does not wait. `null` when
       absent. */
@@ -89,7 +114,8 @@ function oneName(names: readonly string[]): string | null {
   return only !== undefined && others.length === 0 ? only : null;
 }
 
-/** A zone to drop a file on, with the button that picks one. */
+/** A zone to drop a file on, with the button that picks one, or with
+    none. */
 export function FileZone({
   pasteLabel,
   buttonLabel,
@@ -166,7 +192,7 @@ export function FileZone({
     <DropZone
       ref={zoneRef}
       aria-label={pasteLabel}
-      className={classOf(styles, "zone")}
+      className={classOf(styles, buttonLabel === null ? "bare" : "zone")}
       onDrop={onDrop}
     >
       {/* The label slot of the zone, empty: React Aria names its hidden
@@ -180,30 +206,32 @@ export function FileZone({
         </span>
       )}
       <div className={classOf(styles, "content")}>{children}</div>
-      <div className={classOf(styles, "buttons")}>
-        <Button
-          label={buttonLabel}
-          onPress={openPicker}
-          waiting={waiting?.reason ?? null}
-          {...(buttonRef !== undefined && { ref: buttonRef })}
-        />
-        <input
-          ref={inputRef}
-          type="file"
-          hidden
-          accept={accept.join(",")}
-          // The click the button gives the input is not a click on the
-          // zone, which would move the focus to its hidden button.
-          onClick={(event) => {
-            event.stopPropagation();
-          }}
-          onChange={(event) => {
-            const list = event.currentTarget.files;
-            if (list !== null && list.length > 0) take(Array.from(list));
-          }}
-        />
-        {actions}
-      </div>
+      {buttonLabel !== null && (
+        <div className={classOf(styles, "buttons")}>
+          <Button
+            label={buttonLabel}
+            onPress={openPicker}
+            waiting={waiting?.reason ?? null}
+            {...(buttonRef !== undefined && { ref: buttonRef })}
+          />
+          <input
+            ref={inputRef}
+            type="file"
+            hidden
+            accept={accept.join(",")}
+            // The click the button gives the input is not a click on the
+            // zone, which would move the focus to its hidden button.
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+            onChange={(event) => {
+              const list = event.currentTarget.files;
+              if (list !== null && list.length > 0) take(Array.from(list));
+            }}
+          />
+          {actions}
+        </div>
+      )}
     </DropZone>
   );
 }
