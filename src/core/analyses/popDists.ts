@@ -68,6 +68,7 @@ import {
   populationWarnings,
   refusalWords,
 } from "./words.ts";
+import { PARAMETERS } from "./words.ts";
 import type { PopulationWords } from "./words.ts";
 import type {
   Job,
@@ -554,7 +555,7 @@ const LOWER_THE_MINIMUM = "Lower the number of individuals needed, above";
     variant" (the review of the Distances tab, 12 October 2026), and the
     section "Parameters" it is in, which may be closed (the owner, 16
     October 2026). */
-const LOWER_NEEDED = "Lower the individuals needed per variant in Parameters";
+const LOWER_NEEDED = `Lower the individuals needed per variant in ${PARAMETERS}`;
 
 /**
  * The minimum of individuals of the distances as popgen2.html names it in

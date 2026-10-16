@@ -11,6 +11,7 @@
 
 import { holdNoDraw } from "../../../core/analyses/diversity.ts";
 import type { DiversityPage } from "../../../core/analyses/diversity.ts";
+import { PARAMETERS } from "../../../core/analyses/words.ts";
 import {
   MAX_NAMED,
   ONE_POPULATION,
@@ -231,7 +232,7 @@ function shortOfDrawText(
   const advice =
     page === "popgen"
       ? "Lower the number of chromosomes, above, to have them."
-      : "Lower the number of chromosomes in Parameters to have them.";
+      : `Lower the number of chromosomes in ${PARAMETERS} to have them.`;
   if (short.length === 1) {
     return `${namesOf([only[0]])} holds ${counted(only[1], "chromosome")}, fewer than ${drawn}, so it will have no rarefied values and no spectrum. ${advice}`;
   }

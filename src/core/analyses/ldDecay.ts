@@ -64,6 +64,7 @@ import {
   pythonOpenVariants,
   refusalWords,
 } from "./words.ts";
+import { PARAMETERS } from "./words.ts";
 import type { PopulationWords } from "./words.ts";
 import type {
   Job,
@@ -242,7 +243,7 @@ const NO_DISTANCE: Readonly<Record<LdDecayPage, string>> = Object.freeze({
     closed (the owner, 16 October 2026). */
 const NO_DISTANCE_RUN: Readonly<Record<LdDecayPage, string>> = Object.freeze({
   popgen: "Type the largest distance, above.",
-  popgen2: "Type the largest distance in Parameters.",
+  popgen2: `Type the largest distance in ${PARAMETERS}.`,
 });
 
 /** A name of a population is written whole in the legend of the plot up

@@ -82,6 +82,7 @@ import {
   populationWarnings,
   refusalWords,
 } from "./words.ts";
+import { PARAMETERS } from "./words.ts";
 import type { PopulationWords } from "./words.ts";
 import { MIN_DRAW } from "../../worker/protocol.ts";
 import type {
@@ -876,8 +877,7 @@ function atMost(
   words: DrawWords,
   page: DiversityPage,
 ): string {
-  const place =
-    page === "popgen" ? "the options of the diversity" : "Parameters";
+  const place = page === "popgen" ? "the options of the diversity" : PARAMETERS;
   return `Type a number of chromosomes of at most ${grouped(chromosomes)} in ${place}${words.orElse}.`;
 }
 

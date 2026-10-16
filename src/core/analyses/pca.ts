@@ -65,6 +65,7 @@ import {
   pythonOpenVariants,
   refusalWords,
 } from "./words.ts";
+import { PARAMETERS } from "./words.ts";
 import type { LdFilterWords } from "./words.ts";
 import { cellNumber } from "../../worker/individuals/columnTypes.ts";
 import type {
@@ -678,8 +679,7 @@ function needs(p: Project, page: PcaPage): string | null {
     distance, whose reason in full stands under the field, in the section
     "Parameters" of the tab, which may be closed (the owner, 16 October
     2026). */
-const PRUNING_DISTANCE_SHORT =
-  "Type the LD distance in Parameters, or turn the LD pruning off.";
+const PRUNING_DISTANCE_SHORT = `Type the LD distance in ${PARAMETERS}, or turn the LD pruning off.`;
 
 /** The words of the PCA's limit on the individuals of the variants file
     `fileName`, which has `numIndividuals`. */

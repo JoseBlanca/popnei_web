@@ -57,6 +57,7 @@ import { useId, useRef } from "react";
 
 import { checkVerdictText, uncomparedText } from "../../core/projectFile.ts";
 import type { AnalysisId } from "../../core/project.ts";
+import { PARAMETERS } from "../../core/analyses/words.ts";
 import type { AnalysisStatus } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
@@ -139,10 +140,6 @@ export const PANEL_ANALYSIS_ATTRIBUTE = "data-panel-analysis";
 /** The attribute of the heading of a panel, by which the band's link to
     an error of the PCA on popgen2.html finds the PCA tab's. */
 export const PANEL_HEADING_ATTRIBUTE = "data-panel-heading";
-
-/** The words of the button of the section that holds the options of an
-    analysis on popgen2.html, which are also its name. */
-export const PARAMETERS = "Parameters";
 
 /** The words of the button that ends the automatic runs of a live
     analysis while none runs. */

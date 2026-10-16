@@ -27,6 +27,12 @@ import type { Result } from "../result.ts";
 import type { Warning } from "../store.ts";
 import type { Pops } from "../../worker/protocol.ts";
 
+/** The name of the section that holds the options of an analysis on
+    popgen2.html, the words of its button, closed when the page opens
+    (the owner, 16 October 2026); the reasons and the warnings that send
+    the user to an option name it. */
+export const PARAMETERS = "Parameters";
+
 /** The start of popnei's refusal of a pass over a source that holds no
     variant, whatever the filters. */
 export const EMPTY_SOURCE =
