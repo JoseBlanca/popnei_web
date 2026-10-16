@@ -620,8 +620,8 @@ give the principal components that go into the GWAS as covariates.
   first PCA for a number many do not know. A field the user empties is
   no distance, and the PCA waits for one, with the reason beside the
   field and beside Run. Until 16 October 2026 the pruning started with
-  no distance. The old page keeps the rule above, and the LD filter of
-  the Variants tab still has no default distance. The coordinates are downloaded from the
+  no distance. The old page keeps the rule of no default distance, and
+  the LD filter of the Variants tab still has no default distance. The coordinates are downloaded from the
   plot itself, as the names and PC1 to PC10.
 - On `popgen2.html` the PCA has a tab of its own, built on the branches
   `pca-tab` (9 and 10 October 2026, `docs/plans/no-undo.md`) and
@@ -652,8 +652,8 @@ give the principal components that go into the GWAS as covariates.
   button that the keyboard reaches and opens with Enter or Space, and
   that tells a screen reader whether it is open. A reason that keeps
   Run from running because of an option stays beside Run, visible with
-  the section closed, "Type the LD distance in Parameters, or turn the
-  LD pruning off."; the full reason stays beside its field inside the
+  the section closed: with a distance field emptied by the user, "Type
+  the LD distance in Parameters, or turn the LD pruning off."; the full reason stays beside its field inside the
   section. Whether a section is open is not saved, and stays as the
   user left it while they move between tabs. Built on the branch
   `popgen2-tidy` and not yet tried by the owner.
@@ -989,11 +989,12 @@ individuals, because r² is then biased upwards.
   falls to half. The distance and the fit are popnei's. The option not
   taken was the bins alone. The owner decided the plot and the curve on
   30 September 2026.
-- The largest distance between two variants of a pair has no default,
-  since what fits depends on the genome; the user types it, and the
+- On `popgen.html` the largest distance between two variants of a pair
+  has no default, since what fits depends on the genome; the user types it, and the
   analysis cannot run until then, as with the distance of the LD pruning
   (section 3), by the owner's rule of no default that depends on the
-  genome. On `popgen2.html` it starts at 100,000 base pairs, below.
+  genome. On `popgen2.html` it starts at 100,000 base pairs, as the
+  paragraphs below say.
 - It reads the variants every filter of the Variants step keeps but the
   LD pruning, which would take out the very pairs it measures, as the
   owner decided on 30 September 2026. It has no LD filter of its own,
