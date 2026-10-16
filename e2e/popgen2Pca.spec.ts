@@ -1677,6 +1677,11 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
         }),
       ),
     ).toEqual(placesBefore);
+    // The pointer off the view again, as for the picture before: left on
+    // the tab clicked, it stood over a point once the view was scrolled
+    // into the window, and the point's tooltip was in the picture, in
+    // GitHub's WebKit (run 38956230123, 16 October 2026).
+    await page.mouse.move(0, 0);
     const after = await canvas.screenshot();
     expect(after.equals(before)).toBe(true);
   });
