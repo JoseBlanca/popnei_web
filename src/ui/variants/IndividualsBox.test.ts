@@ -884,6 +884,40 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
     expect(paragraphs(tab())).toContain("Reading pops.csv.");
   });
 
+  test("a CSV read, read again for another separator and refused: Remove and the select of the separator stay the same elements, so that the select keeps the focus", async () => {
+    const { store } = await drawPage();
+    await openVariants(store);
+    await pickIndividuals("pops.csv");
+    await recorded(store, readOf(POPS));
+    await choose(store, "popcat");
+    const remove = buttonNamed(tab(), "Remove pops.csv");
+    const separator = tab().querySelectorAll("button")[2];
+    expect(separator?.textContent).toBe("Detected: comma");
+    await act(async () => {
+      const command = csvOptionCommand("separator", "pops.csv", {
+        encoding: "auto",
+        separator: ";",
+        decimal: "auto",
+      });
+      store.applyAfresh(command.command);
+      await Promise.resolve();
+    });
+    expect(tab().querySelectorAll("button")[2]).toBe(separator);
+    await recorded(store, {
+      kind: "failed",
+      error: {
+        kind: "raggedRow",
+        line: 2,
+        expected: 1,
+        found: 2,
+        separator: ";",
+      },
+      format: "text",
+    });
+    expect(tab().querySelectorAll("button")[2]).toBe(separator);
+    expect(buttonNamed(tab(), "Remove pops.csv")).toBe(remove);
+  });
+
   test("a CSV refused: the options, and the line that sends to the box", async () => {
     const { store } = await drawPage();
     await pickIndividuals("pops.csv");

@@ -443,17 +443,32 @@ test("AP5 D4 the table of individuals_10000.xlsx, longer than its frame, sorted 
   await expect(grid.getByRole("rowheader").first()).toHaveText(firstName);
 });
 
-test("NU8 R1 the counts per population of panel_pops.csv have no menu Download…: the box of the individuals file holds no download", async ({
+test("NU8 R1 the counts per population of panel_pops.csv have no menu Download…: neither the box of the individuals file nor the counts of the Individuals tab hold a download", async ({
   page,
 }) => {
   await openDone(page);
   await pickIndividuals(page, "panel_pops.csv");
   await expect(
-    individualsBox(page).getByRole("rowheader", { name: "p0", exact: true }),
+    individualsBox(page).getByText(
+      "200 individuals classified in 3 populations",
+      { exact: true },
+    ),
   ).toBeVisible({ timeout: 20_000 });
   await expect(
     individualsBox(page).getByRole("button", { name: /^Download/u }),
   ).toHaveCount(0);
+  // The counts, in the Individuals tab since 16 October 2026.
+  await page
+    .getByRole("tablist", { name: "Files and analyses" })
+    .getByRole("tab", { name: "Individuals", exact: true })
+    .click();
+  const part = page.getByRole("region", {
+    name: "Individuals per population, after the filters of individuals",
+  });
+  await expect(
+    part.getByRole("rowheader", { name: "p0", exact: true }),
+  ).toBeVisible();
+  await expect(part.getByRole("button", { name: /^Download/u })).toHaveCount(0);
 });
 
 /** Checks that the button `button` is drawn below the table `table`:

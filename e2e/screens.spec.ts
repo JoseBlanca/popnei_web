@@ -4610,10 +4610,17 @@ for (const theme of ["light", "dark"] as const) {
         });
         await pickIndividualsOnNewPage(page, "panel_pops.csv");
         await expect(
-          individualsBoxOnNewPage(page).getByRole("cell", { name: "84" }),
+          individualsBoxOnNewPage(page).getByText(
+            "200 individuals classified in 3 populations",
+          ),
         ).toBeVisible({ timeout: 20_000 });
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
         await save(page, `popgen2-input-counts${at}-${theme}`);
+        // The individuals per population, at the top of the tab since 16
+        // October 2026, under Remove.
+        await individualsTabOnNewPage(page);
+        await expect(page.getByRole("cell", { name: "84" })).toBeVisible();
+        await save(page, `popgen2-input-counts-tab${at}-${theme}`);
       });
 
       test("the box of the individuals file with the unclassified, and the tab with the full list of those not in the file", async ({
@@ -4632,7 +4639,9 @@ for (const theme of ["light", "dark"] as const) {
         });
         await pickIndividualsOnNewPage(page, made);
         await expect(
-          individualsBoxOnNewPage(page).getByText(/^Unclassified, /u),
+          individualsBoxOnNewPage(page).getByText(
+            "193 individuals classified in 3 populations, 7 unclassified",
+          ),
         ).toBeVisible({ timeout: 20_000 });
         await save(page, `popgen2-input-unclassified${at}-${theme}`);
         await individualsTabOnNewPage(page);
@@ -4684,6 +4693,11 @@ for (const theme of ["light", "dark"] as const) {
           .click();
         await expect(box.getByText(/^Warning: accession/u)).toBeVisible();
         await save(page, `popgen2-input-too-many${at}-${theme}`);
+        await individualsTabOnNewPage(page);
+        await expect(
+          page.getByRole("grid", { name: "The table of accessions.csv" }),
+        ).toBeVisible();
+        await save(page, `popgen2-input-too-many-tab${at}-${theme}`);
       });
 
       test("None chosen in the list", async ({ page }) => {
@@ -4693,9 +4707,9 @@ for (const theme of ["light", "dark"] as const) {
         });
         await pickIndividualsOnNewPage(page, "panel_pops.csv");
         const box = individualsBoxOnNewPage(page);
-        await expect(box.getByRole("cell", { name: "84" })).toBeVisible({
-          timeout: 20_000,
-        });
+        await expect(
+          box.getByText("200 individuals classified in 3 populations"),
+        ).toBeVisible({ timeout: 20_000 });
         await box
           .getByRole("button", { name: "Column of the populations" })
           .click();
@@ -4706,9 +4720,13 @@ for (const theme of ["light", "dark"] as const) {
           })
           .click();
         await expect(
-          box.getByRole("rowheader", { name: "Unclassified" }),
+          box.getByText("200 individuals, all unclassified"),
         ).toBeVisible();
-        await expect(box.getByRole("cell", { name: "200" })).toBeVisible();
+        await individualsTabOnNewPage(page);
+        await expect(
+          page.getByRole("rowheader", { name: "Unclassified" }),
+        ).toBeVisible();
+        await expect(page.getByRole("cell", { name: "200" })).toBeVisible();
         await save(page, `popgen2-input-none${at}-${theme}`);
       });
 
@@ -4726,7 +4744,9 @@ for (const theme of ["light", "dark"] as const) {
         });
         await pickIndividualsOnNewPage(page, made);
         await expect(
-          individualsBoxOnNewPage(page).getByRole("cell", { name: "84" }),
+          individualsBoxOnNewPage(page).getByText(
+            "200 individuals classified in 3 populations",
+          ),
         ).toBeVisible({ timeout: 20_000 });
         await individualsTabOnNewPage(page);
         await expect(
@@ -4781,6 +4801,13 @@ for (const theme of ["light", "dark"] as const) {
           ),
         ).toBeVisible();
         await save(page, `popgen2-input-waiting${at}-${theme}`);
+        await individualsTabOnNewPage(page);
+        await expect(
+          page
+            .getByRole("tabpanel", { name: "Individuals" })
+            .getByText(/^The individuals the filters keep are counted once/u),
+        ).toBeVisible();
+        await save(page, `popgen2-input-waiting-tab${at}-${theme}`);
       });
 
       test("the tab of the individuals file with an xlsx", async ({ page }) => {
@@ -5837,7 +5864,7 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-pca-locked${at}-${theme}`);
       });
 
-      test("the PCA tab locked by the LD pruning with no distance, once the file is read", async ({
+      test("the PCA tab locked by the LD pruning with its distance emptied, once the file is read", async ({
         page,
       }) => {
         await pickOnNewPage(page, "panel.nei");
@@ -5845,14 +5872,17 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("tablist", { name: "Files and analyses" })
           .getByRole("tab", { name: "PCA", exact: true })
           .click();
-        const run = page
-          .getByRole("tabpanel")
+        const panel = page.getByRole("tabpanel");
+        const run = panel
           .getByRole("button", { name: "Run", exact: true })
           .first();
-        await expect(run).toHaveAccessibleDescription(
-          /^Type the LD distance/u,
-          { timeout: 20_000 },
-        );
+        await expect(run).toBeEnabled({ timeout: 20_000 });
+        const field = panel.getByRole("textbox", {
+          name: /^Distance within which variants are compared/u,
+        });
+        await field.fill("");
+        await field.press("Enter");
+        await expect(run).toHaveAccessibleDescription(/^Type the LD distance/u);
         await page.mouse.move(0, 0);
         await save(page, `popgen2-pca-locked-ld${at}-${theme}`);
       });
@@ -5880,10 +5910,7 @@ for (const theme of ["light", "dark"] as const) {
           const run = panel
             .getByRole("button", { name: "Run", exact: true })
             .first();
-          await expect(run).toHaveAccessibleDescription(
-            /^Type the LD distance/u,
-            { timeout: 20_000 },
-          );
+          await expect(run).toBeEnabled({ timeout: 20_000 });
           const field = panel.getByRole("textbox", {
             name: /^Distance within which variants are compared/u,
           });
@@ -5905,7 +5932,9 @@ for (const theme of ["light", "dark"] as const) {
         });
       }
 
-      test("the PCA tab ready: a distance typed, Run", async ({ page }) => {
+      test("the PCA tab ready with no option typed: the distance at 100,000, Run", async ({
+        page,
+      }) => {
         await pickOnNewPage(page, "panel.nei");
         await page
           .getByRole("tablist", { name: "Files and analyses" })
@@ -5915,18 +5944,7 @@ for (const theme of ["light", "dark"] as const) {
         const run = panel
           .getByRole("button", { name: "Run", exact: true })
           .first();
-        await expect(run).toHaveAccessibleDescription(
-          /^Type the LD distance/u,
-          {
-            timeout: 20_000,
-          },
-        );
-        const field = panel.getByRole("textbox", {
-          name: /^Distance within which variants are compared/u,
-        });
-        await field.fill("50000");
-        await field.press("Enter");
-        await expect(run).toBeEnabled();
+        await expect(run).toBeEnabled({ timeout: 20_000 });
         await page.mouse.click(1, 1);
         await save(page, `popgen2-pca-ready${at}-${theme}`);
       });
@@ -5955,9 +5973,7 @@ for (const theme of ["light", "dark"] as const) {
           const panel = page.getByRole("tabpanel");
           await expect(
             panel.getByRole("button", { name: "Run", exact: true }).first(),
-          ).toHaveAccessibleDescription(/^Type the LD distance/u, {
-            timeout: 20_000,
-          });
+          ).toBeEnabled({ timeout: 20_000 });
           if (shot === "empty-range") {
             await expect(
               panel.getByText(
@@ -6006,12 +6022,7 @@ for (const theme of ["light", "dark"] as const) {
         const run = panel
           .getByRole("button", { name: "Run", exact: true })
           .first();
-        await expect(run).toHaveAccessibleDescription(
-          /^Type the LD distance/u,
-          {
-            timeout: 20_000,
-          },
-        );
+        await expect(run).toBeEnabled({ timeout: 20_000 });
         const field = panel.getByRole("textbox", {
           name: /^Distance within which variants are compared/u,
         });
@@ -6097,16 +6108,21 @@ for (const theme of ["light", "dark"] as const) {
         return part;
       }
 
-      test("the LD decay locked: no distance typed, the line of help beside the field and the lock beside Run", async ({
+      test("the LD decay locked: the distance emptied, the line of help beside the field and the lock beside Run", async ({
         page,
       }) => {
-        await ldDecayReady(page, null);
+        const part = await ldDecayReady(page, "");
+        await expect(
+          part.getByRole("button", { name: "Run", exact: true }),
+        ).toHaveAccessibleDescription("Type the largest distance, above.");
         await page.mouse.click(1, 1);
         await save(page, `popgen2-ld-decay-locked${at}-${theme}`);
       });
 
-      test("the LD decay ready: 100000 typed, Run", async ({ page }) => {
-        const part = await ldDecayReady(page, "100000");
+      test("the LD decay ready with no option typed: the largest distance at 100,000, Run", async ({
+        page,
+      }) => {
+        const part = await ldDecayReady(page, null);
         await expect(
           part.getByRole("button", { name: "Run", exact: true }),
         ).toBeEnabled();
@@ -6166,7 +6182,7 @@ for (const theme of ["light", "dark"] as const) {
         test(`the LD decay ${shot === "done" ? "done: the table, the time of the last run, the plot with its Download…" : "stopped after its result: the line of a Stop and the time of the last run"}`, async ({
           page,
         }) => {
-          const part = await ldDecayReady(page, "100000");
+          const part = await ldDecayReady(page, null);
           await part.getByRole("button", { name: "Run", exact: true }).click();
           await expect(part.locator("svg.chart-line")).toBeVisible({
             timeout: 20_000,
@@ -6271,6 +6287,20 @@ for (const theme of ["light", "dark"] as const) {
           page,
           `popgen2-individuals-box-locked-tooltip${at}-${theme}`,
         );
+        // Remove, first in the Individuals tab since 16 October 2026,
+        // reached by the Tab key from the tab's label, with its reason.
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "Individuals", exact: true })
+          .focus();
+        await page.keyboard.press("Tab");
+        await expect(
+          page
+            .getByRole("tabpanel", { name: "Individuals" })
+            .getByRole("button", { name: /^Remove / }),
+        ).toBeFocused();
+        await expect(page.getByRole("tooltip")).toBeVisible();
+        await save(page, `popgen2-individuals-remove-locked${at}-${theme}`);
       });
 
       for (const shot of [
@@ -6848,8 +6878,8 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-distances-loading-tab${at}-${theme}`);
       });
 
-      /** Opens panel.nei, shows the PCA tab, types the distance, presses
-          Run and waits for the result: the PCA is live. */
+      /** Opens panel.nei, shows the PCA tab, presses Run with no option
+          typed and waits for the result: the PCA is live. */
       async function pcaLive(page: Page): Promise<Locator> {
         await pickOnNewPage(page, "panel.nei");
         await page
@@ -6860,15 +6890,7 @@ for (const theme of ["light", "dark"] as const) {
         const run = panel
           .getByRole("button", { name: "Run", exact: true })
           .first();
-        await expect(run).toHaveAccessibleDescription(
-          /^Type the LD distance/u,
-          { timeout: 20_000 },
-        );
-        const field = panel.getByRole("textbox", {
-          name: /^Distance within which variants are compared/u,
-        });
-        await field.fill("50000");
-        await field.press("Enter");
+        await expect(run).toBeEnabled({ timeout: 20_000 });
         await run.click();
         await expect(
           panel.getByText(/^The place of each of the 200 individuals/u),
@@ -6942,10 +6964,7 @@ for (const theme of ["light", "dark"] as const) {
         const run = panel
           .getByRole("button", { name: "Run", exact: true })
           .first();
-        await expect(run).toHaveAccessibleDescription(
-          /^Type the LD distance/u,
-          { timeout: 20_000 },
-        );
+        await expect(run).toBeEnabled({ timeout: 20_000 });
         const field = panel.getByRole("textbox", {
           name: /^Distance within which variants are compared/u,
         });
@@ -6975,10 +6994,7 @@ for (const theme of ["light", "dark"] as const) {
         const run = panel
           .getByRole("button", { name: "Run", exact: true })
           .first();
-        await expect(run).toHaveAccessibleDescription(
-          /^Type the LD distance/u,
-          { timeout: 20_000 },
-        );
+        await expect(run).toBeEnabled({ timeout: 20_000 });
         const field = panel.getByRole("textbox", {
           name: /^Distance within which variants are compared/u,
         });
@@ -7026,12 +7042,7 @@ for (const theme of ["light", "dark"] as const) {
           const run = panel
             .getByRole("button", { name: "Run", exact: true })
             .first();
-          await expect(run).toHaveAccessibleDescription(
-            /^Type the LD distance/u,
-            {
-              timeout: 20_000,
-            },
-          );
+          await expect(run).toBeEnabled({ timeout: 20_000 });
           if (shot === "pcoa") {
             await panel.getByRole("button", { name: /Method$/u }).click();
             await page

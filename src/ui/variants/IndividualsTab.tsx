@@ -155,6 +155,10 @@ export function IndividualsTab({
   switch (shows.kind) {
     case "none":
       return <p className={classOf(styles, "line")}>{shows.text}</p>;
+    // Each part in the same place of the tab in every state, the empty
+    // place of the counts included, so that React keeps Remove and the
+    // options from one read to the next, and the select just changed
+    // keeps the focus.
     case "reading":
     case "refused":
       return (
@@ -162,6 +166,7 @@ export function IndividualsTab({
           {individuals !== null && (
             <Remove name={individuals.name} openButton={openButton} />
           )}
+          {null}
           {shows.options && options}
           <p className={classOf(styles, "line")}>{shows.text}</p>
         </div>

@@ -391,9 +391,10 @@ test("IN3 D2 axe on the page with each tab shown, light and dark, with no file a
   await tab(page, "Variants").click();
   await pick(page, "panel.vcf.gz");
   await expect(page.locator("svg.chart")).toHaveCount(6, { timeout: 20_000 });
-  // With a variants file and no individuals file, the counts of one row,
-  // Unclassified (NU8 R1).
-  await expectCounts(page, [["Unclassified", "200"]]);
+  // With a variants file and no individuals file, the summary line of
+  // the individuals, all unclassified, and no table (16 October 2026).
+  await expectSummary(page, "200 individuals, all unclassified");
+  await expect(individualsBox(page).getByRole("table")).toHaveCount(0);
   await expect(individualsBox(page)).not.toContainText("No individuals file");
   await expectAxeBothSchemes(page, makeAxeBuilder);
   await tab(page, "Individuals").click();
@@ -457,25 +458,43 @@ async function chooseIn(
   await page.getByRole("option", { name: item, exact: true }).click();
 }
 
-/** The table of the counts in the box. */
+/** The table of the counts in the Individuals tab, in the box until 16
+    October 2026, found while the tab is hidden too, since it stays
+    drawn. */
 function counts(page: Page): Locator {
-  return individualsBox(page).getByRole("table", {
+  return page.getByRole("table", {
     name: /^Individuals of .* after the filters of individuals$/u,
+    includeHidden: true,
   });
 }
 
-/** Expects the rows of the counts, each a population and its count. */
+/** The cells of the counts, shown or hidden with their tab. */
+function countCells(page: Page): Locator {
+  return counts(page).getByRole("cell", { includeHidden: true });
+}
+
+/** Expects the rows of the counts, each a population and its count, and
+    no table in the box. */
 async function expectCounts(
   page: Page,
   rows: readonly (readonly [string, string])[],
 ): Promise<void> {
-  await expect(counts(page).getByRole("rowheader")).toHaveText(
+  await expect(
+    counts(page).getByRole("rowheader", { includeHidden: true }),
+  ).toHaveText(
     rows.map(([pop]) => pop),
     { timeout: 20_000 },
   );
-  await expect(counts(page).getByRole("cell")).toHaveText(
-    rows.map(([, count]) => count),
-  );
+  await expect(countCells(page)).toHaveText(rows.map(([, count]) => count));
+  await expect(individualsBox(page).getByRole("table")).toHaveCount(0);
+}
+
+/** Expects the summary line of the box of the individuals file, its
+    "…" read "not counted yet", as its words are in the page. */
+async function expectSummary(page: Page, words: string): Promise<void> {
+  await expect(
+    individualsBox(page).getByRole("paragraph").filter({ hasText: words }),
+  ).toHaveText(words, { timeout: 20_000 });
 }
 
 /** The counts of panel_pops.csv with no threshold. */
@@ -539,19 +558,30 @@ test("IN6 D2 panel.nei then panel_pops.csv, and the other order: the list on pop
     }
     await expect(columnList(page)).toContainText("popcat");
     await expectCounts(page, ALL_COUNTS);
-    await expect(individualsBox(page).getByText(/^Unclassified/u)).toHaveCount(
-      0,
-    );
-    // No caption on the screen, no Download and no line of the rows not
-    // used, in the box or the tab, since every row of panel_pops.csv is
-    // an individual of panel.nei (NU8 R1).
+    await expectSummary(page, "200 individuals classified in 3 populations");
+    await expect(page.getByText(/^Unclassified/u)).toHaveCount(0);
+    // In the Individuals tab, the counts under their heading, with no
+    // caption on the screen, no Download and no line of the rows not
+    // used, since every row of panel_pops.csv is an individual of
+    // panel.nei (NU8 R1).
+    await tab(page, "Individuals").click();
+    const panel = page.getByRole("tabpanel", { name: "Individuals" });
+    const part = panel.getByRole("region", {
+      name: "Individuals per population, after the filters of individuals",
+    });
+    await expect(part.getByRole("table")).toBeVisible();
     // The caption names the table for a screen reader, in a box of one
     // pixel clipped to nothing, as words for a screen reader alone are.
-    const caption = await individualsBox(page)
-      .getByText(/after the filters of individuals/u)
-      .boundingBox();
-    expect(caption?.width ?? 0).toBeLessThanOrEqual(1);
-    expect(caption?.height ?? 0).toBeLessThanOrEqual(1);
+    const caption = part.locator("caption");
+    await expect(caption).toHaveText(
+      "Individuals of panel.nei after the filters of individuals",
+    );
+    const captionBox = await caption.boundingBox();
+    expect(captionBox?.width ?? 0).toBeLessThanOrEqual(1);
+    expect(captionBox?.height ?? 0).toBeLessThanOrEqual(1);
+    await expect(part.getByRole("button", { name: /^Download/u })).toHaveCount(
+      0,
+    );
     await expect(
       individualsBox(page).getByRole("button", { name: /^Download/u }),
     ).toHaveCount(0);
@@ -570,6 +600,7 @@ test("NU8 R1 an individuals file with two rows panel.nei does not have: the line
     text: `${[...lines, "x001,p0", "x002,p1"].join("\n")}\n`,
   });
   await expectCounts(page, ALL_COUNTS);
+  await expectSummary(page, "200 individuals classified in 3 populations");
   await expect(individualsBox(page)).not.toContainText("but not in");
   await tab(page, "Individuals").click();
   await expect(
@@ -593,7 +624,9 @@ for (const [variants, file, column, pops] of [
     await pick(page, variants);
     await pickIndividuals(page, file);
     await expect(columnList(page)).toContainText(column);
-    await expect(counts(page).getByRole("rowheader")).toHaveText([...pops], {
+    await expect(
+      counts(page).getByRole("rowheader", { includeHidden: true }),
+    ).toHaveText([...pops], {
       timeout: 20_000,
     });
   });
@@ -662,15 +695,22 @@ test("IN6 D2 four rows left out and three cells of popcat emptied: the line of t
   await openPage(page);
   await pick(page, "panel.nei");
   await pickIndividuals(page, { name: "missing.csv", text });
-  await expect(
-    individualsBox(page).getByText(
-      "Unclassified, left out of the analyses per population: 7 individuals kept, 3 with an empty cell in popcat and 4 that are not in missing.csv. Not in missing.csv: s100, s101, s102 and 1 more; the Individuals tab lists them all.",
-      { exact: true },
-    ),
-  ).toBeVisible({ timeout: 20_000 });
+  await expectSummary(
+    page,
+    "193 individuals classified in 3 populations, 7 unclassified",
+  );
   await expectAxeBothSchemes(page, makeAxeBuilder);
 
   await tab(page, "Individuals").click();
+  await expect(
+    page
+      .getByRole("tabpanel", { name: "Individuals" })
+      .getByText(
+        "Unclassified, left out of the analyses per population: 7 individuals kept, 3 with an empty cell in popcat and 4 that are not in missing.csv. Not in missing.csv: s100, s101, s102 and 1 more; the list of those not in missing.csv, in this tab, names them all.",
+        { exact: true },
+      ),
+  ).toBeVisible();
+  await expect(individualsBox(page)).not.toContainText("left out");
   const missing = page.getByRole("region", {
     name: "Individuals in panel.nei but not in missing.csv, before the filters",
   });
@@ -729,7 +769,7 @@ test("IN6 D2 Copy the 4 names where the page may not write the clipboard, not gr
   await expect(copy).toBeFocused();
 });
 
-test("IN6 D2 a CSV of the names in capitals: the warning of none of the individuals in the file, and no table", async ({
+test("IN6 D2 a CSV of the names in capitals: the warning of none of the individuals in the file, no summary line, and no table", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -747,10 +787,11 @@ test("IN6 D2 a CSV of the names in capitals: the warning of none of the individu
     ),
   ).toBeVisible({ timeout: 20_000 });
   await expect(counts(page)).toHaveCount(0);
+  await expect(individualsBox(page)).not.toContainText("classified in");
   await expectAxeBothSchemes(page, makeAxeBuilder);
 });
 
-test("IN6 D2 a column of 21 values chosen: its warning, and no table", async ({
+test("IN6 D2 a column of 21 values chosen: its warning, no summary line, and no table", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -777,6 +818,7 @@ test("IN6 D2 a column of 21 values chosen: its warning, and no table", async ({
     ),
   ).toBeVisible();
   await expect(counts(page)).toHaveCount(0);
+  await expect(individualsBox(page)).not.toContainText("classified in");
   await expectAxeBothSchemes(page, makeAxeBuilder);
 });
 
@@ -795,6 +837,7 @@ test("IN6 D2 None chosen: the one row Unclassified with every individual kept, a
     "None: every individual unclassified",
   );
   await expectCounts(page, [["Unclassified", "200"]]);
+  await expectSummary(page, "200 individuals, all unclassified");
   await expect(individualsBox(page)).not.toContainText("are unclassified");
   await expectAxeBothSchemes(page, makeAxeBuilder);
 
@@ -832,11 +875,15 @@ test("IN6 D2 the missing rate of the individuals at 0.03, the pass held: … and
   await expect(page.locator("svg.chart")).toHaveCount(6, { timeout: 20_000 });
   await expectCounts(page, ALL_COUNTS);
   await setIndividualsMissing(page, "0.03");
-  await expect(counts(page).getByRole("cell")).toHaveText([
+  await expect(countCells(page)).toHaveText([
     "…not counted yet",
     "…not counted yet",
     "…not counted yet",
   ]);
+  await expectSummary(
+    page,
+    "…not counted yet individuals classified in 3 populations",
+  );
   await expect(
     individualsBox(page).getByText(
       "The individuals the filters keep are counted once panel.nei is read to the end.",
@@ -1078,7 +1125,7 @@ test("IN6 D2 the table of the file sorted by a header and scrolled, the other ta
   await expect.poll(firstInView).toBe(before);
 });
 
-test("IN6 D2 a file name of 80 characters at 320 pixels: Remove, the name in the box and the warnings wrap, and the page does not scroll sideways", async ({
+test("IN6 D2 a file name of 80 characters at 320 pixels: the name in the box, the warnings and Remove in the tab wrap, and the page does not scroll sideways", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 900 });
@@ -1094,8 +1141,11 @@ test("IN6 D2 a file name of 80 characters at 320 pixels: Remove, the name in the
   await expect(individualsBox(page).getByText(/^Warning: none/u)).toBeVisible({
     timeout: 20_000,
   });
+  await tab(page, "Individuals").click();
   await expect(
-    individualsBox(page).getByRole("button", { name: `Remove ${name}` }),
+    page
+      .getByRole("tabpanel", { name: "Individuals" })
+      .getByRole("button", { name: `Remove ${name}` }),
   ).toBeVisible();
   for (const shown of ["Individuals", "Variants"] as const) {
     await tab(page, shown).click();
@@ -1188,7 +1238,8 @@ test("IN6 D2 axe on the box and the tab with no file, a file being read, a file 
     ),
   ).toBeVisible({ timeout: 20_000 });
   await expectAxeBothSchemes(page, makeAxeBuilder);
-  await individualsBox(page)
+  await page
+    .getByRole("tabpanel", { name: "Individuals" })
     .getByRole("button", { name: "Remove excel_en.xlsx" })
     .click();
   await expect(
@@ -1198,6 +1249,34 @@ test("IN6 D2 axe on the box and the tab with no file, a file being read, a file 
   ).toBeFocused();
   await expect(page.getByText("No individuals file open.")).toBeVisible();
   await expectAxeBothSchemes(page, makeAxeBuilder);
+});
+
+test("TIDY2 Remove is the first stop of the Tab key in the Individuals tab; Enter removes the file and puts the focus on the zone's button of the box", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await pickIndividuals(page, "panel_pops.csv");
+  await expectSummary(page, "200 individuals classified in 3 populations");
+  await tab(page, "Individuals").click();
+  await expect(tab(page, "Individuals")).toBeFocused();
+  await page.keyboard.press("Tab");
+  const remove = page
+    .getByRole("tabpanel", { name: "Individuals" })
+    .getByRole("button", { name: "Remove panel_pops.csv" });
+  await expect(remove).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    individualsBox(page).getByRole("button", {
+      name: "Open individuals file…",
+    }),
+  ).toBeFocused();
+  await expect(
+    page
+      .getByRole("tabpanel", { name: "Individuals" })
+      .getByText("No individuals file open.", { exact: true }),
+  ).toBeVisible();
+  await expectSummary(page, "200 individuals, all unclassified");
 });
 
 test("IN6 D2 a run of the arrow keys on the threshold of the individuals, still held as a read of the individuals file ends, goes on waiting past the column the page chooses, and is made a change when its second passes", async ({
@@ -1257,10 +1336,11 @@ test("IN6 D3 at the missing rate of the individuals 0.03, the counts and the unc
   await pickIndividuals(page, "panel_pops.csv");
   await setIndividualsMissing(page, "0.03");
   await expectCounts(page, COUNTS_003);
-  const shown = await counts(page).getByRole("cell").allTextContents();
+  const shown = await countCells(page).allTextContents();
   const sum = shown.reduce((total, count) => total + Number(count), 0);
   // No line of the unclassified: none is kept.
-  await expect(individualsBox(page).getByText(/^Unclassified/u)).toHaveCount(0);
+  await expect(page.getByText(/^Unclassified/u)).toHaveCount(0);
+  await expectSummary(page, "116 individuals classified in 3 populations");
 
   const button = stats(page).getByRole("button", {
     name: "Download filtered variants…",
@@ -1364,7 +1444,9 @@ test("IN6 D2 a folder, then two files, dropped on the box of the individuals fil
   await dropFolder(page);
   await expect(individualsBox(page).getByText(folder)).toBeVisible();
   await expect(columnList(page)).toContainText("popcat");
-  await individualsBox(page)
+  await tab(page, "Individuals").click();
+  await page
+    .getByRole("tabpanel", { name: "Individuals" })
     .getByRole("button", { name: "Remove panel_pops.csv" })
     .click();
   await expect(individualsBox(page).getByText(folder)).toHaveCount(0);
@@ -1410,10 +1492,12 @@ test("IN6 D2 an individuals file pasted into the zone of its box is opened as on
     button.dispatchEvent(event);
   }, bytes);
   await expect(columnList(page)).toContainText("popcat", { timeout: 20_000 });
-  await expect(
-    individualsBox(page).getByRole("button", { name: "Remove panel_pops.csv" }),
-  ).toBeVisible();
   await tab(page, "Individuals").click();
+  await expect(
+    page
+      .getByRole("tabpanel", { name: "Individuals" })
+      .getByRole("button", { name: "Remove panel_pops.csv" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("grid", { name: "The table of panel_pops.csv" }),
   ).toBeVisible();
