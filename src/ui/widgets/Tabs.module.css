@@ -97,6 +97,16 @@
 
 /* A panel not shown that is kept drawn (keepHidden of Tabs.tsx): React
    Aria marks it inert and data-inert, and it takes no room. */
+/* The content of a tab of the page's row, on a panel of its own where
+   the look gives it one (tokens.css, the look of the page). */
+.pageRow ~ .panel {
+  padding: var(--panel-padding);
+  border: var(--panel-border);
+  border-radius: var(--radius-md);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-box);
+}
+
 .panel[data-inert] {
   display: none;
 }

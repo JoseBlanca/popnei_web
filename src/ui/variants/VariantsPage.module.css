@@ -62,11 +62,6 @@
   display: grid;
   gap: var(--space-2);
   min-inline-size: 0;
-  padding: var(--panel-padding);
-  border: var(--panel-border);
-  border-radius: var(--radius-md);
-  background: var(--color-panel);
-  box-shadow: var(--shadow-box);
 }
 
 .tabContent[hidden] {
