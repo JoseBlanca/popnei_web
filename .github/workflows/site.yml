@@ -42,7 +42,7 @@ jobs:
       - run: npm run lint
       - run: npm test
 
-  # Three jobs for each engine, each a third of its tests (--shard), all
+  # Four jobs for each engine, each a quarter of its tests (--shard), all
   # run side by side. One job for each engine, on the two workers
   # Playwright gives the four processors of the runner, took 5.5 to 10
   # minutes on 27 September 2026, and 14.7 minutes for Chromium's 679
@@ -53,7 +53,10 @@ jobs:
   # each job spends 1.5 minutes more to install, build and upload, which
   # leaves room under the 20 minutes as the suite grows. Each job builds
   # the site with the pages of the tests and runs its share of its
-  # engine's tests, as `npm run test:e2e` does for the three.
+  # engine's tests, as `npm run test:e2e` does for the three. Four shares
+  # from 16 October 2026: the thirds of WebKit took 12 to 18 minutes on
+  # run 38905682081 and one passed the 20 minutes on run 38908355357, with
+  # the flows of the look of popgen2.html, about 910 tests by engine.
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -63,8 +66,8 @@ jobs:
       fail-fast: false
       matrix:
         project: [chromium, firefox, webkit]
-        shard: [1, 2, 3]
-    name: e2e (${{ matrix.project }} ${{ matrix.shard }}/3)
+        shard: [1, 2, 3, 4]
+    name: e2e (${{ matrix.project }} ${{ matrix.shard }}/4)
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -80,7 +83,7 @@ jobs:
       - run: npm run build
         env:
           POPNEI_TEST_PAGES: "1"
-      - run: npx playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}/3
+      - run: npx playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}/4
       # The report and the traces, to read what the browser did: kept
       # after every run, since a test that passed only on its retry fails
       # the run but leaves its trace from the first attempt, and a job
