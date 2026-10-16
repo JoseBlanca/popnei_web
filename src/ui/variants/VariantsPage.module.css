@@ -9,7 +9,7 @@
   gap: var(--space-8);
   max-inline-size: 48rem;
   margin-inline: var(--page-margin-inline);
-  padding: var(--space-4);
+  padding: var(--page-padding);
 }
 
 /* The two boxes of the files, one above the other, each the width of the

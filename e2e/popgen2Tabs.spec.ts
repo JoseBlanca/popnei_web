@@ -518,6 +518,59 @@ test("AP1 D4 at 320 pixels the five labels on two lines, the tab shown with its 
   expect(greyed.colour).not.toBe(textColour);
 });
 
+test("the panel of the tab shown on a narrow window runs to the window's edges with the page's 16 px inside and no border at its sides; from 640 px it stands in the column with its border and 24 px inside", async ({
+  page,
+}) => {
+  // 40em at the browser's 16 px: the width under which the panel runs to
+  // the edges (Tabs.module.css, the look of 16 October 2026). At 320 px
+  // the text and the buttons of the panel stood 0 px from its border.
+  for (const [width, narrow] of [
+    [320, true],
+    [639, true],
+    [640, false],
+    [1280, false],
+  ] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    await openPage(page);
+    const panel = await shownPanel(page).evaluate((element) => {
+      const style = getComputedStyle(element);
+      const box = element.getBoundingClientRect();
+      return {
+        left: box.left,
+        right: box.right,
+        paddingStart: style.paddingInlineStart,
+        paddingEnd: style.paddingInlineEnd,
+        borderStart: style.borderInlineStartWidth,
+        borderEnd: style.borderInlineEndWidth,
+      };
+    });
+    if (narrow) {
+      expect(panel).toEqual({
+        left: 0,
+        right: width,
+        paddingStart: "16px",
+        paddingEnd: "16px",
+        borderStart: "0px",
+        borderEnd: "0px",
+      });
+    } else {
+      expect(panel.left).toBeGreaterThanOrEqual(16);
+      expect(panel.right).toBeLessThanOrEqual(width - 16);
+      expect(panel.paddingStart).toBe("24px");
+      expect(panel.paddingEnd).toBe("24px");
+      expect(panel.borderStart).toBe("1px");
+      expect(panel.borderEnd).toBe("1px");
+    }
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(0);
+  }
+});
+
 test("AP1 D4 a tooltip on a greyed tab goes when the tab opens while the focus stays on it", async ({
   page,
 }) => {
