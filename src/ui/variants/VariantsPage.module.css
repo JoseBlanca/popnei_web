@@ -73,6 +73,15 @@
   min-inline-size: 0;
 }
 
+/* The end of a tab of a file: the zone, and under it, close to its
+   button, the words of a file it refused. */
+.tabEnd {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
 /* What a tab of the analyses shows, kept drawn and hidden while the tab
    is greyed and its reason stands in its place (PageTabs.tsx). */
 .tabContent {

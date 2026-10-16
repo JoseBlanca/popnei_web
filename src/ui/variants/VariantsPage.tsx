@@ -152,6 +152,7 @@ export function VariantsPage({
               pageTab.show(next);
             }}
             openButton={openButton}
+            variantsRefusal={refusal}
             onVariantsRefusal={setRefusal}
             individualsOpenButton={individualsOpenButton}
             individualsOpening={individualsOpening}

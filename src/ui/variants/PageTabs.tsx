@@ -23,7 +23,10 @@
  * opens another: the Variants tab with "Open another variants file…"
  * under "Download filtered variants…", the Individuals tab with "Open
  * another individuals file…" and Remove side by side, which wrap on a
- * narrow window (docs/plans/file-buttons.md, 16 October 2026). Each is
+ * narrow window (docs/plans/file-buttons.md, 16 October 2026). A file
+ * refused there has its words under the zone too, where the user is, as
+ * well as in the box and, once, in the status region (the review of the
+ * phase, 16 October 2026). Each is
  * outside the boundary made again for each file, so that the button
  * pressed is the same element after the opening and keeps the focus; and
  * the row of the individuals file, which goes with the file at Remove,
@@ -34,6 +37,8 @@
  * errors: a defect thrown by `analysisTabs` costs the row alone, and the
  * two boxes of the files stay.
  */
+import { useLayoutEffect, useRef } from "react";
+
 import { analysisTabs } from "../../core/popgen2Tabs.ts";
 import type {
   AnalysisTabId,
@@ -51,6 +56,7 @@ import { classOf } from "../classOf.ts";
 import { tabContentId } from "../pageTab.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { useAppState } from "../store.tsx";
+import { Problem } from "../widgets/Problem.tsx";
 import { Tabs } from "../widgets/Tabs.tsx";
 import type { TabItem } from "../widgets/Tabs.tsx";
 import {
@@ -86,6 +92,9 @@ export interface PageTabsProps {
       open, at the end of the Variants tab after, which the statistics
       give the focus to when they go. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
+  /** The words of the last variants file not opened, with the load
+      open then, or `null`. */
+  readonly variantsRefusal: Refusal | null;
   /** Called with the words of a variants file not opened, and with
       `null` when an opening makes them out of date. */
   readonly onVariantsRefusal: (refusal: Refusal | null) => void;
@@ -105,6 +114,7 @@ export function PageTabs({
   tab,
   onTabChange,
   openButton,
+  variantsRefusal,
   onVariantsRefusal,
   individualsOpenButton,
   individualsOpening,
@@ -122,6 +132,12 @@ export function PageTabs({
   const individualsName = useAppState(
     (s) => s.project.individuals?.name ?? null,
   );
+  // The words of a variants file not opened while one is open, which the
+  // zone at the end of the Variants tab, the only one then, refused.
+  const variantsRefused =
+    fileId !== null && variantsRefusal?.forLoad === fileId
+      ? variantsRefusal.text
+      : null;
   // Remove pressed: the row goes with the file, and the focus goes to the
   // box's button, which comes back in the same change.
   const individualsEnd = useFocusOnGone(() => individualsOpenButton.current);
@@ -160,16 +176,21 @@ export function PageTabs({
                 <StatsSection openButton={openButton} onShown={onStatsShown} />
                 {/* Drawn again at a turn of the tabs after a throw, as the
                     zone of the box. */}
-                <ErrorBoundary
-                  heading={OPENING_ZONE_NAME}
-                  level={2}
-                  resetOn={tab}
-                >
-                  <OpenVariants
-                    buttonRef={openButton}
-                    onRefusal={onVariantsRefusal}
-                  />
-                </ErrorBoundary>
+                <div className={classOf(styles, "tabEnd")}>
+                  <ErrorBoundary
+                    heading={OPENING_ZONE_NAME}
+                    level={2}
+                    resetOn={tab}
+                  >
+                    <OpenVariants
+                      buttonRef={openButton}
+                      onRefusal={onVariantsRefusal}
+                    />
+                  </ErrorBoundary>
+                  {variantsRefused !== null && (
+                    <RefusedInTab text={variantsRefused} />
+                  )}
+                </div>
               </div>
             ),
         },
@@ -188,7 +209,7 @@ export function PageTabs({
                 <IndividualsTab shown={tab === "individuals"} />
               </ErrorBoundary>
               {individualsName !== null && (
-                <div ref={individualsEnd}>
+                <div ref={individualsEnd} className={classOf(styles, "tabEnd")}>
                   <ErrorBoundary
                     heading={OPENING_INDIVIDUALS_ZONE_NAME}
                     level={2}
@@ -200,6 +221,11 @@ export function PageTabs({
                       actions={<RemoveIndividuals name={individualsName} />}
                     />
                   </ErrorBoundary>
+                  {/* With a file open the zone of the tab is the only one,
+                      so the words of a file not opened are its own. */}
+                  {individualsOpening.refusal !== null && (
+                    <RefusedInTab text={individualsOpening.refusal} />
+                  )}
                 </div>
               )}
             </div>
@@ -247,6 +273,25 @@ export function PageTabs({
         ),
       ]}
     />
+  );
+}
+
+/** The words `text` of a file refused by the zone at the end of a tab,
+    under it. The zone is at the end of the page, often at the bottom of
+    the window, and the words lengthen the page under it, so they are
+    brought into the window as they come, by the least scroll that shows
+    them whole: their last line stood 23 pixels below a window of 900 in
+    Chromium on 16 October 2026, the page scrolled to its end. A tab not
+    shown is hidden, and its words scroll nothing. */
+function RefusedInTab({ text }: { readonly text: string }): React.JSX.Element {
+  const element = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    element.current?.scrollIntoView({ block: "nearest" });
+  }, [text]);
+  return (
+    <div ref={element}>
+      <Problem>{text}</Problem>
+    </div>
   );
 }
 

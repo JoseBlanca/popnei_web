@@ -12,13 +12,17 @@
  * of a file open takes no drop since the owner's decision of 16 October
  * 2026 (e2e/strayDrops.spec.ts); the focus after an
  * opening by the box's button, on the box's heading, and after Remove, on
- * the box's button; axe, light and dark, on each of these states.
+ * the box's button; axe, light and dark, on each of these states. And a
+ * file refused in a tab's zone, its words under that zone, in the window
+ * near the button, as well as in the box, said once (the review of the
+ * phase, 16 October 2026).
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Locator, Page } from "@playwright/test";
 
+import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
 import { dropFiles } from "./dropFiles.ts";
 import {
@@ -331,4 +335,101 @@ test("FB1 an opening by Open another variants file… keeps the focus on it, at 
   await expect(another).toBeFocused();
   await expect(page.locator("svg.chart")).toHaveCount(6, { timeout: 20_000 });
   await expect(another).toBeFocused();
+});
+
+/** Scrolls the page to its end. */
+async function scrollToEnd(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+  });
+}
+
+/** Expects `words` whole in the window, and under `button` by no more than
+    `most` pixels. */
+async function expectNear(
+  words: Locator,
+  button: Locator,
+  most: number,
+): Promise<void> {
+  await expect(words).toBeVisible();
+  await expect(words).toBeInViewport({ ratio: 1 });
+  const at = await boxOf(words);
+  const under = await boxOf(button);
+  expect(at.y).toBeGreaterThanOrEqual(under.y + under.height);
+  expect(at.y - (under.y + under.height)).toBeLessThanOrEqual(most);
+}
+
+test("FB2 a file refused in the Variants tab, picked with Open another variants file…, has its words under the tab's zone, in the window near the button, as well as in the box, and said once", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await recordAnnouncements(page);
+  await openPage(page);
+  await openVariants(page);
+  const words =
+    "panel_pops.csv was not opened: a variants file is a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a .nei file. If it is one of them, rename it.";
+  const button = anotherOpenButton(page, "variants");
+  // Scrolled to the end of the page, where the button is, as a user is:
+  // the words, which lengthen the page, are brought into the window.
+  await scrollToEnd(page);
+  const chooser = page.waitForEvent("filechooser");
+  await button.click();
+  await (await chooser).setFiles(join(FIXTURES, "panel_pops.csv"));
+  // Before 16 October 2026 they were in the box alone, at the top of the
+  // page, out of the window: at y 217 with the button at y 1725.
+  await expectNear(
+    filePanel(page, "variants").getByText(words, { exact: true }),
+    button,
+    48,
+  );
+  await expect(
+    fileBox(page, "variants").getByText(words, { exact: true }),
+  ).toHaveCount(1);
+  await expect
+    .poll(async () =>
+      // The region adds each thing said after the last one, so a text
+      // that ends with the words is one time they were said.
+      (await announced(page)).filter((t) => t.endsWith(words)),
+    )
+    .toHaveLength(1);
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+
+  // Gone with the next file opened.
+  await pickFile(page, "variants", join(FIXTURES, "panel.nei"));
+  await expect(page.getByText(words, { exact: true })).toHaveCount(0);
+});
+
+test("FB2 two files dropped on the zone at the end of the Individuals tab have their words under it, in the window near the button, as well as in the box, and said once", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await recordAnnouncements(page);
+  await openPage(page);
+  await openVariants(page);
+  await openIndividuals(page);
+  await fileTab(page, "individuals").click();
+  const button = anotherOpenButton(page, "individuals");
+  await scrollToEnd(page);
+  const pops = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+  await dropFiles(page, button, [
+    { name: "a.csv", text: pops },
+    { name: "b.csv", text: pops },
+  ]);
+  const words = "Open one individuals file at a time.";
+  await expectNear(
+    filePanel(page, "individuals").getByText(words, { exact: true }),
+    button,
+    48,
+  );
+  await expect(
+    fileBox(page, "individuals").getByText(words, { exact: true }),
+  ).toHaveCount(1);
+  await expect
+    .poll(async () =>
+      // The region adds each thing said after the last one, so a text
+      // that ends with the words is one time they were said.
+      (await announced(page)).filter((t) => t.endsWith(words)),
+    )
+    .toHaveLength(1);
 });

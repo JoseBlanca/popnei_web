@@ -1190,6 +1190,10 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
       { name: "other.csv", text: other },
     ]);
     await expect(reason).toBeVisible();
+    // And under the zone, where the user dropped it.
+    await expect(
+      shown(page).getByText(OTHER_NOT_OPENED, { exact: true }),
+    ).toBeVisible();
     await expect
       .poll(async () =>
         (await announced(page)).filter((text) => text === OTHER_NOT_OPENED),
