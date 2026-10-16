@@ -2,24 +2,24 @@
  * The box of the individuals file on popgen2.html, beside the box of the
  * variants file, or under it below 720 pixels
  * (docs/specs/steps/popgen2-input.md, "The box of the individuals
- * file"). With no file, nothing before the variants file has given its
- * individuals, and then the counts with one row, "Unclassified"; with a
- * file, its name and, as it is read, refused or read, the words of the
- * read, of the refusal, or the list "Column of the populations" with the
- * individuals the filters keep in each population, or in the one row
- * "Unclassified" when the column classifies nobody, and the lines under
- * them. The counts have no caption on the screen and no menu
- * "Download…", as the owner asked on 11 October 2026, so that the box,
- * which stands above every tab, stays small. It ends with the zone that
- * opens an individuals file, its button, a drop or a paste, and with a
- * file the button that removes it.
+ * file"). A summary since 16 October 2026, when the owner asked for a box
+ * that stays small above every tab: with no file, nothing before the
+ * variants file has given its individuals, and then the summary line of
+ * the individuals kept, all unclassified; with a file, its name and, as
+ * it is read, refused or read, the words of the read, of the refusal, or
+ * the list "Column of the populations" with the summary line, "180
+ * individuals classified in 3 populations, 20 unclassified", and the
+ * lines under it, the warnings that say the counts cannot be trusted
+ * among them. It ends with the zone that opens an individuals file, its
+ * button, a drop or a paste. The individuals per population and the
+ * button that removes the file are in the Individuals tab.
  *
- * While the diversity runs, the list, the zone and Remove wait, greyed
- * with the reason of the lock of the populations, so that no change
- * leaves the running diversity behind; a file dropped, pasted or picked
- * then opens nothing, and the box shows that it was not opened and what
- * to do where it shows the words of a folder dropped (popgen2-input.md,
- * "While the diversity runs").
+ * While an analysis that reads the populations runs, the list and the
+ * zone wait, greyed with the reason of the lock of the populations, so
+ * that no change leaves the running analysis behind; a file dropped,
+ * pasted or picked then opens nothing, and the box shows that it was not
+ * opened and what to do where it shows the words of a folder dropped
+ * (popgen2-input.md, "While the diversity runs").
  *
  * The lines of the file are in a boundary of errors made again for each
  * file, as those of the variants file are; the zone is outside it, so
@@ -27,16 +27,15 @@
  * replaced at each opening, and has a boundary of its own, made again at
  * each turn of the tabs, as the zone of the variants file has. The box
  * holds the words of the last drop or paste it did not open, until the
- * next opening; those of a file refused by the lock, until the lock
- * ends, so that they do not come back at the next run.
+ * next opening or removal; those of a file refused by the lock, until the
+ * lock ends, so that they do not come back at the next run.
  */
-import { useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 
 import { populationCounts } from "../../core/populations.ts";
 import type { PageTab } from "../../core/popgen2Tabs.ts";
 import { escaped, individualsBoxNeeds } from "../../core/project.ts";
 import type { IndividualsSource, Project } from "../../core/project.ts";
-import { useLive } from "../autoRunsContext.ts";
 import { classOf } from "../classOf.ts";
 import { useFiles } from "../files.tsx";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
@@ -44,19 +43,18 @@ import { useAnnouncer } from "../shell/announcer.tsx";
 import { PICKER_ENDINGS } from "../steps/individuals/words.ts";
 import type { StepCommand } from "../steps/variants/commands.ts";
 import { useAppState, usePopgen2Store, useStore } from "../store.tsx";
-import { Button } from "../widgets/Button.tsx";
 import { FileZone } from "../widgets/FileZone.tsx";
 import { usePopulationsLock, usePopulationsRunning } from "./filtersLock.ts";
 import { Problem } from "../widgets/Problem.tsx";
 import { Select } from "../widgets/Select.tsx";
-import { Table } from "../widgets/Table.tsx";
-import { VISUALLY_HIDDEN } from "../widgets/visuallyHidden.ts";
-import type { TableRow } from "../widgets/Table.tsx";
-import { Warning } from "../widgets/Warning.tsx";
 import styles from "./IndividualsBox.module.css";
+import {
+  CountsLineShown,
+  usePassWait,
+  waitingCount,
+} from "./IndividualsCounts.tsx";
 import pageStyles from "./VariantsPage.module.css";
 import {
-  REMOVE_INDIVIDUALS_COMMAND,
   chosenColumnItem,
   columnItemCommand,
   columnItems,
@@ -66,28 +64,19 @@ import {
   COLUMN_LIST_LABEL,
   INDIVIDUALS_BOX_NAME,
   INDIVIDUALS_FOLDER_DROPPED,
-  INDIVIDUALS_HEADER,
   INDIVIDUALS_LINES_NAME,
   INDIVIDUALS_SEVERAL_DROPPED,
   INDIVIDUALS_TEXT_DROPPED,
-  NOT_COUNTED_YET,
   OPENING_INDIVIDUALS_ZONE_NAME,
   OPEN_ANOTHER_INDIVIDUALS_FILE,
   OPEN_INDIVIDUALS_FILE,
   PASTE_INDIVIDUALS_FILE,
-  POPULATION_HEADER,
-  WAITING_COUNT,
-  countText,
-  countsCaption,
   countsShown,
-  UNCLASSIFIED_ROW,
   noColumnQualifiedText,
   noFileCounts,
   notOpenedWhileRunningText,
-  passWaitOf,
-  removeLabel,
 } from "./individualsWords.ts";
-import type { CountsLine, PassWait } from "./individualsWords.ts";
+import type { SummaryLine } from "./individualsWords.ts";
 
 /** What the box says of a drop, or a paste, that is not of one file. */
 const NOT_FILES_WORDS = {
@@ -96,44 +85,49 @@ const NOT_FILES_WORDS = {
   several: INDIVIDUALS_SEVERAL_DROPPED,
 } as const;
 
-/** The columns of the table of the counts. */
-const COUNT_COLUMNS = [
-  { id: "population", label: POPULATION_HEADER, isRowHeader: true },
-  { id: "individuals", label: INDIVIDUALS_HEADER, isNumeric: true },
-] as const;
-
 /** A drop or a paste the box did not open, with its words: of something
     that is not one file; or refused by the lock of the populations,
-    whose words go with the lock. */
+    whose words go with the lock; and the load id of the individuals file
+    open when it was refused, or null with none, since an opening or a
+    removal takes the words away. */
 interface Refusal {
   readonly kind: "notOneFile" | "locked";
   readonly text: string;
+  readonly fileId: string | null;
 }
 
 /** What the box is drawn with. */
 export interface IndividualsBoxProps {
   /** The tab shown, whose turn draws the zone again after a throw. */
   readonly tab: PageTab;
+  /** The zone's button, which Remove in the Individuals tab gives the
+      focus to. */
+  readonly openButton: React.RefObject<HTMLButtonElement | null>;
 }
 
 /** The box of the individuals file. */
 export function IndividualsBox({
   tab,
+  openButton,
 }: IndividualsBoxProps): React.JSX.Element {
   const headingId = useId();
   const store = usePopgen2Store();
   const files = useFiles();
   const announcer = useAnnouncer();
-  const openButton = useRef<HTMLButtonElement>(null);
   // The last drop or paste not opened, until the next opening or
   // removal, or, refused by the lock, until the lock ends.
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const individuals = useAppState((s) => s.project.individuals);
+  const fileId = individuals?.fileId ?? null;
   const lock = usePopulationsLock();
   const running = usePopulationsRunning();
-  // The lock ended: the words of a file it refused go with it, set while
-  // drawing, as React keeps a state that follows another.
-  if (refusal?.kind === "locked" && lock === null) {
+  // The lock ended, or a file was opened or removed, Remove being in the
+  // Individuals tab: the words of the refusal go, set while drawing, as
+  // React keeps a state that follows another.
+  if (
+    refusal !== null &&
+    ((refusal.kind === "locked" && lock === null) || refusal.fileId !== fileId)
+  ) {
     setRefusal(null);
   }
 
@@ -143,7 +137,7 @@ export function IndividualsBox({
   };
 
   const refuse = (kind: Refusal["kind"], text: string): void => {
-    setRefusal({ kind, text });
+    setRefusal({ kind, text, fileId });
     // The focus stays where it was, so a screen reader would not read the
     // words by themselves.
     announcer.announce(text);
@@ -159,13 +153,6 @@ export function IndividualsBox({
     // Any file: the reader says what it is from its bytes, not its name.
     setRefusal(null);
     send(openIndividualsCommand(files.addFile(file), file.name));
-  };
-
-  const remove = (): void => {
-    setRefusal(null);
-    send(REMOVE_INDIVIDUALS_COMMAND);
-    // Remove goes with the file; the zone's button stays.
-    openButton.current?.focus();
   };
 
   return (
@@ -218,15 +205,6 @@ export function IndividualsBox({
                     }
                   },
                 }
-          }
-          actions={
-            individuals !== null && (
-              <Button
-                label={removeLabel(individuals.name)}
-                onPress={remove}
-                waiting={lock}
-              />
-            )
           }
         />
       </ErrorBoundary>
@@ -283,14 +261,15 @@ function reasonOf(p: Project): string {
   return reason;
 }
 
-/** What the list and the counts are drawn with. */
+/** What the list and the summary line are drawn with. */
 interface ColumnAndCountsProps {
   /** The project, whose individuals file is read. */
   readonly project: Project;
 }
 
 /** The list "Column of the populations", with the line of no column
-    chosen under it, and the counts with their lines. */
+    chosen under it, and the summary line with the lines of the counts,
+    or the warning in its place. */
 function ColumnAndCounts({ project }: ColumnAndCountsProps): React.JSX.Element {
   const store = useStore();
   const kept = useAppState((s) => s.individualsKept);
@@ -318,45 +297,26 @@ function ColumnAndCounts({ project }: ColumnAndCountsProps): React.JSX.Element {
           store.apply(step.description, step.command);
         }}
       />
-      {shown.table !== "none" && project.variants !== null && (
-        <CountsTable
-          variantsName={project.variants.name}
-          rows={
-            shown.table === "populations"
-              ? counts.populations.map(({ pop, kept: numKept }) => ({
-                  id: pop,
-                  cells: [escaped(pop), countCell(numKept)],
-                }))
-              : [
-                  unclassifiedRow(
-                    counts.known ? (counts.unclassified?.kept ?? null) : null,
-                  ),
-                ]
-          }
-        />
-      )}
-      {shown.lines.map((line) => (
+      {shown.kind === "counts" && <SummaryLineShown line={shown.summary} />}
+      {shown.boxLines.map((line) => (
         <CountsLineShown key={line.text} line={line} />
       ))}
     </>
   );
 }
 
-/** The counts with no individuals file: one row, "Unclassified", with
-    the individuals kept, and the line of why they wait; nothing before
-    the variants file has given its individuals (`noFileCounts`). */
+/** The summary line with no individuals file, of the individuals kept,
+    all unclassified, and the line of why they wait; nothing before the
+    variants file has given its individuals (`noFileCounts`). */
 function NoFileCounts(): React.JSX.Element | null {
   const project = useAppState((s) => s.project);
   const kept = useAppState((s) => s.individualsKept);
   const wait = usePassWait();
   const counts = noFileCounts(project, kept, wait);
-  if (counts === null || project.variants === null) return null;
+  if (counts === null) return null;
   return (
     <div className={classOf(styles, "lines")}>
-      <CountsTable
-        variantsName={project.variants.name}
-        rows={[unclassifiedRow(counts.kept)]}
-      />
+      <SummaryLineShown line={counts.summary} />
       {counts.lines.map((line) => (
         <CountsLineShown key={line.text} line={line} />
       ))}
@@ -364,68 +324,16 @@ function NoFileCounts(): React.JSX.Element | null {
   );
 }
 
-/** What the table of the counts is drawn with. */
-interface CountsTableProps {
-  /** The name of the variants file, which names the table. */
-  readonly variantsName: string;
-  /** A row per population, or the one row of the unclassified. */
-  readonly rows: readonly TableRow[];
-}
-
-/** The table of the counts, with no menu "Download…" and with its caption
-    hidden from the screen and kept as its name for a screen reader: the
-    owner took both out of the box on 11 October 2026. */
-function CountsTable({
-  variantsName,
-  rows,
-}: CountsTableProps): React.JSX.Element {
-  return (
-    <Table
-      caption={countsCaption(variantsName)}
-      captionHidden
-      columns={COUNT_COLUMNS}
-      rows={rows}
-    />
-  );
-}
-
-/** The one row of the counts, "Unclassified", of every individual kept,
-    `kept`, or null while the count waits. */
-function unclassifiedRow(kept: number | null): TableRow {
-  return { id: UNCLASSIFIED_ROW, cells: [UNCLASSIFIED_ROW, countCell(kept)] };
-}
-
-/** A count of the table: its number, or "…" while it is not known, read
-    as "not counted yet". */
-function countCell(kept: number | null): string | React.JSX.Element {
-  if (kept !== null) return countText(kept);
-  return (
-    <span>
-      <span aria-hidden="true">{WAITING_COUNT}</span>
-      <span className={VISUALLY_HIDDEN}>{NOT_COUNTED_YET}</span>
-    </span>
-  );
-}
-
-/** A line under the list: words, or a warning. */
-function CountsLineShown({
+/** The summary line, each count that waits drawn "…" and read "not
+    counted yet". */
+function SummaryLineShown({
   line,
 }: {
-  readonly line: CountsLine;
+  readonly line: SummaryLine;
 }): React.JSX.Element {
   return (
     <p className={classOf(styles, "line")}>
-      {line.kind === "warning" ? <Warning>{line.text}</Warning> : line.text}
+      {line.map((part, index) => part ?? waitingCount(index))}
     </p>
-  );
-}
-
-/** Why the counts wait for the one pass, a primitive, so that a progress
-    of the pass, which changes the statuses and not the answer, draws the
-    box no more; and read again when the analyses the page starts by
-    itself tell a Stop. */
-function usePassWait(): PassWait {
-  return useLive((s, autoRuns) =>
-    passWaitOf(s, (key) => autoRuns.startedUnder(key)),
   );
 }

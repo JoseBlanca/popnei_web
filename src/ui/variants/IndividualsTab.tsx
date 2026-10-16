@@ -1,7 +1,11 @@
 /**
  * The tab "Individuals" of popgen2.html
  * (docs/specs/steps/popgen2-input.md, "The Individuals tab" and
- * "Both tabs kept drawn"): with no file, its words; while it is read, the
+ * "Both tabs kept drawn"): with no file, its words; with one, first the
+ * button that removes it, in the box until 16 October 2026, which puts
+ * the focus on the zone's button of the box, since it goes with the file;
+ * read, then the individuals the filters keep in each population with
+ * the line under them (`IndividualsCounts`); while it is read, the
  * words of the read, under the options of a CSV when the last read of the
  * same load was of a text file, so that the select just changed keeps the
  * focus; refused, the options of a text file and the line that sends to
@@ -13,9 +17,9 @@
  * table of the file, sortable, with its menu "Download…", whose CSV has
  * every row in the order sorted, with the cells as the file holds them.
  *
- * While the diversity runs, the three options of a text file wait,
- * greyed with the reason of the lock of the populations
- * (popgen2-input.md, "While the diversity runs").
+ * While an analysis that reads the populations runs, Remove and the
+ * three options of a text file wait, greyed with the reason of the lock
+ * of the populations (popgen2-input.md, "While the diversity runs").
  *
  * What the screen holds of its own: the format of the last read of each
  * load, and whether it started with the mark of UTF-16, which a read
@@ -44,6 +48,8 @@ import type {
 } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
+import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
+import type { StepCommand } from "../steps/variants/commands.ts";
 import { downloadName, individualsStem } from "../../core/fileNames.ts";
 import { csvOptionCommand } from "../steps/individuals/commands.ts";
 import {
@@ -65,7 +71,9 @@ import { SortableTable } from "../widgets/SortableTable.tsx";
 import type { TableSort } from "../widgets/tableSort.ts";
 import { Warning } from "../widgets/Warning.tsx";
 import { usePopulationsLock } from "./filtersLock.ts";
+import { IndividualsCounts } from "./IndividualsCounts.tsx";
 import styles from "./IndividualsTab.module.css";
+import { REMOVE_INDIVIDUALS_COMMAND } from "./individualsCommands.ts";
 import {
   individualsTableColumns,
   individualsTableRows,
@@ -73,8 +81,10 @@ import {
 } from "./individualsTable.ts";
 import type { TableColumnId } from "./individualsTable.ts";
 import {
+  COUNTS_HEADING,
   individualsTabShows,
   notInFileHeading,
+  removeLabel,
   rowsNotUsedText,
   tableLabel,
   tableSizeText,
@@ -86,11 +96,15 @@ export interface IndividualsTabProps {
   /** Whether the tab is shown, for the table to scroll back to where it
       was when it is shown again. */
   readonly shown: boolean;
+  /** The zone's button in the box of the individuals file, which Remove
+      gives the focus to. */
+  readonly openButton: React.RefObject<HTMLButtonElement | null>;
 }
 
 /** The tab of the individuals file. */
 export function IndividualsTab({
   shown,
+  openButton,
 }: IndividualsTabProps): React.JSX.Element {
   const individuals = useAppState((s) => s.project.individuals);
   const read = individuals?.read ?? null;
@@ -143,10 +157,18 @@ export function IndividualsTab({
   switch (shows.kind) {
     case "none":
       return <p className={classOf(styles, "line")}>{shows.text}</p>;
+    // Each part in the same place of the tab in every state, the empty
+    // place of the counts included, so that React keeps Remove and the
+    // options from one read to the next, and the select just changed
+    // keeps the focus.
     case "reading":
     case "refused":
       return (
         <div className={classOf(styles, "tab")}>
+          {individuals !== null && (
+            <Remove name={individuals.name} openButton={openButton} />
+          )}
+          {null}
           {shows.options && options}
           <p className={classOf(styles, "line")}>{shows.text}</p>
         </div>
@@ -159,6 +181,12 @@ export function IndividualsTab({
       }
       return (
         <div className={classOf(styles, "tab")}>
+          <Remove name={individuals.name} openButton={openButton} />
+          {/* The counts and the table each in a boundary of its own, so
+              that a defect in either leaves Remove and the other. */}
+          <ErrorBoundary heading={COUNTS_HEADING} level={2}>
+            <IndividualsCounts />
+          </ErrorBoundary>
           {shows.options ? (
             options
           ) : (
@@ -173,17 +201,50 @@ export function IndividualsTab({
           )}
           <NotInFile individuals={individuals} />
           <RowsNotUsed />
-          <FileTable
+          <ErrorBoundary
             // A new load, or a read of other options, starts unsorted and
-            // at the top.
+            // at the top, in a boundary that has caught nothing.
             key={`${individuals.fileId} ${JSON.stringify(individuals.csv)}`}
-            read={read}
-            name={individuals.name}
-            shown={shown}
-          />
+            heading={tableLabel(individuals.name)}
+            level={2}
+          >
+            <FileTable read={read} name={individuals.name} shown={shown} />
+          </ErrorBoundary>
         </div>
       );
   }
+}
+
+/** What Remove is drawn with. */
+interface RemoveProps {
+  /** The name of the individuals file. */
+  readonly name: string;
+  /** The zone's button in the box, which takes the focus. */
+  readonly openButton: React.RefObject<HTMLButtonElement | null>;
+}
+
+/** The button that removes the individuals file `name`, greyed while an
+    analysis that reads the populations runs; the history starts afresh
+    (popgen2-input.md, "What it sends and reads"), and the focus goes to
+    the zone's button in the box, since Remove goes with the file. */
+function Remove({ name, openButton }: RemoveProps): React.JSX.Element {
+  const store = usePopgen2Store();
+  const lock = usePopulationsLock();
+  const remove = (step: StepCommand): void => {
+    store.applyAfresh(step.command);
+    openButton.current?.focus();
+  };
+  return (
+    <div>
+      <Button
+        label={removeLabel(name)}
+        onPress={() => {
+          remove(REMOVE_INDIVIDUALS_COMMAND);
+        }}
+        waiting={lock}
+      />
+    </div>
+  );
 }
 
 /** The format the reader found of `read`: "text" for a read with a

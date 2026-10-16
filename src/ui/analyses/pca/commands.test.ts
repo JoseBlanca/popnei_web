@@ -144,7 +144,7 @@ describe("AP2 D3 the commands of the PCA on popgen2.html", () => {
     expect(pcaOptions(after, "popgen2").ld).toEqual({
       follow: false,
       maxAllowedR2: 0.1,
-      maxDist: null,
+      maxDist: 100_000,
     });
     expect(pcaOptions(after, "popgen2").colourBy).toBe("popcat");
     // The old page's command reads PCA_DEFAULTS, whose LD filter follows.
@@ -183,6 +183,24 @@ describe("AP2 D3 the commands of the PCA on popgen2.html", () => {
     expect(
       pcaOptions(methodCommand("pcoa", page).command(p), "popgen2").method,
     ).toBe("pcoa");
+  });
+
+  test("with no option set the LD pruning is on within 100,000 base pairs, and the distance emptied is no distance (the owner, 16 October 2026)", () => {
+    const p = deepFreeze(sampleProject());
+    expect(pcaOptions(p, "popgen2").ld).toEqual({
+      follow: false,
+      maxAllowedR2: 0.1,
+      maxDist: 100_000,
+    });
+    const emptied = ownValueCommand(
+      { kind: "ld", maxDist: null },
+      popgen2("pca"),
+    ).command(p);
+    expect(pcaOptions(emptied, "popgen2").ld).toEqual({
+      follow: false,
+      maxAllowedR2: 0.1,
+      maxDist: null,
+    });
   });
 
   test("the calls the screen spec's 'Its filters' has no step for are refused by the compiler", () => {

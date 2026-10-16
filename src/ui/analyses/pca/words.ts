@@ -11,7 +11,17 @@
  * core's, in src/core/analyses/pca.ts.
  */
 
-import type { PcaColours, PcaRow } from "../../../core/analyses/pca.ts";
+import {
+  PCA2_LD_MAX_DIST,
+  pcaFilters,
+  pcaOptions,
+} from "../../../core/analyses/pca.ts";
+import type {
+  PcaColours,
+  PcaPage,
+  PcaRow,
+} from "../../../core/analyses/pca.ts";
+import { filtersApplied } from "../../../core/filtersApplied.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import type { IndividualsKept } from "../../../core/individualsKept.ts";
 import { counted, escaped, grouped, shown } from "../../../core/project.ts";
@@ -226,22 +236,53 @@ export function readyLines(
   p: Project,
   kept: IndividualsKept | null,
 ): readonly string[] {
+  const count = keptCount(p, kept);
+  if (count === null) return [];
+  const name = escaped(count.variantsName);
+  const total = counted(count.total, "individual");
+  const line =
+    count.numKept === count.total
+      ? `${total} of ${name}`
+      : `${grouped(count.numKept)} of the ${total} of ${name}, those the filters of individuals keep`;
+  return count.waits ? [line, WAITS_FOR_STATISTICS_TEXT] : [line];
+}
+
+/** The individuals a run will take, of those of the variants file. */
+export interface KeptCount {
+  /** The name of the variants file. */
+  readonly variantsName: string;
+  /** The individuals of the variants file. */
+  readonly total: number;
+  /** Those the filters of individuals keep: the known list, every
+      individual of the file when it is `null`, or, while a threshold
+      waits for the statistics of each individual, those the lists
+      keep. */
+  readonly numKept: number;
+  /** Whether a threshold waits for the statistics of each individual. */
+  readonly waits: boolean;
+}
+
+/** The count of the individuals a run of the project `p` will take, with
+    the individuals kept `kept`; `null` without a variants file read or
+    individuals kept, which lock the analysis. */
+export function keptCount(
+  p: Project,
+  kept: IndividualsKept | null,
+): KeptCount | null {
   const read = p.variants?.read;
   if (p.variants === null || read?.kind !== "read" || kept === null) {
-    return [];
+    return null;
   }
   const total = read.individuals.length;
-  const name = escaped(p.variants.name);
-  const waits = kept.list.kind === "needsStatistics";
-  const numKept =
-    kept.list.kind === "known"
-      ? (kept.list.individuals?.length ?? total)
-      : kept.byLists.length;
-  const line =
-    numKept === total
-      ? `${counted(total, "individual")} of ${name}`
-      : `${grouped(numKept)} of the ${counted(total, "individual")} of ${name}, those the filters of individuals keep`;
-  return waits ? [line, WAITS_FOR_STATISTICS_TEXT] : [line];
+  return {
+    variantsName: p.variants.name,
+    total,
+    numKept:
+      kept.list.kind === "known"
+        ? (kept.list.individuals?.length ?? total)
+        : kept.byLists.length,
+    waits: kept.list.kind === "needsStatistics",
+  };
 }
 
 /** The individuals a calculation of the project `p` ran on, those the
@@ -273,14 +314,16 @@ export function decompositionLine(variantsName: string): string {
   return `The bar shows the reading of ${escaped(variantsName)}. The components are calculated once it is read, and the bar does not move meanwhile: from under a second for 1,000 individuals to minutes for several thousand.`;
 }
 
-/** The words of the 3D view (docs/specs/analyses/pca.md, "Its words"). */
 /** The line under the field of the distance of the LD pruning of
-    popgen2.html, on how to choose it, with no number, since no distance
-    holds for every genome (docs/specs/steps/popgen2-pca.md, "Its
-    filters"). */
-export const DISTANCE_HINT =
-  "Choose the distance beyond which the r² between two variants falls to its background level in your species, as studies of its LD decay report.";
+    popgen2.html: that its default, `PCA2_LD_MAX_DIST`, is a start that
+    does not hold for every genome, where to see how far LD extends, and
+    which distance of the LD decay to choose, well beyond the half
+    distance, which is far shorter than a window of pruning should be
+    (docs/specs/steps/popgen2-pca.md, "Its filters"; the owner, 16
+    October 2026). */
+export const DISTANCE_HINT = `${grouped(PCA2_LD_MAX_DIST)} bp is a start that suits many genomes but not all. The LD decay of the Populations tab shows how far LD extends in your data: choose a distance where its curve has flattened, well beyond the half distance.`;
 
+/** The words of the 3D view (docs/specs/analyses/pca.md, "Its words"). */
 export const LOADING_3D = "Loading the 3D view…";
 export const LOAD_FAILED_3D =
   "The 3D view could not be loaded, so the 2D plot is shown in its place. If the connection works, the site may have been updated since this page was opened: save the project, reload the page and open the project again.";
@@ -422,16 +465,50 @@ export function varianceCells(
   ]);
 }
 
+/** The PCA's own LD pruning of popgen2.html as the caption of the table
+    names it. */
+export interface LdPruning {
+  /** Its largest r² between two variants kept. */
+  readonly maxAllowedR2: number;
+  /** Its window, in base pairs. */
+  readonly maxDist: number;
+}
+
+/** The LD pruning the PCA of `p` applies on the page `page`, from the
+    options of the project, which for a result shown are those of its
+    key: on popgen2.html the PCA's own when it is on and has a distance;
+    `null` with it off, and on the old page, whose caption does not name
+    it. */
+export function ldPruningOf(p: Project, page: PcaPage): LdPruning | null {
+  if (page === "popgen") return null;
+  const ld = pcaFilters(filtersApplied(p), pcaOptions(p, page), page).find(
+    (filter) => filter.kind === "ld",
+  );
+  return ld?.kind === "ld" && ld.maxDist !== null
+    ? { maxAllowedR2: ld.maxAllowedR2, maxDist: ld.maxDist }
+    : null;
+}
+
 /** The caption of the table of the individuals: "The place of each of the
     200 individuals of panel.nei on the first 10 of the 199 components,
-    from 548 variants." */
-export function tableCaption(r: PcaResult, variantsName: string): string {
+    from 548 variants.", with ", after the LD pruning at r² 0.1 within
+    100,000 bp" before the full stop for `pruning`, the PCA's own on
+    popgen2.html, so that the result says the pruning ran. */
+export function tableCaption(
+  r: PcaResult,
+  variantsName: string,
+  pruning: LdPruning | null = null,
+): string {
   const numVars = r.numVarsUsed ?? r.passStats.numVars;
   const first =
     r.numComps === r.numCompsFound
       ? `the ${counted(r.numComps, "component")}`
       : `the first ${grouped(r.numComps)} of the ${counted(r.numCompsFound, "component")}`;
-  return `The place of each of the ${counted(r.individuals.length, "individual")} of ${escaped(variantsName)} on ${first}, from ${counted(numVars, "variant")}.`;
+  const after =
+    pruning === null
+      ? ""
+      : `, after the LD pruning at r² ${String(pruning.maxAllowedR2)} within ${grouped(pruning.maxDist)} bp`;
+  return `The place of each of the ${counted(r.individuals.length, "individual")} of ${escaped(variantsName)} on ${first}, from ${counted(numVars, "variant")}${after}.`;
 }
 
 /** A coordinate of the table, to four decimals with the minus sign:

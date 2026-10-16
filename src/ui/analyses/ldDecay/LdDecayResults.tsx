@@ -144,7 +144,14 @@ export function LdDecayResults({
   );
   const variantsName = useAppState((s) => s.project.variants?.name ?? null);
   const popneiVersion = useAppState((s) => s.popneiVersion);
-  const maxDist = useAppState((s) => ldDecayOptions(s.project).maxDist);
+  // The options the result was calculated with: those of the key the
+  // result is shown under, read with the defaults of its page.
+  const maxDist = useAppState(
+    (s) => ldDecayOptions(s.project, ldDecayPageOf(analysis)).maxDist,
+  );
+  const maxAllowedMaf = useAppState(
+    (s) => ldDecayOptions(s.project, ldDecayPageOf(analysis)).maxAllowedMaf,
+  );
   const [tab, setTab] = useState<LdTab>(PLOT_ID);
   if (result.analysis !== "ldDecay") {
     throw new Error(
@@ -171,6 +178,7 @@ export function LdDecayResults({
         result={result}
         maxDist={maxDist}
         variantsName={variantsName}
+        maxAllowedMaf={maxAllowedMaf}
         onPage2={onPage2}
         leftOut={leftOut}
       />
@@ -325,17 +333,21 @@ const BinsTable = memo(function BinsTable({
 });
 
 /** The table of the populations, which is not drawn again while its
-    result, the largest distance and the name of the variants file are
-    the same. */
+    result, the largest distance, the largest major allele frequency and
+    the name of the variants file are the same. */
 const PopulationsTable = memo(function PopulationsTable({
   result,
   maxDist,
   variantsName,
+  maxAllowedMaf,
   onPage2,
   leftOut,
 }: PartProps & {
   /** The name of the variants file, which the caption names. */
   readonly variantsName: string;
+  /** The largest major allele frequency of the options, which the
+      caption names. */
+  readonly maxAllowedMaf: number;
   /** Whether it is drawn on popgen2.html, with its "Download…". */
   readonly onPage2: boolean;
   /** The unclassified individuals kept it leaves out, on popgen2.html,
@@ -350,11 +362,6 @@ const PopulationsTable = memo(function PopulationsTable({
         values: ldDecayValues(row),
       })),
     [result],
-  );
-  // The maximum the result was calculated with: the options are those of
-  // the key the result is shown under.
-  const maxAllowedMaf = useAppState(
-    (s) => ldDecayOptions(s.project).maxAllowedMaf,
   );
   const caption = captionText(
     result.passStats.numVars,

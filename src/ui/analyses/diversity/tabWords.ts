@@ -127,6 +127,7 @@ export function diversityTabReadyLines(
       diversityOptions(p).minNumIndividuals,
       onePopulation,
       draw,
+      "popgen2",
     ),
     ...(pops.emptied.length > 0 ? [emptiedLine(pops.emptied)] : []),
     ...(kept.list.kind === "needsStatistics"

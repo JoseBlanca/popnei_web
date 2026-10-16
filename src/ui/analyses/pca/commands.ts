@@ -181,12 +181,14 @@ export function followCommand(
   });
 }
 
-/** A value of a filter set for the analysis alone. */
+/** A value of a filter set for the analysis alone; the distance of the
+    LD pruning `null` for its field emptied on popgen2.html, no distance,
+    which locks the PCA until one is typed. */
 export type OwnValue =
   | { readonly kind: "missing_data"; readonly maxAllowedMissingRate: number }
   | { readonly kind: "maf"; readonly maxAllowedMaf: number }
   | { readonly kind: "ld"; readonly maxAllowedR2: number }
-  | { readonly kind: "ld"; readonly maxDist: number };
+  | { readonly kind: "ld"; readonly maxDist: number | null };
 
 /** The value `value` of a filter set for the analysis alone. */
 export function ownValueCommand(

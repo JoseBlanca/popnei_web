@@ -970,7 +970,7 @@ that send the user to "the Variants step", "the Individuals step" and
   |---|---|
   | the individuals file being read | "The distances wait for panel_pops.csv to be read." |
   | the one population of `popgen2OnePopulationCause`, no individuals file, "None", a refused file, a column absent, not offered, of more than 20 values or that classifies nobody, or one population of the column with an individual in the variants file | "The distances between populations need two populations or more with individuals in panel.nei. Choose a column of the populations in the box Individuals that gives them two or more." |
-  | fewer than two populations with the minimum of individuals, over every individual of the variants file | "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, or merge populations in panel_pops.csv."; with none, "No population has 20 individuals or more, and …" |
+  | fewer than two populations with the minimum of individuals, over every individual of the variants file | "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant in Parameters, or merge populations in panel_pops.csv."; with none, "No population has 20 individuals or more, and …" |
 
   The second row comes with a greyed tab (`docs/specs/core/popgen2Tabs.md`),
   whose reason is what the user reads; it locks so that no request of
@@ -985,8 +985,8 @@ that send the user to "the Variants step", "the Individuals step" and
   distances need two or more. Loosen the thresholds of the individuals
   in the Variants tab."; fewer than two of those they leave have the
   minimum, "Only p0 has 20 individuals or more among the individuals the
-  thresholds keep, and … Lower the individuals needed per variant, above,
-  merge populations in panel_pops.csv, or loosen the thresholds of the
+  thresholds keep, and … Lower the individuals needed per variant in
+  Parameters, merge populations in panel_pops.csv, or loosen the thresholds of the
   individuals in the Variants tab." The first two come with a greyed
   tab too, `fewKept`.
 - **The warnings**, in the order of "The warnings": `tooFewIndividuals`

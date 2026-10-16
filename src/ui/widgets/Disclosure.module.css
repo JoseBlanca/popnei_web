@@ -1,9 +1,15 @@
 /* The tokens are those of src/ui/tokens.css. */
 
+/* As wide as its parent gives it, the line that opens it at the start
+   and what it opens across it: the options of an analysis of popgen2.html
+   take the whole width of their panel, whose grid sets its items at the
+   start, as wide as their content. */
 .disclosure {
   display: grid;
   gap: var(--space-2);
   justify-items: start;
+  justify-self: stretch;
+  min-inline-size: 0;
 }
 
 .trigger {
@@ -16,14 +22,20 @@
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: none;
-  color: var(--color-accent);
+  color: var(--color-text);
   font: inherit;
-  text-decoration: underline;
+  font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
 }
 
+/* The header of a section, which opens it, and not a link, which would
+   take the user elsewhere: the colour of the text and semibold, not the
+   accent and an underline, which a link has (the review of 16 October
+   2026); underlined only under the pointer. */
 .trigger[data-hovered] {
   background: var(--color-surface);
+  text-decoration: underline;
 }
 
 .trigger[data-focus-visible] {
@@ -49,5 +61,7 @@
 }
 
 .panel {
+  justify-self: stretch;
+  min-inline-size: 0;
   padding-inline-start: var(--space-6);
 }

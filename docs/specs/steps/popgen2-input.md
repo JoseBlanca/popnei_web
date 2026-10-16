@@ -55,6 +55,19 @@ populations too, and while they run the same controls are greyed, with
 words that name the distances (`popgen2-distances.md`, "While the
 distances run").
 
+Revised on 16 October 2026 for the owner's request of that day,
+item 1 of `docs/plans/popgen2-tidy.md`, so that the box, which stands
+above every tab, is a summary: the box of the individuals file keeps the
+name of the file, the list "Column of the populations", the warnings
+that say its counts cannot be trusted, and the zone that opens a file,
+and shows one line in place of the table of the counts, "180
+individuals classified in 3 populations, 20 unclassified"; the table of
+the individuals per population, now under a heading of its own, the
+line of the unclassified under it, and "Remove panel_pops.csv", with
+its lock while an analysis that reads the populations runs, move to the
+top of the Individuals tab (below, "The box of the individuals file",
+"The Individuals tab").
+
 The two tabs were called "Variants file" and "Individuals file" until 9
 October 2026, when the row of five tabs of `popgen2-pca.md` renamed them
 "Variants" and "Individuals" and named the row "Files and analyses";
@@ -144,8 +157,9 @@ moved under the tab and otherwise unchanged; their terms are used here.
   button, by a drop on its box, or by a paste with the focus in its box,
   before or after the variants file, and removed.
 - The box of the individuals file shows the column of the populations,
-  chosen by the page and changed by the user, and how many individuals
-  the filters keep in each population.
+  chosen by the page and changed by the user, and one line that counts
+  the individuals the filters keep, classified and unclassified; the
+  Individuals tab shows how many the filters keep in each population.
 - What the page showed under the box of the variants file is now under
   the Variants tab. The button that opens a variants file moves
   from the end of the page into its box.
@@ -205,15 +219,16 @@ Its heading is "Individuals" ("Individuals file" until 11 October
 | the individuals file | what the box shows |
 |---|---|
 | none, no variants file | the zone alone: there are no individuals yet |
-| none, a variants file open | the counts with one row, "Unclassified", below; the zone alone before the variants file has given its individuals, and when it could not be opened |
+| none, a variants file open | the summary line, "200 individuals, all unclassified", below; the zone alone before the variants file has given its individuals, and when it could not be opened |
 | being read | its name, and "Reading panel_pops.csv." |
 | refused, or the read failed | its name, and the words of the refusal, below, "Its words" |
-| read | its name, the list "Column of the populations", and the counts, below |
+| read | its name, the list "Column of the populations", and the summary line or the warning that stands in its place, below |
 
 It ends with the zone that opens an individuals file, a `FileZone`, as
 the variants file's: "Open individuals file…" with no file, "Open
-another individuals file…" with one, taking a dropped or a pasted file;
-and, with a file, the button "Remove panel_pops.csv". The zone takes any
+another individuals file…" with one, taking a dropped or a pasted file.
+The button "Remove panel_pops.csv", in the box until 16 October 2026,
+is the first control of the Individuals tab (below). The zone takes any
 file: table_io says what each is from its bytes, so the page turns no
 file away by its name. A drop or a paste of a folder, of a piece of text
 or of several files says, in the box, "Open an individuals file, a CSV,
@@ -254,80 +269,55 @@ names alone; with more columns, all of true or false, "panel_pops.csv has no col
 2026: "Choose it in the list" sent the user to a list that offers only
 "None").
 
-**The counts.** With a variants file read and a column chosen whose
-values are 20 or fewer, a table of two columns, "Population" and
-"Individuals". It has no caption on the screen, and no menu
-"Download…", since 11 October 2026, when the owner took both out of the
-box; a screen reader names it "Individuals of panel.nei after the
-filters of individuals", the caption it had until then:
+**The summary line.** With a variants file read and a column chosen
+whose values are 20 or fewer, one line under the list counts the
+individuals the filters keep (`populationCounts` of core, from
+`populationsKept`): the classified, those in a population, and the
+unclassified, as "The terms" defines them. It replaced the table of the
+counts in the box on 16 October 2026, when the owner asked for a box
+that summarises; the table is in the Individuals tab (below).
 
-| Population | Individuals |
+| the individuals kept | the line |
 |---|---|
-| p0 | 31 |
-| p2 | 36 |
-| p1 | 44 |
+| some classified and some unclassified | "180 individuals classified in 3 populations, 20 unclassified" |
+| all classified | "200 individuals classified in 3 populations" |
+| none classified: no individuals file, "None" chosen, a column that classifies none of them, or populations the filters leave empty | "200 individuals, all unclassified" |
+| one, in one population | "1 individual classified in 1 population" |
+| none: the filters of the individuals remove every one | "No individual is kept by the filters of individuals" |
 
-- The rows are the populations with an individual in both files, in the
-  order each first appears in the individuals file, named as the cells
-  are written (a number with the decimal mark of the file, `1,75`). A
-  population the filters leave empty keeps its row, with 0. A
-  population none of whose individuals is in the variants file has no
-  row.
-- Each count is the individuals kept of that population
-  (`populationCounts` of core, from `populationsKept`).
+- The populations counted are those with at least one individual kept:
+  a population the filters leave empty is not counted in the line, and
+  keeps its row, with 0, in the table of the tab.
 - A count is written as the page writes counts, with a comma for the
-  thousands, "1,250".
+  thousands, "1,250"; "1 individual", "1 population" for one.
 
-Under the table, the first that holds:
+In the place of the summary line, the first that holds:
 
-- some individuals classified and some unclassified kept: "Unclassified,
-  left out of the analyses per population: 7 individuals kept, 3 with an
-  empty cell in popcat and 4 that are not in panel_pops.csv. Not in
-  panel_pops.csv: s031, s044, s102 and 1 more; the Individuals
-  tab lists them all." The count and its causes are of the individuals
-  kept; the names are of the kept not in the file, in a sentence of
-  their own, so that they are not read as of both causes. Each part is
-  left out when its count is 0, and the one cause left needs no count of
-  its own, its names then after a colon: "…: 3 individuals kept with an
-  empty cell in popcat.", "…: 1 individual kept that is not in
-  panel_pops.csv: s031."; past three names, the count of the rest and
-  "; the Individuals tab lists them all.", whose list holds them
-  among those of before the filters. One individual: "1 individual".
-- no individual of the variants file in the individuals file, the table
-  then empty and not drawn: the warning "Warning: none of the 200
-  individuals of panel.nei is in panel_pops.csv, so all of them are
-  unclassified. The first column of panel_pops.csv has to hold their
-  names as panel.nei writes them: panel.nei starts with s000, and
-  panel_pops.csv with S-000."
-- a column that classifies none of the individuals of the variants
-  file, "None" among them: no line, and the table has the one row
-  "Unclassified" with the individuals kept, as with no individuals file
-  (below); the sentence "All 200 individuals kept are unclassified, and
-  the analyses per population will take them as one population." went on
-  11 October 2026, so that the two look the same. A column whose
-  populations the filters leave empty keeps its rows, with 0, and the
-  line of the unclassified.
-
-The line of the rows of the individuals file that the variants file
-does not have, which stood last in the box until 11 October 2026, is in
-the Individuals tab (below).
+- no individual of the variants file in the individuals file: the
+  warning "Warning: none of the 200 individuals of panel.nei is in
+  panel_pops.csv, so all of them are unclassified. The first column of
+  panel_pops.csv has to hold their names as panel.nei writes them:
+  panel.nei starts with s000, and panel_pops.csv with S-000."
+- a column of more than 20 values, below.
 
 **With no individuals file**, once the variants file has given its
-individuals, the same table has one row, "Unclassified", with the
-individuals kept, every one of them unclassified:
-
-| Population | Individuals |
-|---|---|
-| Unclassified | 200 |
-
-While the count waits, as below, the row has "…" and the line of
-waiting is under it; nothing else is.
+individuals, the summary line counts the individuals kept, every one of
+them unclassified: "200 individuals, all unclassified". It was a table
+of one row, "Unclassified", from 11 to 16 October 2026.
 
 **The counts that wait.** With a threshold of the individuals on and the
 one pass not finished, once the variants file has given its individuals
-(the opening reads them before the pass starts), the rows are drawn with "…" in place of each
-count, read by a screen reader as "not counted yet", and the line of the
-unclassified gives way to:
+(the opening reads them before the pass starts), the summary line is
+drawn with "…" in place of each number it cannot give yet, each read by
+a screen reader as "not counted yet": "… individuals classified in …
+populations, … unclassified", and ", … unclassified" only when an
+individual of the variants file has no population before the filters;
+the number of populations waits too, since once counted it is those
+with an individual kept, and a population the filters empty would make
+"in 3 populations" become "in 2" (until 16 October 2026 it gave the
+populations before the filters); "…
+individuals, all unclassified" when none is classified. Under it, the
+line of why:
 
 - while the pass runs, or before it starts: "The individuals the filters
   keep are counted once panel.nei is read to the end.";
@@ -338,19 +328,20 @@ unclassified gives way to:
   could not be read to the end; the box Variants says why."
 
 The box is named by its heading, "Variants", as the page's other words
-name it ("the box of panel.nei" until 11 October 2026).
+name it ("the box of panel.nei" until 11 October 2026). The table of the
+Individuals tab waits in the same way (below).
 
 The warning of no individual in the file does not wait.
 With no threshold of the individuals on, the counts never wait.
 
-**Before a variants file is read**, the counts give way to "The
+**Before a variants file is read**, the summary line gives way to "The
 individuals are counted once a variants file is open.", and the
 warning of too many values, below, still shows, from `populationCounts`,
 which gives the column and its values before the variants file.
 
-**A column of more than 20 values** gives no table and no line of the
-unclassified: "Warning: accession has 1,845 different values, too many
-for a column of populations: the individuals are counted here only for a
+**A column of more than 20 values** gives no summary line, and no table
+in the tab: "Warning: accession has 1,845 different values, too many
+for a column of populations: the individuals are counted only for a
 column of 20 different values or fewer. If it is not the column of the
 populations, choose another in the list." The values
 are counted in the individuals file, missing ones left out, so the
@@ -395,10 +386,73 @@ the statistics leaves the lines.
 | the individuals file | what the tab shows |
 |---|---|
 | none | "No individuals file open." |
-| being read | "Reading panel_pops.csv." |
-| refused, read as text | the options of the reader, below, and nothing else; the box holds the words |
-| refused as an xlsx, or before table_io read it: too large, not readable by the browser, the reader not downloaded, the worker stopped | "panel_pops.xlsx could not be read; the box Individuals says why." |
+| being read | "Remove panel_pops.csv", then "Reading panel_pops.csv." |
+| refused, read as text | "Remove panel_pops.csv", then the options of the reader, below, and nothing else; the box holds the words |
+| refused as an xlsx, or before table_io read it: too large, not readable by the browser, the reader not downloaded, the worker stopped | "Remove panel_pops.csv", then "panel_pops.xlsx could not be read; the box Individuals says why." |
 | read | the parts below, in this order |
+
+With no individuals file the tab holds its words alone: the summary line
+of the box counts the individuals, all unclassified, and a table of one
+row would say no more.
+
+**Remove.** The first control of the tab, with a file in any state, is
+the button "Remove panel_pops.csv", in the box until 16 October 2026,
+when the owner moved it here with the detail of the file. Remove puts the
+focus on the zone's button in the box, "Open individuals file…" (below,
+"Accessibility").
+
+**The individuals per population.** With a variants file read and a
+column chosen whose values are 20 or fewer, the heading "Individuals per
+population, after the filters of individuals" and under it a table of
+two columns, "Population" and "Individuals", the table the box showed
+until 16 October 2026. It has no caption on the screen, its heading
+standing above it, and no menu "Download…"; a screen reader names it
+"Individuals of panel.nei after the filters of individuals":
+
+| Population | Individuals |
+|---|---|
+| p0 | 31 |
+| p2 | 36 |
+| p1 | 44 |
+
+- The rows are the populations with an individual in both files, in the
+  order each first appears in the individuals file, named as the cells
+  are written (a number with the decimal mark of the file, `1,75`). A
+  population the filters leave empty keeps its row, with 0. A
+  population none of whose individuals is in the variants file has no
+  row.
+- Each count is the individuals kept of that population
+  (`populationCounts` of core, from `populationsKept`).
+- A count is written as the page writes counts, with a comma for the
+  thousands, "1,250".
+- A column that classifies none of the individuals of the variants
+  file, "None" among them, gives the one row "Unclassified" with the
+  individuals kept, and no line under it.
+
+Under the table, with some individuals classified and some unclassified
+kept: "Unclassified, left out of the analyses per population: 7
+individuals kept, 3 with an empty cell in popcat and 4 that are not in
+panel_pops.csv. Not in panel_pops.csv: s031, s044, s102 and 1 more; the
+list of those not in panel_pops.csv, in this tab, names them all." The
+count and its causes are of the individuals kept; the names are of the
+kept not in the file, in a sentence of their own, so that they are not
+read as of both causes. Each part is left out when its count is 0, and
+the one cause left needs no count of its own, its names then after a
+colon: "…: 3 individuals kept with an empty cell in popcat.", "…: 1
+individual kept that is not in panel_pops.csv: s031."; past three names,
+the count of the rest and "; the list of those not in panel_pops.csv,
+in this tab, names them all.", whose list holds them among those of
+before the filters ("; the Individuals tab lists them all." while the
+line stood in the box). One individual: "1 individual".
+
+While the counts wait, as in the box, the rows have "…" in place of each
+count, read by a screen reader as "not counted yet", and the line of
+why, the box's, stands under the table in place of the line of the
+unclassified, so that the "…" of a tab looked at alone is explained.
+
+Nothing of this part is drawn before a variants file is read, with a
+column of more than 20 values, or with no individual of the variants
+file in the individuals file: the box says why, in its words above.
 
 **How it was read.** For a file table_io read as text, the found format
 of the read, three selects as in the old Individuals step
@@ -430,7 +484,12 @@ individuals file opened, as the statistics of the variants file are for
 each variants file: a throw there leaves its heading alone in the tab,
 "How the individuals file was read and what it holds", and the boxes,
 the other tab and the row of the tabs working; the next file opened
-draws the tab again.
+draws the tab again. Inside it, the individuals per population and the
+table of the file each have a boundary of their own: a throw in one
+leaves its heading alone in its place, "Individuals per population,
+after the filters of individuals" or "The table of panel_pops.csv", and
+Remove and the rest of the tab working, so that the user can still
+remove the file.
 
 **The individuals not in the file.** When individuals of the variants
 file are not in the individuals file: the heading "Individuals in
@@ -479,7 +538,9 @@ one height as the table scrolls sideways: "Fecha de muestreo" of
 
 Since 12 October 2026, all of this holds while the distances between
 populations run too, with "the distances" in the words
-(`popgen2-distances.md`, "While the distances run").
+(`popgen2-distances.md`, "While the distances run"), and since 13
+October 2026 while the LD decay runs, with "the LD decay"
+(`popgen2-populations.md`, "The LD decay").
 
 
 From 11 October 2026, while the diversity of the Populations tab runs,
@@ -489,11 +550,12 @@ greyed, so that no change leaves the running diversity behind
 runs"; the design's choice 2 (a)):
 
 - in the box Individuals: the list "Column of the populations", whose
-  popover does not open; the zone that opens another individuals file,
-  whose button opens no picker and which takes no drop and no paste;
-  and "Remove panel_pops.csv";
-- in the Individuals tab: the lists "Encoding", "Separator" and
-  "Decimal mark" of a text file.
+  popover does not open; and the zone that opens another individuals
+  file, whose button opens no picker and which takes no drop and no
+  paste;
+- in the Individuals tab: "Remove panel_pops.csv", in the box until 16
+  October 2026, which moved with its lock; and the lists "Encoding",
+  "Separator" and "Decimal mark" of a text file.
 
 Each is drawn greyed, carries `aria-disabled`, and is still reached by
 the Tab key, as the greyed thresholds are (`popgen2-pca.md`, "While a
@@ -529,9 +591,9 @@ now. The zone of a file, `src/ui/widgets/FileZone.tsx`, has a greyed
 state for this, `waiting`: its reason, and what the screen does with
 the name of a file refused while it waits.
 
-Not greyed: the counts, the table of the file, its sort and scroll,
-and the copy of the names, which change nothing. While only the PCA
-runs, nothing of this box is greyed, as the owner decided on 10
+Not greyed: the summary line, the counts, the table of the file, its
+sort and scroll, and the copy of the names, which change nothing. While
+only the PCA runs, nothing of the box or of the tab is greyed, as the owner decided on 10
 October 2026 (open point 3 of `docs/designs/no-undo.md`).
 
 ### Both tabs kept drawn
@@ -576,12 +638,12 @@ analysis, and has no Run of its own.
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | no file: the two boxes with their openings and the words of no file; the tabs, each with its words of no file | open either file |
-| locked | the counts cannot be given: before a variants file, "The individuals are counted once a variants file is open."; with a threshold on and the pass not finished, the rows with "…" and the line of why; a column of more than 20 values, its warning | open the variants file; Start again; change the column; turn the threshold off |
+| locked | the counts cannot be given: before a variants file, "The individuals are counted once a variants file is open."; with a threshold on and the pass not finished, the summary line and the rows of the tab with "…", and the line of why under each; a column of more than 20 values, its warning | open the variants file; Start again; change the column; turn the threshold off |
 | ready | cannot happen apart: nothing waits for a Run, the counts are drawn as soon as they are known | |
 | running | the individuals file being read, "Reading panel_pops.csv." in the box and the tab; the one pass running, as `popgen2-filters.md` gives it, the counts waiting when a threshold of the individuals is on | open another file; remove the file; choose a column of a file already read |
-| done | the list, the counts and their lines; the tab with how it was read, the missing ones and the table | choose the column, sort and scroll the table, change the options of a CSV, copy the names, open another file, remove it |
+| done | the list and the summary line; the tab with Remove, the counts per population and their line, how it was read, the missing ones and the table | choose the column, sort and scroll the table, change the options of a CSV, copy the names, open another file, remove it |
 | results removed | never in this box: a change of the filters or the column changes the counts in place, with no notice, as the owner decided for every change on this page on 8 October 2026. From 11 October 2026 a change of the individuals file or of the column takes the diversity's result off the Populations tab, and starts it again a second later while it is live (`popgen2-populations.md`, "The states"); neither the one pass's key nor the download's holds it | |
-| locked, from 11 October 2026 | while the diversity runs: the list, the zone and Remove greyed, with their reason; the three lists of the reader in the Individuals tab the same (above, "While the diversity runs") | Stop the diversity in the Populations tab, or Stop all in the band |
+| locked, from 11 October 2026 | while the diversity runs: the list and the zone greyed, with their reason; Remove and the three lists of the reader in the Individuals tab the same (above, "While the diversity runs") | Stop the diversity in the Populations tab, or Stop all in the band |
 | error | the file refused or its read failed: its words in the box, the options of the reader under the tab for a text file | change the options of a CSV; open another file; remove it |
 
 ## What it sends and reads
@@ -638,15 +700,18 @@ the project's (`docs/architecture.md`, section 7).
 |---|---|
 | the heading of each box | "Variants"; "Individuals" ("Variants file" and "Individuals file" until 11 October 2026) |
 | the buttons of the zones | "Open variants file…", "Open another variants file…"; "Open individuals file…", "Open another individuals file…" |
-| the button of removal | "Remove panel_pops.csv" |
+| the button of removal, first in the Individuals tab | "Remove panel_pops.csv" |
+| the summary line of the box | "180 individuals classified in 3 populations, 20 unclassified"; "200 individuals classified in 3 populations"; "200 individuals, all unclassified"; "1 individual classified in 1 population"; "No individual is kept by the filters of individuals"; while the counts wait, "…" in place of each number, read "not counted yet" |
+| the heading of the counts, in the Individuals tab | "Individuals per population, after the filters of individuals" |
 | the row of the tabs, for a screen reader | "Files and analyses" |
 | the heading drawn in place of the zone of the variants file when its code throws, under the box's "Variants" | "Opening a variants file" |
 | the headings drawn in place of the lines of the individuals file and of its zone when their code throws, under the box's "Individuals" | "What the individuals file holds"; "Opening an individuals file" |
 | the heading drawn in place of what the Individuals tab shows when its code throws | "How the individuals file was read and what it holds" |
+| the headings drawn in place of the counts and of the table of the file when their code throws | "Individuals per population, after the filters of individuals"; "The table of panel_pops.csv" |
 | the tabs | "Variants"; "Individuals" |
 | the list | "Column of the populations"; first item "None: every individual unclassified" |
 | the name of the counts, for a screen reader alone | "Individuals of panel.nei after the filters of individuals" |
-| the one row of the counts with no individuals file | "Unclassified" |
+| the one row of the counts for a column that classifies nobody | "Unclassified" |
 | the headers of the counts | "Population"; "Individuals" |
 | a count not yet known, for a screen reader | "not counted yet" |
 | the line of the rows not used, in the Individuals tab | "Individuals in panel_pops.csv but not in panel.nei: 18" |
@@ -684,20 +749,22 @@ The criteria are those of WCAG 2.2 at level AA.
 
 **The order of the Tab key** (2.4.3, "Focus order"): in the box of the
 variants file, Stop or Start again, then its zone; in the box of the
-individuals file, the list, then its zone, then Remove;
+individuals file, the list, then its zone;
 the row of the tabs, one stop, whose left and right arrow keys move
 between the two labels and show each as they reach it, and Home and End
 go to the first and the last; then the controls of the tab shown, in the
 order of `popgen2-filters.md` for the Variants tab, and for the
-Individuals tab the three selects, the copy button, and the table, one stop, a grid
+Individuals tab Remove, the three selects, the copy button, and the table, one stop, a grid
 whose arrow keys move from cell to cell and whose headers sort with
 Enter. Each zone is two stops, the zone itself, which takes a paste and
 is named "Paste a variants file" or "Paste an individuals file", then
 its button. The hidden tab is never reached.
 
 **Where the focus goes.** An opening by the button leaves the focus on
-the button, which becomes "Open another …". Remove puts the focus on the
-zone's button, "Open individuals file…", since Remove goes. A turn of
+the button, which becomes "Open another …". Remove, in the Individuals
+tab, puts the focus on the zone's button in the box, "Open individuals
+file…", since Remove goes with the file and the tab then holds no
+control. A turn of
 the tab moves no focus but React Aria's on the labels.
 
 **What is said without moving the focus** (4.1.3, "Status messages").
@@ -719,19 +786,22 @@ a change of a threshold or of the column is not said: the user acted on
 the threshold or the list, which says what changed, and a sentence at
 each count would fill the region while a threshold is moved.
 
-**The widgets.** The counts are `Table.tsx`, whose cells take an
-element, for the "…" with its words for a screen reader; the list
+**The widgets.** The counts of the tab are `Table.tsx`, whose cells
+take an element, for the "…" with its words for a screen reader; each
+"…" of the summary line is drawn the same way; the list
 `Select.tsx`; each warning `Warning.tsx`, which writes "Warning:" itself,
 so the words given to it start after it; the table of the file
 `SortableTable.tsx`, named by its `label`, "The table of
 panel_pops.csv".
 
 **A table that a screen reader can read.** The counts are a table named for
-a screen reader by the caption it had, which the screen no longer
-shows: the table's own `<caption>`, hidden from the screen
+a screen reader by the caption it had, which the screen does not
+show: the table's own `<caption>`, hidden from the screen
 (`captionHidden` of `Table.tsx`), so that its words are read once, as
 the table's name, and not also as a paragraph before it, as they were
-until 11 October 2026. It has two header cells; a count waiting is "…" on the screen
+until 11 October 2026. Its heading in the tab, an `h2` as the heading
+of the individuals not in the file is, lets a screen reader reach it by
+the headings of the page. It has two header cells; a count waiting is "…" on the screen
 and "not counted yet" to a screen reader. The table of the file has its
 first column as row headers.
 
@@ -760,8 +830,9 @@ yet"; a refusal said once as it appears.
 
 ## How it is checked
 
-**In Vitest**, in node: the words of the box in each row of its table
-and each line of the counts, from projects and individuals kept made in
+**In Vitest**, in node: the words of the box in each row of its table,
+the summary line in each case of its table and while it waits, and
+each line of the counts, from projects and individuals kept made in
 the test; the choice of what the Individuals tab shows from the
 read and its format; the words of the status region; the functions of
 core and of the entry in their module specs.
@@ -772,28 +843,35 @@ core and of the entry in their module specs.
 `individuals_10000.xlsx`, and files the flow makes:
 
 - `panel.nei` then `panel_pops.csv`, and the other order: the list on
-  `popcat`, the counts p0 48, p2 84, p1 68, in that order, no line of the
-  unclassified, and in the Individuals tab no line of the rows not used;
-  with no individuals file, the one row "Unclassified" with 200, and
-  none before a variants file;
+  `popcat`, in the box "200 individuals classified in 3 populations" and
+  no table, in the Individuals tab the counts p0 48, p2 84, p1 68, in
+  that order, under their heading, no line of the unclassified, and no
+  line of the rows not used; with no individuals file, "200
+  individuals, all unclassified" in the box, and no line before a
+  variants file;
 - `panel_split.csv` chooses `popsplit`; `ld_pops.csv`, opened over
   `ld.nei`, chooses `pop`, its two populations; `panel_meta.csv` chooses
   `popcat` and not `altitude`;
 - a CSV made from `panel_pops.csv` without 4 rows and with 3 cells of
-  `popcat` emptied: the line of the unclassified with 3 and 4 and three
-  names; the full list of 4 under the tab, and Copy the 4 names;
+  `popcat` emptied: in the box "193 individuals classified in 3
+  populations, 7 unclassified"; in the tab the line of the unclassified
+  with 3 and 4 and three names, the full list of 4, and Copy the 4
+  names;
 - a CSV of the names in capitals, `S000`: the warning of none in the
   file;
-- a CSV with a column of 21 values: its warning, and no table;
-- "None" chosen: the one row "Unclassified", 200; the
+- a CSV with a column of 21 values: its warning in the box, no summary
+  line, and no table in the tab;
+- "None" chosen: "200 individuals, all unclassified" in the box, the one
+  row "Unclassified", 200, in the tab; the
   separator set to the semicolon and back to the comma afterwards: the
   list still on "None", with the same row;
 - with the missing rate of the individuals at 0.03: the counts change to
   those of `individualsKept` for 0.03, p0 29, p2 51 and p1 36, which the
   flow reads from popnei
   under node as the fixtures of `popgen2-filters.md` do; while the pass
-  is held (`e2e/holdWorker.ts`), "…" and the line of waiting; after Stop,
-  the line of a Stop; at Start again's end, the counts;
+  is held (`e2e/holdWorker.ts`), "…" in the summary line and in the
+  rows of the tab, and the line of waiting under each; after Stop, the
+  line of a Stop; at Start again's end, the counts;
 - an individuals file opened while the one pass runs: the pass goes on
   to its end, with no second pass started;
 - a CSV the flow makes, `id;pop;h` over rows such as `s000;p0;1,75`,
@@ -824,8 +902,9 @@ core and of the entry in their module specs.
   Mac (the case VS7 D4). On 9 October 2026, on the built site, the first
   frame came 11 ms after the click in Chromium 153 and 6 ms in WebKit
   26.6, and the rows sorted 311 and 382 ms after it;
-- a long file name, 80 characters, at 320 px: "Remove …", the name in the
-  box and the warnings wrap and the page does not scroll sideways
+- a long file name, 80 characters, at 320 px: the name in the box, the
+  warnings and "Remove …" in the tab wrap and the page does not scroll
+  sideways
   (1.4.10, "Reflow");
 - a CSV with an integer column before the column of the populations:
   the populations chosen, not the integers;
@@ -837,22 +916,29 @@ core and of the entry in their module specs.
 - 320 px wide: no sideways scroll of the page, the boxes one above the
   other, the two labels of the tabs visible;
 - axe on each state of the box and of the tab, in light and in dark;
-- from 11 October 2026, the diversity held running: the list, the zone,
-  Remove and the three lists of the reader greyed, each with
+- from 11 October 2026, the diversity held running: the list and the
+  zone of the box, Remove and the three lists of the reader in the tab
+  greyed, each with
   `aria-disabled="true"`, reached by the Tab key, its reason as its
   tooltip and description; the list's popover does not open; a file
   dropped and one pasted on the zone open nothing and show the reason;
   the button opens no picker; the PCA held running instead: none of
-  them greyed (`popgen2-populations.md`, "How it is checked").
+  them greyed (`popgen2-populations.md`, "How it is checked");
+- from 16 October 2026, Remove reached by the Tab key in the tab, with
+  the focus on the zone's button of the box after it; greyed while the
+  diversity is held running, its reason read as its description.
 
 The flows of the old page's Individuals step are run again, since its
 reader changed.
 
 **The screens**, `--project=screens`: no file; both files read with the
-counts; the counts waiting; a refusal; the warning of too many values;
-the Individuals tab with a CSV and with an xlsx; from 11 October 2026
-the box greyed while the diversity runs, `popgen2-individuals-box-locked`;
-light and dark; 1280 and 320 px.
+summary line; the counts waiting; a refusal; the warning of too many
+values; the Individuals tab with a CSV and with an xlsx; from 11 October
+2026 the box greyed while the diversity runs,
+`popgen2-individuals-box-locked`; from 16 October 2026 the box and the
+tab with no individuals file, with some individuals unclassified, with
+all classified, with the warning of too many values, while the counts
+wait, and with Remove greyed; light and dark; 1280 and 320 px.
 
 **By hand**, in the plan: the memory of the light worker and of the page
 after reading a CSV of 20 MB of short cells, in Chromium and WebKit,
@@ -867,12 +953,15 @@ headers of the counts; the words "File size:" at the top of the Variants
 tab, and its three values in columns; "…" for a count that waits; the
 status region silent at a change of the counts; the tab shown first and
 never changed by the page; the order of the parts of the Individuals tab; the zone of the individuals file taking any file,
-with no check of its name; Remove putting the focus on the zone.
+with no check of its name; Remove putting the focus on the zone. On 16
+October 2026: the words of the summary line; the populations it counts,
+those with an individual kept; the line of why the counts wait drawn
+under the table of the tab as well as in the box; the tab with no
+individuals file holding its words alone, with no table of one row.
 
 ## Left for the running application
 
-The spacing of the boxes and their heights side by side, where Remove
-sits beside the zone, the look of the bar of the tab shown, the width of
+The spacing of the boxes and their heights side by side, the look of the bar of the tab shown, the width of
 the columns of the counts, the place of the line of no column under the
 list.
 

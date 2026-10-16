@@ -162,6 +162,7 @@ And these:
 ### The order of the tab
 
 Its heading, an `<h2>`, "Diversity". Under it, in this order: the
+section "Parameters", closed when the page opens, which holds the
 three options; before a result, the line of the populations it runs
 on, which the frame of the panel draws only then (said since 12
 October 2026, the review of the Distances tab); Run, Stop or
@@ -173,6 +174,21 @@ piece 2 of case 4, comes after it in the same tab, under an `<h2>` of
 its own, "LD decay" (below, "The LD decay", from 12 October 2026).
 
 ### The options
+
+In the section "Parameters" of the diversity, as the PCA tab's
+(`popgen2-pca.md`, "The PCA tab", the section "Parameters"; the owner,
+16 October 2026): a button "Parameters", closed when the page opens,
+which the Tab key reaches and Enter and Space open and close, with
+`aria-expanded`; its state is the screen's, kept while the user moves
+between tabs and not saved. The LD decay, below, has a section of its
+own, so the tab has two buttons "Parameters", each under the heading of
+its analysis. A lock of the draw, beside Run, sends the user to the
+section by name: "… Type a number of chromosomes of at most 20 in
+Parameters." (in the options of the diversity until 16 October 2026,
+as the old panel still says it); and so does the line before Run of
+the populations that hold fewer chromosomes than the draw, "… Lower the
+number of chromosomes in Parameters to have them." ("…, above, …" until
+then).
 
 The three fields of the old panel (`diversity.md`, "What it shows", the
 options), with their labels, defaults, lines and refusals, each a
@@ -221,7 +237,7 @@ The line under the options says what Run will take, the old panel's
 line with this page's words (`diversity.md`, "The states", ready): "3
 populations: p0, 48 individuals; p2, 84 individuals; p1, 68
 individuals"; then, when unclassified individuals are left out, "7
-unclassified individuals kept are left out, as the box Individuals
+unclassified individuals kept are left out, as the Individuals tab
 says."; then the old panel's lines of the populations the filters
 empty, of those under the minimum and of those that hold fewer
 chromosomes than the draw, with "the Variants tab" for "the Variants
@@ -574,7 +590,7 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 |---|---|
 | the heading of the tab | "Diversity" |
 | the heading of the spectrum | "Site frequency spectrum" |
-| the line of the populations | the old panel's, with "the Variants tab"; "7 unclassified individuals kept are left out, as the box Individuals says."; "1 population, Unclassified: 200 individuals. No individual is assigned to a population, so the diversity is of every individual kept as one population." |
+| the line of the populations | the old panel's, with "the Variants tab"; "7 unclassified individuals kept are left out, as the Individuals tab says."; "1 population, Unclassified: 200 individuals. No individual is assigned to a population, so the diversity is of every individual kept as one population." |
 | the locks | the table of "Run and Stop" |
 | the line in the place of the bar | the table of "Run and Stop"; after a crash of the worker ended the PCA's live state, until the next change or a Run, "The diversity starts after the next change of the filters, of its options or of the populations, or when Run is pressed.", with Run beside Stop recalculating (`popgen2-pca.md`, "A failure that ends a live state", corrected on 11 October 2026); after a Stop, "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.", or with the result shown, or popnei's refusal (from 12 October 2026, the review of the LD decay), "… After the next change, Run calculates it and starts it again after each change."; after a failure that ended the live state, "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.", or, after a variants file the browser can no longer read, which offers no Run, "… since its calculation failed. Once the variants file is opened again in the box Variants, Run calculates it and starts it again after each change." (12 October 2026, the review of the LD decay); the end of a refusal's words, "The diversity is then calculated again by itself.", only while it is live |
 | the button while live and not running | "Stop recalculating" |
@@ -610,8 +626,9 @@ part (`diversity.md`, "Accessibility"; `sfs.md`, "Accessibility")
 holds for the fields, the table and the bar; the plot of the spectrum
 has its own, in `sfs.md`, "On popgen2.html".
 
-**The order of the Tab key** (2.4.3), after the row of tabs: the three
-fields and "Use the default" when it is there; Run, Stop or Stop
+**The order of the Tab key** (2.4.3), after the row of tabs: the button
+"Parameters" and, while the section is open, the three fields and "Use
+the default" when it is there; Run, Stop or Stop
 recalculating, one stop in one place, and after a failure that leaves
 the diversity live, or while a crash of the PCA holds its start, Run and
 then Stop recalculating; the warnings, with the link to the warning of
@@ -682,7 +699,8 @@ the same.
 **In jsdom**: Run through `autoRuns.run`, Stop and Stop recalculating
 through `autoRuns.pause`; each line in the place of the bar from a
 `liveState`; the focus after Stop recalculating with the result shown,
-on the heading.
+on the heading; from 16 October 2026, the options of each analysis in a
+section "Parameters" of its own, closed.
 
 **In Playwright, on the built site, in Chromium and WebKit**, on
 `e2e/fixtures/panel.nei` and `panel_pops.csv`, the thresholds as a new
@@ -749,9 +767,17 @@ page has them, the missing data of the variants at 0.1, which keeps all
   page with no sideways scroll; the caption's sentence of the variants
   left out.
 - axe in each state of the tab, light and dark.
+- The two sections "Parameters", in `e2e/popgen2Parameters.spec.ts`, as
+  the PCA tab's (`popgen2-pca.md`, "How it is checked"): closed when
+  the page opens; Enter and Space; the distance of the LD decay
+  emptied with its section closed, "Type the largest distance in
+  Parameters." visible beside its greyed Run; one section opened and
+  the other left closed.
 
 **The screens**, `--project=screens`, at 1280 and 320 px, light and
-dark: `popgen2-populations-ready`, `-locked-pass`, `-running`,
+dark, with both sections "Parameters" closed unless a screen is of the
+options: `popgen2-populations-parameters`, both open;
+`popgen2-populations-ready`, `-locked-pass`, `-running`,
 `-waiting` (the PCA running), `-about-to-start`, `-done`, `-done-live`,
 `-stopped`, `-failed`, `-unclassified`, `-one-population`,
 `-loading-tab`, and `popgen2-individuals-box-locked`, the box
@@ -791,7 +817,11 @@ as the diversity is. The owner's decisions it takes, of 12 October
   or the user presses Stop; the owner accepted that cost.
 - **The time of its last run** stands beside its button, so that the
   user knows what a change will cost them.
-- **No default distance**: until a distance is typed it is locked, with
+- **A default distance**: the largest distance starts at 100,000 base
+  pairs, so that the LD decay runs with no option typed, as the owner
+  decided on 16 October 2026; until then it had no default, by the rule
+  of no default that depends on the genome, and was locked until a
+  distance was typed. Once the user empties the field it is locked, with
   the reason, and never started by itself.
 
 Everything else is the old panel's: its options and their bounds, the
@@ -807,7 +837,9 @@ pruning is not applied here is never drawn.
 
 The `<h2>` "LD decay", 2 rem below the diversity's part, which ends
 with its Run or its result (from 12 October 2026, the review of the LD
-decay, where it stood 8 px under the diversity's Run); the two options; the line of the populations it
+decay, where it stood 8 px under the diversity's Run); its section
+"Parameters", closed when the page opens, which holds the two options
+(above, "The options", from 16 October 2026); the line of the populations it
 runs on; Run, Stop or Stop recalculating, with the lock beside it and,
 after it, the time of the last run; the line in the place of the bar;
 and, once calculated: the warnings, with their count on their heading;
@@ -822,20 +854,29 @@ its own below it.
 The two fields of the old panel (`ldDecay.md`, "What it shows", the
 options), with their labels, their lines, the reason beside the field
 of the distance and their refusals: "Largest distance between the two
-variants of a pair, in base pairs, from 50", empty until typed, and
+variants of a pair, in base pairs, from 50", at 100,000, and
 "Maximum major allele frequency in each population, from 0.5 to 1",
 0.95. Each is a command of `setAnalysisOptions` sent with `store.apply`,
 with the old descriptions. A change of either while the LD decay is
 live starts it again a second later; while it runs both are greyed with
 the words of the lock of the filters (below, "While it runs").
 
-Beside the field of the distance, while no distance is typed, the line
-of help of the old panel says why it has to be typed: "The LD decay
-needs the largest distance between the two variants of a pair. It has
-no default, because it depends on how far linkage disequilibrium
-extends in the genome of your species. Type a distance in base pairs.";
-and for a distance the memory does not allow, the reason of that lock,
-drawn as an error. The populations it counts are those of this page,
+Under the field of the distance, its line says that the default is a
+start and not a value for every genome: "How far to look for pairs.
+100,000 bp is a start that suits many genomes but not all. The result
+gives each population's half distance, where its fitted curve falls to
+half its r² at distance 0; a half distance close to the largest
+distance means it was not far enough." The old panel's line says
+"Choose a distance beyond which you expect little LD in your species."
+in place of the second sentence. The warning of a half distance close
+to the largest distance is then also the sign of a default too short
+for the user's genome. The field emptied by the user is no distance
+(`onEmptied` of the number field; on the old page an emptied field shows
+its number again), and beside it a line of help says why one is needed:
+"The LD decay needs the largest distance between the two variants of a
+pair. Type a distance in base pairs, 100,000 to start with."; and for a
+distance the memory does not allow, the reason of that lock, drawn as
+an error. The populations it counts are those of this page,
 below.
 
 ### The populations it runs on
@@ -848,8 +889,8 @@ classified, the one population, "Unclassified", every individual kept.
 
 The line under the options says what Run will take, as the
 diversity's: "2 populations: pop_a, 50 individuals; pop_b, 50
-individuals"; "7 unclassified individuals kept are left out, as the box
-Individuals says."; the populations the thresholds of the individuals
+individuals"; "7 unclassified individuals kept are left out, as the Individuals
+tab says."; the populations the thresholds of the individuals
 empty; and, while a threshold of the individuals waits for the one
 pass, "The thresholds of the individuals may take individuals from them
 once ld.nei is read to the end." For the one population: "1 population,
@@ -946,7 +987,7 @@ disabled, or beside Stop recalculating while it is live:
 |---|---|
 | the one pass running or about to start, stopped, or refused | the three of the diversity's table with "the LD decay": "Run once ld.nei is read to the end: the reading under way in the box Variants and the LD decay cannot run at once." and the two others |
 | the individuals file being read | "The LD decay waits for ld_pops.csv to be read." |
-| no distance typed | "Type the largest distance, above.", with the line of help beside the field |
+| the distance emptied by the user | "Type the largest distance in Parameters.", with the line of help beside the field, inside the section; "Type the largest distance, above." until 16 October 2026, as the old panel still says it |
 | a distance whose counts would take more than 1 GB for the populations of the variants file | "With 2 populations, the largest distance can be at most 12,500,000 base pairs: the pairs are counted at every distance up to it, …", the old words, also beside the field; "The largest distance can be at most 25,000,000 base pairs: …" for one |
 | the thresholds of the individuals keep no individual at all | the store's words of `keptNoneReason`, as for the diversity |
 | the thresholds of the individuals keep no individual of any population | the diversity's words of this page, "… Loosen the thresholds of the individuals in the Variants tab to keep them." |
@@ -1081,8 +1122,8 @@ comes with it.
 ### Accessibility
 
 As the old panel's (`ldDecay.md`, "Accessibility") and the
-diversity's above. The order of the Tab key in its section: the two
-fields; Run, Stop or Stop recalculating, one stop in one place, Run then
+diversity's above. The order of the Tab key in its section: its button
+"Parameters" and, while it is open, the two fields; Run, Stop or Stop recalculating, one stop in one place, Run then
 Stop recalculating when both stand; the warnings; the table of the
 populations, when it scrolls, and its "Download…"; the tabs Plot and
 Table; in Plot, its "Download…" and the frame of the plot when it
@@ -1124,7 +1165,9 @@ another variants file.
 `e2e/fixtures/ld.nei` and `ld_pops.csv`, the thresholds as a new page
 has them, the missing data at 0.1, which keeps all 500 variants:
 
-- **The numbers**: 100000 typed and Run: the rows pop_a and pop_b, 50
+- **The numbers**: Run offered with no option typed, the distance at
+  100000; the distance emptied, then above what the memory allows, then
+  100000 typed again, and Run: the rows pop_a and pop_b, 50
   individuals, 432 variants, 29,367 pairs and half distances "7,548"
   and "7,340"; no warning; "The last run, pairs up to 100,000 base
   pairs, took less than a second."; the
@@ -1132,7 +1175,8 @@ has them, the missing data at 0.1, which keeps all 500 variants:
   "7,416", with no Run pressed. With no individuals file, the one row
   Unclassified, 100 individuals, 432 variants, 29,367 pairs, "7,151"
   (7150.803607577506, popnei 0.2.2 under node on 12 October 2026).
-- **The locks**: before a distance, Run disabled with "Type the largest
+- **The locks**: the field at 100000 and Run enabled when the tab
+  opens; the field emptied, Run disabled with "Type the largest
   distance, above." and the line of help beside the field; 30000000
   typed, the lock of the memory with "With 2 populations, the largest
   distance can be at most 12,500,000 base pairs".
@@ -1153,8 +1197,9 @@ has them, the missing data at 0.1, which keeps all 500 variants:
 - axe with the LD decay ready, running and done, light and dark.
 
 **The screens**, `--project=screens`, at 1280 and 320 px, light and
-dark: `popgen2-ld-decay-locked` (no distance typed), `-ready`,
-`-running`, `-waiting` (the diversity running), `-done`, `-stopped`.
+dark: `popgen2-ld-decay-locked` (the distance emptied), `-ready` (no
+option typed), `-done` (run with no option typed),
+`-running`, `-waiting` (the diversity running), `-stopped`.
 
 ## Choices made by the session
 

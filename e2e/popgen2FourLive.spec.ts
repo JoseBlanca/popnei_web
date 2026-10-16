@@ -18,6 +18,7 @@ import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { openParameters } from "./parameters.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -273,6 +274,7 @@ async function fourLive(page: Page): Promise<void> {
   await pick(page, "Individuals", "ld_pops.csv");
 
   await tab(page, "PCA").click();
+  await openParameters(shown(page));
   await typeInto(shown(page), PCA_DISTANCE, "50000");
   await expect(tabRun(page)).toBeEnabled({ timeout: RESULT_TIMEOUT });
   await tabRun(page).click();
@@ -282,6 +284,7 @@ async function fourLive(page: Page): Promise<void> {
   ).toBeVisible({ timeout: RESULT_TIMEOUT });
 
   await tab(page, "Populations").click();
+  await openParameters(shown(page));
   const diversityRun = part(page, "Diversity").getByRole("button", {
     name: "Run",
     exact: true,

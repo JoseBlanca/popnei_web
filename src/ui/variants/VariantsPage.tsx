@@ -26,7 +26,9 @@
  * shown. The tab "Individuals" is in a boundary made again for
  * each individuals file, as the statistics are for each variants file.
  * The page holds the words of the last file not opened, which the
- * opening says and the box shows. The tab shown, the screen's and not
+ * opening says and the box shows, and the button that opens an
+ * individuals file, which Remove in the Individuals tab gives the focus
+ * to. The tab shown, the screen's and not
  * the project's, is the page's store of it, `pageTab`, which the band at
  * the top of the page reads and changes too.
  */
@@ -68,6 +70,7 @@ export function VariantsPage({
   onStatsShown,
 }: VariantsPageProps): React.JSX.Element {
   const openButton = useRef<HTMLButtonElement>(null);
+  const individualsOpenButton = useRef<HTMLButtonElement>(null);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const tab = usePageTab(pageTab);
   const variantsHeadingId = useId();
@@ -107,7 +110,7 @@ export function VariantsPage({
               <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
             </ErrorBoundary>
           </section>
-          <IndividualsBox tab={tab} />
+          <IndividualsBox tab={tab} openButton={individualsOpenButton} />
         </div>
         {/* A defect in the reasons of the tabs costs the row alone, not
             the boxes of the files. */}
@@ -118,6 +121,7 @@ export function VariantsPage({
               pageTab.show(next);
             }}
             openButton={openButton}
+            individualsOpenButton={individualsOpenButton}
             onStatsShown={onStatsShown}
           />
         </ErrorBoundary>

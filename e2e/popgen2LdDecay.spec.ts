@@ -2,9 +2,9 @@
  * The LD decay in the Populations tab of popgen2.html, on the built site
  * (docs/specs/steps/popgen2-populations.md, "The LD decay", "How it is
  * checked", In Playwright): on ld.nei with ld_pops.csv, the missing data
- * at 0.1, which keeps all 500 variants; the lock until a distance is
- * typed and the lock of the memory; the numbers of each population at
- * 100,000 bp and, live, at the missing data of 0.05 with no Run pressed;
+ * at 0.1, which keeps all 500 variants; Run with the largest distance
+ * at its default of 100,000 bp, the lock of the distance emptied and the
+ * lock of the memory; the numbers of each population at 100,000 bp and, live, at the missing data of 0.05 with no Run pressed;
  * the one population with no individuals file; the time of the last run;
  * the diversity and the LD decay live, a threshold moved, the LD decay
  * after the diversity's result, counted at the worker; the LD decay held
@@ -26,6 +26,7 @@ import type AxeBuilder from "@axe-core/playwright";
 import type { Download, Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { openParameters } from "./parameters.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -195,6 +196,7 @@ function distance(page: Page): Locator {
 
 /** Types `value` into the field of the largest distance and commits it. */
 async function typeDistance(page: Page, value: string): Promise<void> {
+  await openParameters(ldDecay(page));
   await distance(page).fill(value);
   await distance(page).press("Enter");
 }
@@ -252,14 +254,16 @@ async function ready(
   }
   if (individuals) await pickIndividuals(page, "ld_pops.csv");
   await tab(page, "Populations").click();
+  await openParameters(page.getByRole("tabpanel"));
   await expect(button(diversity(page), "Run")).toBeEnabled({
     timeout: RESULT_TIMEOUT,
   });
 }
 
-/** Types 100000, presses the LD decay's Run and waits for its table. */
+/** Presses the LD decay's Run, with the largest distance it has, the
+    default of 100,000 base pairs when none was typed, and waits for its
+    table. */
 async function runLdDecay(page: Page): Promise<void> {
-  await typeDistance(page, "100000");
   await expect(button(ldDecay(page), "Run")).toBeEnabled();
   await button(ldDecay(page), "Run").click();
   await expect(ldDecay(page).getByRole("table", { name: CAPTION })).toBeVisible(
@@ -315,7 +319,7 @@ async function isBelow(below: Locator, above: Locator): Promise<boolean> {
 }
 
 test.describe("LT1 D5 the LD decay in the Populations tab", () => {
-  test("LT1 D5 ld.nei and ld_pops.csv: locked until a distance is typed, and above 12,500,000 bp for two populations; at 100000 pop_a and pop_b 50, 432, 29,367, 7,548 and 7,340, no warning, the time of the last run; the missing data at 0.05 gives 7,639 and 7,416 with no Run pressed; axe locked and done, light and dark", async ({
+  test("LT1 D5 ld.nei and ld_pops.csv: Run offered with the largest distance at 100,000 and no option typed; locked with the distance emptied, and above 12,500,000 bp for two populations; 100000 typed again, pop_a and pop_b 50, 432, 29,367, 7,548 and 7,340, no warning, the time of the last run; the missing data at 0.05 gives 7,639 and 7,416 with no Run pressed; axe locked and done, light and dark", async ({
     page,
     makeAxeBuilder,
   }) => {
@@ -331,12 +335,22 @@ test.describe("LT1 D5 the LD decay in the Populations tab", () => {
         { exact: true },
       ),
     ).toBeVisible();
+    // The largest distance starts at 100,000 base pairs, so Run is free
+    // with no option typed (the owner, 16 October 2026).
+    await expect(distance(page)).toHaveValue("100000");
+    await expect(button(part, "Run")).toBeEnabled();
+    await expect(distance(page)).toHaveAccessibleDescription(
+      /How far to look for pairs\. 100,000 bp is a start that suits many genomes but not all\./u,
+    );
+
+    // The field emptied is no distance, which locks Run.
+    await typeDistance(page, "");
     await expect(button(part, "Run")).toBeDisabled();
     await expect(button(part, "Run")).toHaveAccessibleDescription(
-      "Type the largest distance, above.",
+      "Type the largest distance in Parameters.",
     );
     await expect(distance(page)).toHaveAccessibleDescription(
-      /The LD decay needs the largest distance between the two variants of a pair\. It has no default/u,
+      /The LD decay needs the largest distance between the two variants of a pair\. Type a distance in base pairs, 100,000 to start with\./u,
     );
     await expectNoAxeViolations(page, makeAxeBuilder);
 
@@ -345,6 +359,7 @@ test.describe("LT1 D5 the LD decay in the Populations tab", () => {
       /^With 2 populations, the largest distance can be at most 12,500,000 base pairs: /u,
     );
 
+    await typeDistance(page, "100000");
     await runLdDecay(page);
     await expect(row(page, "pop_a")).toHaveText([
       "50",
@@ -534,7 +549,7 @@ test.describe("LT1 D5 the LD decay with unclassified individuals", () => {
     await tab(page, "Populations").click();
     await expect(
       ldDecay(page).getByText(
-        "7 unclassified individuals kept are left out, as the box Individuals says.",
+        "7 unclassified individuals kept are left out, as the Individuals tab says.",
         { exact: true },
       ),
     ).toBeVisible({ timeout: RESULT_TIMEOUT });

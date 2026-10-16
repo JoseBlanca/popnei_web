@@ -499,7 +499,7 @@ describe("PT1 D3 the Populations tab", () => {
       "2 populations: A, 4 individuals; B, 4 individuals",
     );
     expect(lines()).toContain(
-      "2 unclassified individuals kept are left out, as the box Individuals says.",
+      "2 unclassified individuals kept are left out, as the Individuals tab says.",
     );
   });
 
@@ -542,7 +542,7 @@ describe("PT1 D3 the Populations tab", () => {
       }),
     );
     expectLocked(
-      "The rarefaction draws 30 chromosomes, and the one population, Unclassified, holds 20, those of its 10 individuals at a ploidy of 2. Type a number of chromosomes of at most 20 in the options of the diversity.",
+      "The rarefaction draws 30 chromosomes, and the one population, Unclassified, holds 20, those of its 10 individuals at a ploidy of 2. Type a number of chromosomes of at most 20 in Parameters.",
     );
   });
 });
@@ -789,6 +789,35 @@ describe("PT2 D2 the Populations tab while the diversity is live and does not ru
   });
 });
 
+describe("PT3 the sections Parameters of the Populations tab (the owner, 16 October 2026)", () => {
+  test("one for the diversity and one for the LD decay, each in its part, closed when drawn, with the options of its analysis inside and its Run outside", async () => {
+    await readyTab();
+    for (const [id, label] of [
+      ["diversity", "Chromosomes drawn for the rarefaction"],
+      ["ldDecay", "Largest distance between the two variants of a pair"],
+    ] as const) {
+      const part = container.querySelector(`[data-panel-analysis="${id}"]`);
+      if (part === null) throw new Error(`no part of ${id}`);
+      const triggers = [...part.querySelectorAll("button")].filter(
+        (b) => b.textContent === "Parameters",
+      );
+      expect(triggers).toHaveLength(1);
+      const [trigger] = triggers;
+      expect(trigger?.getAttribute("aria-expanded")).toBe("false");
+      const section = part.querySelector<HTMLElement>(
+        `[role="group"][aria-labelledby="${trigger?.id ?? ""}"]`,
+      );
+      expect(section?.hidden).toBe(true);
+      expect(section?.textContent).toContain(label);
+      const run = [...part.querySelectorAll("button")].find(
+        (b) => b.textContent === "Run",
+      );
+      expect(run).toBeDefined();
+      expect(section?.contains(run ?? null)).toBe(false);
+    }
+  });
+});
+
 describe("LT1 D4 the part of the LD decay in the Populations tab", () => {
   /** The part of the LD decay, after the diversity's. */
   function ldPart(): Element {
@@ -811,7 +840,7 @@ describe("LT1 D4 the part of the LD decay in the Populations tab", () => {
   async function typeMaxDist(page: Page, maxDist: number): Promise<void> {
     await apply(page, (p) =>
       setAnalysisOptions(p, ldDecayOnPopgen2, {
-        ...ldDecayOptions(p),
+        ...ldDecayOptions(p, "popgen2"),
         maxDist,
       }),
     );
@@ -894,18 +923,31 @@ describe("LT1 D4 the part of the LD decay in the Populations tab", () => {
     expect(document.activeElement?.textContent).toBe("LD decay");
   });
 
-  test("its heading after the diversity's; Run locked until a distance is typed; Run and Stop recalculating through autoRuns of the LD decay alone; the time of the last run after a result, kept after a Stop", async () => {
+  test("its heading after the diversity's; Run enabled with no option typed, the largest distance at 100,000, and locked once the distance is emptied; Run and Stop recalculating through autoRuns of the LD decay alone; the time of the last run after a result, kept after a Stop", async () => {
     const page = await readyTab();
     const headings = [...container.querySelectorAll("h2")].map(
       (h) => h.textContent,
     );
     expect(headings).toEqual(["Diversity", "LD decay"]);
-    expect(ldButton("Run")?.disabled).toBe(true);
-    expect(ldPart().textContent).toContain("Type the largest distance, above.");
+    expect(ldButton("Run")?.disabled).toBe(false);
+    expect(ldPart().textContent).not.toContain(
+      "Type the largest distance in Parameters.",
+    );
 
     await apply(page, (p) =>
       setAnalysisOptions(p, ldDecayOnPopgen2, {
-        ...ldDecayOptions(p),
+        ...ldDecayOptions(p, "popgen2"),
+        maxDist: null,
+      }),
+    );
+    expect(ldButton("Run")?.disabled).toBe(true);
+    expect(ldPart().textContent).toContain(
+      "Type the largest distance in Parameters.",
+    );
+
+    await apply(page, (p) =>
+      setAnalysisOptions(p, ldDecayOnPopgen2, {
+        ...ldDecayOptions(p, "popgen2"),
         maxDist: 100_000,
       }),
     );

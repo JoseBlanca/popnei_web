@@ -39,6 +39,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { openParameters } from "./parameters.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 import { pcaTabSeen, watchPcaTab } from "./pcaSeen.ts";
 
@@ -237,21 +238,25 @@ async function openLive(page: Page): Promise<void> {
   await page.goto("popgen2.html");
   await pick(page, "panel.nei");
   await tab(page, "PCA").click();
+  await openParameters(shown(page));
   const distance = shown(page).getByRole("textbox", { name: DISTANCE });
   await expect(distance).toBeVisible({ timeout: RESULT_TIMEOUT });
   await distance.fill("50000");
   await distance.press("Enter");
   await expect(run(page)).toBeEnabled({ timeout: RESULT_TIMEOUT });
   await run(page).click();
-  await expect(caption(page)).toContainText("from 548 variants.", {
-    timeout: RESULT_TIMEOUT,
-  });
+  await expect(caption(page)).toContainText(
+    "from 548 variants, after the LD pruning",
+    {
+      timeout: RESULT_TIMEOUT,
+    },
+  );
   await expect(stopRecalculating(page)).toBeVisible();
 }
 
 /** Expects one more calculation than `posted` once the PCA started by
     itself has given its result, and none more meanwhile; and, given
-    `variants`, "from 532 variants.", the caption of that result. */
+    `variants`, "from 532 variants, after the LD pruning", the caption of that result. */
 async function expectOneMore(
   page: Page,
   posted: number,
@@ -304,7 +309,11 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     }
     await expect(missing.slider).toHaveValue("0.045");
     await expect(caption(page)).toHaveCount(0);
-    await expectOneMore(page, posted, "from 519 variants.");
+    await expectOneMore(
+      page,
+      posted,
+      "from 519 variants, after the LD pruning",
+    );
   });
 
   test("NU4 D3 ten presses of Page Down and the left arrow on the slider of the missing data of the PCA start one PCA, after the last, for the value they reached, and no control greys before it", async ({
@@ -320,7 +329,11 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
       await expectNotGreyed(missing);
     }
     await expect(missing).toHaveAttribute("aria-valuetext", "0.045");
-    await expectOneMore(page, posted, "from 519 variants.");
+    await expectOneMore(
+      page,
+      posted,
+      "from 519 variants, after the LD pruning",
+    );
   });
 
   test("NU4 D3 ten presses of the arrow keys on the closed list of the method start one PCA, after the last, and no control greys before it", async ({
@@ -336,9 +349,12 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
       await expectNotGreyed(method);
     }
     await expect(method).toHaveAccessibleName(/^PCA of the genotypes/u);
-    await expect(caption(page)).toContainText("from 548 variants.", {
-      timeout: RESULT_TIMEOUT,
-    });
+    await expect(caption(page)).toContainText(
+      "from 548 variants, after the LD pruning",
+      {
+        timeout: RESULT_TIMEOUT,
+      },
+    );
     expect(await runsPosted(page)).toBe(posted + 1);
   });
 
@@ -485,7 +501,11 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     expect(await runsPosted(page)).toBe(posted);
     await page.keyboard.press("Escape");
     await expect(menu).toBeHidden();
-    await expectOneMore(page, posted, "from 532 variants.");
+    await expectOneMore(
+      page,
+      posted,
+      "from 532 variants, after the LD pruning",
+    );
   });
 
   test("NU4 D3 a change, then digits typed slowly in the r² of the PCA, over 3 s: no PCA starts and the box keeps taking them; Enter, and the PCA starts with both", async ({
@@ -514,7 +534,11 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     await expect(r2).toHaveValue("0.2");
     await r2.press("Enter");
     // The missing data at 0.099 and the r² at 0.2: 1,072 variants.
-    await expectOneMore(page, posted, "from 1,072 variants.");
+    await expectOneMore(
+      page,
+      posted,
+      "from 1,072 variants, after the LD pruning",
+    );
     await expect(r2).toHaveValue("0.2");
     await expect(missing).toHaveAttribute("aria-valuetext", "0.099");
   });
@@ -535,9 +559,12 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     await expect(missing).toHaveAttribute("aria-valuetext", "0.05");
     await expect(shown(page).getByText(ABOUT, { exact: true })).toBeVisible();
     await expect(stopRecalculating(page)).toHaveAccessibleDescription("");
-    await expect(caption(page)).toContainText("from 532 variants.", {
-      timeout: RESULT_TIMEOUT,
-    });
+    await expect(caption(page)).toContainText(
+      "from 532 variants, after the LD pruning",
+      {
+        timeout: RESULT_TIMEOUT,
+      },
+    );
     await expect(axisLabels(page).first()).toHaveText("PC1 (3.58%)");
     expect(await runsPosted(page)).toBe(posted + 1);
     expect(await pcaTabSeen(page)).toEqual({
@@ -579,9 +606,12 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     expect(await runsPosted(page)).toBe(posted + 1);
     await missing.press("End");
     await expect(caption(page)).toHaveCount(0);
-    await expect(caption(page)).toContainText("from 548 variants.", {
-      timeout: RESULT_TIMEOUT,
-    });
+    await expect(caption(page)).toContainText(
+      "from 548 variants, after the LD pruning",
+      {
+        timeout: RESULT_TIMEOUT,
+      },
+    );
     expect(await runsPosted(page)).toBe(posted + 2);
   });
 
@@ -670,7 +700,11 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     ).toBeAttached();
     await downloadDialog(page).getByRole("button", { name: "Cancel" }).click();
     await expect(downloadDialog(page)).toBeHidden();
-    await expectOneMore(page, posted, "from 532 variants.");
+    await expectOneMore(
+      page,
+      posted,
+      "from 532 variants, after the LD pruning",
+    );
     await expect(missing.slider).toHaveValue("0.05");
   });
 
@@ -686,6 +720,7 @@ test.describe("NU4 D3 the PCA calculated again by itself", () => {
     await release(page, "allSoFar");
     await release(page, "result");
     await tab(page, "PCA").click();
+    await openParameters(shown(page));
     const distance = shown(page).getByRole("textbox", { name: DISTANCE });
     await distance.fill("50000");
     await distance.press("Enter");

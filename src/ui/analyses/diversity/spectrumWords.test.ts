@@ -172,7 +172,7 @@ describe("PT2 D1 the downloads of the spectrum on popgen2.html", () => {
 describe("PT7 R1.2 the words of the plot of the spectrum as lines", () => {
   test("the caption says what each axis is, that the variants with no copy of the rarer allele are left out, and where the table and the draw are", () => {
     expect(linesCaption(40, 1200, "panel.nei")).toBe(
-      "The folded site frequency spectrum of each population, in a draw of 40 of its chromosomes at each variant, over the 1,200 variants of panel.nei the filters kept. Each line is a population: across, the frequency of the commonest allele in the draw, 1 \u2212 j/40 for j copies of the rarer allele; up, the proportion of the population's variants with both alleles in the draw that have that frequency. Variants with no copy of the rarer allele in the draw are left out of the plot and of the proportions; the table holds them. The number of chromosomes is set above the table, with the rarefaction.",
+      "The folded site frequency spectrum of each population, in a draw of 40 of its chromosomes at each variant, over the 1,200 variants of panel.nei the filters kept. Each line is a population: across, the frequency of the commonest allele in the draw, 1 \u2212 j/40 for j copies of the rarer allele; up, the proportion of the population's variants with both alleles in the draw that have that frequency. Variants with no copy of the rarer allele in the draw are left out of the plot and of the proportions; the table holds them. The number of chromosomes is set in Parameters, with the rarefaction.",
     );
   });
 

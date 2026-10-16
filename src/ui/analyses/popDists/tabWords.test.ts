@@ -184,7 +184,7 @@ describe("DT1 D3 the words of the Distances tab", () => {
     ).toEqual([
       "2 populations: p0, 3 individuals; p1, 2 individuals",
       "p2 has 1 individual, fewer than the 2 individuals needed per variant, and is left out.",
-      "2 unclassified individuals kept are left out, as the box Individuals says.",
+      "2 unclassified individuals kept are left out, as the Individuals tab says.",
     ]);
   });
 
@@ -198,7 +198,7 @@ describe("DT1 D3 the words of the Distances tab", () => {
       ),
     ).toEqual([
       "2 populations: p0, 2 individuals; p1, 2 individuals",
-      "1 unclassified individual kept is left out, as the box Individuals says.",
+      "1 unclassified individual kept is left out, as the Individuals tab says.",
       "p2 has no individual left after the thresholds of the individuals, and is left out. Loosen the thresholds of the individuals in the Variants tab to keep it.",
     ]);
     expect(distancesTabReadyLines(p, keptOf(names, "waiting")).at(-1)).toBe(

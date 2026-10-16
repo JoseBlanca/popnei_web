@@ -92,7 +92,8 @@ and those of `popgen2-populations.md`: **waiting**, **unclassified**,
 ### The order of the tab
 
 Its heading, an `<h2>`, "Distances between populations", the title of
-the old panel. Under it, in this order: the two options; before a
+the old panel. Under it, in this order: the section "Parameters",
+closed when the page opens, which holds the two options; before a
 result, the lines of the populations it runs on, which the frame of the
 panel draws only then (since 12 October 2026, the review of the
 Distances tab; with a result the caption of the table gives the
@@ -123,6 +124,19 @@ more come back, the tab opens and the distances start a second later,
 as after any change that lifts a lock.
 
 ### The options
+
+In the section "Parameters", as the PCA tab's (`popgen2-pca.md`, "The
+PCA tab", the section "Parameters"; the owner, 16 October 2026): a
+button "Parameters", closed when the page opens, which the Tab key
+reaches and Enter and Space open and close, with `aria-expanded`; its
+state is the screen's, kept while the user moves between tabs and not
+saved. The measure of the heatmap is in it too: it is one of the two
+options of the old panel, although it only changes what the heatmap
+draws, as "Colour the points by" does the PCA's plot, which stays out
+of the PCA's section. A lock of the minimum, beside Run, sends the user
+to the section by name: "… Lower the individuals needed per variant in
+Parameters, or merge populations in panel_pops.csv." ("…, above, …"
+until 16 October 2026).
 
 The two options of the old panel (`popDists.md`, "What it shows", its
 options), with their labels and defaults, each a command of
@@ -176,7 +190,7 @@ panel's ready state with this page's words:
   individuals needed" and "the minimum of individuals"), "p3 has 12 individuals, fewer than the 20 individuals needed per variant,
   and is left out.", or "p3 and p5 have 12 and 8 individuals, fewer than the 20 individuals needed per variant, and are left out.";
 - the unclassified individuals kept, as the Populations tab says them,
-  "7 unclassified individuals kept are left out, as the box Individuals
+  "7 unclassified individuals kept are left out, as the Individuals tab
   says.";
 - the populations the thresholds of the individuals leave empty, as the
   Populations tab says them, "p9 has no individual left after the
@@ -233,7 +247,7 @@ disabled, or beside Stop recalculating while the distances are live:
 | the one pass stopped by the user, or failed in a way its box offers Start again for | "Run once panel.nei is read to the end: Start again its reading in the box Variants." |
 | the one pass refused by popnei, or the file no longer readable | "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again there, or open another." |
 | the filters of the individuals keep no individual at all | the store's words of `keptNoneReason`, as the other tabs give them |
-| fewer than two of the populations have the minimum of individuals | "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, or merge populations in panel_pops.csv."; with none, "No population has 20 individuals or more, and …"; when the thresholds of the individuals took a population below the minimum, "Only p0 has 20 individuals or more among the individuals the thresholds keep, and … Lower the individuals needed per variant, above, merge populations in panel_pops.csv, or loosen the thresholds of the individuals in the Variants tab." |
+| fewer than two of the populations have the minimum of individuals | "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant in Parameters, or merge populations in panel_pops.csv."; with none, "No population has 20 individuals or more, and …"; when the thresholds of the individuals took a population below the minimum, "Only p0 has 20 individuals or more among the individuals the thresholds keep, and … Lower the individuals needed per variant in Parameters, merge populations in panel_pops.csv, or loosen the thresholds of the individuals in the Variants tab." |
 
 The three of the one pass are the PCA tab's with "the distances"
 (`passLockText` of `src/ui/analyses/pca/passLock.ts`). The lock of the
@@ -451,8 +465,9 @@ The criteria are those of WCAG 2.2 at level AA, and the old panel's
 part (`popDists.md`, "Accessibility") holds for the field, the radio
 buttons, the heatmap and the table.
 
-**The order of the Tab key** (2.4.3), after the row of tabs: the field
-of the minimum; the radio buttons, one stop; Run, Stop or Stop
+**The order of the Tab key** (2.4.3), after the row of tabs: the button
+"Parameters"; while the section is open, the field of the minimum and
+the radio buttons, one stop; Run, Stop or Stop
 recalculating, one stop in one place, and after a failure that leaves
 the distances live, or while a crash holds their start, Run and then
 Stop recalculating; the warnings; the "Download…" of the heatmap; the
@@ -492,7 +507,8 @@ their verbs in the plural.
 **In jsdom**: Run through `autoRuns.run`, Stop and Stop recalculating
 through `autoRuns.pause`; each line in the place of the bar from a
 `liveState`; the measure's radio buttons not greyed while the distances
-run, the field of the minimum greyed.
+run, the field of the minimum greyed; from 16 October 2026, the two
+options inside the section "Parameters", closed.
 
 **In Playwright, on the built site, in Chromium and WebKit**, in
 `e2e/popgen2Distances.spec.ts`, on `e2e/fixtures/panel.nei` and
@@ -534,13 +550,18 @@ data of the variants at 0.1, which keeps all 1,200 variants:
 - **The code of the tab**: held, "Loading the Distances tab…"; refused
   once, the words and Try again, which brings the tab.
 - axe in each state of the tab, light and dark.
+- The section "Parameters", in `e2e/popgen2Parameters.spec.ts`, as the
+  PCA tab's (`popgen2-pca.md`, "How it is checked"): closed when the
+  page opens; Enter and Space; the radio buttons of the measure reached
+  inside it while the distances run.
 
 `e2e/popgen2Tabs.spec.ts` checks the tab's heading in the place of its
 line "Not built yet", and the flows of `popgen2Live.spec.ts`,
 `popgen2BandLive.spec.ts` and `popgen2Band.spec.ts` pass.
 
 **The screens**, `--project=screens`, at 1280 and 320 px, light and
-dark: `popgen2-distances-ready`, `-locked-pass`, `-locked-minimum`,
+dark, with the section "Parameters" closed unless a screen is of the
+options: `popgen2-distances-parameters`, open; `popgen2-distances-ready`, `-locked-pass`, `-locked-minimum`,
 `-running`, `-waiting`, `-about-to-start`, `-done`, `-done-dest`,
 `-done-negative`, `-stopped-done`, `-stopped`, `-failed`,
 `-unclassified`, `-loading-tab`.

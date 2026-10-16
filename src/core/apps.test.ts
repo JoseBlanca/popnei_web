@@ -585,10 +585,12 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
     const state = store.getState();
     expect(state.analyses.map((view) => [view.id, view.status.kind])).toEqual([
       ["variantsSummary", "done"],
-      ["pca", "locked"],
+      // The PCA and the LD decay run with no option typed (the owner,
+      // 16 October 2026).
+      ["pca", "ready"],
       ["diversity", "ready"],
       ["popDists", "locked"],
-      ["ldDecay", "locked"],
+      ["ldDecay", "ready"],
     ]);
     const read = state.project.variants?.read;
     expect(read?.kind === "read" ? read.numVars : null).toBe(1200);

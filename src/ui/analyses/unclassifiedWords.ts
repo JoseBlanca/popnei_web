@@ -38,10 +38,10 @@ function leftOutSubject(numLeftOut: number): string {
 }
 
 /** The line under the options of what a run leaves out: "7
-    unclassified individuals kept are left out, as the box Individuals
+    unclassified individuals kept are left out, as the Individuals tab
     says." */
 export function unclassifiedLine(numLeftOut: number): string {
-  return `${leftOutSubject(numLeftOut)} left out, as the box Individuals says.`;
+  return `${leftOutSubject(numLeftOut)} left out, as the Individuals tab says.`;
 }
 
 /** The sentence that ends the caption of a result when unclassified

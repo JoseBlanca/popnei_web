@@ -25,6 +25,7 @@ import type AxeBuilder from "@axe-core/playwright";
 import type { Download, Locator, Page, Route } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { openParameters } from "./parameters.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -262,6 +263,7 @@ function missingBox(page: Page): Locator {
 
 /** Sets the minimum of the distances to `value`, in the tab shown. */
 async function setMinimum(page: Page, value: string): Promise<void> {
+  await openParameters(shown(page));
   const field = shown(page).getByRole("textbox", { name: MINIMUM });
   await field.fill(value);
   await field.press("Enter");
@@ -284,6 +286,7 @@ async function expectNoAxeViolations(
 async function distancesReady(page: Page): Promise<void> {
   await tab(page, "Distances").click();
   await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+  await openParameters(shown(page));
 }
 
 /** Presses Run and waits for the table of `caption`. */
@@ -382,6 +385,7 @@ test.describe("DT1 D5 the Distances tab", () => {
     await missingBox(page).fill("0.05");
     await missingBox(page).press("Enter");
     await tab(page, "Distances").click();
+    await openParameters(shown(page));
     await expect(
       table(
         page,
@@ -430,7 +434,7 @@ test.describe("DT1 D5 the Distances tab", () => {
 
     await setMinimum(page, "70");
     const lock =
-      "Only p2 has 70 individuals or more, and a variant counts for a pair of populations only where both have 70 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant, above, or merge populations in panel_split.csv.";
+      "Only p2 has 70 individuals or more, and a variant counts for a pair of populations only where both have 70 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant in Parameters, or merge populations in panel_split.csv.";
     await expect(shown(page).getByText(lock, { exact: true })).toBeVisible({
       timeout: RESULT_TIMEOUT,
     });
@@ -454,7 +458,7 @@ test.describe("DT1 D5 the Distances tab", () => {
     await distancesReady(page);
     await expect(
       shown(page).getByText(
-        "7 unclassified individuals kept are left out, as the box Individuals says.",
+        "7 unclassified individuals kept are left out, as the Individuals tab says.",
         { exact: true },
       ),
     ).toBeVisible();
@@ -476,6 +480,7 @@ test.describe("DT1 D5 the Distances tab", () => {
     await pickIndividuals(page, "panel_pops.csv");
     // The PCA live: its LD distance typed, its Run, its result.
     await tab(page, "PCA").click();
+    await openParameters(shown(page));
     const field = shown(page).getByRole("textbox", { name: DISTANCE });
     await expect(field).toBeVisible({ timeout: RESULT_TIMEOUT });
     await field.fill("50000");
@@ -718,6 +723,7 @@ test.describe("DT1 D5 the Distances tab", () => {
     await release(page, "result");
     await pickIndividuals(page, "panel_pops.csv");
     await tab(page, "PCA").click();
+    await openParameters(shown(page));
     const field = shown(page).getByRole("textbox", { name: DISTANCE });
     await expect(field).toBeVisible({ timeout: RESULT_TIMEOUT });
     await field.fill("50000");

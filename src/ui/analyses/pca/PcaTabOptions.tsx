@@ -11,11 +11,12 @@
  * number committed and each move of a slider is one command, with this
  * page's description.
  *
- * Under the distance a line says how to choose it. While the LD pruning
- * has no distance, the reason of the lock, in full, stands under that
- * field as a line of what is needed, describes it, and is announced when
- * the switch turned on makes it appear, since the focus is then on the
- * switch; Run beside it says only a short line.
+ * The distance starts at 100,000 base pairs, and a line under it says
+ * what it is, that this start does not suit every genome and where to
+ * see how far LD extends (the owner, 16 October 2026). The field emptied
+ * is no distance: the reason of the lock, in full, then stands under
+ * that field as a line of what is needed, describes it, and is
+ * announced; Run beside it says only a short line.
  *
  * While the PCA runs every option waits, with "Stop the PCA in the PCA
  * tab to change the filters; then press Run there to calculate it
@@ -207,6 +208,18 @@ export function PcaTabOptions(): React.JSX.Element {
                   onRefused={announce}
                   onChange={(maxDist) => {
                     apply(ownValueCommand({ kind: "ld", maxDist }, page));
+                  }}
+                  // The field emptied is no distance, which locks the PCA
+                  // and makes the reason appear under the field; it is
+                  // announced, as the switch turned on announces it, since
+                  // a screen reader says nothing of a line that appears.
+                  onEmptied={() => {
+                    apply(ownValueCommand({ kind: "ld", maxDist: null }, page));
+                    const reason = pruningDistanceReason(
+                      store.getState().project,
+                      "popgen2",
+                    );
+                    if (reason !== null) announce(reason);
                   }}
                 />
               </div>

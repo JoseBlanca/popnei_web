@@ -16,10 +16,10 @@ import {
 describe("the words of the unclassified left out", () => {
   test("the line under the options, one and several", () => {
     expect(unclassifiedLine(1)).toBe(
-      "1 unclassified individual kept is left out, as the box Individuals says.",
+      "1 unclassified individual kept is left out, as the Individuals tab says.",
     );
     expect(unclassifiedLine(7)).toBe(
-      "7 unclassified individuals kept are left out, as the box Individuals says.",
+      "7 unclassified individuals kept are left out, as the Individuals tab says.",
     );
   });
 

@@ -25,7 +25,11 @@
  * page, and the two fields wait while the LD decay runs, each with the
  * reason as its tooltip and its description, `waiting`
  * (docs/specs/steps/popgen2-populations.md, "The LD decay", "While it
- * runs"); on popgen.html they never wait.
+ * runs"); on popgen.html they never wait. On popgen2.html the distance
+ * starts at 100,000 base pairs, its line says that start does not suit
+ * every genome, and the field emptied is no distance, which locks the
+ * LD decay until one is typed (the owner, 16 October 2026); on the old
+ * page an emptied field shows its number again.
  */
 import { useId } from "react";
 
@@ -53,6 +57,7 @@ import styles from "./LdDecayOptionsPart.module.css";
 import {
   MAX_DIST_LABEL,
   MAX_DIST_LINE,
+  MAX_DIST_LINE_2,
   MAX_MAF_LABEL,
   MAX_MAF_LINE,
   frequencyRefusedText,
@@ -91,9 +96,9 @@ export function LdDecayOptionsPart({
   const announcer = useAnnouncer();
   // Each option alone, a number or `null`: `ldDecayOptions` makes a new
   // object at each call, which a selector must not give back.
-  const maxDist = useAppState((s) => ldDecayOptions(s.project).maxDist);
+  const maxDist = useAppState((s) => ldDecayOptions(s.project, page).maxDist);
   const maxAllowedMaf = useAppState(
-    (s) => ldDecayOptions(s.project).maxAllowedMaf,
+    (s) => ldDecayOptions(s.project, page).maxAllowedMaf,
   );
   const distanceReason = useAppState((s) => maxDistReason(s.project, page));
   const pruning = useAppState((s) => pruningLine(s.project));
@@ -104,6 +109,14 @@ export function LdDecayOptionsPart({
   };
   const announce = (text: string): void => {
     announcer.announce(text);
+  };
+  // Said when the commit turns the lock on, or changes its reason, and
+  // not again while the same reason holds.
+  const commitDistance = (typed: number | null): void => {
+    const before = maxDistReason(store.getState().project, page);
+    apply(maxDistCommand(typed, page));
+    const reason = maxDistReason(store.getState().project, page);
+    if (reason !== null && reason !== before) announce(reason);
   };
 
   return (
@@ -119,18 +132,16 @@ export function LdDecayOptionsPart({
           maxValue={MAX_DIST_TAKEN}
           step={1}
           {...(distanceReason !== null && { describedBy: reasonId })}
-          description={MAX_DIST_LINE}
+          description={page === "popgen" ? MAX_DIST_LINE : MAX_DIST_LINE_2}
           waiting={waiting}
           refusedText={distanceRefusedText}
           onRefused={announce}
-          onChange={(typed) => {
-            // Said when the commit turns the lock on, or changes its
-            // reason, and not again while the same reason holds.
-            const before = maxDistReason(store.getState().project, page);
-            apply(maxDistCommand(typed));
-            const reason = maxDistReason(store.getState().project, page);
-            if (reason !== null && reason !== before) announce(reason);
-          }}
+          onChange={commitDistance}
+          {...(page === "popgen2" && {
+            onEmptied: () => {
+              commitDistance(null);
+            },
+          })}
         />
         {distanceReason !== null &&
           (maxDist === null ? (
@@ -153,7 +164,7 @@ export function LdDecayOptionsPart({
         refusedText={frequencyRefusedText}
         onRefused={announce}
         onChange={(typed) => {
-          apply(maxAllowedMafCommand(typed));
+          apply(maxAllowedMafCommand(typed, page));
         }}
       />
       {pruning !== null && <p className={classOf(styles, "line")}>{pruning}</p>}

@@ -244,7 +244,7 @@ export function page(
   const setLdDecay = (options: Partial<LdDecayOptions>): void => {
     gated.apply("the options of the LD decay changed", (p: Project) =>
       setAnalysisOptions(p, ldDecayOnPopgen2, {
-        ...ldDecayOptions(p),
+        ...ldDecayOptions(p, "popgen2"),
         ...options,
       }),
     );

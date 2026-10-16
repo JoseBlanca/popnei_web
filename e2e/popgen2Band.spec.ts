@@ -36,6 +36,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { openParameters } from "./parameters.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -272,6 +273,7 @@ async function runPca(
   { pcoa = false, pruningOff = false } = {},
 ): Promise<void> {
   await tab(page, "PCA").click();
+  await openParameters(shown(page));
   if (pcoa) {
     await shown(page)
       .getByRole("button", { name: /Method$/u })
@@ -384,9 +386,12 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       timeout: RESULT_TIMEOUT,
     });
     await runPca(page);
-    await expect(caption(page)).toContainText("from 548 variants.", {
-      timeout: RESULT_TIMEOUT,
-    });
+    await expect(caption(page)).toContainText(
+      "from 548 variants, after the LD pruning",
+      {
+        timeout: RESULT_TIMEOUT,
+      },
+    );
     // Live, and nothing runs nor is about to start: Popnei alone.
     await expect.poll(() => lineText(page)).toBe("Popnei");
     await tab(page, "Variants").click();
@@ -1066,6 +1071,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
         .poll(() => lineText(page), { timeout: 15_000 })
         .toBe("Popnei");
       await tab(page, "PCA").click();
+      await openParameters(shown(page));
       await run(page).click();
       await expect
         .poll(() => lineText(page))
@@ -1173,6 +1179,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       // The link: the PCoA with the LD pruning off, calculated again by
       // itself, has 2 warnings, which the Variants tab links to.
       await tab(page, "PCA").click();
+      await openParameters(shown(page));
       await shown(page)
         .getByRole("button", { name: /Method$/u })
         .click();

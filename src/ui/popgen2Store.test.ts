@@ -107,10 +107,12 @@ describe("the store of popgen2.html", () => {
     expect(store.getState().analyses.map((a) => [a.id, a.status.kind])).toEqual(
       [
         ["variantsSummary", "running"],
-        ["pca", "locked"],
+        // The PCA and the LD decay run with no option typed (the owner,
+        // 16 October 2026).
+        ["pca", "ready"],
         ["diversity", "ready"],
         ["popDists", "locked"],
-        ["ldDecay", "locked"],
+        ["ldDecay", "ready"],
       ],
     );
   });
@@ -451,10 +453,12 @@ describe("DL4 D3 the store of popgen2.html writes, and works out the individuals
       store.getState().analyses.map((view) => [view.id, view.status.kind]),
     ).toStrictEqual([
       ["variantsSummary", "ready"],
-      ["pca", "locked"],
+      // The PCA and the LD decay run with no option typed (the owner,
+      // 16 October 2026).
+      ["pca", "ready"],
       ["diversity", "ready"],
       ["popDists", "locked"],
-      ["ldDecay", "locked"],
+      ["ldDecay", "ready"],
     ]);
   });
 

@@ -564,7 +564,7 @@ describe("the status region says the LD decay's start, its hold after a crash, i
   }): void {
     page.store.apply("the largest distance of the LD decay changed", (p) =>
       setAnalysisOptions(p, ldDecayOnPopgen2, {
-        ...ldDecayOptions(p),
+        ...ldDecayOptions(p, "popgen2"),
         maxDist: 100_000,
       }),
     );

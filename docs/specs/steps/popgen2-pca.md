@@ -1057,9 +1057,42 @@ shows the distances between populations (`popgen2-distances.md`).
 ### The PCA tab
 
 The tab's heading, an `<h2>`, is "PCA" or "PCoA" by the method of the
-project. Under it, as in the old panel, in this order: the options, the
-line of the individuals it will run on, Run or Stop with the lock, and,
-once calculated, the result.
+project. Under it, in this order: the section "Parameters", which holds
+the options; the line of the individuals it will run on; Run or Stop
+with the lock; and, once calculated, the result. The old panel draws
+the options open, with no section.
+
+**The section "Parameters"** (the owner, 16 October 2026; the same in
+the Populations tab, twice, and in the Distances tab,
+`popgen2-populations.md` and `popgen2-distances.md`, "The options"):
+one line, a button whose words are "Parameters", with the chevron "›"
+before them, which points down while the section is open. It is drawn
+as the header of a section and not as a link: in the colour of the
+text, semibold, underlined only under the pointer, with the ring of
+the focus of every control (the review of 16 October 2026; until then
+it was underlined text in the colour of the accent, the look of a link,
+though it opens a section and goes nowhere). The section
+is closed when the page opens, so that Run stands near the top of the
+tab, under the heading and the line of the individuals, and a user who
+keeps the defaults runs the PCA with one press. The button opens and
+closes it with a click, with Enter and with Space, is a stop of the Tab
+key, and tells a screen reader whether the section is open,
+`aria-expanded`; what it opens is a group named "Parameters". The
+header is the word alone: the option not taken, the values in force in
+the closed header, the owner refused as too long. It holds every option
+of the PCA, the method, its filters and its LD pruning; the components
+on the axes and "Colour the points by" belong to the result and stay
+with it. Whether the section is open belongs to the screen and is not
+saved: it stays as the user left it while they move between tabs, since
+every tab stays drawn, and is closed again only by a reload. Closed,
+what it holds stays in the page, hidden, and takes no focus (React Aria's `Disclosure`, as
+`src/ui/widgets/Disclosure.tsx` wraps it). An option greyed while the PCA runs is greyed inside the open
+section as it was before, and the Tab key reaches it there. A reason
+that keeps Run from running because of an option stands beside Run, as
+every lock does, so it is seen with the section closed; its words send
+the user to the section by name, "Type the LD distance in Parameters,
+or turn the LD pruning off.", and the reason in full stays under the
+field inside it.
 
 **The method**, a drop-down list named "Method", React Aria's
 `Select`, as the components on the axes and "Colour the points by"
@@ -1174,14 +1207,31 @@ Then three, in this order:
   disequilibrium (LD)", on when the page opens, with two number fields
   under it while on: "Maximum r² with a variant kept before it, from 0
   to 1", at 0.1, and "Distance within which variants are compared, in
-  base pairs, from 1", empty. The Variants tab has no LD pruning, so the
-  PCA's is its own alone. Under the distance, a line says what it is in
-  terms of the data, with no number, since no distance holds for every
-  genome (the owner's rule of no default that depends on the genome):
-  "Choose the distance beyond which the r² between two variants falls
-  to its background level in your species, as studies of its LD decay
-  report." While the distance is empty, the reason of the lock, in
+  base pairs, from 1", at 100,000, so that the PCA runs with no option
+  typed. The owner decided the default on 16 October 2026, reversing for
+  this distance the rule of no default that depends on the genome of 27
+  and 28 September 2026; the option not taken, the field empty and Run
+  locked until the user typed a distance, made every user stop before
+  their first PCA for a number many of them would not know. The Variants
+  tab has no LD pruning, so the PCA's is its own alone. Under the
+  distance, a line says that the start is not right for every genome,
+  and which number of the LD decay to read: "100,000 bp is a start that
+  suits many genomes but not all. The LD decay of the Populations tab
+  shows how far LD extends in your data: choose a distance where its
+  curve has flattened, well beyond the half distance." The half distance
+  of the LD decay, where its curve falls to half its r² at distance 0,
+  is far shorter than a window of pruning should be, so the line sends
+  the user past it. On 16 October 2026 it first said "The window within
+  which pairs of variants are compared. 100,000 bp is a start …; the LD
+  decay of the Populations tab shows how far LD extends in your data.",
+  whose first sentence repeated the label; until then it said "Choose the distance beyond which the r²
+  between two variants falls to its background level in your species,
+  as studies of its LD decay report." The field emptied by the user is
+  no distance, which locks Run: the field calls `onEmptied` of the
+  number field, where on the old page an emptied field shows its number
+  again. While the distance is empty, the reason of the lock, in
   full, stands under that field and describes it to a screen reader,
+  is announced in the status region,
   drawn as a line of what is needed, in the colour of the lines of help
   and with no mark of a problem, since the user caused no error; beside
   Run a short line points to it (below). Until 10 October 2026 the same
@@ -1199,9 +1249,13 @@ a whole number from 1 to 9007199254740991 for the distance, written
 with no comma between thousands; the empty distance field sends nothing
 on the arrow keys, Page Up, Page Down, Home and End.
 
-**The line of what it will run on**, as on the old panel: "200
-individuals of panel.nei", or "111 of the 200 individuals of panel.nei,
-those the filters of individuals keep".
+**The line of what it will run on**, only when the filters of
+individuals remove some: "111 of the 200 individuals of panel.nei,
+those the filters of individuals keep". When the PCA uses every
+individual of the variants file the tab says nothing of them, since the
+boxes at the top already count them; the owner decided it on 16 October
+2026. Until then the tab said "200 individuals of panel.nei", as the
+old panel still does.
 
 **Run and Stop**, one button, with the lock beside it as text that
 describes it. Run makes the PCA live for the file and starts it at
@@ -1233,7 +1287,7 @@ its place when they come and go. The lock is the first of these:
 | the one pass refused by popnei, or the file could no longer be read, where the box offers no Start again (`startAgainMends` of `src/ui/variants/chain.ts`) | "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again there, or open another." |
 | more than 9,381 individuals kept, the PCoA | the old panel's, with "Keep at most 9,381 with the filters of individuals in the Variants tab" |
 | the filters of the individuals keep none | the store's, ending "Loosen them." |
-| the LD pruning on with no distance | "Type the LD distance above, or turn the LD pruning off."; the reason in full stands under the field of the distance ("Its filters") |
+| the LD pruning on with no distance | "Type the LD distance in Parameters, or turn the LD pruning off."; the reason in full stands under the field of the distance ("Its filters"); "Type the LD distance above, …" until 16 October 2026, when the options went into the section "Parameters" |
 
 The three of the one pass are the screen's, `passLock` of
 `src/ui/analyses/pca/passLock.ts`, a pure function of the store's state
@@ -1366,7 +1420,15 @@ answer 2a to `docs/designs/population-tab.md`).
   was needed, the old panel's line that says so.
 - **The table of the individuals**, as the old panel's, the second
   column headed "Population" or the column's name, "Unclassified" for an
-  individual with no population. While columns are cut off at its right, a fade
+  individual with no population. Its caption, when the PCA's LD pruning
+  is on, says it was applied, with the r² and the distance of the run,
+  which are those of the key the result is shown under: "The place of
+  each of the 200 individuals of panel.nei on the first 10 of the 199
+  components, from 548 variants, after the LD pruning at r² 0.1 within
+  100,000 bp." (since 16 October 2026, by the review of the piece, which
+  found that nothing in the result said the default pruning had run);
+  with the pruning off, the old panel's caption, "… from 548
+  variants.". While columns are cut off at its right, a fade
   over its right edge and the words under it, "More columns: scroll
   sideways.", which also describe the table to a screen reader, say
   that there are more, since macOS draws no scrollbar until a scroll;
@@ -1559,9 +1621,10 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | a filter whose slider would have no range | "0, as in the Variants tab. The PCA cannot be stricter than the Variants tab here." |
 | the Variants tab stricter than the PCA's own | "The Variants tab keeps at most 0.03, stricter than the 0.05 set here, so the PCA uses 0.03." |
 | the lock and the help of the one pass | the table of "Run and Stop" |
-| under the field of the distance | "Choose the distance beyond which the r² between two variants falls to its background level in your species, as studies of its LD decay report." |
-| under the field of the distance, while it is empty | "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off."; "PCoA" under the PCoA |
-| beside Run, while the distance is empty | "Type the LD distance above, or turn the LD pruning off." |
+| under the field of the distance | "100,000 bp is a start that suits many genomes but not all. The LD decay of the Populations tab shows how far LD extends in your data: choose a distance where its curve has flattened, well beyond the half distance." |
+| under the field of the distance, once the user emptied it | "The LD pruning of the PCA needs the distance within which variants are compared. Type a distance in base pairs, 100,000 to start with, or turn the LD pruning off."; "PCoA" under the PCoA |
+| beside Run, while the distance is empty | "Type the LD distance in Parameters, or turn the LD pruning off." |
+| the section of the options | "Parameters" |
 | an error, a refusal of the variants file itself, which the one pass would have met first | the words of the box Variants (`src/core/analyses/fileRefusals.ts`), with "in the box Variants" after "open it again" and "Open another variants file", and "so the PCA cannot be calculated" where the box says the variants cannot be counted: "panel.nei has no variants. Open another variants file in the box Variants."; "panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again in the box Variants.", for a gzipped file cut short or a damaged batch of a `.nei` file; a variant at position 0, a position beyond 2,147,483,647, a genotype of another ploidy, and a line of the VCF popnei cannot read, each ending "and open it again in the box Variants." |
 | an error, the statistics of each individual refused | "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the PCA was not run.", or "… so the PCA cannot run." when its own Run did not wait for them, followed by the row above with "so the statistics of each individual cannot be calculated", or, for another refusal, "popnei could not read panel.nei: ‹popnei's words›. Open the file again in the box Variants, or another file." |
 | an error, a failure that is not popnei's refusal, in this page's words where the old panel's name the Variants step or a project to save (`popgen2FailureText` of `src/ui/analyses/words.ts`; since 9 October 2026, by task 6.1 of the plan, from the review of work package 2, which found the old words on this page) | the variants file changed on the disk since the one pass read it, a failure and not a refusal, "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants."; an error of the application's own, "The application met an error of its own: ‹its words›. Run it again."; the calculations that could not start, "The application could not start its calculations. Reload the page and open panel.nei again."; the page out of date, "The page is out of date. Reload the page and open panel.nei again."; the worker that stopped, the PCA's own words of the memory, `crashText` of core with the page |
@@ -1582,6 +1645,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | its menu | "Table as CSV"; "Image as SVG"; "Image as PNG"; "Data as CSV" |
 | a histogram's menu waiting | "Download once panel.nei is read to the end."; once the user stopped the one pass, "Download once panel.nei is read to the end: its reading was stopped; start it again in the box Variants."; once it failed, "Nothing to download: panel.nei could not be read to the end; the box Variants says why." |
 | the PCA's menu while three.js downloads | "Download once the 3D view is drawn." |
+| the caption of the table of the individuals | "The place of each of the 200 individuals of panel.nei on the first 10 of the 199 components, from 548 variants, after the LD pruning at r² 0.1 within 100,000 bp."; with the LD pruning off, "… from 548 variants." |
 | the table of the individuals cut off at its right | "More columns: scroll sideways." |
 | the result while its code downloads | "Loading the result…" |
 | the result whose code could not be downloaded | "The result of the PCA could not be loaded. Press Try again. If it fails again, the site may have been updated since this page was opened: reload the page, open panel.nei again and run the PCA again; what the page has calculated is lost."; "PCoA" under the PCoA; its button "Try again" (worded so on 11 October 2026: Try again first, the reload second with what it costs) |
@@ -1596,9 +1660,9 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
   variants in linkage disequilibrium, such as an inversion, can make a
   component of its own that separates the individuals by that region
   rather than by their ancestry. Turn on the LD pruning of the PCA in
-  its options above, unless such regions are what you are looking for."
+  Parameters, unless such regions are what you are looking for."
 - `fewVariants`: "… If the dataset has more, loosen the filters of the
-  PCA in its options above, or the thresholds of the Variants tab."
+  PCA in Parameters, or the thresholds of the Variants tab."
 - `lingoesCorrection`: the old panel's, unchanged: the share of the
   variance that lay in directions no space has, 7.87% on `panel.nei`;
   the amount added to every squared distance, 0.047, and its share of
@@ -1615,8 +1679,10 @@ VCF, and open it again in the box Variants, or turn the LD pruning
 off.", the end of the lock of the LD pruning with no distance. The row
 of no variant left: "No variant of
 panel.nei is left after the filters of the PCA, so there is no variant
-to do the PCA with. Loosen the filters of the PCA in its options above,
-or the thresholds of the Variants tab." The words of the 3D view are
+to do the PCA with. Loosen the filters of the PCA in Parameters, or the
+thresholds of the Variants tab." These three name the section
+"Parameters", which may be closed, in place of "in its options above"
+until 16 October 2026. The words of the 3D view are
 the old panel's, but for its failure to download, which ends "reload
 the page, open panel.nei again and run the PCA again", since this page
 saves no project and a reload leaves it with no file open.
@@ -1643,8 +1709,9 @@ one stop, the tab shown, also after the arrow keys rested on a greyed
 tab before the focus left the row, whose Left and Right arrow keys move
 along the labels, greyed ones among them, and Home and End go to the
 first and the last; then
-the content of the tab shown. In the PCA tab: the method; the slider of
-the missing data; that of the MAF; the LD switch and its two fields; Run, Stop or Stop recalculating, one stop in one place, and after a failure that leaves the PCA live, Run and then Stop recalculating; the warnings; the plot's "Download…",
+the content of the tab shown. In the PCA tab: the button "Parameters";
+while the section is open, the method, the slider of
+the missing data, that of the MAF, and the LD switch and its two fields; Run, Stop or Stop recalculating, one stop in one place, and after a failure that leaves the PCA live, Run and then Stop recalculating; the warnings; the plot's "Download…",
 beside the title of the plot; the bar of controls; the legend; the link
 to the table; the explained variance, when it scrolls, and its
 "Download…"; the table of the individuals, then its "Download…". Each
@@ -1824,6 +1891,12 @@ focus is on a threshold of the Variants tab.
 - No Undo: the page's store has no `undo` nor `redo` in its type; a
   press of Ctrl+Z on the page sends no command.
 - The CSV of each table and plot, in `docs/specs/widgets/downloads.md`.
+- From 16 October 2026, in jsdom: the PCA tab draws its options inside
+  the section "Parameters", closed, its button with
+  `aria-expanded="false"`, and the line of the distance's lock beside
+  Run outside it. That the panels of `popgen.html` draw their options
+  with no section is checked by its flows, which reach the options with
+  no section opened.
 
 **In Playwright, on the built site, in Chromium and WebKit**, the two
 engines that start on the owner's Mac, on `panel.nei`,
@@ -1841,14 +1914,32 @@ engines that start on the owner's Mac, on `panel.nei`,
   greyed, with the reason in its place. At 320 px, the five labels on
   two lines in the Mac's system font, three in DejaVu Sans, and no
   sideways scroll.
+- **The section "Parameters"**, in the PCA, Populations and Distances
+  tabs (`e2e/popgen2Parameters.spec.ts`, from 16 October 2026): each
+  closed when the page opens, its button with `aria-expanded="false"`
+  and its options not visible; the Tab key reaches the button, Enter
+  opens it and Space closes it, `aria-expanded` following; an option
+  inside works as before once open; an option greyed while the PCA
+  runs is reached by the Tab key inside the open section, with its
+  reason; with the distance of the LD pruning emptied and the section
+  closed again, "Type the LD distance in Parameters, or turn the LD
+  pruning off." visible beside the greyed Run; and the section opened
+  in the PCA tab still open after the Populations tab is shown and the
+  PCA tab shown again. axe on each state.
 - **The PCA**, all thresholds of the Variants tab as a new page has
   them, the missing rate of the variants at 0.1: the PCA tab opened
   during the one pass, held (`e2e/holdWorker.ts`), shows Run disabled
   with "Run once panel.nei is read to the end: the reading under way
-  …"; after the pass, Run disabled with the reason of the LD pruning
-  with no distance; 50000 typed: Run; "PC1 (3.55%)" and "PC2 (3.40%)"
+  …", and no line of the individuals; after the pass, Run enabled with
+  the distance at 100000; the distance emptied, Run disabled with the
+  reason of the LD pruning with no distance; 50000 typed: Run. With no
+  option typed, the LD pruning within 100,000 bp: "PC1 (3.55%)" and
+  "PC2 (3.40%)", the same as within 50,000, 548 variants kept either
+  way (popnei 0.2.2 under node, 16 October 2026),
   on the 2D plot's axes, PC3 1.89% in the explained variance, `s000` at
-  −0.7139 and 7.6765 in the table, the caption "… from 548 variants",
+  −0.7139 and 7.6765 in the table, the caption "… from 548 variants,
+  after the LD pruning at r² 0.1 within 100,000 bp.", which shows that
+  the run was made with the default distance,
   no warning; the legend with "Unclassified (200)" alone, and, after
   `panel_pops.csv` is opened, p0 (48), p2 (84), p1 (68), with no
   request to the worker.
@@ -1951,8 +2042,9 @@ the PCoA, 198 components, PC1 3.679886264523731, `lingoesConstant`
 these values.
 
 **The screens**, `--project=screens`: the row with greyed tabs and a
-tooltip shown; the PCA tab locked, locked by the empty distance once
-the file is read, `popgen2-pca-locked-ld`, ready, running, done in 3D
+tooltip shown; the PCA tab locked, locked by the distance emptied once
+the file is read, `popgen2-pca-locked-ld`, ready with no option typed,
+`popgen2-pca-ready`, running, done in 3D
 and in 2D, with the PCoA's warning, while the result's code downloads
 and after it could not be; a menu of a download open; about to start,
 `popgen2-pca-about-to-start`, and running started by itself with the
@@ -1961,7 +2053,12 @@ ready after a Stop, with its line under Run, `popgen2-pca-stopped`;
 done with the PCA live, "Stop recalculating" above the result with no
 line under it, `popgen2-pca-live-done`; a crash that leaves it live, Run and
 Stop recalculating side by side, `popgen2-pca-live-failed`;
-light and dark; 1280 and 320 px. The screens `popgen2-undo`,
+light and dark; 1280 and 320 px. From 16 October 2026, the section
+"Parameters" of the three tabs closed, as every screen of a tab shows
+it unless it says otherwise, and open, `popgen2-pca-parameters`,
+`popgen2-populations-parameters` and `popgen2-distances-parameters`;
+`popgen2-pca-locked-ld` with the section closed after the distance was
+emptied, the reason beside Run. The screens `popgen2-undo`,
 `popgen2-undo-redo` and `popgen2-undo-waiting` go.
 
 **By hand**, in the plan: the memory and the time of a PCA and a PCoA

@@ -11,6 +11,7 @@ import {
 import {
   drawLine,
   drawRefusedText,
+  minimumAndDrawLines,
   readyLines,
   thresholdRefusedText,
 } from "./words.ts";
@@ -408,6 +409,20 @@ describe("PA7 D1 the words of the options of the diversity", () => {
       }).slice(1),
     ).toEqual([
       "p0, p1 and 2 more hold fewer chromosomes than the 160 the rarefaction draws, so they will have no rarefied values and no spectrum. Lower the number of chromosomes, above, to have them.",
+    ]);
+  });
+
+  test("on popgen2.html the line of the populations short of the draw sends the user to Parameters, where the options are (the owner, 16 October 2026); the old page's says above", () => {
+    const pops = [
+      ["p0", Array.from({ length: 48 }, (_, i) => `a${String(i)}`)],
+      ["p2", Array.from({ length: 84 }, (_, i) => `b${String(i)}`)],
+    ] as const;
+    const draw = { numCalledAlleles: 120, ploidy: 2 };
+    expect(minimumAndDrawLines(pops, 20, false, draw, "popgen2")).toEqual([
+      "p0 holds 96 chromosomes, fewer than the 120 the rarefaction draws, so it will have no rarefied values and no spectrum. Lower the number of chromosomes in Parameters to have them.",
+    ]);
+    expect(minimumAndDrawLines(pops, 20, false, draw, "popgen")).toEqual([
+      "p0 holds 96 chromosomes, fewer than the 120 the rarefaction draws, so it will have no rarefied values and no spectrum. Lower the number of chromosomes, above, to have them.",
     ]);
   });
 

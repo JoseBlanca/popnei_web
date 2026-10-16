@@ -374,14 +374,14 @@ describe("AP2 D1 pcaFilters on popgen2.html, the table of 'On popgen2.html'", ()
   const ownMaf = (maf: number): Partial<PcaOptions> => ({
     maf: { follow: false, maxAllowedMaf: maf },
   });
-  const ldNoDistance = { kind: "ld", maxAllowedR2: 0.1, maxDist: null };
+  const ldDefault = { kind: "ld", maxAllowedR2: 0.1, maxDist: 100_000 };
 
-  test("PCA2_DEFAULTS: the missing data and the MAF following the Variants tab, the LD pruning on at r² 0.1 with no distance", () => {
+  test("PCA2_DEFAULTS: the missing data and the MAF following the Variants tab, the LD pruning on at r² 0.1 within 100,000 base pairs", () => {
     expect(PCA2_DEFAULTS).toEqual({
       method: "pca",
       missingData: { follow: true, maxAllowedMissingRate: 0.1 },
       maf: { follow: true, maxAllowedMaf: 0.95 },
-      ld: { follow: false, maxAllowedR2: 0.1, maxDist: null },
+      ld: { follow: false, maxAllowedR2: 0.1, maxDist: 100_000 },
       colourBy: null,
       axes: [1, 2, 3],
       view: "3d",
@@ -389,10 +389,10 @@ describe("AP2 D1 pcaFilters on popgen2.html, the table of 'On popgen2.html'", ()
     expect(Object.isFrozen(PCA2_DEFAULTS.ld)).toBe(true);
   });
 
-  test("the Variants tab's missing data 0.1 and PCA2_DEFAULTS: missing data 0.1, LD r² 0.1 with no distance", () => {
+  test("the Variants tab's missing data 0.1 and PCA2_DEFAULTS: missing data 0.1, LD r² 0.1 within 100,000", () => {
     expect(pcaFilters([missing(0.1)], options2(), "popgen2")).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
-      ldNoDistance,
+      ldDefault,
     ]);
   });
 
@@ -401,7 +401,7 @@ describe("AP2 D1 pcaFilters on popgen2.html, the table of 'On popgen2.html'", ()
       pcaFilters([missing(0.1)], options2(ownMissing(0.05)), "popgen2"),
     ).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.05 },
-      ldNoDistance,
+      ldDefault,
     ]);
   });
 
@@ -410,19 +410,19 @@ describe("AP2 D1 pcaFilters on popgen2.html, the table of 'On popgen2.html'", ()
       pcaFilters([missing(0.03)], options2(ownMissing(0.05)), "popgen2"),
     ).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.03 },
-      ldNoDistance,
+      ldDefault,
     ]);
   });
 
   test("missing data off and the PCA's own 0.05: missing data 0.05, LD", () => {
     expect(pcaFilters([], options2(ownMissing(0.05)), "popgen2")).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.05 },
-      ldNoDistance,
+      ldDefault,
     ]);
   });
 
   test("missing data off and the PCA following: LD alone", () => {
-    expect(pcaFilters([], options2(), "popgen2")).toEqual([ldNoDistance]);
+    expect(pcaFilters([], options2(), "popgen2")).toEqual([ldDefault]);
   });
 
   test("MAF 0.95 and the PCA's own 0.9: missing data 0.1, MAF 0.9, LD", () => {
@@ -435,7 +435,7 @@ describe("AP2 D1 pcaFilters on popgen2.html, the table of 'On popgen2.html'", ()
     ).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "maf", maxAllowedMaf: 0.9 },
-      ldNoDistance,
+      ldDefault,
     ]);
   });
 
@@ -445,7 +445,7 @@ describe("AP2 D1 pcaFilters on popgen2.html, the table of 'On popgen2.html'", ()
     ).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "maf", maxAllowedMaf: 0.9 },
-      ldNoDistance,
+      ldDefault,
     ]);
   });
 
@@ -459,7 +459,7 @@ describe("AP2 D1 pcaFilters on popgen2.html, the table of 'On popgen2.html'", ()
     ).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "maf", maxAllowedMaf: 0.85 },
-      ldNoDistance,
+      ldDefault,
     ]);
   });
 
@@ -501,7 +501,7 @@ describe("AP2 D1 pcaFilters on popgen2.html, the table of 'On popgen2.html'", ()
       { kind: "passed" },
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "obs_het", maxAllowedObsHet: 0.5 },
-      ldNoDistance,
+      ldDefault,
     ]);
   });
 
@@ -629,14 +629,20 @@ describe("AP2 D2 the key of the PCA on popgen2.html", () => {
     });
   });
 
-  test("a project with no entry has the key of PCA2_DEFAULTS, the LD pruning with no distance among its filters", () => {
+  test("a project with no entry has the key of PCA2_DEFAULTS, the LD pruning within 100,000 among its filters, that of 100,000 typed", () => {
     expect(pcaOnPopgen2.keyInputs(project())).toEqual({
       method: "pca",
       filters: [
         { kind: "missing_data", maxAllowedMissingRate: 0.1 },
-        { kind: "ld", maxAllowedR2: 0.1, maxDist: null },
+        { kind: "ld", maxAllowedR2: 0.1, maxDist: 100_000 },
       ],
     });
+    expect(pcaOnPopgen2.keyInputs(project())).toEqual(
+      pcaOnPopgen2.keyInputs(project({ options: ownLd(100_000) })),
+    );
+    expect(pcaOnPopgen2.keyInputs(project())).not.toEqual(
+      pcaOnPopgen2.keyInputs(project({ options: ownLd(50_000) })),
+    );
     expect(pcaOnPopgen2.defaults).toEqual({
       ...PCA2_DEFAULTS,
       axes: [1, 2, 3],
@@ -703,7 +709,11 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
     ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
   };
   const PRUNING_DISTANCE_2 =
-    "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off.";
+    "The LD pruning of the PCA needs the distance within which variants are compared. Type a distance in base pairs, 100,000 to start with, or turn the LD pruning off.";
+  /** The PCA's LD pruning on with its distance emptied by the user. */
+  const LD_EMPTIED: Partial<PcaOptions> = {
+    ld: { follow: false, maxAllowedR2: 0.1, maxDist: null },
+  };
 
   test("an individuals file pending, refused, or lacking individuals of the variants file: no reason", () => {
     expect(
@@ -733,13 +743,17 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
     ).toBeNull();
   });
 
-  test("PCA2_DEFAULTS, with no distance: needs gives the short line of popgen2.html beside Run, the reason in full under the field by the method; 50000 typed: none", () => {
-    expect(pcaOnPopgen2.needs(project())).toBe(
-      "Type the LD distance above, or turn the LD pruning off.",
+  test("PCA2_DEFAULTS, within 100,000 base pairs: no reason", () => {
+    expect(pcaOnPopgen2.needs(project())).toBeNull();
+    expect(pruningDistanceReason(project(), "popgen2")).toBeNull();
+  });
+
+  test("the distance emptied: needs gives the short line of popgen2.html beside Run, the reason in full under the field by the method; 50000 typed: none", () => {
+    const emptied = project({ options: LD_EMPTIED });
+    expect(pcaOnPopgen2.needs(emptied)).toBe(
+      "Type the LD distance in Parameters, or turn the LD pruning off.",
     );
-    expect(pruningDistanceReason(project(), "popgen2")).toBe(
-      PRUNING_DISTANCE_2,
-    );
+    expect(pruningDistanceReason(emptied, "popgen2")).toBe(PRUNING_DISTANCE_2);
     const pcoa = project({
       options: {
         method: "pcoa",
@@ -747,10 +761,10 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
       },
     });
     expect(pcaOnPopgen2.needs(pcoa)).toBe(
-      "Type the LD distance above, or turn the LD pruning off.",
+      "Type the LD distance in Parameters, or turn the LD pruning off.",
     );
     expect(pruningDistanceReason(pcoa, "popgen2")).toBe(
-      "The LD pruning of the PCoA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off.",
+      "The LD pruning of the PCoA needs the distance within which variants are compared. Type a distance in base pairs, 100,000 to start with, or turn the LD pruning off.",
     );
     expect(pcaOnPopgen2.needs(project({ options: LD_50000 }))).toBeNull();
     expect(pruningDistanceReason(project(), "popgen")).toBeNull();
@@ -799,7 +813,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
     ).toEqual([
       {
         code: "pruningOff",
-        text: "No LD pruning was applied for the PCA, so a region of the genome counts once for each of its variants, and a region of many variants in linkage disequilibrium, such as an inversion, can make a component of its own that separates the individuals by that region rather than by their ancestry. Turn on the LD pruning of the PCA in its options above, unless such regions are what you are looking for.",
+        text: "No LD pruning was applied for the PCA, so a region of the genome counts once for each of its variants, and a region of many variants in linkage disequilibrium, such as an inversion, can make a component of its own that separates the individuals by that region rather than by their ancestry. Turn on the LD pruning of the PCA in Parameters, unless such regions are what you are looking for.",
       },
     ]);
     expect(
@@ -811,7 +825,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
     ).toEqual([
       {
         code: "fewVariants",
-        text: "The PCA used 150 variants that vary among its 200 individuals, fewer variants than individuals, so each component rests on few variants and can show chance differences as structure. If the dataset has more, loosen the filters of the PCA in its options above, or the thresholds of the Variants tab.",
+        text: "The PCA used 150 variants that vary among its 200 individuals, fewer variants than individuals, so each component rests on few variants and can show chance differences as structure. If the dataset has more, loosen the filters of the PCA in Parameters, or the thresholds of the Variants tab.",
       },
     ]);
   });
@@ -821,7 +835,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
     expect(
       refusalText("there are no variants to do a PCA with", p, "popgen2"),
     ).toBe(
-      "No variant of panel.nei is left after the filters of the PCA, so there is no variant to do the PCA with. Loosen the filters of the PCA in its options above, or the thresholds of the Variants tab.",
+      "No variant of panel.nei is left after the filters of the PCA, so there is no variant to do the PCA with. Loosen the filters of the PCA in Parameters, or the thresholds of the Variants tab.",
     );
     expect(
       refusalText(

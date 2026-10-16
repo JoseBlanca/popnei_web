@@ -142,13 +142,13 @@ describe("PT1 D3 the words of the Populations tab", () => {
     const lines = diversityTabReadyLines(p, keptOf(null));
     expect(lines[0]).toBe("2 populations: A, 4 individuals; B, 4 individuals");
     expect(lines[1]).toBe(
-      "2 unclassified individuals kept are left out, as the box Individuals says.",
+      "2 unclassified individuals kept are left out, as the Individuals tab says.",
     );
     expect(unclassifiedLeftOutOf(p, keptOf(null))).toBe(2);
     // Only the unclassified kept count: s009 removed, s008 kept.
     const someKept = keptOf(INDIVIDUALS.filter((name) => name !== "s009"));
     expect(diversityTabReadyLines(p, someKept)[1]).toBe(
-      "1 unclassified individual kept is left out, as the box Individuals says.",
+      "1 unclassified individual kept is left out, as the Individuals tab says.",
     );
     expect(unclassifiedLeftOutOf(p, someKept)).toBe(1);
   });
@@ -169,7 +169,7 @@ describe("PT1 D3 the words of the Populations tab", () => {
     const lines = diversityTabReadyLines(p, keptOf(["s000", "s001", "s008"]));
     expect(lines).toEqual([
       "1 population: A, 2 individuals",
-      "1 unclassified individual kept is left out, as the box Individuals says.",
+      "1 unclassified individual kept is left out, as the Individuals tab says.",
       "A has 2 individuals, fewer than the minimum of 20, so it will have no values.",
       "B has no individual left after the thresholds of the individuals, and is left out. Loosen the thresholds of the individuals in the Variants tab to keep it.",
     ]);
