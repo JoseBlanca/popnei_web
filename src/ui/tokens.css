@@ -29,6 +29,16 @@
   --color-scroll-shadow: #1a1d2140;
   /* the page behind a dialog: the text at a half */
   --color-backdrop: #1a1d2180;
+  /* the look of the page (docs/designs/visual-design.md): the lines that
+     only separate, which mark no control and need no 3:1, the boxes of
+     the two files, the band, the zone that opens a file, the headings
+     and the selected tab */
+  --color-rule: #7c8591;
+  --color-box: #ffffff;
+  --color-band: #ffffff;
+  --color-zone: #f4f5f7;
+  --color-heading: #1a1d21;
+  --color-tab-selected: transparent;
 
   /* the plots (charts.md): the seven colours of Okabe and Ito without
      black, the axes and their text, the lines of the thresholds */
@@ -73,6 +83,8 @@
   --text-xl: 1.5rem;
   --leading-body: 1.5;
   --leading-heading: 1.25;
+  --font-heading: var(--font-body);
+  --weight-heading: bold;
 
   /* the order in which what is fixed over the page covers one another:
      the band at the top of popgen2.html over the page, whose plots and
@@ -85,6 +97,9 @@
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-full: 999rem;
+  --shadow-box: none;
+  --zone-border-style: dashed;
+  --tab-bar: 3px;
   --focus-ring: 2px solid var(--color-focus);
   --focus-offset: 2px;
   --target-min: 1.5rem;
@@ -108,6 +123,12 @@
     --color-focus: #7fb0ff;
     --color-scroll-shadow: #e8eaed40;
     --color-backdrop: #0b0c0eb3;
+    --color-rule: #7a838e;
+    --color-box: #16181b;
+    --color-band: #16181b;
+    --color-zone: #202328;
+    --color-heading: #e8eaed;
+    --color-tab-selected: transparent;
     --chart-bar: #56b4e9;
     --chart-axis: #a3abb5;
     --chart-threshold: #ff8a80;
@@ -130,6 +151,12 @@
   --color-focus: #7fb0ff;
   --color-scroll-shadow: #e8eaed40;
   --color-backdrop: #0b0c0eb3;
+  --color-rule: #7a838e;
+  --color-box: #16181b;
+  --color-band: #16181b;
+  --color-zone: #202328;
+  --color-heading: #e8eaed;
+  --color-tab-selected: transparent;
   --chart-bar: #56b4e9;
   --chart-axis: #a3abb5;
   --chart-threshold: #ff8a80;

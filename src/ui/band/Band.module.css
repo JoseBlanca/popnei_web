@@ -8,8 +8,8 @@
   inset-block-start: 0;
   inset-inline: 0;
   z-index: var(--layer-band);
-  border-block-end: 1px solid var(--color-border);
-  background: var(--color-background);
+  border-block-end: 1px solid var(--color-rule);
+  background: var(--color-band);
   color: var(--color-text);
 }
 
@@ -25,8 +25,8 @@
    at its top, so that it scrolls with it and covers nothing of the
    window, at 400% zoom among others. */
 .bandScrolls {
-  border-block-end: 1px solid var(--color-border);
-  background: var(--color-background);
+  border-block-end: 1px solid var(--color-rule);
+  background: var(--color-band);
   color: var(--color-text);
 }
 

@@ -5,9 +5,9 @@
   gap: var(--space-3);
   justify-items: start;
   padding: var(--space-4);
-  border: 1px dashed var(--color-border);
+  border: 1px var(--zone-border-style) var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: var(--color-zone);
   transition: border-color var(--duration-fast);
 }
 

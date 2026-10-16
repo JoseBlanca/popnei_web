@@ -37,7 +37,7 @@
   display: flex;
   block-size: 100%;
   align-items: flex-end;
-  border-block-end: 1px solid var(--color-border);
+  border-block-end: 1px solid var(--color-rule);
   background: var(--color-background);
   padding-block: var(--space-1);
   padding-inline: var(--space-3);
@@ -55,7 +55,7 @@
   align-items: center;
   padding-block: var(--space-1);
   padding-inline: var(--space-3);
-  border-block-end: 1px solid var(--color-border);
+  border-block-end: 1px solid var(--color-rule);
 }
 
 /* On a narrow page less space between the columns, as the plain table

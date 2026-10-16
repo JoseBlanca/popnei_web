@@ -10,7 +10,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  border-block-end: 1px solid var(--color-border);
+  border-block-end: 1px solid var(--color-rule);
 }
 
 /* The tab shown is marked by a bar under its label and by the weight of
@@ -21,7 +21,7 @@
   min-block-size: var(--target-min);
   padding-inline: var(--space-3);
   margin-block-end: -1px;
-  border-block-end: 3px solid transparent;
+  border-block-end: var(--tab-bar) solid transparent;
   color: var(--color-text-muted);
   cursor: pointer;
 }
@@ -32,6 +32,7 @@
 
 .tab[data-selected] {
   border-block-end-color: var(--color-accent);
+  background: var(--color-tab-selected);
   color: var(--color-text);
   font-weight: 600;
 }
@@ -77,6 +78,7 @@
    on. */
 .tab[data-greyed][data-selected] {
   border-block-end-color: var(--color-text-disabled);
+  background: transparent;
   color: var(--color-text-disabled);
   font-weight: normal;
   cursor: default;

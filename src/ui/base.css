@@ -53,6 +53,9 @@ body {
 h1,
 h2,
 h3 {
+  color: var(--color-heading);
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
   line-height: var(--leading-heading);
 }
 
