@@ -1357,9 +1357,10 @@ each change, and in WebKit each stop of a large PCA leaves 3 to 4 GB
 in the tab for 40 s and more (`docs/architecture.md`, section 5).
 
 Not locked, since the PCA's key holds none of them: the box of the
-individuals file, its Open, its Remove, its reader's options and its
-"Column of the populations", which only colour the points and the
-counts; "Colour the points by", the axes, 3D or 2D and the turn and
+individuals file and its list "Column of the populations", the
+Individuals tab, with its reader's options and, at its end, the zone of
+the individuals file and its Remove, which only colour the points and
+the counts; "Colour the points by", the axes, 3D or 2D and the turn and
 zoom of the 3D view; the row of tabs; and the opening of another variants file,
 which stops the PCA, as an opening stops every calculation. The owner's
 answer of 9 October 2026 named the column of the populations among the

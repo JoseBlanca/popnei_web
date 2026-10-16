@@ -3329,9 +3329,10 @@ the `manifest.json` the build writes, since Chromium 153 and WebKit
 again had never brought back a tab's code once a file it shares with
 the page failed, the PCA tab's included (the review of work package 1;
 section 9, `codeFiles.ts`). While the diversity runs, the box
-Individuals greys the column of the populations, the zone of the
-individuals file and its Remove, and the Individuals tab the three
-lists of how a text file is read (section 3); the zone of a file,
+Individuals greys its list of the column of the populations, and the
+Individuals tab the three lists of how a text file is read and, at its
+end, the zone of the individuals file and its Remove (section 3); the
+zone of a file,
 `FileZone` of `src/ui/widgets/`, has a state that waits, with its
 reason as the tooltip and the description of its button, in which a
 file dropped, pasted, or picked in a picker opened before the wait
