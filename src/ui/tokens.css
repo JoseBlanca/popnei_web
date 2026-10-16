@@ -102,7 +102,11 @@
   --radius-full: 999rem;
   --shadow-box: none;
   --zone-border-style: dashed;
-  --tab-bar: 1px;
+  /* the bar under the selected tab of a row inside a result, the Plot
+     and the Table of the spectrum, and the line under the selected tab
+     of the page's row, whose bar is at its top (--shadow-tab-selected) */
+  --tab-bar: 3px;
+  --tab-bar-page: 1px;
   /* the column of the page and of the band at the left of the window,
      or, auto, in its middle; the content of a tab of the page on a panel
      of its own, or on the page as the rest */

@@ -41,6 +41,7 @@
    the colour of the text, 3.39:1 from a greyed one in the light theme and
    3.26:1 in the dark, where the muted colour was 1.34:1 and 1.69:1. */
 .pageRow .tab {
+  border-block-end-width: var(--tab-bar-page);
   color: var(--color-text);
 }
 
