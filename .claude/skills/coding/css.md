@@ -45,7 +45,11 @@ When the floor rises, this table is revised first.
 `src/ui/tokens.css` is the one place where a colour, a length of the
 spacing, a size of type, a radius or a duration is written as a value.
 Every other file uses the tokens, so that a change of the look is a change
-there, and the dark theme is the same tokens with other values.
+there, and the dark theme is the same tokens with other values. The
+excerpt below holds the values of 16 October 2026, the look "Instrument,
+blue" (`docs/plans/visual-design.md`); `tokens.css` is the source, and
+holds as well the shadows, the layers and the lengths of the page, the
+panel and the tabs that the excerpt leaves out.
 
 ```css
 :root,
@@ -53,17 +57,27 @@ there, and the dark theme is the same tokens with other values.
   color-scheme: light dark;
 
   /* colours: named by their role, never by their hue */
-  --color-background: #ffffff;
-  --color-surface: #f4f5f7;
-  --color-text: #1a1d21;
-  --color-text-muted: #555d68;
-  --color-text-disabled: #6b7078;
-  --color-border: #7c8591;
-  --color-accent: #1f5fbf;
+  --color-background: #edf2f7;
+  --color-surface: #e1e8f0;
+  --color-text: #16202b;
+  --color-text-muted: #47525e;
+  --color-text-disabled: #626d7a;
+  --color-border: #6f7d8c;
+  --color-accent: #1d5c96;
   --color-on-accent: #ffffff;
   --color-danger: #b3261e;
   --color-warning: #8a5a00;
-  --color-focus: #1f5fbf;
+  --color-focus: #1d5c96;
+  /* the look of the page: the lines that only separate, the boxes of the
+     two files, the band, the zone that opens a file, the headings, the
+     selected tab and the panel of the open tab */
+  --color-rule: #c4d0dc;
+  --color-box: #ffffff;
+  --color-band: #d9e5f1;
+  --color-zone: #edf2f7;
+  --color-heading: #16202b;
+  --color-tab-selected: #ffffff;
+  --color-panel: #ffffff;
 
   /* the plots (charts.md): the seven colours of Okabe and Ito without
      black, the bars of a histogram, which name no group, the axes and
@@ -76,8 +90,9 @@ there, and the dark theme is the same tokens with other values.
   --chart-cat-6: #d55e00;
   --chart-cat-7: #cc79a7;
   --chart-bar: #0072b2;
-  --chart-axis: #555d68;
+  --chart-axis: #47525e;
   --chart-threshold: #b3261e;
+  --chart-threshold-keeps-all: #4f6f86;
   /* the text over the colours of viridis in the cells of the heatmap,
      the same in both themes, as the colours under it are */
   --chart-text-on-light: #000000;
@@ -103,7 +118,7 @@ there, and the dark theme is the same tokens with other values.
 
   /* shape, focus, size, motion */
   --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
+  --radius-md: 0.375rem;
   --radius-full: 999rem;
   --focus-ring: 2px solid var(--color-focus);
   --focus-offset: 2px;
@@ -129,33 +144,43 @@ there, and the dark theme is the same tokens with other values.
   says where it comes from. A number repeated in two files is a missing
   token.
 - The values above are checked: every text colour is at least 4.5:1 on
-  the background and on the surface, and the border, the accent and the
-  focus at least 3:1, in both themes (below).
+  the grounds it stands on, the background and the surface, and in the
+  look of 16 October 2026 the panel, the boxes of the files, the band and
+  the zone that opens a file; and the border, the accent and the focus at
+  least 3:1 on theirs, in both themes (below).
 
 ## Light and dark
 
 The user's system chooses the theme, and the application offers a
 setting, system, light or dark, that overrides it. The dark theme is the
-same tokens redefined:
+same tokens redefined (an excerpt of `tokens.css`, as above):
 
 ```css
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --color-background: #16181b;
-    --color-surface: #202328;
-    --color-text: #e8eaed;
-    --color-text-muted: #a3abb5;
-    --color-text-disabled: #7c8188;
-    --color-border: #7a838e;
-    --color-accent: #7fb0ff;
-    --color-on-accent: #0d1b2e;
+    --color-background: #121821;
+    --color-surface: #1b2330;
+    --color-text: #e8edf3;
+    --color-text-muted: #a0acb9;
+    --color-text-disabled: #7d8997;
+    --color-border: #788594;
+    --color-accent: #86b8ea;
+    --color-on-accent: #0b1a2b;
     --color-danger: #ff8a80;
     --color-warning: #f2c14e;
-    --color-focus: #7fb0ff;
+    --color-focus: #86b8ea;
+    --color-rule: #2f3b4a;
+    --color-box: #19212c;
+    --color-band: #1d2836;
+    --color-zone: #121821;
+    --color-heading: #f0f4f8;
+    --color-tab-selected: #19212c;
+    --color-panel: #19212c;
     --chart-bar: #56b4e9;
-    --chart-axis: #a3abb5;
+    --chart-axis: #a0acb9;
     --chart-threshold: #ff8a80;
+    --chart-threshold-keeps-all: #6387a1;
   }
 }
 
@@ -183,7 +208,8 @@ same tokens redefined:
   4.5:1 of text (`docs/specs/charts/heatmap.md`, "The values in the
   cells"). `--chart-bar` is the blue of Okabe and Ito, #0072b2,
   in the light theme, and their sky blue, #56b4e9, in the dark one, so
-  that a filled bar is 5.19:1 on #ffffff and 7.71:1 on #16181b, above the
+  that a filled bar is 5.19:1 on the light panel, #ffffff, and 7.03:1 on
+  the dark one, #19212c, where the plots of `popgen2.html` stand, above the
   3:1 of a mark (`docs/specs/charts/histogram.md`).
 - **The dark values are written twice**, in the media query and under
   `[data-theme="dark"]`, because the floor lacks `light-dark()`, the one
@@ -388,14 +414,16 @@ The values of WCAG 2.2 at level AA, in both themes:
 | the focus ring | 3:1 | 1.4.11 |
 
 - **A test computes the ratios** of the pairs of tokens that are used
-  together, text on background, text on surface, border on surface,
-  `--chart-bar`, `--chart-axis` and `--chart-threshold` on background, in
-  both themes,
+  together, text on the background, the surface, the panel, the boxes,
+  the band and the zone, border and focus on the grounds they are drawn
+  on, `--chart-bar`, `--chart-axis` and `--chart-threshold` on the panel,
+  where the plots stand since the look of 16 October 2026, in both
+  themes,
   with the formula of WCAG, and fails below the limit. A pair is added to
   the test when a component starts to use it. It is a Vitest test in
   node, `src/ui/tokens.test.ts` (`testing.md`).
 - **The fill of the groups of a plot carries the 3:1 for four of the
-  seven colours**, and a test checks them on the background of both
+  seven colours**, and a test checks them on the panel of both
   themes; the three below it on white, orange, sky blue and yellow, have
   an outline in `--chart-axis`, which carries it and is the pair tested
   (`charts.md`; decided by the owner on 29 September 2026).
