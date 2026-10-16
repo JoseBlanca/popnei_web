@@ -21,10 +21,12 @@ The owner asked on 16 October 2026, after the look of
   looking in a tab.
 - The two boxes side by side are of the same height and their buttons,
   while they have them, at the same height, at the bottom of each box.
-- A file dropped on a box still opens it, as it did on the zone in the
-  box: with a file open, the whole box takes a dropped or pasted file,
-  with no dashed zone drawn; the button in the tab opens the picker and
-  its zone takes a drop too.
+- With a file open, its box takes no dropped or pasted file: a file is
+  dropped on the zone at the end of its tab, beside its button, and a
+  drop on the box is stopped as a drop anywhere outside a zone is
+  (`src/ui/strayDrops.ts`). Before any file, the box keeps its zone with
+  "Open … file…". The owner decided so on 16 October 2026, after phase
+  1, which had made the whole box of a file open take a drop.
 
 Use cases: `docs/use-cases.md`, cases 3 and 4, the step that opens the
 files; the boxes then become the summary of each file the owner asked
@@ -51,8 +53,8 @@ Found by reading the code on main at 2da6b3f9:
 - `src/ui/strayDrops.ts`: a file dropped outside a zone is stopped,
   `docs/specs/entry.md`, "A file dropped outside a zone";
   `e2e/strayDrops.spec.ts` EN30 checks that a drop on the heading of the
-  box Individuals is stopped, which this piece changes for a box with a
-  file open.
+  box Individuals is stopped, which holds for a box with a file open
+  too since the owner's decision of 16 October 2026.
 
 No function of popnei is called; no interface between the layers
 changes.
@@ -61,12 +63,15 @@ changes.
 
 - `OpenVariants` and the zone of `IndividualsBox` render in the box only
   while no file of their kind is open (`project.variants` or
-  `project.individuals` null). With a file open, the box's content is
-  wrapped in a drop zone with no button and no dashed border, which
-  takes a dropped or pasted file through the same `onFiles` as the
-  zone, so that the drop, the paste and the picker share one path;
-  `FileZone` gains what that needs (a form with no button and no frame)
-  rather than a second widget.
+  `project.individuals` null). With a file open, the box has no zone and
+  takes no drop (the owner's decision of 16 October 2026, which replaced
+  the drop zone with no button and no frame around the box that phase 1
+  had built). The box's lines, with Stop, Start again or the list of the
+  column, are in a boundary of errors keyed by the file, and the zone,
+  before a file, in one of its own.
+- A file refused by the zone of a tab has its words under that zone too,
+  where the user is, as well as in the box and, once, in the status
+  region; they are brought into the window when they come below it.
 - The Variants tab ends with a `FileZone` whose button is "Open another
   variants file…", after `DownloadVariants`. The Individuals tab ends
   with Remove and a `FileZone` whose button is "Open another individuals
@@ -100,7 +105,7 @@ tab too, where the user's eyes are when they decide to change it.
    and a new one for a box with a file. New flows: the buttons at the
    bottom of each box before a file, at the same height at 1280 px; the
    boxes' heights equal; after a file, no zone in the box, the button at
-   the end of its tab; a drop on the box with a file opens it; Remove and
+   the end of its tab; a drop on the tab's zone opens a file; Remove and
    "Open another individuals file…" together at the bottom, wrapping at
    320 px; the focus after an opening and after Remove; axe light and
    dark. Checks: type check, lint, format, Vitest, the whole Playwright
@@ -113,7 +118,7 @@ tab too, where the user's eyes are when they decide to change it.
    tabs, the tab order, the focus, the checks), `docs/designs/input-page.md`
    where it says what the boxes hold, `docs/use-cases.md` and
    `docs/functionality.md` where they place Remove at the top,
-   `docs/specs/entry.md` for the drop on a box.
+   `docs/specs/entry.md` for the drop on a box of a file open, stopped.
 
 ## Left out
 
@@ -163,14 +168,66 @@ Choices the plan did not settle, made in phase 1:
   the zone, as the zone's actions: Remove is inside the dashed zone.
 - The words of a file not opened, dropped or picked in a tab, are shown
   in the box, as before, and said in the status region; the tab shows
-  none.
+  none. Changed in phase 2: the tab shows them too.
 - The box of a file open and the zone of its tab each have a hidden
   button "Paste a variants file" (or "an individuals file"), so the page
-  has two of each name, in two regions.
+  has two of each name, in two regions. Undone in phase 2, the box of a
+  file open having no zone.
 
 For phase 3, the documents also need: `docs/specs/entry.md` and the
 input spec on the two paste buttons; the specs of the analyses whose
 words now name the tab (`pca.md`, `diversity.md`, `ldDecay.md`,
 `popDists.md`, the PCA lock); and `individualsBoxWords` of
-`src/core/project.ts`, which still says "open it with Open variants file
-in the box Variants" when a variants file is open, to decide.
+`src/core/project.ts`, decided in phase 2.
+
+Phase 2, 16 October 2026, after the owner's decision that the box of a
+file open takes no drop, and the reviews of phase 1, in six commits:
+
+- The box of a file open takes no drop (94bf799e): the zone with no
+  button and no frame goes, from `FileZone`, `OpenVariants` and
+  `OpenIndividuals`; each box is one section again, its lines in a
+  boundary keyed by the file and its zone, before a file, in its own.
+  The flows drop on the tab's zone (`dropInTab` of `e2e/openFiles.ts`);
+  EN30 drops on the headings and lines of both boxes with their files
+  open and expects the drop stopped and nothing opened, which failed on
+  phase 1. A PCA tab can no longer be greyed while shown, since another
+  variants file is opened from the Variants tab: the flows of a tab
+  greyed while shown use Distances, greyed by "None" in the list of the
+  column. One "Paste a variants file" and one "Paste an individuals
+  file" at a time again.
+- The words of an individuals file that is a variants file name "Open
+  another variants file… in the Variants tab" while a variants file is
+  open, and "Open variants file… in the box Variants" while none is;
+  the diversity's line of one population for a refused individuals file
+  sends the user to the Individuals tab (506c1719). The other words that
+  name a box or a button were read in the state they are shown in, and
+  are right.
+- A file refused by a tab's zone has its words under it, 33 px under the
+  button, scrolled into the window when they come below it (55532e47);
+  before, they were at page y 217 with the button at y 1725, at 1280 by
+  900. Said once in the status region, as before.
+- No empty row in the Variants tab of a file not read, 41 px from its
+  line to the button where it was 65; and the reason the box keeps its
+  height corrected (82e6b3cf).
+- The opening of the individuals file is made by a provider around the
+  page and read by the zones and the words of a refusal, so that the
+  start and end of a run that locks the populations no longer draw the
+  page and its five tabs again: 0 drawings of the row of tabs where
+  there were 4, in jsdom under StrictMode (e9c2df04).
+- Checks: type check, lint, format, Vitest 5,719 tests; Playwright on the
+  built site at e9c2df04, Chromium 925 passed, WebKit 923 passed and 2
+  skipped; the flows `e2e/popgen2*` in Chromium with `POPNEI_WIDE_FONT=1`,
+  290 passed and 1 failed, AP5 D4 of `popgen2Downloads.spec.ts`, which
+  fails on main with that font too. Then a scroll margin under the words
+  of a refusal in a tab (a commit of its own), with
+  `e2e/popgen2FileButtons.spec.ts` run again in Chromium and WebKit, 12
+  passed in each. Firefox not run, as it does not launch on this Mac.
+  Screens seen in Chromium at 1280 and 320 px, light and dark.
+
+Not settled in phase 2:
+
+- The words of a variants file popnei could not read, in the box, end
+  with "Open another file." or "open it again." and name no place; the
+  button is at the end of the Variants tab, under the tab's line "…
+  could not be read; the box Variants says why.". Left as they are,
+  since they name no wrong place.
