@@ -332,5 +332,39 @@ Phase 3, the documents, 16 October 2026, in one commit:
   that did not parse, and the old "Remove putting the focus on the zone".
 
 Left as found: the words of a write popnei refused, in the dialog of
-the download, end "… and open it again." and name no place;
-`docs/designs/analyses-pca.md` keeps the words of its day.
+the download, end "… and open it again." and name no place (settled by
+the last reviews, below); `docs/designs/analyses-pca.md` keeps the
+words of its day.
+
+The findings of the last reviews, 16 October 2026, in ten commits:
+
+- The documents: `docs/functionality.md` puts the opening of another
+  individuals file and its Remove, greyed while the diversity runs, at
+  the end of the Individuals tab, the box keeping the column of the
+  populations; `docs/architecture.md` and `popgen2-pca.md` the same;
+  `popgen2-band.md` names the menu "Download…" of the first plot that
+  flow NU5 D3 opens; `popgen2-input.md` counts the region of popnei's
+  Python among the stops of the box Variants, and the words of a file
+  given while the diversity runs under the tab's zone too;
+  `docs/specs/entry.md` lists EN30 among its checks; `docs/use-cases.md`
+  says the box holds "Open individuals file…" while no individuals file
+  is open.
+- The words: the PCA's file of no variant ends "Open another file in
+  the Variants tab.", as the shared refusals do; popnei's other refusals
+  read "Open the file again, or another file, with Open another
+  variants file… in the Variants tab." in the box, and "…, or another
+  file, in the Variants tab." in the analyses, where "or another file"
+  came after the place; the dialog of a refused write ends "… and open
+  it again with Open another variants file… in the Variants tab.".
+- The flows: FB1 checks at 1280 px that the two buttons of the
+  Individuals tab share their top, and at 320 px that Remove stands
+  below the zone, in place of a condition on their widths that passed
+  either way at 320 px; FB1 before a file checks that the words of a
+  folder stand above the box's button; IN6 D2's title says where each
+  drop lands.
+- Checks: type check, lint, format, Vitest 5,729 tests; Playwright on
+  the built site at 020457ac with the flows of 921cc027, Chromium 925
+  passed, WebKit 923 passed and 2 skipped; the flows `e2e/popgen2*` in
+  Chromium with `POPNEI_WIDE_FONT=1`, 291 passed. Firefox not run, as
+  it does not launch on this Mac. No screen was looked at, since only
+  words and tests changed.
