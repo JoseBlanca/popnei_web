@@ -8,8 +8,13 @@
 
 /* The tabs of the page's row (pageRow of Tabs.tsx): from 40em the panel
    stands against the row, joined to the tab shown, so no gap between
-   them; under 40em, below, the gap of the other rows. */
+   them; under 40em, below, the gap of the other rows. Its one column no
+   wider than the page's, minmax(0, 1fr): with an auto column a field
+   wider than the window, at 320 px with the text at 200% in DejaVu Sans,
+   widened the panel to 326 px and the page scrolled sideways (16
+   October 2026), where the page's own column keeps it at 320. */
 .pageTabs {
+  grid-template-columns: minmax(0, 1fr);
   gap: 0;
 }
 
