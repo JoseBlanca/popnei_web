@@ -68,8 +68,14 @@ declare global {
 
 /** How many times the box worked out what it shows of the counts, one
     for each drawing of the box with a file read; and whether the tab of
-    the individuals file throws a defect as it is drawn with a file. */
-const drawn = vi.hoisted(() => ({ counts: 0, tabThrows: false }));
+    the individuals file throws a defect as it is drawn with a file, and
+    whether its counts or its table of the file throw one. */
+const drawn = vi.hoisted(() => ({
+  counts: 0,
+  tabThrows: false,
+  countsThrow: false,
+  tableThrows: false,
+}));
 
 vi.mock("./individualsWords.ts", async (importOriginal) => {
   const real = await importOriginal<typeof IndividualsWordsModule>();
@@ -88,6 +94,22 @@ vi.mock("./individualsWords.ts", async (importOriginal) => {
         throw new Error("popnei_web defect: a defect of the test");
       }
       return real.individualsTabShows(...args);
+    },
+    countsCaption: (
+      ...args: Parameters<typeof real.countsCaption>
+    ): ReturnType<typeof real.countsCaption> => {
+      if (drawn.countsThrow) {
+        throw new Error("popnei_web defect: a defect of the test");
+      }
+      return real.countsCaption(...args);
+    },
+    tableSizeText: (
+      ...args: Parameters<typeof real.tableSizeText>
+    ): ReturnType<typeof real.tableSizeText> => {
+      if (drawn.tableThrows) {
+        throw new Error("popnei_web defect: a defect of the test");
+      }
+      return real.tableSizeText(...args);
     },
   };
 });
@@ -121,6 +143,8 @@ beforeEach(() => {
   vi.stubGlobal("ResizeObserver", NoResize);
   drawn.counts = 0;
   drawn.tabThrows = false;
+  drawn.countsThrow = false;
+  drawn.tableThrows = false;
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -820,6 +844,54 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
         await Promise.resolve();
       });
       expect(paragraphs(tab())).toEqual(["Reading other.csv."]);
+    } finally {
+      quiet.mockRestore();
+    }
+  });
+
+  test("a defect in the counts draws their heading alone in their place, and leaves Remove and the table of the file", async () => {
+    const quiet = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    try {
+      const { store } = await drawPage();
+      await openVariants(store);
+      drawn.countsThrow = true;
+      await pickIndividuals("pops.csv");
+      await recorded(store, readOf(POPS));
+      await choose(store, "popcat");
+      expect(buttons(tab())).toContain("Remove pops.csv");
+      expect(
+        [...tab().querySelectorAll("h2")].map((h) => h.textContent),
+      ).toContain(COUNTS_HEADING);
+      expect(countRows()).toEqual([]);
+      expect(paragraphs(tab())).toContain("5 rows, 3 columns");
+    } finally {
+      quiet.mockRestore();
+    }
+  });
+
+  test("a defect in the table of the file draws its name alone in its place, and leaves Remove and the counts", async () => {
+    const quiet = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    try {
+      const { store } = await drawPage();
+      await openVariants(store);
+      drawn.tableThrows = true;
+      await pickIndividuals("pops.csv");
+      await recorded(store, readOf(POPS));
+      await choose(store, "popcat");
+      expect(buttons(tab())).toContain("Remove pops.csv");
+      expect(
+        [...tab().querySelectorAll("h2")].map((h) => h.textContent),
+      ).toContain("The table of pops.csv");
+      expect(tab().querySelector('[role="grid"]')).toBeNull();
+      expect(countRows()).toEqual([
+        ["Population", "Individuals"],
+        ["p0", "2"],
+        ["p1", "1"],
+      ]);
     } finally {
       quiet.mockRestore();
     }

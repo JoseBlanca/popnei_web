@@ -481,7 +481,12 @@ individuals file opened, as the statistics of the variants file are for
 each variants file: a throw there leaves its heading alone in the tab,
 "How the individuals file was read and what it holds", and the boxes,
 the other tab and the row of the tabs working; the next file opened
-draws the tab again.
+draws the tab again. Inside it, the individuals per population and the
+table of the file each have a boundary of their own: a throw in one
+leaves its heading alone in its place, "Individuals per population,
+after the filters of individuals" or "The table of panel_pops.csv", and
+Remove and the rest of the tab working, so that the user can still
+remove the file.
 
 **The individuals not in the file.** When individuals of the variants
 file are not in the individuals file: the heading "Individuals in
@@ -699,6 +704,7 @@ the project's (`docs/architecture.md`, section 7).
 | the heading drawn in place of the zone of the variants file when its code throws, under the box's "Variants" | "Opening a variants file" |
 | the headings drawn in place of the lines of the individuals file and of its zone when their code throws, under the box's "Individuals" | "What the individuals file holds"; "Opening an individuals file" |
 | the heading drawn in place of what the Individuals tab shows when its code throws | "How the individuals file was read and what it holds" |
+| the headings drawn in place of the counts and of the table of the file when their code throws | "Individuals per population, after the filters of individuals"; "The table of panel_pops.csv" |
 | the tabs | "Variants"; "Individuals" |
 | the list | "Column of the populations"; first item "None: every individual unclassified" |
 | the name of the counts, for a screen reader alone | "Individuals of panel.nei after the filters of individuals" |

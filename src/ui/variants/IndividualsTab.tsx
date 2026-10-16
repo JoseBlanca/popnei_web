@@ -48,6 +48,7 @@ import type {
 } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
+import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import type { StepCommand } from "../steps/variants/commands.ts";
 import { downloadName, individualsStem } from "../../core/fileNames.ts";
 import { csvOptionCommand } from "../steps/individuals/commands.ts";
@@ -80,6 +81,7 @@ import {
 } from "./individualsTable.ts";
 import type { TableColumnId } from "./individualsTable.ts";
 import {
+  COUNTS_HEADING,
   individualsTabShows,
   notInFileHeading,
   removeLabel,
@@ -180,7 +182,11 @@ export function IndividualsTab({
       return (
         <div className={classOf(styles, "tab")}>
           <Remove name={individuals.name} openButton={openButton} />
-          <IndividualsCounts />
+          {/* The counts and the table each in a boundary of its own, so
+              that a defect in either leaves Remove and the other. */}
+          <ErrorBoundary heading={COUNTS_HEADING} level={2}>
+            <IndividualsCounts />
+          </ErrorBoundary>
           {shows.options ? (
             options
           ) : (
@@ -195,14 +201,15 @@ export function IndividualsTab({
           )}
           <NotInFile individuals={individuals} />
           <RowsNotUsed />
-          <FileTable
+          <ErrorBoundary
             // A new load, or a read of other options, starts unsorted and
-            // at the top.
+            // at the top, in a boundary that has caught nothing.
             key={`${individuals.fileId} ${JSON.stringify(individuals.csv)}`}
-            read={read}
-            name={individuals.name}
-            shown={shown}
-          />
+            heading={tableLabel(individuals.name)}
+            level={2}
+          >
+            <FileTable read={read} name={individuals.name} shown={shown} />
+          </ErrorBoundary>
         </div>
       );
   }
