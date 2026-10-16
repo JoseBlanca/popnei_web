@@ -198,8 +198,9 @@ constant changed in a later release raises the key version. Whether
 2026, for the owner to overrule: it changes which variants each
 population counts, and the plot moves with it, where the bins do not.
 
-`ldDecayOptions(p)` gives the options of the project for `ldDecay`, or
-`LD_DECAY_DEFAULTS`. `parseOptions(o, 1)` gives back an object of
+`ldDecayOptions(p, page)` gives the options of the project for
+`ldDecay`, or the defaults of the page, `LD_DECAY_DEFAULTS` on the old
+page and `LD_DECAY2_DEFAULTS` on popgen2.html. `parseOptions(o, 1)` gives back an object of
 exactly the two fields, `maxDist` a whole number from 50 to
 9,007,199,254,740,991, the largest popnei takes, or `null`, and
 `maxAllowedMaf` a number from 0.5 to 1; anything else is refused with the
@@ -266,7 +267,7 @@ these:
 | `maxDist` `null` | "Type the largest distance, above." |
 | 40 × `maxDist` × the populations of `populationsKept(p, byLists)` above 1,000,000,000 bytes, `LD_DECAY_MAX_BYTES` | "With 3 populations, the largest distance can be at most 8,333,333 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser." With one population, "The largest distance can be at most 25,000,000 base pairs: …" |
 
-`maxDistReason(p)` gives what stands beside the field of the distance
+`maxDistReason(p, page)` gives what stands beside the field of the distance
 whenever one of these two rows holds, and not only when it is the first
 reason, as the PCA's reason of its own LD pruning is. For a distance
 above what the memory allows it is the reason of the table. For a
@@ -342,7 +343,7 @@ its words (`diversity.md`, "Why it cannot run").
   individuals: c.individuals,          // the individuals kept; null when the filters remove nobody
   pops,                                // populationsKept(p, c.individuals).pops
   minDist: 1,                          // LD_DECAY_MIN_DIST
-  maxDist: 100000,                     // ldDecayOptions(p).maxDist, never null here
+  maxDist: 100000,                     // ldDecayOptions(p, page).maxDist, never null here
   numBins: 50,                         // LD_DECAY_NUM_BINS
   maxAllowedMaf: 0.95,
 }
@@ -617,14 +618,14 @@ export const LD_DECAY_FEW_INDIVIDUALS = 20;
 export const LD_DECAY_MAX_BYTES = 1_000_000_000;
 export const LD_CURVE_POINTS = 200;
 
-export function ldDecayOptions(p: Project): LdDecayOptions;
+export function ldDecayOptions(p: Project, page: LdDecayPage): LdDecayOptions;
 
 /** The project's filters of the variants that are on, but the LD pruning. */
 export function ldDecayFilters(filters: Project["filters"]): Project["filters"];
 
 /** What stands beside the field of the largest distance: why it has to
     be typed, or the reason of the lock of the memory; null otherwise. */
-export function maxDistReason(p: Project): string | null;
+export function maxDistReason(p: Project, page: LdDecayPage): string | null;
 
 /** The largest distance the memory allows for this many populations. */
 export function maxDistFor(numPops: number): number;   // Math.floor(LD_DECAY_MAX_BYTES / (40 * numPops))
@@ -1156,8 +1157,8 @@ from the module above.
 ### What it shows
 
 **The options**, above the Run button, two number fields, each a
-command of `setAnalysisOptions` with the options of `ldDecayOptions(p)`
-and the one changed:
+command of `setAnalysisOptions` with the options of
+`ldDecayOptions(p, page)` and the one changed:
 
 - "Largest distance between the two variants of a pair, in base pairs,
   from 50", empty until typed. Under it: "How far to look for pairs.
@@ -1312,7 +1313,7 @@ the notice, the project for `ldDecayOptions`, `ldDecayFilters` and the
 names of the files, and the individuals kept. Run calls
 `startAnalysis(store, "ldDecay")`, Stop `store.cancelRun("ldDecay")`,
 and each option is `store.apply(description, (p) =>
-setAnalysisOptions(p, ldDecay, { ...ldDecayOptions(p), ‹the option› }))`
+setAnalysisOptions(p, ldDecay, { ...ldDecayOptions(p, "popgen"), ‹the option› }))`
 with the descriptions "the largest distance of the LD decay changed" and
 "the maximum major allele frequency of the LD decay changed". The panel
 holds no state of the project; its own is the tick of the clock and the
