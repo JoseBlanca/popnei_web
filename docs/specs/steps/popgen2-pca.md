@@ -1066,7 +1066,12 @@ the options open, with no section.
 the Populations tab, twice, and in the Distances tab,
 `popgen2-populations.md` and `popgen2-distances.md`, "The options"):
 one line, a button whose words are "Parameters", with the chevron "›"
-before them, which points down while the section is open. The section
+before them, which points down while the section is open. It is drawn
+as the header of a section and not as a link: in the colour of the
+text, semibold, underlined only under the pointer, with the ring of
+the focus of every control (the review of 16 October 2026; until then
+it was underlined text in the colour of the accent, the look of a link,
+though it opens a section and goes nowhere). The section
 is closed when the page opens, so that Run stands near the top of the
 tab, under the heading and the line of the individuals, and a user who
 keeps the defaults runs the PCA with one press. The button opens and

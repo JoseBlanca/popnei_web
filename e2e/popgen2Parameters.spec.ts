@@ -144,6 +144,22 @@ test.describe("popgen2-tidy phase 3: the sections Parameters", () => {
     const pcaSection = parametersButton(shown(page));
     await expect(pcaSection).toHaveCount(1);
     await expect(pcaSection).toHaveAttribute("aria-expanded", "false");
+    // Drawn as the header of a section, not as a link: the colour of the
+    // text, semibold, no underline but under the pointer.
+    const look = await pcaSection.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const text = getComputedStyle(document.body).color;
+      return {
+        sameColour: style.color === text,
+        weight: style.fontWeight,
+        underline: style.textDecorationLine,
+      };
+    });
+    expect(look).toEqual({
+      sameColour: true,
+      weight: "600",
+      underline: "none",
+    });
     await expect(method(page)).toBeHidden();
     await expect(button(shown(page), "Run")).toBeVisible();
     await expectNoAxeViolations(page, makeAxeBuilder);
