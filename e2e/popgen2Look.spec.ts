@@ -335,6 +335,35 @@ test.describe("in the forced colours of Windows", () => {
       });
       expect((await bar(tab(page, "PCA"), side)).colour).not.toBe(grey);
     }
+
+    // The Variants tab shown, and Distances still greyed by the column
+    // None: a greyed tab not shown, with no bar in GrayText at any width.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await tab(page, "Variants").click();
+    await expect(tab(page, "Distances")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await expect(tab(page, "Distances")).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
+    for (const [width, side] of [
+      [1280, "top"],
+      [640, "top"],
+      [639, "bottom"],
+      [320, "bottom"],
+    ] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await bar(tab(page, "Variants"), side)).toEqual({
+        width: "3px",
+        colour: highlight,
+      });
+      expect(
+        (await bar(tab(page, "Distances"), side)).colour,
+        `${String(width)} px`,
+      ).not.toBe(grey);
+    }
   });
 
   test("the tab shown of a row inside a result, Plot or Table of the spectrum, has its bar in Highlight, the other none", async ({
