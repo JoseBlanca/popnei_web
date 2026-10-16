@@ -831,7 +831,7 @@ the project's (`docs/architecture.md`, section 7).
 | the status region, a file read | "panel_pops.csv read: 200 rows, the populations from popcat."; with no column chosen, "panel_pops.csv read: 200 rows, no column chosen for the populations."; with rows not used, at the end, "18 individuals in panel_pops.csv are not in panel.nei, as the Individuals tab says." |
 | the status region, a file refused | the words of the box |
 | the box, and under the zone of the tab when a file is open, a file not opened | the words of a folder, a piece of text or several files, above; for a variants file of another name, "other.txt was not opened: a variants file is a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a .nei file. If it is one of them, rename it." |
-| the box, and the status region, a file dropped, pasted or picked while the diversity runs | "other.csv was not opened: the populations cannot change while the diversity runs. Stop the diversity in the Populations tab, then open other.csv again."; a folder, a piece of text, or several files, the words they get when the zone does not wait (12 October 2026) |
+| the box, under the zone of the tab when a file is open, and the status region, a file dropped, pasted or picked while the diversity runs | "other.csv was not opened: the populations cannot change while the diversity runs. Stop the diversity in the Populations tab, then open other.csv again."; a folder, a piece of text, or several files, the words they get when the zone does not wait (12 October 2026) |
 | the status region, the names copied | the old step's, "4 names copied." |
 
 The other words are given above, where they stand. "Warning: " opens
@@ -853,7 +853,9 @@ stops: its hidden button that takes a paste, "Paste a variants file" or
 kind of file on the page at a time, and so one of each hidden button. In
 the box of the variants file, its zone while no file is open; once a
 file is open, no stop, but Stop or Start again while the box shows one
-of them; in the box of
+of them, and the region of popnei's Python, which scrolls its lines
+with the arrow keys, under the words of a VCF whose ploidy popnei could
+not read; in the box of
 the individuals file, its zone while no file is open, and the list
 "Column of the populations" once a file is read; the row of the tabs,
 one stop, whose left and right arrow keys move between the labels and
