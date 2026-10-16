@@ -118,6 +118,9 @@
   --shadow-tab-selected:
     inset 0 3px 0 var(--color-accent), inset 1px 0 0 var(--color-rule),
     inset -1px 0 0 var(--color-rule);
+  /* the bar of a tab of that row greyed while it is shown, in the colour
+     of its words, so that the user still sees which tab they are on */
+  --shadow-tab-greyed: inset 0 3px 0 var(--color-text-disabled);
   --focus-ring: 2px solid var(--color-focus);
   --focus-offset: 2px;
   --target-min: 1.5rem;

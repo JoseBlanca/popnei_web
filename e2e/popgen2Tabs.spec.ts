@@ -69,6 +69,37 @@ function tab(page: Page, name: Label): Locator {
   return row(page).getByRole("tab", { name, exact: true });
 }
 
+/** The look of the label of the tab `name`: the weight of its words,
+    their colour, and its bar, the width and the colour of the first
+    shadow inside it, a line at its top, which the look of 16 October 2026
+    draws in place of a border under it (tokens.css,
+    --shadow-tab-selected; docs/plans/visual-design.md); width "0px" and
+    colour "none" when it has none. */
+async function tabLook(
+  page: Page,
+  name: Label,
+): Promise<{
+  readonly weight: string;
+  readonly colour: string;
+  readonly barWidth: string;
+  readonly bar: string;
+}> {
+  return tab(page, name).evaluate((element) => {
+    const style = getComputedStyle(element);
+    // "rgb(29, 92, 150) 0px 3px 0px 0px inset, ...", as Chromium and
+    // WebKit write it: the colour, then x, y, blur and spread.
+    const first = /^(rgba?\([^)]*\)) 0px (\d+(?:\.\d+)?px) 0px 0px inset/u.exec(
+      style.boxShadow,
+    );
+    return {
+      weight: style.fontWeight,
+      colour: style.color,
+      barWidth: first?.[2] ?? "0px",
+      bar: first?.[1] ?? "none",
+    };
+  });
+}
+
 /** The lines the labels of the row take when each line holds as many as
     fit it, from their widths, the gap between them and the room of the
     row, as measured in the page: as many as the font of the page needs. */
@@ -416,15 +447,7 @@ test("AP1 D4 the PCA tab shown, another variants file opened: the tab stays show
   await expectShown(page, reason);
   // Its bar kept, in the greyed colour, its words not in bold, so that
   // the user can tell which tab they are on.
-  const look = await tab(page, "PCA").evaluate((element) => {
-    const style = getComputedStyle(element);
-    return {
-      weight: style.fontWeight,
-      barWidth: style.borderBottomWidth,
-      bar: style.borderBottomColor,
-      colour: style.color,
-    };
-  });
+  const look = await tabLook(page, "PCA");
   expect(look.weight).toBe("400");
   expect(look.barWidth).toBe("3px");
   expect(look.bar).toBe(look.colour);
@@ -469,17 +492,10 @@ test("AP1 D4 at 320 pixels the five labels on two lines, the tab shown with its 
     // so that the row breaks only where it must.
     expect(tops.size).toBe(await linesTheLabelsNeed(page));
     expect(tops.size).toBeGreaterThanOrEqual(2);
-    const look = await tab(page, shown).evaluate((element) => {
-      const style = getComputedStyle(element);
-      return {
-        weight: style.fontWeight,
-        bar: style.borderBottomColor,
-        barWidth: style.borderBottomWidth,
-      };
-    });
+    const look = await tabLook(page, shown);
     expect(look.weight).toBe("600");
     expect(look.barWidth).toBe("3px");
-    expect(look.bar).not.toBe("rgba(0, 0, 0, 0)");
+    expect(look.bar).not.toMatch(/^(none|rgba\(0, 0, 0, 0\))$/u);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -489,16 +505,9 @@ test("AP1 D4 at 320 pixels the five labels on two lines, the tab shown with its 
   // A greyed tab not shown has neither the bar nor the weight of the tab
   // shown, and a tab that opens is in the colour of the text, the
   // heading's, apart from the greyed one's.
-  const greyed = await tab(page, "Distances").evaluate((element) => {
-    const style = getComputedStyle(element);
-    return {
-      weight: style.fontWeight,
-      bar: style.borderBottomColor,
-      colour: style.color,
-    };
-  });
+  const greyed = await tabLook(page, "Distances");
   expect(greyed.weight).toBe("400");
-  expect(greyed.bar).toBe("rgba(0, 0, 0, 0)");
+  expect(greyed.bar).toBe("none");
   const textColour = await page
     .getByRole("heading", { level: 1, name: "Popnei" })
     .evaluate((element) => getComputedStyle(element).color);
