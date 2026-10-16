@@ -79,9 +79,10 @@
 
 /* The first rectangle of an exported plot, which toSVG adds, so that the
    file is not transparent on a dark slide (charts.md, "Colours, themes
-   and the exported file"). */
+   and the exported file"). The panel's colour, on which the plots of
+   popgen2.html are drawn, white in the light theme of the file. */
 .chart-background {
-  fill: var(--color-background);
+  fill: var(--color-panel);
   stroke: none;
 }
 
@@ -210,7 +211,7 @@
 /* Behind the legend of an exported file, so that the points under it do
    not cross its text. */
 .chart-legend-background {
-  fill: var(--color-background);
+  fill: var(--color-panel);
   fill-opacity: 0.85;
   stroke: none;
 }

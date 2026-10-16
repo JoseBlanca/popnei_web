@@ -98,6 +98,23 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
   // The links of the header and of the stepper.
   ["--color-accent", "--color-background", 4.5],
   ["--color-accent", "--color-surface", 4.5],
+  // The text of the page on the boxes of the files, the band, the panel
+  // of the open tab and the zone that opens a file (the look of
+  // docs/plans/visual-design.md); the links and the selected tab's bar
+  // on them.
+  ...(
+    ["--color-box", "--color-band", "--color-panel", "--color-zone"] as const
+  ).flatMap(
+    (ground) =>
+      [
+        ["--color-text", ground, 4.5],
+        ["--color-text-muted", ground, 4.5],
+        ["--color-accent", ground, 4.5],
+      ] as const,
+  ),
+  ["--color-border", "--color-box", 3],
+  ["--color-border", "--color-panel", 3],
+  ["--color-focus", "--color-panel", 3],
   // The text of a button filled with the accent.
   ["--color-on-accent", "--color-accent", 4.5],
   ["--color-border", "--color-background", 3],
@@ -110,17 +127,19 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
   ["--color-danger", "--color-background", 3],
   // The mark of a warning of a column in the Individuals step.
   ["--color-warning", "--color-background", 3],
-  // A filled bar of a histogram, told from an outlined one on the
-  // background (docs/specs/charts/histogram.md).
-  ["--chart-bar", "--color-background", 3],
-  ["--chart-axis", "--color-background", 3],
-  ["--chart-threshold", "--color-background", 3],
+  // A filled bar of a histogram, told from an outlined one on the panel
+  // of the tab that holds every plot of popgen2.html
+  // (docs/specs/charts/histogram.md).
+  ["--chart-bar", "--color-panel", 3],
+  ["--chart-axis", "--color-panel", 3],
+  ["--chart-threshold", "--color-panel", 3],
   // A threshold that keeps every value on popgen2.html: its number in
-  // its box, whose background is the page's, 4.88:1 in the light theme
-  // and 4.67:1 in the dark; its line and its handle on the plot, 3:1 at
-  // least, which the 4.5 covers; and the number told from the number of
-  // one that removes something, 3.46:1 and 3.16:1 from the text.
+  // its box, whose background is the page's, 4.72:1 in the light theme
+  // and 4.68:1 in the dark; its line and its handle on the plot, on the
+  // panel, 3:1 at least; and the number told from the number of one that
+  // removes something, 3.10:1 and 3.09:1 from the text.
   ["--chart-threshold-keeps-all", "--color-background", 4.5],
+  ["--chart-threshold-keeps-all", "--color-panel", 3],
   ["--color-text", "--chart-threshold-keeps-all", 3],
   // The fill of a mark with no outline carries the 3:1 of a mark itself
   // (docs/specs/charts/scatter.md, "The marks of the groups", stop C 2).
@@ -128,7 +147,7 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
     .filter((colour) => !isOutlined(colour))
     .map(
       (colour) =>
-        [`--chart-cat-${String(colour + 1)}`, "--color-background", 3] as const,
+        [`--chart-cat-${String(colour + 1)}`, "--color-panel", 3] as const,
     ),
 ];
 
@@ -162,8 +181,8 @@ describe("the colour of a threshold that keeps every value", () => {
       ].map((ratio) => Math.round(ratio * 100) / 100);
     });
     expect(ratios).toEqual([
-      [4.88, 3.46],
-      [4.67, 3.16],
+      [4.72, 3.1],
+      [4.68, 3.09],
     ]);
   });
 
