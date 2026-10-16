@@ -16,8 +16,10 @@
   --color-surface: #e1e8f0;
   --color-text: #16202b;
   --color-text-muted: #47525e;
-  /* the text of a disabled control: 4.5:1 on the background, and 3:1
-     from the text of an enabled one */
+  /* the text of a disabled control: 4.5:1 on the background, the panel
+     and the boxes, and 3:1 from the text of an enabled one; in the dark
+     theme the two are at the edge, 4.55:1 on the panel and 3.03:1 from
+     the text */
   --color-text-disabled: #626d7a;
   --color-border: #6f7d8c;
   --color-accent: #1d5c96;
@@ -128,16 +130,16 @@
     color-scheme: dark;
     --color-background: #121821;
     --color-surface: #1b2330;
-    --color-text: #e2e8ef;
+    --color-text: #e8edf3;
     --color-text-muted: #a0acb9;
-    --color-text-disabled: #7a8694;
+    --color-text-disabled: #7d8997;
     --color-border: #788594;
     --color-accent: #86b8ea;
     --color-on-accent: #0b1a2b;
     --color-danger: #ff8a80;
     --color-warning: #f2c14e;
     --color-focus: #86b8ea;
-    --color-scroll-shadow: #e2e8ef40;
+    --color-scroll-shadow: #e8edf340;
     --color-backdrop: #0a0e14b3;
     --color-rule: #2f3b4a;
     --color-box: #19212c;
@@ -157,16 +159,16 @@
   color-scheme: dark;
   --color-background: #121821;
   --color-surface: #1b2330;
-  --color-text: #e2e8ef;
+  --color-text: #e8edf3;
   --color-text-muted: #a0acb9;
-  --color-text-disabled: #7a8694;
+  --color-text-disabled: #7d8997;
   --color-border: #788594;
   --color-accent: #86b8ea;
   --color-on-accent: #0b1a2b;
   --color-danger: #ff8a80;
   --color-warning: #f2c14e;
   --color-focus: #86b8ea;
-  --color-scroll-shadow: #e2e8ef40;
+  --color-scroll-shadow: #e8edf340;
   --color-backdrop: #0a0e14b3;
   --color-rule: #2f3b4a;
   --color-box: #19212c;

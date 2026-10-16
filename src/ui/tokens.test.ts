@@ -94,6 +94,11 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
   // told apart from the text of an enabled one (css.md, "Contrast and
   // colour").
   ["--color-text-disabled", "--color-background", 4.5],
+  // And on the panel of the open tab and the boxes of the files, where a
+  // greyed option of the PCA stands while a PCA runs (axe found 4.37:1 in
+  // the dark theme of the look, 16 October 2026).
+  ["--color-text-disabled", "--color-panel", 4.5],
+  ["--color-text-disabled", "--color-box", 4.5],
   ["--color-text", "--color-text-disabled", 3],
   // The links of the header and of the stepper.
   ["--color-accent", "--color-background", 4.5],
@@ -137,7 +142,7 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
   // its box, whose background is the page's, 4.72:1 in the light theme
   // and 4.68:1 in the dark; its line and its handle on the plot, on the
   // panel, 3:1 at least; and the number told from the number of one that
-  // removes something, 3.10:1 and 3.09:1 from the text.
+  // removes something, 3.10:1 and 3.24:1 from the text.
   ["--chart-threshold-keeps-all", "--color-background", 4.5],
   ["--chart-threshold-keeps-all", "--color-panel", 3],
   ["--color-text", "--chart-threshold-keeps-all", 3],
@@ -182,7 +187,7 @@ describe("the colour of a threshold that keeps every value", () => {
     });
     expect(ratios).toEqual([
       [4.72, 3.1],
-      [4.68, 3.09],
+      [4.68, 3.24],
     ]);
   });
 
