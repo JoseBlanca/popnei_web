@@ -639,6 +639,32 @@ test("the panel of the tab shown on a narrow window runs to the window's edges w
     const look = await tabLook(page, "Variants");
     expect(look.barAt).toBe(narrow ? "bottom" : "top");
     expect(look.barWidth).toBe("3px");
+    // The bar in the accent, whatever the form: a bar in another colour,
+    // the panel's white among them, would still be a shadow inside the
+    // tab. Joined, the tab's background and the line under it are the
+    // panel's, so that the tab opens into its panel.
+    const tokens = await page.evaluate(() => {
+      const probe = document.createElement("div");
+      document.body.append(probe);
+      const resolved = (token: string): string => {
+        probe.style.color = `var(${token})`;
+        return getComputedStyle(probe).color;
+      };
+      const found = {
+        accent: resolved("--color-accent"),
+        panel: resolved("--color-panel"),
+      };
+      probe.remove();
+      return found;
+    });
+    expect(look.bar).toBe(tokens.accent);
+    if (!narrow) {
+      const under = await tab(page, "Variants").evaluate(
+        (element) => getComputedStyle(element).borderBottomColor,
+      );
+      expect(look.background).toBe(tokens.panel);
+      expect(under).toBe(tokens.panel);
+    }
     if (!narrow) {
       const tops = new Set<number>();
       for (const name of LABELS) {
