@@ -2021,7 +2021,9 @@ step", which the page does not have.
   the individuals file never locks the PCA on that page, since the key
   holds nothing of it. The limit of 9,381 individuals and the reason of
   the LD pruning with no distance stay, the latter as a short line
-  beside Run, "Type the LD distance above, or turn the LD pruning off.",
+  beside Run, "Type the LD distance in Parameters, or turn the LD pruning
+  off." ("… above, …" until 16 October 2026, when the options went into
+  the section "Parameters"),
   since the reason in full, `pruningDistanceReason` with that page's
   words, stands under the field of the distance: "The LD pruning of the
   PCA needs the distance within which variants are compared. Type a

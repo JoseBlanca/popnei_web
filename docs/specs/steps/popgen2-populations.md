@@ -162,6 +162,7 @@ And these:
 ### The order of the tab
 
 Its heading, an `<h2>`, "Diversity". Under it, in this order: the
+section "Parameters", closed when the page opens, which holds the
 three options; before a result, the line of the populations it runs
 on, which the frame of the panel draws only then (said since 12
 October 2026, the review of the Distances tab); Run, Stop or
@@ -173,6 +174,21 @@ piece 2 of case 4, comes after it in the same tab, under an `<h2>` of
 its own, "LD decay" (below, "The LD decay", from 12 October 2026).
 
 ### The options
+
+In the section "Parameters" of the diversity, as the PCA tab's
+(`popgen2-pca.md`, "The PCA tab", the section "Parameters"; the owner,
+16 October 2026): a button "Parameters", closed when the page opens,
+which the Tab key reaches and Enter and Space open and close, with
+`aria-expanded`; its state is the screen's, kept while the user moves
+between tabs and not saved. The LD decay, below, has a section of its
+own, so the tab has two buttons "Parameters", each under the heading of
+its analysis. A lock of the draw, beside Run, sends the user to the
+section by name: "… Type a number of chromosomes of at most 20 in
+Parameters." (in the options of the diversity until 16 October 2026,
+as the old panel still says it); and so does the line before Run of
+the populations that hold fewer chromosomes than the draw, "… Lower the
+number of chromosomes in Parameters to have them." ("…, above, …" until
+then).
 
 The three fields of the old panel (`diversity.md`, "What it shows", the
 options), with their labels, defaults, lines and refusals, each a
@@ -610,8 +626,9 @@ part (`diversity.md`, "Accessibility"; `sfs.md`, "Accessibility")
 holds for the fields, the table and the bar; the plot of the spectrum
 has its own, in `sfs.md`, "On popgen2.html".
 
-**The order of the Tab key** (2.4.3), after the row of tabs: the three
-fields and "Use the default" when it is there; Run, Stop or Stop
+**The order of the Tab key** (2.4.3), after the row of tabs: the button
+"Parameters" and, while the section is open, the three fields and "Use
+the default" when it is there; Run, Stop or Stop
 recalculating, one stop in one place, and after a failure that leaves
 the diversity live, or while a crash of the PCA holds its start, Run and
 then Stop recalculating; the warnings, with the link to the warning of
@@ -682,7 +699,8 @@ the same.
 **In jsdom**: Run through `autoRuns.run`, Stop and Stop recalculating
 through `autoRuns.pause`; each line in the place of the bar from a
 `liveState`; the focus after Stop recalculating with the result shown,
-on the heading.
+on the heading; from 16 October 2026, the options of each analysis in a
+section "Parameters" of its own, closed.
 
 **In Playwright, on the built site, in Chromium and WebKit**, on
 `e2e/fixtures/panel.nei` and `panel_pops.csv`, the thresholds as a new
@@ -749,9 +767,17 @@ page has them, the missing data of the variants at 0.1, which keeps all
   page with no sideways scroll; the caption's sentence of the variants
   left out.
 - axe in each state of the tab, light and dark.
+- The two sections "Parameters", in `e2e/popgen2Parameters.spec.ts`, as
+  the PCA tab's (`popgen2-pca.md`, "How it is checked"): closed when
+  the page opens; Enter and Space; the distance of the LD decay
+  emptied with its section closed, "Type the largest distance in
+  Parameters." visible beside its greyed Run; one section opened and
+  the other left closed.
 
 **The screens**, `--project=screens`, at 1280 and 320 px, light and
-dark: `popgen2-populations-ready`, `-locked-pass`, `-running`,
+dark, with both sections "Parameters" closed unless a screen is of the
+options: `popgen2-populations-parameters`, both open;
+`popgen2-populations-ready`, `-locked-pass`, `-running`,
 `-waiting` (the PCA running), `-about-to-start`, `-done`, `-done-live`,
 `-stopped`, `-failed`, `-unclassified`, `-one-population`,
 `-loading-tab`, and `popgen2-individuals-box-locked`, the box
@@ -811,7 +837,9 @@ pruning is not applied here is never drawn.
 
 The `<h2>` "LD decay", 2 rem below the diversity's part, which ends
 with its Run or its result (from 12 October 2026, the review of the LD
-decay, where it stood 8 px under the diversity's Run); the two options; the line of the populations it
+decay, where it stood 8 px under the diversity's Run); its section
+"Parameters", closed when the page opens, which holds the two options
+(above, "The options", from 16 October 2026); the line of the populations it
 runs on; Run, Stop or Stop recalculating, with the lock beside it and,
 after it, the time of the last run; the line in the place of the bar;
 and, once calculated: the warnings, with their count on their heading;
@@ -959,7 +987,7 @@ disabled, or beside Stop recalculating while it is live:
 |---|---|
 | the one pass running or about to start, stopped, or refused | the three of the diversity's table with "the LD decay": "Run once ld.nei is read to the end: the reading under way in the box Variants and the LD decay cannot run at once." and the two others |
 | the individuals file being read | "The LD decay waits for ld_pops.csv to be read." |
-| the distance emptied by the user | "Type the largest distance, above.", with the line of help beside the field |
+| the distance emptied by the user | "Type the largest distance in Parameters.", with the line of help beside the field, inside the section; "Type the largest distance, above." until 16 October 2026, as the old panel still says it |
 | a distance whose counts would take more than 1 GB for the populations of the variants file | "With 2 populations, the largest distance can be at most 12,500,000 base pairs: the pairs are counted at every distance up to it, …", the old words, also beside the field; "The largest distance can be at most 25,000,000 base pairs: …" for one |
 | the thresholds of the individuals keep no individual at all | the store's words of `keptNoneReason`, as for the diversity |
 | the thresholds of the individuals keep no individual of any population | the diversity's words of this page, "… Loosen the thresholds of the individuals in the Variants tab to keep them." |
@@ -1094,8 +1122,8 @@ comes with it.
 ### Accessibility
 
 As the old panel's (`ldDecay.md`, "Accessibility") and the
-diversity's above. The order of the Tab key in its section: the two
-fields; Run, Stop or Stop recalculating, one stop in one place, Run then
+diversity's above. The order of the Tab key in its section: its button
+"Parameters" and, while it is open, the two fields; Run, Stop or Stop recalculating, one stop in one place, Run then
 Stop recalculating when both stand; the warnings; the table of the
 populations, when it scrolls, and its "Download…"; the tabs Plot and
 Table; in Plot, its "Download…" and the frame of the plot when it

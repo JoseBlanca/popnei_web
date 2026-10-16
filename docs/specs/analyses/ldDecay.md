@@ -993,7 +993,9 @@ filters of individuals", which that page does not have.
 - **`needs`**, without `individualsNeeds` and `populationsNeeds` of
   `docs/specs/core/project.md`, in this order: the individuals file being
   read, "The LD decay waits for ld_pops.csv to be read."; no distance,
-  once the user emptied the field, "Type the largest distance, above.",
+  once the user emptied the field, "Type the largest distance in
+  Parameters.", the section of the options (`popgen2-populations.md`,
+  "The options"; "…, above." until 16 October 2026, as on the old page),
   with beside the field "The LD decay needs the largest distance between
   the two variants of a pair. Type a distance in base pairs, 100,000 to
   start with." in place of the old page's "It has no default, …"; a distance above what the memory
