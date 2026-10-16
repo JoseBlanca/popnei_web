@@ -844,7 +844,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
         "popgen2",
       ),
     ).toBe(
-      "empty.vcf has no variants, so there is no variant to do the PCA with. Open another variants file in the Variants tab.",
+      "empty.vcf has no variants, so there is no variant to do the PCA with. Open another file in the Variants tab.",
     );
     expect(
       refusalText(

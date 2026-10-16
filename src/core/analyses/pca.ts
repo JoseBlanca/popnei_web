@@ -1185,7 +1185,7 @@ function emptyText(p: Project, consequence: string, page: PcaPage): string {
   if (page === "popgen" || p.variants === null) {
     return emptySourceText(p, consequence);
   }
-  return `${escaped(p.variants.name)} has no variants, so ${consequence}. Open another variants file in the Variants tab.`;
+  return `${escaped(p.variants.name)} has no variants, so ${consequence}. Open another file in the Variants tab.`;
 }
 
 /** The words of the PCoA's pairs of individuals with no distance: `pairs`
