@@ -969,4 +969,20 @@ describe("the ends of the tabs of the files and the boundaries around them", () 
     ).toContain("Opening an individuals file");
     expect(buttonOf("Remove pops.csv")).not.toBeNull();
   });
+
+  test("a defect in the row of tabs is undone by the next file opened, so that the row's buttons that open files come back", async () => {
+    const { store } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+    inject.tabsThrow = true;
+    await open(store, "b".repeat(32), "second.nei");
+    expect(caught).toEqual([
+      new Error("popnei_web defect: an individuals file read gave no counts."),
+    ]);
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
+    inject.tabsThrow = false;
+    await openPopulationsKeepingI1(store);
+    expect(container.querySelector('[role="tablist"]')).not.toBeNull();
+    expect(buttonOf("Open another variants file…")).not.toBeNull();
+    expect(buttonOf("Open another individuals file…")).not.toBeNull();
+  });
 });

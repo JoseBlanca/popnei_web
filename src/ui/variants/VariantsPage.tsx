@@ -10,7 +10,8 @@
  * (docs/specs/steps/popgen2-pca.md, "The row of tabs"), the first shown
  * when the page opens and never changed by the page, drawn by
  * `PageTabs` in a boundary of errors of its own, so that a throw in it
- * leaves the two boxes.
+ * leaves the two boxes, and drawn again when a file is opened or
+ * removed.
  *
  * The box of the variants file holds the lines of the file open, in a
  * boundary of errors made again for each file, which draws their name
@@ -88,6 +89,9 @@ export function VariantsPage({
   const tab = usePageTab(pageTab);
   const variantsHeadingId = useId();
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
+  const individualsId = useAppState(
+    (s) => s.project.individuals?.fileId ?? null,
+  );
   // An opening by the box's button: the button goes with its zone, and
   // the focus goes to the box's heading.
   const zoneEnd = useFocusOnGone(() => variantsHeading.current);
@@ -148,9 +152,17 @@ export function VariantsPage({
             </section>
             <IndividualsBox tab={tab} openButton={individualsOpenButton} />
           </div>
-          {/* A defect in the reasons of the tabs costs the row alone, not
-            the boxes of the files. */}
-          <ErrorBoundary heading={ANALYSES_TABS_LABEL} level={2}>
+          {/* A defect in the row costs the row alone, not the boxes of
+            the files, until a file is opened or removed: with a file
+            open, its box has no button, and the row holds the one that
+            opens another, which a defect must not take away for good.
+            With both files open and the row down, no button opens a
+            file until the page is reloaded, as the error bar says. */}
+          <ErrorBoundary
+            heading={ANALYSES_TABS_LABEL}
+            level={2}
+            resetOn={`${fileId ?? "none"} ${individualsId ?? "none"}`}
+          >
             <PageTabs
               tab={tab}
               onTabChange={(next) => {
