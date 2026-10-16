@@ -3,8 +3,9 @@
  * (docs/plans/analyses-pca.md, work package 6, task 6.3;
  * docs/specs/steps/popgen2-pca.md, "The PCA tab", "While a PCA runs",
  * "The states" and "How it is checked", In Playwright): Run locked while
- * the one pass is held by holdWorker.ts, then by the LD pruning with no
- * distance, and free once a distance is typed; a PCA held running, the
+ * the one pass is held by holdWorker.ts, then free with the LD pruning at
+ * its default of 100,000 base pairs, locked once the distance is emptied
+ * and free again once one is typed; a PCA held running, the
  * bar moving, with the thresholds, the FILTER box and the PCA's options
  * greyed, `aria-disabled`, reached by the Tab key and refusing a press, a
  * key and a drag; Ctrl+Z doing nothing; the column of the
@@ -49,14 +50,14 @@ const READING =
 /** The words beside Run locked by the LD pruning with no distance. */
 const NO_DISTANCE = "Type the LD distance above, or turn the LD pruning off.";
 
-/** The reason of the LD pruning with no distance, in full, under the
-    field of the distance. */
+/** The reason of the LD pruning with its distance emptied, in full,
+    under the field of the distance. */
 const NO_DISTANCE_FULL =
-  "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off.";
+  "The LD pruning of the PCA needs the distance within which variants are compared. Type a distance in base pairs, 100,000 to start with, or turn the LD pruning off.";
 
 /** The line under the field of the distance, on how to choose it. */
 const DISTANCE_HINT =
-  "Choose the distance beyond which the r² between two variants falls to its background level in your species, as studies of its LD decay report.";
+  "The window within which pairs of variants are compared. 100,000 bp is a start that suits many genomes but not all; the LD decay of the Populations tab shows how far LD extends in your data.";
 
 /** The label of the field of the distance. */
 const DISTANCE =
@@ -215,9 +216,7 @@ async function openHeld(page: Page, file: string): Promise<void> {
   await release(page, "allSoFar");
   await release(page, "result");
   await tab(page, "PCA").click();
-  await expect(run(page)).toHaveAccessibleDescription(NO_DISTANCE, {
-    timeout: 30_000,
-  });
+  await expect(run(page)).toBeEnabled({ timeout: 30_000 });
 }
 
 /** Types the distance of the LD pruning and gives it with Enter. */
@@ -351,7 +350,7 @@ async function pcaTabControls(page: Page): Promise<
   return controls;
 }
 
-test("AP6 D3 the PCA tab opened during the one pass, held: Run disabled with the reading under way; after it, with the reason of the LD pruning with no distance; a distance typed, Run; axe light and dark in each", async ({
+test("AP6 D3 the PCA tab opened during the one pass, held: Run disabled with the reading under way; after it, Run with the distance at 100,000 and no line of the individuals; the distance emptied, the reason of the LD pruning with no distance; a distance typed, Run; axe light and dark in each", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -364,17 +363,33 @@ test("AP6 D3 the PCA tab opened during the one pass, held: Run disabled with the
   ).toBeVisible();
   await expect(run(page)).toBeDisabled();
   await expect(run(page)).toHaveAccessibleDescription(READING);
+  // Every individual is used, which the boxes at the top count: no line
+  // of the individuals in the tab (the owner, 16 October 2026).
   await expect(
     shown(page).getByText("200 individuals of panel.nei", { exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expectAxeBothSchemes(page, makeAxeBuilder);
 
   await release(page, "allSoFar");
   await release(page, "result");
-  await expect(run(page)).toHaveAccessibleDescription(NO_DISTANCE, {
-    timeout: 30_000,
-  });
+  // The LD pruning starts within 100,000 base pairs, so Run is free with
+  // no option typed (the owner, 16 October 2026).
+  await expect(run(page)).toBeEnabled({ timeout: 30_000 });
+  await expect(run(page)).toHaveAccessibleDescription("");
+  await expect(distance(page)).toHaveValue("100000");
+  await expect(distance(page)).toHaveAccessibleDescription(
+    new RegExp(`${DISTANCE_HINT.replace(/[.()]/gu, "\\$&")}$`, "u"),
+  );
+  await expect(
+    shown(page).getByText(NO_DISTANCE_FULL, { exact: true }),
+  ).toHaveCount(0);
+
+  // The distance emptied is no distance, which locks Run.
+  await distance(page).fill("");
+  await distance(page).press("Enter");
+  await expect(run(page)).toHaveAccessibleDescription(NO_DISTANCE);
   await expect(run(page)).toBeDisabled();
+  await expect(distance(page)).toHaveValue("");
   await expect(distance(page)).toHaveAccessibleDescription(
     new RegExp(`^${NO_DISTANCE_FULL.replace(/[.()]/gu, "\\$&")}`, "u"),
   );
@@ -919,9 +934,7 @@ test("AP6 D3 the PCA tab shown, another variants file opened: its reason in plac
   await page.goto("popgen2.html");
   await pick(page, "panel.nei");
   await tab(page, "PCA").click();
-  await expect(run(page)).toHaveAccessibleDescription(NO_DISTANCE, {
-    timeout: 30_000,
-  });
+  await expect(run(page)).toBeEnabled({ timeout: 30_000 });
   await typeDistance(page, "50000");
 
   await pick(page, "panel.vcf.gz");
@@ -990,16 +1003,18 @@ async function givesWebGl(page: Page): Promise<boolean> {
 
 /** Opens popgen2.html with its calculations counted, opens panel.nei,
     shows the PCA tab once the one pass has ended, and types the distance
-    of the LD pruning, 50000. */
-async function openReady(page: Page): Promise<void> {
+    of the LD pruning, `distance`, or leaves it at its default of 100,000
+    base pairs when `distance` is `null`. */
+async function openReady(
+  page: Page,
+  distance: string | null = "50000",
+): Promise<void> {
   await page.addInitScript(countRuns);
   await page.goto("popgen2.html");
   await pick(page, "panel.nei");
   await tab(page, "PCA").click();
-  await expect(run(page)).toHaveAccessibleDescription(NO_DISTANCE, {
-    timeout: 30_000,
-  });
-  await typeDistance(page, "50000");
+  await expect(run(page)).toBeEnabled({ timeout: 30_000 });
+  if (distance !== null) await typeDistance(page, distance);
 }
 
 /** The caption of the table of the individuals of a result. */
@@ -1104,12 +1119,14 @@ function status(page: Page): Locator {
 }
 
 test.describe("AP6 D3 the result of the PCA tab", () => {
-  test("AP6 D3 the PCA: its title, the 3D view first, PC1 (3.55%) and PC2 (3.40%) in 2D, PC3 1.89%, s000 at −0.7139 and 7.6765, 548 variants, no warning; Unclassified (200) alone, then p0, p2 and p1 with panel_pops.csv and no request; axe light and dark", async ({
+  test("AP6 D3 the PCA with no option typed, the LD pruning within 100,000: its title, the 3D view first, PC1 (3.55%) and PC2 (3.40%) in 2D, PC3 1.89%, s000 at −0.7139 and 7.6765, 548 variants, no warning; Unclassified (200) alone, then p0, p2 and p1 with panel_pops.csv and no request; axe light and dark", async ({
     page,
     makeAxeBuilder,
   }) => {
     test.setTimeout(90_000);
-    await openReady(page);
+    // popnei 0.2.2 under node gives the same numbers within 100,000 base
+    // pairs as within 50,000: 548 variants are kept either way.
+    await openReady(page, null);
     await runToResult(page);
     await expect(
       shown(page).getByRole("heading", {
@@ -1685,9 +1702,7 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
       held.push(route);
     });
     await tab(page, "PCA").click();
-    await expect(run(page)).toHaveAccessibleDescription(NO_DISTANCE, {
-      timeout: 30_000,
-    });
+    await expect(run(page)).toBeEnabled({ timeout: 30_000 });
     await typeDistance(page, "50000");
     await run(page).click();
     await expect(
@@ -1738,9 +1753,7 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     // The plots of the Variants tab ask for the file first.
     await expect.poll(() => failed).toBe(1);
     await tab(page, "PCA").click();
-    await expect(run(page)).toHaveAccessibleDescription(NO_DISTANCE, {
-      timeout: 30_000,
-    });
+    await expect(run(page)).toBeEnabled({ timeout: 30_000 });
     await typeDistance(page, "50000");
     await run(page).click();
     const tryAgain = shown(page).getByRole("button", { name: "Try again" });
@@ -1779,9 +1792,7 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
         }
       });
       await tab(page, "PCA").click();
-      await expect(run(page)).toHaveAccessibleDescription(NO_DISTANCE, {
-        timeout: 30_000,
-      });
+      await expect(run(page)).toBeEnabled({ timeout: 30_000 });
       await typeDistance(page, "50000");
       await run(page).click();
       const tryAgain = shown(page).getByRole("button", { name: "Try again" });

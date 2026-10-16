@@ -811,7 +811,7 @@ describe("LT1 D4 the part of the LD decay in the Populations tab", () => {
   async function typeMaxDist(page: Page, maxDist: number): Promise<void> {
     await apply(page, (p) =>
       setAnalysisOptions(p, ldDecayOnPopgen2, {
-        ...ldDecayOptions(p),
+        ...ldDecayOptions(p, "popgen2"),
         maxDist,
       }),
     );
@@ -894,18 +894,29 @@ describe("LT1 D4 the part of the LD decay in the Populations tab", () => {
     expect(document.activeElement?.textContent).toBe("LD decay");
   });
 
-  test("its heading after the diversity's; Run locked until a distance is typed; Run and Stop recalculating through autoRuns of the LD decay alone; the time of the last run after a result, kept after a Stop", async () => {
+  test("its heading after the diversity's; Run enabled with no option typed, the largest distance at 100,000, and locked once the distance is emptied; Run and Stop recalculating through autoRuns of the LD decay alone; the time of the last run after a result, kept after a Stop", async () => {
     const page = await readyTab();
     const headings = [...container.querySelectorAll("h2")].map(
       (h) => h.textContent,
     );
     expect(headings).toEqual(["Diversity", "LD decay"]);
+    expect(ldButton("Run")?.disabled).toBe(false);
+    expect(ldPart().textContent).not.toContain(
+      "Type the largest distance, above.",
+    );
+
+    await apply(page, (p) =>
+      setAnalysisOptions(p, ldDecayOnPopgen2, {
+        ...ldDecayOptions(p, "popgen2"),
+        maxDist: null,
+      }),
+    );
     expect(ldButton("Run")?.disabled).toBe(true);
     expect(ldPart().textContent).toContain("Type the largest distance, above.");
 
     await apply(page, (p) =>
       setAnalysisOptions(p, ldDecayOnPopgen2, {
-        ...ldDecayOptions(p),
+        ...ldDecayOptions(p, "popgen2"),
         maxDist: 100_000,
       }),
     );

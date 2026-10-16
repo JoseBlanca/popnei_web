@@ -106,7 +106,8 @@ export interface PcaOptions {
   readonly maf: { readonly follow: boolean; readonly maxAllowedMaf: number };
   /** The PCA's LD filter: whether it follows the Variants step or tab,
       its largest r², and its window in base pairs, `null` until the user
-      types one. */
+      types one on the old page, and on popgen2.html once the user emptied
+      its field. */
   readonly ld: {
     readonly follow: boolean;
     readonly maxAllowedR2: number;
@@ -141,19 +142,26 @@ export const PCA_DEFAULTS: PcaOptions = deepFrozen({
   view: "3d",
 });
 
+/** The window of the PCA's own LD pruning on popgen2.html before the
+    user types one, in base pairs: a start that suits many genomes and not
+    all, which the owner chose on 16 October 2026 so that the PCA runs
+    with no option typed, reversing for this distance the rule of no
+    default that depends on the genome (docs/specs/analyses/pca.md, "On
+    popgen2.html"). */
+export const PCA2_LD_MAX_DIST = 100_000;
+
 /**
  * The options of a PCA the user has not changed on popgen2.html: those of
- * the old page, but for the LD pruning, which starts on, at r² 0.1 with no
- * distance, so that the PCA is locked until the user types one or turns
- * it off: the owner's numbers of 27 September 2026, and the rule of no
- * default that depends on the genome (docs/specs/analyses/pca.md, "On
+ * the old page, but for the LD pruning, which starts on, at r² 0.1, the
+ * owner's number of 27 September 2026, within `PCA2_LD_MAX_DIST`, the
+ * owner's of 16 October 2026 (docs/specs/analyses/pca.md, "On
  * popgen2.html").
  */
 export const PCA2_DEFAULTS: PcaOptions = deepFrozen({
   method: "pca",
   missingData: { follow: true, maxAllowedMissingRate: 0.1 },
   maf: { follow: true, maxAllowedMaf: 0.95 },
-  ld: { follow: false, maxAllowedR2: 0.1, maxDist: null },
+  ld: { follow: false, maxAllowedR2: 0.1, maxDist: PCA2_LD_MAX_DIST },
   colourBy: null,
   axes: [1, 2, 3],
   view: "3d",
@@ -596,9 +604,16 @@ const PLACES: Readonly<Record<PcaPage, PlaceWords>> = Object.freeze({
 /** The reason of the analysis's own LD pruning with no distance, named
     by the method `name`, "PCA" or "PCoA", as the choice "For the PCoA
     alone" is (docs/specs/analyses/pca.md, "Why it cannot run"), with the
-    way out of the page `page`. */
+    way out of the page `page`. On the old page the distance has no
+    default; on popgen2.html it has one, and is empty only when the user
+    emptied it, so the words give that default as a start. */
 function pruningDistanceText(name: string, page: PcaPage): string {
-  return `The LD pruning of the ${name} needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or ${PLACES[page].pruningOff(name)}.`;
+  const start = `The LD pruning of the ${name} needs the distance within which variants are compared.`;
+  const typed =
+    page === "popgen"
+      ? "It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs"
+      : `Type a distance in base pairs, ${grouped(PCA2_LD_MAX_DIST)} to start with`;
+  return `${start} ${typed}, or ${PLACES[page].pruningOff(name)}.`;
 }
 
 /** The reason of the lock of the PCA's own LD filter, set with no

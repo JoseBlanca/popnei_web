@@ -8,6 +8,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  DISTANCE_HINT,
   METHOD_ADVICE,
   METHOD_ITEMS,
   POPGEN2_METHOD_ITEMS,
@@ -69,6 +70,14 @@ describe("AP6 D1 the words of the PCA tab", () => {
     );
     expect(filtersLockedText({ ...pca, name: "the PCoA" }, [])).toBe(
       "Stop the PCoA in the PCA tab to change the filters; then press Run there to calculate it again.",
+    );
+  });
+});
+
+describe("the line under the distance of the LD pruning (the owner, 16 October 2026)", () => {
+  test("says what the distance is, that 100,000 bp is a start that suits many genomes and not all, and where to see how far LD extends", () => {
+    expect(DISTANCE_HINT).toBe(
+      "The window within which pairs of variants are compared. 100,000 bp is a start that suits many genomes but not all; the LD decay of the Populations tab shows how far LD extends in your data.",
     );
   });
 });

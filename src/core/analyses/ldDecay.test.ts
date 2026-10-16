@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   LD_CURVE_POINTS,
+  LD_DECAY2_DEFAULTS,
   LD_DECAY_DEFAULTS,
   ldDecay,
   ldDecayFilters,
@@ -311,6 +312,11 @@ const NO_DISTANCE_RUN = "Type the largest distance, above.";
 const NO_DISTANCE =
   "The LD decay needs the largest distance between the two variants of a pair. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs.";
 
+/** Why the largest distance has to be typed on popgen2.html, beside its
+    field emptied by the user. */
+const NO_DISTANCE_2 =
+  "The LD decay needs the largest distance between the two variants of a pair. Type a distance in base pairs, 100,000 to start with.";
+
 /** What the options should be. */
 const OPTIONS_EXPECTED =
   "the largest distance of a pair, a whole number of base pairs from 50 to 9,007,199,254,740,991 or null, and the largest major allele frequency in each population, a number from 0.5 to 1, and nothing else";
@@ -362,13 +368,20 @@ describe("PA2 D5 the definition of the LD decay", () => {
     });
   });
 
-  test("ldDecayOptions gives the options of the project, or the defaults without them", () => {
-    expect(ldDecayOptions(project())).toStrictEqual({
-      maxDist: 100_000,
+  test("ldDecayOptions gives the options of the project, or the defaults of the page without them", () => {
+    const typed = project({ ld: { maxDist: 20_000 } });
+    for (const page of ["popgen", "popgen2"] as const) {
+      expect(ldDecayOptions(typed, page)).toStrictEqual({
+        maxDist: 20_000,
+        maxAllowedMaf: 0.95,
+      });
+    }
+    expect(ldDecayOptions(project({ ld: null }), "popgen")).toStrictEqual({
+      maxDist: null,
       maxAllowedMaf: 0.95,
     });
-    expect(ldDecayOptions(project({ ld: null }))).toStrictEqual({
-      maxDist: null,
+    expect(ldDecayOptions(project({ ld: null }), "popgen2")).toStrictEqual({
+      maxDist: 100_000,
       maxAllowedMaf: 0.95,
     });
   });
@@ -1378,7 +1391,7 @@ describe("PA2 D5 the options through setAnalysisOptions", () => {
       maxDist: 2_000_000,
       maxAllowedMaf: 0.9,
     });
-    expect(ldDecayOptions(p)).toStrictEqual({
+    expect(ldDecayOptions(p, "popgen")).toStrictEqual({
       maxDist: 2_000_000,
       maxAllowedMaf: 0.9,
     });
@@ -1875,6 +1888,45 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
     });
   }
 
+  test("the defaults of the page: a largest distance of 100,000 base pairs and a maximum MAF of 0.95; the old page's keep no distance (the owner, 16 October 2026)", () => {
+    expect(LD_DECAY2_DEFAULTS).toStrictEqual({
+      maxDist: 100_000,
+      maxAllowedMaf: 0.95,
+    });
+    expect(ldDecayOnPopgen2.defaults).toStrictEqual(LD_DECAY2_DEFAULTS);
+    expect(ldDecay.defaults).toStrictEqual(LD_DECAY_DEFAULTS);
+    expect(ldDecayOnPopgen2.needs(page2({ ld: null }))).toBeNull();
+    expect(maxDistReason(page2({ ld: null }), "popgen2")).toBeNull();
+    expect(ldDecay.needs(page2({ ld: null }))).toBe(NO_DISTANCE_RUN);
+  });
+
+  test("run with no option set sends the largest distance of 100,000 base pairs", () => {
+    const jobs: Job[] = [];
+    ldDecayOnPopgen2.run(page2({ ld: null }), {
+      run: (job: Job): Run<JobResult> => {
+        jobs.push(job);
+        return {
+          id: 1,
+          outcome: new Promise<Outcome<JobResult>>(() => undefined),
+          cancel: () => undefined,
+        };
+      },
+      intermediateKey: () => "",
+      individuals: null,
+    });
+    expect(jobs[0]).toMatchObject({ maxDist: 100_000, maxAllowedMaf: 0.95 });
+  });
+
+  test("the key with no option set is that of 100,000 typed, and differs from 50,000 typed", () => {
+    const two = (p: Project): Key => keyOfLd(p, "0.2.2", ldDecayOnPopgen2);
+    expect(two(page2({ ld: null }))).toBe(
+      two(page2({ ld: { maxDist: 100_000 } })),
+    );
+    expect(two(page2({ ld: null }))).not.toBe(
+      two(page2({ ld: { maxDist: 50_000 } })),
+    );
+  });
+
   test("ldDecayPageOf gives each definition's page, both of the id ldDecay and key version 1, and a defect for another", () => {
     expect(ldDecayPageOf(ldDecay)).toBe("popgen");
     expect(ldDecayPageOf(ldDecayOnPopgen2)).toBe("popgen2");
@@ -1974,7 +2026,9 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
     expect(ldDecayOnPopgen2.needs(pending())).toBe(
       "The LD decay waits for ld_pops.csv to be read.",
     );
-    expect(ldDecayOnPopgen2.needs(page2({ ld: null }))).toBe(NO_DISTANCE_RUN);
+    const emptied = page2({ ld: { maxDist: null } });
+    expect(ldDecayOnPopgen2.needs(emptied)).toBe(NO_DISTANCE_RUN);
+    expect(maxDistReason(emptied, "popgen2")).toBe(NO_DISTANCE_2);
     expect(ldDecayOnPopgen2.needs(page2({ ld: { maxDist: 12_500_001 } }))).toBe(
       "With 2 populations, the largest distance can be at most 12,500,000 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.",
     );
@@ -1995,7 +2049,9 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
         "popgen2",
       ),
     ).toBeNull();
-    expect(maxDistReason(page2({ ld: null }), "popgen2")).toBe(NO_DISTANCE);
+    expect(maxDistReason(page2({ ld: { maxDist: null } }), "popgen2")).toBe(
+      NO_DISTANCE_2,
+    );
   });
 
   test("keptNeeds: the thresholds keep only unclassified individuals while the column classifies some, in the words of the Variants tab", () => {

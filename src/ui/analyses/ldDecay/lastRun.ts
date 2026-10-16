@@ -86,7 +86,7 @@ export function createLastRunClock(
       running = {
         runId: status.runId,
         start: startOf(status.runId) ?? now(),
-        maxDist: ldDecayOptions(store.getState().project).maxDist,
+        maxDist: ldDecayOptions(store.getState().project, "popgen2").maxDist,
       };
     }
   };

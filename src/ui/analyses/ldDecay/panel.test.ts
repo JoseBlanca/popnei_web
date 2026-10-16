@@ -318,7 +318,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     });
     expect(distance.value).toBe("");
     expect(applied).toEqual([]);
-    expect(ldDecayOptions(project).maxDist).toBeNull();
+    expect(ldDecayOptions(project, "popgen").maxDist).toBeNull();
     expect(container.textContent).toContain(NO_DISTANCE);
   });
 
@@ -342,7 +342,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
       expect(distance.value).toBe("");
     }
     expect(applied).toEqual([]);
-    expect(ldDecayOptions(project).maxDist).toBeNull();
+    expect(ldDecayOptions(project, "popgen").maxDist).toBeNull();
   });
 
   test("review of PA8: a distance typed above what the memory allows the two populations is committed, and its reason stands beside the field, describes it before the line under it, and is announced; a distance the memory allows takes the reason away with no word", () => {
@@ -354,7 +354,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     typeKeys(distance, "12500001");
     press("Enter");
     expect(applied).toEqual(["the largest distance of the LD decay changed"]);
-    expect(ldDecayOptions(project).maxDist).toBe(12_500_001);
+    expect(ldDecayOptions(project, "popgen").maxDist).toBe(12_500_001);
     expect(announced).toEqual([reason]);
     expect(container.textContent).toContain(reason);
     expect(container.textContent).not.toContain(NO_DISTANCE);
@@ -373,7 +373,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     select(fields()[0]);
     typeKeys(fields()[0], "12500000");
     press("Enter");
-    expect(ldDecayOptions(project).maxDist).toBe(12_500_000);
+    expect(ldDecayOptions(project, "popgen").maxDist).toBe(12_500_000);
     expect(announced).toEqual([reason]);
     expect(container.textContent).not.toContain(reason);
   });
@@ -387,7 +387,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     press("ArrowUp");
     press("ArrowUp");
     press("ArrowUp");
-    expect(ldDecayOptions(project).maxDist).toBe(12_500_004);
+    expect(ldDecayOptions(project, "popgen").maxDist).toBe(12_500_004);
     select(fields()[0]);
     typeKeys(fields()[0], "13000000");
     press("Tab");
@@ -396,7 +396,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     act(() => {
       fields()[0].blur();
     });
-    expect(ldDecayOptions(project).maxDist).toBe(13_000_000);
+    expect(ldDecayOptions(project, "popgen").maxDist).toBe(13_000_000);
     expect(applied).toHaveLength(5);
     expect(announced).toHaveLength(1);
     expect(announced[0]).toMatch(/^With 2 populations, the largest distance/);
@@ -405,7 +405,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     press("Enter");
     expect(announced).toHaveLength(1);
     press("ArrowUp");
-    expect(ldDecayOptions(project).maxDist).toBe(12_500_001);
+    expect(ldDecayOptions(project, "popgen").maxDist).toBe(12_500_001);
     expect(announced).toHaveLength(2);
     expect(announced[1]).toBe(announced[0]);
   });
@@ -416,18 +416,18 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     select(distance);
     typeKeys(distance, "12345");
     press("Enter");
-    expect(ldDecayOptions(project).maxDist).toBe(12_345);
+    expect(ldDecayOptions(project, "popgen").maxDist).toBe(12_345);
     select(distance);
     typeKeys(distance, "100000");
     press("Enter");
     press("ArrowUp");
-    expect(ldDecayOptions(project).maxDist).toBe(100_001);
+    expect(ldDecayOptions(project, "popgen").maxDist).toBe(100_001);
     expect(fields()[0].value).toBe("100001");
     select(frequency);
     typeKeys(frequency, "0.8");
     press("Enter");
     press("ArrowUp");
-    expect(ldDecayOptions(project).maxAllowedMaf).toBe(0.81);
+    expect(ldDecayOptions(project, "popgen").maxAllowedMaf).toBe(0.81);
     expect(applied).toEqual([
       "the largest distance of the LD decay changed",
       "the largest distance of the LD decay changed",
@@ -441,7 +441,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     expect(container.textContent).toContain(
       "9007199254740993 is more than 9007199254740991; the distance stays 100001.",
     );
-    expect(ldDecayOptions(project).maxDist).toBe(100_001);
+    expect(ldDecayOptions(project, "popgen").maxDist).toBe(100_001);
     expect(applied).toHaveLength(5);
   });
 
@@ -457,7 +457,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     expect(applied).toEqual([]);
     press("Enter");
     expect(applied).toEqual(["the largest distance of the LD decay changed"]);
-    expect(ldDecayOptions(project)).toEqual({
+    expect(ldDecayOptions(project, "popgen")).toEqual({
       maxDist: 100_000,
       maxAllowedMaf: 0.8,
     });
@@ -476,7 +476,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
       "Write the distance as a whole number of base pairs, 10000 and not 10,000; the distance is still to be typed.";
     expect(container.textContent).toContain(line);
     expect(announced).toContain(line);
-    expect(ldDecayOptions(project).maxDist).toBeNull();
+    expect(ldDecayOptions(project, "popgen").maxDist).toBeNull();
     expect(distance.value).toBe("");
   });
 
@@ -504,7 +504,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     select(distance);
     typeKeys(distance, "50");
     press("Enter");
-    expect(ldDecayOptions(project).maxDist).toBe(50);
+    expect(ldDecayOptions(project, "popgen").maxDist).toBe(50);
   });
 
   test("the frequency is a number from 0.5 to 1 of two decimals: 0,9 typed key by key, 0.4, 1.1 and 0.955 are refused with the frequency kept, and 0.8 is one command with the distance kept", () => {
@@ -538,7 +538,7 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     expect(applied).toEqual([
       "the maximum major allele frequency of the LD decay changed",
     ]);
-    expect(ldDecayOptions(project)).toEqual({
+    expect(ldDecayOptions(project, "popgen")).toEqual({
       maxDist: 100_000,
       maxAllowedMaf: 0.8,
     });

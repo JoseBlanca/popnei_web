@@ -126,21 +126,42 @@ const IN_BOX_VARIANTS = " in the box Variants";
 /** The two options of the LD decay, as the project holds them. */
 export interface LdDecayOptions {
   /** The largest distance between the two variants of a pair, in base
-      pairs, from 50; `null` until the user types one, since it depends
-      on the genome of the species (decision 10 of the owner, 30 September
-      2026). */
+      pairs, from 50; on the old page `null` until the user types one,
+      since it depends on the genome of the species (decision 10 of the
+      owner, 30 September 2026); on popgen2.html `null` only once the user
+      emptied its field. */
   readonly maxDist: number | null;
   /** The largest major allele frequency a variant has in a population and
       is still counted there, from 0.5 to 1. */
   readonly maxAllowedMaf: number;
 }
 
-/** The options when the user has set none: no largest distance, and
-    popnei's default of `maxAllowedMaf` of `calcLdAndDistPerPop`, 0.95. */
+/** The options of the old page when the user has set none: no largest
+    distance, and popnei's default of `maxAllowedMaf` of
+    `calcLdAndDistPerPop`, 0.95. */
 export const LD_DECAY_DEFAULTS: LdDecayOptions = Object.freeze({
   maxDist: null,
   maxAllowedMaf: 0.95,
 });
+
+/** The largest distance of popgen2.html before the user types one, in
+    base pairs: a start that suits many genomes and not all, which the
+    owner chose on 16 October 2026 so that the LD decay runs with no
+    option typed, reversing for this distance decision 10 of 30 September
+    2026. A half distance close to it, which a warning reports, says it
+    was too short for the genome (ldDecay.md, "On popgen2.html"). */
+export const LD_DECAY2_MAX_DIST = 100_000;
+
+/** The options of popgen2.html when the user has set none: the largest
+    distance `LD_DECAY2_MAX_DIST`, and the old page's maximum MAF. */
+export const LD_DECAY2_DEFAULTS: LdDecayOptions = Object.freeze({
+  maxDist: LD_DECAY2_MAX_DIST,
+  maxAllowedMaf: LD_DECAY_DEFAULTS.maxAllowedMaf,
+});
+
+/** The defaults of each page. */
+const DEFAULTS_OF: Readonly<Record<LdDecayPage, LdDecayOptions>> =
+  Object.freeze({ popgen: LD_DECAY_DEFAULTS, popgen2: LD_DECAY2_DEFAULTS });
 
 /** The smallest distance of a pair, popnei's default, 1 bp, which leaves
     out only the pairs of two variants at one position. */
@@ -204,11 +225,16 @@ const LD_DECAY_WORDS: PopulationWords = Object.freeze({
   notIn: "the plot",
 });
 
-/** Why the largest distance has to be typed, which stands beside its
-    field while it is empty, and nowhere else (ldDecay.md, "Why it cannot
-    run"). */
-const NO_DISTANCE =
-  "The LD decay needs the largest distance between the two variants of a pair. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs.";
+/** Why the largest distance has to be typed, on each page, which stands
+    beside its field while it is empty, and nowhere else (ldDecay.md, "Why
+    it cannot run"): on the old page it has no default; on popgen2.html
+    it is empty only once the user emptied it, and its default is given
+    as a start. */
+const NO_DISTANCE: Readonly<Record<LdDecayPage, string>> = Object.freeze({
+  popgen:
+    "The LD decay needs the largest distance between the two variants of a pair. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs.",
+  popgen2: `The LD decay needs the largest distance between the two variants of a pair. Type a distance in base pairs, ${grouped(LD_DECAY2_MAX_DIST)} to start with.`,
+});
 
 /** The reason beside the Run button while the largest distance is not
     typed: where to type it, the field saying why. */
@@ -226,11 +252,12 @@ function noMemoryText(fewerIndividuals: string): string {
   return `The LD decay needed more memory than the browser tab could give. Type a smaller largest distance, keep fewer individuals ${fewerIndividuals}, or calculate it with popnei in Python, outside the browser.`;
 }
 
-/** The options of the project for the LD decay, or `LD_DECAY_DEFAULTS`.
-    Throws a defect on options its `parseOptions` would refuse, which no
-    command puts into a project. */
-export function ldDecayOptions(p: Project): LdDecayOptions {
-  const read = readOptions(analysisOptions(p, ID, { ...LD_DECAY_DEFAULTS }));
+/** The options of the project for the LD decay, or the defaults of the
+    page `page`, `LD_DECAY_DEFAULTS` or `LD_DECAY2_DEFAULTS`. Throws a
+    defect on options its `parseOptions` would refuse, which no command
+    puts into a project. */
+export function ldDecayOptions(p: Project, page: LdDecayPage): LdDecayOptions {
+  const read = readOptions(analysisOptions(p, ID, { ...DEFAULTS_OF[page] }));
   if (!read.ok) {
     throw defect("the project holds options of the LD decay it refuses.");
   }
@@ -275,10 +302,10 @@ export function ldDecayFilters(
  * whenever it holds (ldDecay.md, "Why it cannot run").
  */
 export function maxDistReason(p: Project, page: LdDecayPage): string | null {
-  const maxDist = ldDecayOptions(p).maxDist;
+  const maxDist = ldDecayOptions(p, page).maxDist;
   if (maxDist === null) {
     // Why it has to be typed; `needs` says only where.
-    return NO_DISTANCE;
+    return NO_DISTANCE[page];
   }
   // No population is left when the populations cannot be made yet, which
   // `needs` locks on first, and when the lists to keep and to remove
@@ -488,7 +515,7 @@ function definitionOf(page: LdDecayPage): AnalysisDef<Job, JobResult> {
   return Object.freeze({
     id: ID,
     app: Object.freeze(["popgen"] as const),
-    defaults: Object.freeze({ ...LD_DECAY_DEFAULTS }),
+    defaults: Object.freeze({ ...DEFAULTS_OF[page] }),
     keyVersion: 1,
     filtersRead: Object.freeze({ variants: false, individuals: true }),
     parseOptions,
@@ -584,7 +611,7 @@ function readOptions(options: unknown): Result<LdDecayOptions, string> {
  * nothing of `p.variants`, so it answers for any project.
  */
 function keyInputs(p: Project, page: LdDecayPage): JsonObject {
-  const options = ldDecayOptions(p);
+  const options = ldDecayOptions(p, page);
   return {
     pops: page === "popgen" ? populationsOf(p) : popgen2Populations(p),
     filters: ldDecayFilters(filtersApplied(p)),
@@ -619,7 +646,7 @@ function needs(p: Project): string | null {
   if (populations !== null) {
     return populations;
   }
-  return ldDecayOptions(p).maxDist === null
+  return ldDecayOptions(p, "popgen").maxDist === null
     ? NO_DISTANCE_RUN
     : maxDistReason(p, "popgen");
 }
@@ -640,7 +667,7 @@ function popgen2Needs(p: Project): string | null {
   if (p.grouping.kind === "roles") {
     throw defect("the LD decay was given a project of association.");
   }
-  return ldDecayOptions(p).maxDist === null
+  return ldDecayOptions(p, "popgen2").maxDist === null
     ? NO_DISTANCE_RUN
     : maxDistReason(p, "popgen2");
 }
@@ -678,7 +705,7 @@ function run(
   page: LdDecayPage,
 ): Run<JobResult> {
   const kept = populationsKeptOf(p, c.individuals, page);
-  const options = ldDecayOptions(p);
+  const options = ldDecayOptions(p, page);
   if (p.variants === null || kept === null || options.maxDist === null) {
     throw defect(
       "the LD decay was run with no populations or no largest distance.",
@@ -718,7 +745,7 @@ function warnings(
   if (p.variants?.read.kind !== "read") {
     throw defect("the warnings of the LD decay need a variants file read.");
   }
-  const options = ldDecayOptions(p);
+  const options = ldDecayOptions(p, page);
   const maxDist = options.maxDist;
   if (maxDist === null) {
     throw defect("the warnings of the LD decay need a largest distance.");
@@ -955,7 +982,7 @@ function numCheckNumbers(p: Project, page: LdDecayPage): number | null {
  */
 function script(p: Project, page: LdDecayPage): string {
   const variants = p.variants;
-  const options = ldDecayOptions(p);
+  const options = ldDecayOptions(p, page);
   if (variants === null || options.maxDist === null) {
     throw defect(
       "the script of the LD decay needs a variants file and a largest distance.",

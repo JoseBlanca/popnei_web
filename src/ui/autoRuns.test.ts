@@ -2507,7 +2507,7 @@ function sentSince(page: LivePage, from: number): readonly string[] {
 function setLdDistance(page: LivePage, value: number): void {
   page.store.apply("the largest distance of the LD decay changed", (p) =>
     setAnalysisOptions(p, ldDecayOnPopgen2, {
-      ...ldDecayOptions(p),
+      ...ldDecayOptions(p, "popgen2"),
       maxDist: value,
     }),
   );

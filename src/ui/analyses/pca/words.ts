@@ -226,22 +226,53 @@ export function readyLines(
   p: Project,
   kept: IndividualsKept | null,
 ): readonly string[] {
+  const count = keptCount(p, kept);
+  if (count === null) return [];
+  const name = escaped(count.variantsName);
+  const total = counted(count.total, "individual");
+  const line =
+    count.numKept === count.total
+      ? `${total} of ${name}`
+      : `${grouped(count.numKept)} of the ${total} of ${name}, those the filters of individuals keep`;
+  return count.waits ? [line, WAITS_FOR_STATISTICS_TEXT] : [line];
+}
+
+/** The individuals a run will take, of those of the variants file. */
+export interface KeptCount {
+  /** The name of the variants file. */
+  readonly variantsName: string;
+  /** The individuals of the variants file. */
+  readonly total: number;
+  /** Those the filters of individuals keep: the known list, every
+      individual of the file when it is `null`, or, while a threshold
+      waits for the statistics of each individual, those the lists
+      keep. */
+  readonly numKept: number;
+  /** Whether a threshold waits for the statistics of each individual. */
+  readonly waits: boolean;
+}
+
+/** The count of the individuals a run of the project `p` will take, with
+    the individuals kept `kept`; `null` without a variants file read or
+    individuals kept, which lock the analysis. */
+export function keptCount(
+  p: Project,
+  kept: IndividualsKept | null,
+): KeptCount | null {
   const read = p.variants?.read;
   if (p.variants === null || read?.kind !== "read" || kept === null) {
-    return [];
+    return null;
   }
   const total = read.individuals.length;
-  const name = escaped(p.variants.name);
-  const waits = kept.list.kind === "needsStatistics";
-  const numKept =
-    kept.list.kind === "known"
-      ? (kept.list.individuals?.length ?? total)
-      : kept.byLists.length;
-  const line =
-    numKept === total
-      ? `${counted(total, "individual")} of ${name}`
-      : `${grouped(numKept)} of the ${counted(total, "individual")} of ${name}, those the filters of individuals keep`;
-  return waits ? [line, WAITS_FOR_STATISTICS_TEXT] : [line];
+  return {
+    variantsName: p.variants.name,
+    total,
+    numKept:
+      kept.list.kind === "known"
+        ? (kept.list.individuals?.length ?? total)
+        : kept.byLists.length,
+    waits: kept.list.kind === "needsStatistics",
+  };
 }
 
 /** The individuals a calculation of the project `p` ran on, those the
@@ -273,14 +304,15 @@ export function decompositionLine(variantsName: string): string {
   return `The bar shows the reading of ${escaped(variantsName)}. The components are calculated once it is read, and the bar does not move meanwhile: from under a second for 1,000 individuals to minutes for several thousand.`;
 }
 
-/** The words of the 3D view (docs/specs/analyses/pca.md, "Its words"). */
 /** The line under the field of the distance of the LD pruning of
-    popgen2.html, on how to choose it, with no number, since no distance
-    holds for every genome (docs/specs/steps/popgen2-pca.md, "Its
-    filters"). */
+    popgen2.html: what the distance is, that its default of 100,000 base
+    pairs is a start that does not hold for every genome, and where to
+    see how far LD extends (docs/specs/steps/popgen2-pca.md, "Its
+    filters"; the owner, 16 October 2026). */
 export const DISTANCE_HINT =
-  "Choose the distance beyond which the r² between two variants falls to its background level in your species, as studies of its LD decay report.";
+  "The window within which pairs of variants are compared. 100,000 bp is a start that suits many genomes but not all; the LD decay of the Populations tab shows how far LD extends in your data.";
 
+/** The words of the 3D view (docs/specs/analyses/pca.md, "Its words"). */
 export const LOADING_3D = "Loading the 3D view…";
 export const LOAD_FAILED_3D =
   "The 3D view could not be loaded, so the 2D plot is shown in its place. If the connection works, the site may have been updated since this page was opened: save the project, reload the page and open the project again.";

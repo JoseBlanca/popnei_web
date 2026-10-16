@@ -167,11 +167,20 @@ describe("AP6 D1 the words of the PCA tab around its options", () => {
     expect(pcaTabName("pcoa")).toBe("the PCoA");
   });
 
-  test("the line of the individuals, without the old panel's line that Run calculates the statistics first", () => {
+  test("no line while every individual is used, since the boxes count them (the owner, 16 October 2026); the line of those kept, without the old panel's line that Run calculates the statistics first", () => {
     const { store } = pageStore(200);
     const kept = store.getState().individualsKept;
-    expect(pcaTabReadyLines(projectOf(store), kept)).toEqual([
-      "200 individuals of panel.nei",
+    expect(pcaTabReadyLines(projectOf(store), kept)).toEqual([]);
+    const known: IndividualsKept = {
+      list: {
+        kind: "known",
+        individuals: Array.from({ length: 111 }, (_, i) => String(i)),
+      },
+      byLists: [],
+      counts: [],
+    };
+    expect(pcaTabReadyLines(projectOf(store), known)).toEqual([
+      "111 of the 200 individuals of panel.nei, those the filters of individuals keep",
     ]);
     // A threshold of the individuals waiting for their statistics, which
     // the old panel says Run calculates first.

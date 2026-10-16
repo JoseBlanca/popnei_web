@@ -15,6 +15,7 @@ import { WAITS_FOR_STATISTICS_TEXT } from "../words.ts";
 import {
   LD_DECAY_COLUMNS,
   MAX_DIST_LINE,
+  MAX_DIST_LINE_2,
   LD_PRUNING_LINE,
   captionText,
   fitLine,
@@ -100,6 +101,11 @@ describe("PA8 D1 the tables of the LD decay", () => {
     ]);
     expect(MAX_DIST_LINE).toBe(
       "How far to look for pairs. Choose a distance beyond which you expect little LD in your species. The result gives each population's half distance, where its fitted curve falls to half its r² at distance 0; a half distance close to the largest distance means it was not far enough.",
+    );
+    // On popgen2.html the field starts at 100,000 base pairs (the owner,
+    // 16 October 2026).
+    expect(MAX_DIST_LINE_2).toBe(
+      "How far to look for pairs. 100,000 bp is a start that suits many genomes but not all. The result gives each population's half distance, where its fitted curve falls to half its r² at distance 0; a half distance close to the largest distance means it was not far enough.",
     );
   });
 

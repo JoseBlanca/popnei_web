@@ -41,7 +41,12 @@ import {
 import type { PanelErrorWords } from "../words.ts";
 import { passLockText } from "./passLock.ts";
 import type { PassLock } from "./passLock.ts";
-import { individualsRunOn, methodName, readyLines } from "./words.ts";
+import {
+  individualsRunOn,
+  keptCount,
+  methodName,
+  readyLines,
+} from "./words.ts";
 
 /** The heading of the tab, its `<h2>`: "PCA" or "PCoA". */
 export function pcaTabTitle(method: PcaMethod): string {
@@ -55,9 +60,11 @@ export function pcaTabName(method: PcaMethod): string {
 }
 
 /**
- * The line of the individuals the PCA will run on, "200 individuals of
- * panel.nei", or "111 of the 200 individuals of panel.nei, those the
- * filters of individuals keep", as on the old panel; without the old
+ * The line of the individuals the PCA will run on when the filters of
+ * individuals remove some, "111 of the 200 individuals of panel.nei,
+ * those the filters of individuals keep", as on the old panel; none when
+ * it runs on every individual of the variants file, which the boxes at
+ * the top already count (the owner, 16 October 2026). Without the old
  * panel's line that Run calculates the statistics of each individual
  * first, since on this page the one pass calculates them and Run waits
  * for its end. None without a variants file read or individuals kept.
@@ -66,6 +73,8 @@ export function pcaTabReadyLines(
   p: Project,
   kept: IndividualsKept | null,
 ): readonly string[] {
+  const count = keptCount(p, kept);
+  if (count === null || count.numKept === count.total) return [];
   return readyLines(p, kept).filter(
     (line) => line !== WAITS_FOR_STATISTICS_TEXT,
   );

@@ -144,7 +144,9 @@ export function LdDecayResults({
   );
   const variantsName = useAppState((s) => s.project.variants?.name ?? null);
   const popneiVersion = useAppState((s) => s.popneiVersion);
-  const maxDist = useAppState((s) => ldDecayOptions(s.project).maxDist);
+  const maxDist = useAppState(
+    (s) => ldDecayOptions(s.project, ldDecayPageOf(analysis)).maxDist,
+  );
   const [tab, setTab] = useState<LdTab>(PLOT_ID);
   if (result.analysis !== "ldDecay") {
     throw new Error(
@@ -354,7 +356,8 @@ const PopulationsTable = memo(function PopulationsTable({
   // The maximum the result was calculated with: the options are those of
   // the key the result is shown under.
   const maxAllowedMaf = useAppState(
-    (s) => ldDecayOptions(s.project).maxAllowedMaf,
+    (s) =>
+      ldDecayOptions(s.project, onPage2 ? "popgen2" : "popgen").maxAllowedMaf,
   );
   const caption = captionText(
     result.passStats.numVars,
