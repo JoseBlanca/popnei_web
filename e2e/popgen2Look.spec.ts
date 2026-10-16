@@ -174,6 +174,50 @@ test("on the white panels the tables, their headers, their fades, the table of t
   }
 });
 
+test("the words that stand in the place of the 3D view of the PCA while it loads are on the panel's colour, not the page's, light and dark", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  // The file of the 3D view held back, so that its words stay over the
+  // place of the view, as on a slow connection.
+  let release3d: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => {
+    release3d = resolve;
+  });
+  await page.route(/\/pca3d-[^/]*\.js$/u, async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto("popgen2.html");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Popnei" }),
+  ).toBeVisible();
+  await pickInto(page, "Variants", "panel.nei");
+  await tab(page, "PCA").click();
+  await openParameters(shown(page));
+  const distance = shown(page).getByRole("textbox", {
+    name: "Distance within which variants are compared, in base pairs, from 1",
+  });
+  await distance.fill("50000");
+  await distance.press("Enter");
+  await expect(button(page, "Run")).toBeEnabled({ timeout: RESULT_TIMEOUT });
+  await button(page, "Run").click();
+  const words = shown(page).getByText("Loading the 3D view…", { exact: true });
+  await expect(words).toBeVisible({ timeout: RESULT_TIMEOUT });
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    const [over, panel] = await Promise.all([
+      words.evaluate((element) => getComputedStyle(element).backgroundColor),
+      shown(page).evaluate(
+        (element) => getComputedStyle(element).backgroundColor,
+      ),
+    ]);
+    expect(over, scheme).toBe(panel);
+    expect(await drawnInPageColour(page), scheme).toEqual([]);
+  }
+  release3d();
+});
+
 /** Serves every calculation worker with the opening of the file `name`
     kept from its runner, so that the file stays being opened; to call
     before the page is opened (as in popgen2Tabs.spec.ts). */
