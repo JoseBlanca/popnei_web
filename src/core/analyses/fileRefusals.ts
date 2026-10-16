@@ -120,5 +120,5 @@ export function passRefusalText(
     return ofFile;
   }
   const fileName = escaped(p.variants?.name ?? "");
-  return `popnei could not read ${fileName}${saying(withoutBackquotes(message))}. Open the file again${place.where}, or another file.`;
+  return `popnei could not read ${fileName}${saying(withoutBackquotes(message))}. Open the file again, or another file,${place.where}.`;
 }

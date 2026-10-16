@@ -295,7 +295,7 @@ describe("the refusals of the count", () => {
 
   test("any other refusal says popnei could not read the file, with popnei's words", () => {
     expect(refusalText("out of memory", EVERY)).toBe(
-      "popnei could not read panel.vcf.gz: out of memory. Open the file again with Open another variants file… in the Variants tab, or another file.",
+      "popnei could not read panel.vcf.gz: out of memory. Open the file again, or another file, with Open another variants file… in the Variants tab.",
     );
   });
 

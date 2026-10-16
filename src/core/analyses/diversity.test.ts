@@ -3717,7 +3717,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
         "popgen2",
       ),
     ).toBe(
-      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity cannot run. popnei could not read panel.nei: something else went wrong. Open the file again in the Variants tab, or another file.",
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity cannot run. popnei could not read panel.nei: something else went wrong. Open the file again, or another file, in the Variants tab.",
     );
   });
 

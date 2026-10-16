@@ -986,7 +986,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
         "popgen2",
       ),
     ).toBe(
-      `${start} the PCoA cannot run. popnei could not read panel.nei: out of memory. Open the file again in the Variants tab, or another file.`,
+      `${start} the PCoA cannot run. popnei could not read panel.nei: out of memory. Open the file again, or another file, in the Variants tab.`,
     );
   });
 
