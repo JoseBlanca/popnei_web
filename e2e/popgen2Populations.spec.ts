@@ -1916,12 +1916,16 @@ test.describe("PT7 R1.1 the bar plots of the table", () => {
     await pickIndividuals(page, "panel_pops.csv");
     await runDiversity(page);
     const plot = barPlots(page).locator("svg.chart-bars").first();
-    // The page is dark: the axis on the screen is in the dark theme.
+    // The page is dark: the axis on the screen is in the dark theme. The
+    // colours here are the values of tokens.css, those of the look of 16
+    // October 2026 (docs/plans/visual-design.md): --chart-axis #a0acb9
+    // dark and #47525e light, the text #e8edf3 dark, the background
+    // #121821 and the panel #19212c dark.
     expect(
       await plot
         .locator("g.chart-axis-x path.domain")
         .evaluate((path) => getComputedStyle(path).stroke),
-    ).toBe("rgb(163, 171, 181)");
+    ).toBe("rgb(160, 172, 185)");
     const menu = menuButton(
       page,
       "the bar plot of expected heterozygosity (unbiased)",
@@ -1930,12 +1934,13 @@ test.describe("PT7 R1.1 the bar plots of the table", () => {
     const text = await textOf(await chooseByKeys(page, "Image as SVG"));
     expect(text).not.toContain("var(");
     // The colours of the dark theme that the light one does not have:
-    // its text, background and axis (sky blue, the bar of p1, is the
-    // same in both).
+    // its text, background, panel and axis (sky blue, the bar of p1, is
+    // the same in both).
     for (const dark of [
-      "rgb(232, 234, 237)",
-      "rgb(22, 24, 27)",
-      "rgb(163, 171, 181)",
+      "rgb(232, 237, 243)",
+      "rgb(18, 24, 33)",
+      "rgb(25, 33, 44)",
+      "rgb(160, 172, 185)",
     ]) {
       expect(text).not.toContain(dark);
     }
@@ -1962,10 +1967,10 @@ test.describe("PT7 R1.1 the bar plots of the table", () => {
       };
     }, text);
     expect(found).toEqual({
-      axis: "rgb(85, 93, 104)",
+      axis: "rgb(71, 82, 94)",
       // The names in the colour of the axes of the light theme.
-      name: "rgb(85, 93, 104)",
-      bar: ["rgb(230, 159, 0)", "rgb(85, 93, 104)"],
+      name: "rgb(71, 82, 94)",
+      bar: ["rgb(230, 159, 0)", "rgb(71, 82, 94)"],
     });
   });
 
