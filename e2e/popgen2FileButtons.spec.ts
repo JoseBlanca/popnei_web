@@ -337,6 +337,21 @@ test("FB1 an opening by Open another variants file… keeps the focus on it, at 
   await expect(another).toBeFocused();
 });
 
+/** Expects `words` said once in the status region: each thing said is
+    added after the last one, so a text that ends with the words is one
+    time they were said; and the page has one status region that holds
+    them, so that no other part reads them out a second time. A poll
+    stops at its first pass, so the caller checks again later, after
+    the page has had time to say them a second time. */
+async function expectSaidOnce(page: Page, words: string): Promise<void> {
+  expect((await announced(page)).filter((t) => t.endsWith(words))).toHaveLength(
+    1,
+  );
+  await expect(page.getByRole("status").filter({ hasText: words })).toHaveCount(
+    1,
+  );
+}
+
 /** Scrolls the page to its end. */
 async function scrollToEnd(page: Page): Promise<void> {
   await page.evaluate(() => {
@@ -393,7 +408,10 @@ test("FB2 a file refused in the Variants tab, picked with Open another variants 
       (await announced(page)).filter((t) => t.endsWith(words)),
     )
     .toHaveLength(1);
+  await expectSaidOnce(page, words);
   await expectAxeBothSchemes(page, makeAxeBuilder);
+  // Still once after axe has run, light and dark.
+  await expectSaidOnce(page, words);
 
   // Gone with the next file opened.
   await pickFile(page, "variants", join(FIXTURES, "panel.nei"));
@@ -402,6 +420,7 @@ test("FB2 a file refused in the Variants tab, picked with Open another variants 
 
 test("FB2 two files dropped on the zone at the end of the Individuals tab have their words under it, in the window near the button, as well as in the box, and said once", async ({
   page,
+  makeAxeBuilder,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await recordAnnouncements(page);
@@ -432,6 +451,9 @@ test("FB2 two files dropped on the zone at the end of the Individuals tab have t
       (await announced(page)).filter((t) => t.endsWith(words)),
     )
     .toHaveLength(1);
+  await expectSaidOnce(page, words);
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+  await expectSaidOnce(page, words);
 });
 
 test("FB3 a variants file popnei could not read: the Variants tab holds its line and, one gap under it, the zone and its button, with no empty room between", async ({
