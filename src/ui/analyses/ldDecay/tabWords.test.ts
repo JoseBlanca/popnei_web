@@ -152,7 +152,7 @@ describe("LT1 D3 the words of the LD decay of the Populations tab", () => {
     const lines = ldDecayTabReadyLines(projectOf(ROWS), keptOf(null));
     expect(lines).toEqual([
       "2 populations: A, 4 individuals; B, 4 individuals",
-      "2 unclassified individuals kept are left out, as the box Individuals says.",
+      "2 unclassified individuals kept are left out, as the Individuals tab says.",
     ]);
   });
 
@@ -164,7 +164,7 @@ describe("LT1 D3 the words of the LD decay of the Populations tab", () => {
     };
     expect(ldDecayTabReadyLines(projectOf(ROWS), kept)).toEqual([
       "1 population: B, 4 individuals",
-      "2 unclassified individuals kept are left out, as the box Individuals says.",
+      "2 unclassified individuals kept are left out, as the Individuals tab says.",
       "A has no individual left after the thresholds of the individuals, and is left out. Loosen the thresholds of the individuals in the Variants tab to keep it.",
     ]);
   });

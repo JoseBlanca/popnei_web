@@ -428,7 +428,7 @@ describe("DT1 D4 the Distances tab", () => {
       "2 populations: A, 4 individuals; B, 4 individuals",
     );
     expect(lines()).toContain(
-      "2 unclassified individuals kept are left out, as the box Individuals says.",
+      "2 unclassified individuals kept are left out, as the Individuals tab says.",
     );
     expect(descriptionOf(button("Run"))).toBe("");
   });

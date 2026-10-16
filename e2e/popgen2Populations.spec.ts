@@ -539,7 +539,7 @@ test.describe("PT1 D4 the Populations tab", () => {
     await tab(page, "Populations").click();
     await expect(
       diversity(page).getByText(
-        "7 unclassified individuals kept are left out, as the box Individuals says.",
+        "7 unclassified individuals kept are left out, as the Individuals tab says.",
         { exact: true },
       ),
     ).toBeVisible({ timeout: RESULT_TIMEOUT });

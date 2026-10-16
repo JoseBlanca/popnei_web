@@ -237,7 +237,7 @@ The line under the options says what Run will take, the old panel's
 line with this page's words (`diversity.md`, "The states", ready): "3
 populations: p0, 48 individuals; p2, 84 individuals; p1, 68
 individuals"; then, when unclassified individuals are left out, "7
-unclassified individuals kept are left out, as the box Individuals
+unclassified individuals kept are left out, as the Individuals tab
 says."; then the old panel's lines of the populations the filters
 empty, of those under the minimum and of those that hold fewer
 chromosomes than the draw, with "the Variants tab" for "the Variants
@@ -590,7 +590,7 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 |---|---|
 | the heading of the tab | "Diversity" |
 | the heading of the spectrum | "Site frequency spectrum" |
-| the line of the populations | the old panel's, with "the Variants tab"; "7 unclassified individuals kept are left out, as the box Individuals says."; "1 population, Unclassified: 200 individuals. No individual is assigned to a population, so the diversity is of every individual kept as one population." |
+| the line of the populations | the old panel's, with "the Variants tab"; "7 unclassified individuals kept are left out, as the Individuals tab says."; "1 population, Unclassified: 200 individuals. No individual is assigned to a population, so the diversity is of every individual kept as one population." |
 | the locks | the table of "Run and Stop" |
 | the line in the place of the bar | the table of "Run and Stop"; after a crash of the worker ended the PCA's live state, until the next change or a Run, "The diversity starts after the next change of the filters, of its options or of the populations, or when Run is pressed.", with Run beside Stop recalculating (`popgen2-pca.md`, "A failure that ends a live state", corrected on 11 October 2026); after a Stop, "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.", or with the result shown, or popnei's refusal (from 12 October 2026, the review of the LD decay), "… After the next change, Run calculates it and starts it again after each change."; after a failure that ended the live state, "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.", or, after a variants file the browser can no longer read, which offers no Run, "… since its calculation failed. Once the variants file is opened again in the box Variants, Run calculates it and starts it again after each change." (12 October 2026, the review of the LD decay); the end of a refusal's words, "The diversity is then calculated again by itself.", only while it is live |
 | the button while live and not running | "Stop recalculating" |
@@ -889,8 +889,8 @@ classified, the one population, "Unclassified", every individual kept.
 
 The line under the options says what Run will take, as the
 diversity's: "2 populations: pop_a, 50 individuals; pop_b, 50
-individuals"; "7 unclassified individuals kept are left out, as the box
-Individuals says."; the populations the thresholds of the individuals
+individuals"; "7 unclassified individuals kept are left out, as the Individuals
+tab says."; the populations the thresholds of the individuals
 empty; and, while a threshold of the individuals waits for the one
 pass, "The thresholds of the individuals may take individuals from them
 once ld.nei is read to the end." For the one population: "1 population,

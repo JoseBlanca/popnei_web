@@ -549,7 +549,7 @@ test.describe("LT1 D5 the LD decay with unclassified individuals", () => {
     await tab(page, "Populations").click();
     await expect(
       ldDecay(page).getByText(
-        "7 unclassified individuals kept are left out, as the box Individuals says.",
+        "7 unclassified individuals kept are left out, as the Individuals tab says.",
         { exact: true },
       ),
     ).toBeVisible({ timeout: RESULT_TIMEOUT });

@@ -458,7 +458,7 @@ test.describe("DT1 D5 the Distances tab", () => {
     await distancesReady(page);
     await expect(
       shown(page).getByText(
-        "7 unclassified individuals kept are left out, as the box Individuals says.",
+        "7 unclassified individuals kept are left out, as the Individuals tab says.",
         { exact: true },
       ),
     ).toBeVisible();

@@ -190,7 +190,7 @@ panel's ready state with this page's words:
   individuals needed" and "the minimum of individuals"), "p3 has 12 individuals, fewer than the 20 individuals needed per variant,
   and is left out.", or "p3 and p5 have 12 and 8 individuals, fewer than the 20 individuals needed per variant, and are left out.";
 - the unclassified individuals kept, as the Populations tab says them,
-  "7 unclassified individuals kept are left out, as the box Individuals
+  "7 unclassified individuals kept are left out, as the Individuals tab
   says.";
 - the populations the thresholds of the individuals leave empty, as the
   Populations tab says them, "p9 has no individual left after the
