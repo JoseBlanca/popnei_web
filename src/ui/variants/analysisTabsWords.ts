@@ -74,11 +74,11 @@ export function greyedText(tab: AnalysisTabId, reason: TabGreyed): string {
       return `${TWO_POPULATIONS}: ${escaped(reason.name)} could not be read; the box Individuals says why and what to do.`;
     case "noColumnToChoose":
       if (!reason.oneColumn) {
-        return `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again in the box Individuals.`;
+        return `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again in the Individuals tab.`;
       }
       return reason.textFile
         ? `${TWO_POPULATIONS}, and ${escaped(reason.name)} was read as a single column, the names of the individuals. If its columns are separated by another character, choose that separator in the Individuals tab.`
-        : `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column to choose besides the names of the individuals. Add a column of the populations to it and open it again in the box Individuals.`;
+        : `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column to choose besides the names of the individuals. Add a column of the populations to it and open it again in the Individuals tab.`;
     case "noColumn":
       return `${TWO_POPULATIONS}, and no column of the populations is chosen. Choose one in the box Individuals.`;
     case "tooManyValues":

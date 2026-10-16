@@ -138,7 +138,7 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
         oneColumn: true,
       }),
     ).toBe(
-      "The distances between populations need at least two populations, and panel_pops.xlsx has no column to choose besides the names of the individuals. Add a column of the populations to it and open it again in the box Individuals.",
+      "The distances between populations need at least two populations, and panel_pops.xlsx has no column to choose besides the names of the individuals. Add a column of the populations to it and open it again in the Individuals tab.",
     );
   });
 
@@ -152,7 +152,7 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
           oneColumn: false,
         }),
       ).toBe(
-        "The distances between populations need at least two populations, and panel_pops.csv has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again in the box Individuals.",
+        "The distances between populations need at least two populations, and panel_pops.csv has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again in the Individuals tab.",
       );
     }
   });

@@ -327,11 +327,11 @@ export function refusalText(
   if (page === "popgen2") {
     const fileWords = fileRefusalText(message, p, {
       cannot: "the diversity cannot be calculated",
-      where: IN_BOX_VARIANTS,
+      where: IN_VARIANTS_TAB,
     });
     if (fileWords !== null) return fileWords;
     return `${refusalWords(message, p, {
-      change: `Change the settings, or open the variants file again${IN_BOX_VARIANTS}`,
+      change: `Change the settings, or open the variants file again${IN_VARIANTS_TAB}`,
       calculate: "calculate the diversity",
       nothingLeft: "there is no variant to calculate the diversity over",
       again: "to run it again",
@@ -351,7 +351,7 @@ export function refusalText(
 
 /** Where the variants file is opened again on popgen2.html, after "open
     it again". */
-const IN_BOX_VARIANTS = " in the box Variants";
+const IN_VARIANTS_TAB = " in the Variants tab";
 
 /**
  * The words of the error state of the panel when the statistics of each
@@ -377,7 +377,7 @@ export function statisticsFailedText(
     : statisticsFailedWords(error, p, failureText, notDone, (message, q) =>
         passRefusalText(message, q, {
           cannot: "the statistics of each individual cannot be calculated",
-          where: IN_BOX_VARIANTS,
+          where: IN_VARIANTS_TAB,
         }),
       );
 }

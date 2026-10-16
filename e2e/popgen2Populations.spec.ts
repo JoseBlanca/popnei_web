@@ -1517,7 +1517,7 @@ test.describe("PT2 D3 the Populations tab while the diversity waits, and what th
     await expect(button(page, "Stop")).toBeVisible();
     await release(page, "crash");
     const failed =
-      "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the box Variants.";
+      "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the Variants tab.";
     await expect(shown(page).getByText(failed, { exact: true })).toBeVisible({
       timeout: RESULT_TIMEOUT,
     });

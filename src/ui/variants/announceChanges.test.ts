@@ -494,7 +494,7 @@ describe("PT2 D2 the status region says a round of two analyses once, a Run that
       await run;
       await vi.advanceTimersByTimeAsync(ANNOUNCE_DELAY_MS);
       expect(announcer.getState()).toBe(
-        "The diversity of panel.nei could not be calculated: The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the box Variants.",
+        "The diversity of panel.nei could not be calculated: The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the Variants tab.",
       );
     } finally {
       vi.useRealTimers();

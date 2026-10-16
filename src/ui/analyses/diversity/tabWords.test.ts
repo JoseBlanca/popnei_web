@@ -207,7 +207,7 @@ describe("PT1 D3 the words of the Populations tab", () => {
       "Run once panel.nei is read to the end: Start again its reading in the box Variants.",
     );
     expect(diversityTabLock(p, "unreadable")).toBe(
-      "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again there, or open another.",
+      "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again, or another, in the Variants tab.",
     );
     expect(diversityTabLock(p, null)).toBeNull();
   });
@@ -357,7 +357,7 @@ describe("PT2 D1 the lines of the Populations tab while the diversity is live an
       diversityPanelLive({ kind: "endedByFailure" }, null, "unreadable"),
     ).toEqual({
       kind: "stopped",
-      line: "The diversity no longer starts by itself after a change, since its calculation failed. Once the variants file is opened again in the box Variants, Run calculates it and starts it again after each change.",
+      line: "The diversity no longer starts by itself after a change, since its calculation failed. Once the variants file is opened again in the Variants tab, Run calculates it and starts it again after each change.",
     });
   });
 });

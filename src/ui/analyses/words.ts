@@ -265,9 +265,9 @@ export function popgen2FailureText(
   const name = escaped(variantsName);
   switch (error.kind) {
     case "reopenFailed":
-      return `${escaped(error.name)} could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants.`;
+      return `${escaped(error.name)} could not be read again; it may have changed on the disk since it was opened. Open it again in the Variants tab.`;
     case "workerFailed":
-      return `The calculation stopped unexpectedly. ${again} If it stops again, open ${name} again in the box Variants.`;
+      return `The calculation stopped unexpectedly. ${again} If it stops again, open ${name} again in the Variants tab.`;
     case "defect":
     case "files":
       return failureText(error, variantsName, again);

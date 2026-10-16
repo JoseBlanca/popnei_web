@@ -131,7 +131,7 @@ describe("PT2 D2 the status region's words of the diversity", () => {
     const failures: readonly [RunError, string][] = [
       [
         { kind: "workerFailed", message: "a crash" },
-        "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the box Variants.",
+        "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the Variants tab.",
       ],
       [
         { kind: "popnei", message: "a refusal of popnei" },

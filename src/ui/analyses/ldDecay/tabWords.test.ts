@@ -281,7 +281,7 @@ describe("LT1 D3 the words of the LD decay of the Populations tab", () => {
       ldDecayPanelLive({ kind: "endedByFailure" }, null, "unreadable"),
     ).toEqual({
       kind: "stopped",
-      line: "The LD decay no longer starts by itself after a change, since its calculation failed. Once the variants file is opened again in the box Variants, Run calculates it and starts it again after each change.",
+      line: "The LD decay no longer starts by itself after a change, since its calculation failed. Once the variants file is opened again in the Variants tab, Run calculates it and starts it again after each change.",
     });
     expect(
       ldDecayPanelLive({ kind: "endedByFailure" }, null, "result"),

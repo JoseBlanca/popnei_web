@@ -280,7 +280,7 @@ describe("DT1 D3 the words of the Distances tab", () => {
       distancesPanelLive({ kind: "endedByFailure" }, null, "unreadable"),
     ).toEqual({
       kind: "stopped",
-      line: "The distances no longer start by themselves after a change, since their calculation failed. Once the variants file is opened again in the box Variants, Run calculates them and starts them again after each change.",
+      line: "The distances no longer start by themselves after a change, since their calculation failed. Once the variants file is opened again in the Variants tab, Run calculates them and starts them again after each change.",
     });
     expect(distancesPanelLive({ kind: "stopped" }, null, "refused")).toEqual({
       kind: "stopped",

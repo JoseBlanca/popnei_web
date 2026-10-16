@@ -483,7 +483,7 @@ describe("PT1 D3 the Populations tab", () => {
       error: { kind: "popnei", message: "the file is not a vars file" },
     });
     expectLocked(
-      "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again there, or open another.",
+      "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again, or another, in the Variants tab.",
     );
   });
 

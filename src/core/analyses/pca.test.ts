@@ -844,7 +844,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
         "popgen2",
       ),
     ).toBe(
-      "empty.vcf has no variants, so there is no variant to do the PCA with. Open another variants file in the box Variants.",
+      "empty.vcf has no variants, so there is no variant to do the PCA with. Open another variants file in the Variants tab.",
     );
     expect(
       refusalText(
@@ -857,7 +857,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
         "popgen2",
       ),
     ).toBe(
-      "The LD pruning of the PCA needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and open it again in the box Variants, or turn the LD pruning off.",
+      "The LD pruning of the PCA needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and open it again in the Variants tab, or turn the LD pruning off.",
     );
     expect(
       refusalText(
@@ -870,7 +870,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
         "popgen2",
       ),
     ).toBe(
-      "The LD pruning of the PCoA needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and open it again in the box Variants, or turn the LD pruning off.",
+      "The LD pruning of the PCoA needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and open it again in the Variants tab, or turn the LD pruning off.",
     );
     expect(
       refusalText(
@@ -882,7 +882,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
       "No variant left after the filters varies among the individuals kept, so there is nothing to do the PCA with. This happens with one individual, or a few of one line; keep more individuals with the thresholds of the individuals in the Variants tab.",
     );
     expect(refusalText("out of memory.", p, "popgen2")).toBe(
-      "popnei could not calculate the principal components: out of memory. Change the settings, or open the variants file again in the box Variants, to run it again.",
+      "popnei could not calculate the principal components: out of memory. Change the settings, or open the variants file again in the Variants tab, to run it again.",
     );
   });
 
@@ -894,7 +894,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
     });
     const nei = project({ options: LD_50000 });
     const pcoa = project({ options: { method: "pcoa", ...LD_50000 } });
-    const again = "open it again in the box Variants.";
+    const again = "open it again in the Variants tab.";
     expect(
       refusalText(
         "the pass gave no variant and its source holds none",
@@ -902,7 +902,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
         "popgen2",
       ),
     ).toBe(
-      "panel.nei has no variants. Open another variants file in the box Variants.",
+      "panel.nei has no variants. Open another variants file in the Variants tab.",
     );
     expect(
       refusalText(
@@ -977,7 +977,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
         "popgen2",
       ),
     ).toBe(
-      `${start} the PCA was not run. panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again in the box Variants.`,
+      `${start} the PCA was not run. panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again in the Variants tab.`,
     );
     expect(
       statisticsFailedText(
@@ -988,7 +988,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
         "popgen2",
       ),
     ).toBe(
-      `${start} the PCoA cannot run. popnei could not read panel.nei: out of memory. Open the file again in the box Variants, or another file.`,
+      `${start} the PCoA cannot run. popnei could not read panel.nei: out of memory. Open the file again in the Variants tab, or another file.`,
     );
   });
 
@@ -1005,7 +1005,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
   test("the words of a calculation that stopped with no answer, on popgen2.html", () => {
     const p = project({ options: LD_50000 });
     expect(crashText(p, 200, "popgen2")).toBe(
-      "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the box Variants.",
+      "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the Variants tab.",
     );
     expect(crashText(p, 4000, "popgen2")).toBe(
       "The calculation stopped unexpectedly, perhaps because the principal components of 4,000 individuals, which need about 0.8 GB, did not fit in the memory of this tab; a phone or a tablet gives a tab far less than a computer. Keep fewer individuals with the thresholds of the individuals in the Variants tab, close other tabs and run it again, or calculate them with popnei in Python, outside the browser.",

@@ -52,7 +52,7 @@ describe("the lines of a live analysis that reads the populations", () => {
       "The distances no longer start by themselves after a change, since their calculation failed. Run calculates them and starts them again after each change.",
     );
     expect(failureEndedLine(named, "unreadable")).toBe(
-      "The distances no longer start by themselves after a change, since their calculation failed. Once the variants file is opened again in the box Variants, Run calculates them and starts them again after each change.",
+      "The distances no longer start by themselves after a change, since their calculation failed. Once the variants file is opened again in the Variants tab, Run calculates them and starts them again after each change.",
     );
     expect(startedByItselfText(DISTANCES_LINES)).toBe(
       "Calculating the distances between populations again. To change the filters or the populations, stop them in the Distances tab.",

@@ -197,7 +197,7 @@ const AGAIN_BY_THEMSELVES =
 const THEN_AGAIN = "and the distances are then calculated again by themselves";
 
 /** Where the variants file is opened again on popgen2.html. */
-const IN_BOX_VARIANTS = " in the box Variants";
+const IN_VARIANTS_TAB = " in the Variants tab";
 
 /**
  * The words of a refusal of popnei, for the error state of the panel of
@@ -224,13 +224,13 @@ export function refusalText(
   if (page === "popgen2") {
     const fileWords = fileRefusalText(message, p, {
       cannot: "the distances between populations cannot be calculated",
-      where: IN_BOX_VARIANTS,
+      where: IN_VARIANTS_TAB,
     });
     if (fileWords !== null) return fileWords;
     // Any other refusal ends with what happens after the change, once and
     // in the plural; the rows of their own end with their own words.
     const words = refusalWords(message, p, {
-      change: `Change the settings, or open the variants file again${IN_BOX_VARIANTS}`,
+      change: `Change the settings, or open the variants file again${IN_VARIANTS_TAB}`,
       calculate: "calculate the distances between populations",
       nothingLeft:
         "there is no variant to calculate the distances between populations over",

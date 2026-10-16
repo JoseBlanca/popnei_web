@@ -113,7 +113,7 @@ describe("AP6 D1 passLockText, the words of the lock", () => {
       "Run once panel.nei is read to the end: Start again its reading in the box Variants.",
     );
     expect(passLockText("unreadable", "panel.nei", "the PCA")).toBe(
-      "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again there, or open another.",
+      "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again, or another, in the Variants tab.",
     );
   });
 });

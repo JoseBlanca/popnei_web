@@ -2125,7 +2125,7 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
       "The LD decay needed more memory than the browser tab could give. Type a smaller largest distance, keep fewer individuals with the thresholds of the individuals in the Variants tab, or calculate it with popnei in Python, outside the browser.",
     );
     expect(crashText(page2(), "popgen2")).toBe(
-      "The calculation stopped unexpectedly, perhaps because the LD decay needed more memory than the browser tab could give. Type a smaller largest distance, or keep fewer individuals with the thresholds of the individuals in the Variants tab, and run it again; or calculate it with popnei in Python, outside the browser. If it stops again at a small distance, open ld.nei again in the box Variants.",
+      "The calculation stopped unexpectedly, perhaps because the LD decay needed more memory than the browser tab could give. Type a smaller largest distance, or keep fewer individuals with the thresholds of the individuals in the Variants tab, and run it again; or calculate it with popnei in Python, outside the browser. If it stops again at a small distance, open ld.nei again in the Variants tab.",
     );
     expect(
       refusalText(
@@ -2138,12 +2138,12 @@ describe("LT1 D1 the LD decay of popgen2.html", () => {
       "The thresholds of the Variants tab kept none of the variants of ld.nei, so there is no variant to calculate the LD decay over. Loosen them. The LD decay is then calculated again by itself.",
     );
     expect(refusalText("`numBins` is 0.", page2(), "popgen2", true)).toBe(
-      "popnei could not calculate the LD decay: numBins is 0. Change the settings, or open the variants file again in the box Variants, to calculate it again. The LD decay is then calculated again by itself.",
+      "popnei could not calculate the LD decay: numBins is 0. Change the settings, or open the variants file again in the Variants tab, to calculate it again. The LD decay is then calculated again by itself.",
     );
     // No longer live, after Stop recalculating (the review of the LD
     // decay, 12 October 2026).
     expect(refusalText("`numBins` is 0.", page2(), "popgen2", false)).toBe(
-      "popnei could not calculate the LD decay: numBins is 0. Change the settings, or open the variants file again in the box Variants, to calculate it again.",
+      "popnei could not calculate the LD decay: numBins is 0. Change the settings, or open the variants file again in the Variants tab, to calculate it again.",
     );
     expect(refusalText(memory, page2(), "popgen", false)).toBe(
       "The LD decay needed more memory than the browser tab could give. Type a smaller largest distance, keep fewer individuals with the filters of individuals, or calculate it with popnei in Python, outside the browser.",

@@ -67,7 +67,7 @@ export function passLock(
  * "Run once panel.nei is read to the end: the reading under way in the
  * box Variants and the PCA cannot run at once.", "…: Start again its
  * reading in the box Variants.", "…: it could not be read, as the
- * box Variants says. Open it again there, or open another.".
+ * box Variants says. Open it again, or another, in the Variants tab.".
  */
 export function passLockText(
   lock: PassLock,
@@ -81,6 +81,6 @@ export function passLockText(
     case "stopped":
       return `${start}Start again its reading in the box Variants.`;
     case "unreadable":
-      return `${start}it could not be read, as the box Variants says. Open it again there, or open another.`;
+      return `${start}it could not be read, as the box Variants says. Open it again, or another, in the Variants tab.`;
   }
 }

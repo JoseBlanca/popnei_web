@@ -118,7 +118,7 @@ function onePopulationWhy(
   const fileName = escaped(p.individuals?.name ?? "");
   switch (cause.kind) {
     case "refused":
-      return `${fileName} could not be read, as the box Individuals says; open it again, or another file, there to get populations.`;
+      return `${fileName} could not be read, as the box Individuals says; open it again, or another file, in the Individuals tab to get populations.`;
     case "noSuchColumn":
       return `${fileName} has no column ${shown(cause.column)}; choose a column of the populations in the box Individuals.`;
     case "tooMany":

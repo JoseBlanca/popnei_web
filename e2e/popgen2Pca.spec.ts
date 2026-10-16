@@ -847,7 +847,7 @@ test("AP6 D3 a PCA that fails: its words in the tab and in the status region, St
   await runHeld(page);
   await release(page, "crash");
   const words =
-    "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.vcf.gz again in the box Variants.";
+    "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.vcf.gz again in the Variants tab.";
   await expect(shown(page).getByText(words, { exact: true })).toBeVisible({
     timeout: RESULT_TIMEOUT,
   });

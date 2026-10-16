@@ -47,7 +47,7 @@ export const LD_DECAY_TAB_ERRORS: PanelErrorWords = Object.freeze({
       (message, q) =>
         passRefusalText(message, q, {
           cannot: "the statistics of each individual cannot be calculated",
-          where: " in the box Variants",
+          where: " in the Variants tab",
         }),
     ),
   workerFailedText: (p: Project): string => crashText(p, "popgen2"),

@@ -111,7 +111,7 @@ const PLACES: Readonly<Record<LdDecayPage, PlaceWords>> = Object.freeze({
     fewerIndividualsWhere:
       "with the thresholds of the individuals in the Variants tab",
     openAgain: (fileName: string) =>
-      `open ${fileName} again in the box Variants`,
+      `open ${fileName} again in the Variants tab`,
   }),
 });
 
@@ -122,7 +122,7 @@ const PLACES: Readonly<Record<LdDecayPage, PlaceWords>> = Object.freeze({
 const AGAIN_BY_ITSELF = "The LD decay is then calculated again by itself.";
 
 /** Where the variants file is opened again on popgen2.html. */
-const IN_BOX_VARIANTS = " in the box Variants";
+const IN_VARIANTS_TAB = " in the Variants tab";
 
 /** The two options of the LD decay, as the project holds them. */
 export interface LdDecayOptions {
@@ -470,11 +470,11 @@ export function refusalText(
   if (page === "popgen2") {
     const fileWords = fileRefusalText(message, p, {
       cannot: "the LD decay cannot be calculated",
-      where: IN_BOX_VARIANTS,
+      where: IN_VARIANTS_TAB,
     });
     if (fileWords !== null) return fileWords;
     return `${refusalWords(message, p, {
-      change: `Change the settings, or open the variants file again${IN_BOX_VARIANTS}`,
+      change: `Change the settings, or open the variants file again${IN_VARIANTS_TAB}`,
       calculate: "calculate the LD decay",
       nothingLeft: "there is no variant to calculate the LD decay over",
       again: "to calculate it again",

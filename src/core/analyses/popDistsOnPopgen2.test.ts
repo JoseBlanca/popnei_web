@@ -437,19 +437,19 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
         true,
       ),
     ).toBe(
-      "panel.nei has no variants. Open another variants file in the box Variants.",
+      "panel.nei has no variants. Open another variants file in the Variants tab.",
     );
     // In the plural, and said once (the review of the Distances tab, 12
     // October 2026).
     expect(refusalText("something else went wrong.", p, "popgen2", true)).toBe(
-      "popnei could not calculate the distances between populations: something else went wrong. Change the settings, or open the variants file again in the box Variants, and the distances are then calculated again by themselves.",
+      "popnei could not calculate the distances between populations: something else went wrong. Change the settings, or open the variants file again in the Variants tab, and the distances are then calculated again by themselves.",
     );
     // Not live, after a Stop over the refusal: nothing is calculated by
     // itself, so the words do not say it (the merge of the LD decay and
     // the distances, 13 October 2026, as the LD decay's review gave the
     // diversity).
     expect(refusalText("something else went wrong.", p, "popgen2", false)).toBe(
-      "popnei could not calculate the distances between populations: something else went wrong. Change the settings, or open the variants file again in the box Variants, to run them again.",
+      "popnei could not calculate the distances between populations: something else went wrong. Change the settings, or open the variants file again in the Variants tab, to run them again.",
     );
     expect(
       refusalText(

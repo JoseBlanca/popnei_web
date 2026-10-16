@@ -102,7 +102,7 @@ export function failureEndedLine(
     case null:
       return `${ended} ${runStartsIt(named)}`;
     case "unreadable":
-      return `${ended} Once the variants file is opened again in the box Variants, ${runStartsIt(named)}`;
+      return `${ended} Once the variants file is opened again in the Variants tab, ${runStartsIt(named)}`;
     case "result":
     case "refused":
       return `${ended} After the next change, ${runStartsIt(named)}`;

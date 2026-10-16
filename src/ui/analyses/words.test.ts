@@ -290,7 +290,7 @@ describe("AP6 D1 the failures on popgen2.html, in its words", () => {
         "panel.nei",
       ),
     ).toBe(
-      "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants.",
+      "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the Variants tab.",
     );
     expect(
       popgen2FailureText(
@@ -298,7 +298,7 @@ describe("AP6 D1 the failures on popgen2.html, in its words", () => {
         "panel.nei",
       ),
     ).toBe(
-      "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the box Variants.",
+      "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the Variants tab.",
     );
     expect(
       popgen2FailureText(

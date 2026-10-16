@@ -3638,7 +3638,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
       "The thresholds of the Variants tab kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen them. The diversity is then calculated again by itself.",
     );
     expect(refusalText("something else went wrong.", p, "popgen2", true)).toBe(
-      "popnei could not calculate the diversity: something else went wrong. Change the settings, or open the variants file again in the box Variants, to run it again. The diversity is then calculated again by itself.",
+      "popnei could not calculate the diversity: something else went wrong. Change the settings, or open the variants file again in the Variants tab, to run it again. The diversity is then calculated again by itself.",
     );
     // No longer live, after Stop recalculating: nothing starts it by
     // itself after the change (the review of the LD decay, 12 October
@@ -3671,7 +3671,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
         true,
       ),
     ).toBe(
-      "panel.nei has no variants. Open another variants file in the box Variants.",
+      "panel.nei has no variants. Open another variants file in the Variants tab.",
     );
     expect(
       refusalText(
@@ -3697,7 +3697,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
         "popgen2",
       ),
     ).toBe(
-      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity cannot run. popnei could not read panel.nei: something else went wrong. Open the file again in the box Variants, or another file.",
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity cannot run. popnei could not read panel.nei: something else went wrong. Open the file again in the Variants tab, or another file.",
     );
   });
 
@@ -3718,7 +3718,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     expect(
       popgen2OnePopulationLine(refusedProject(), 4, DIVERSITY_ONE_POPULATION),
     ).toBe(
-      `1 population, Unclassified: 4 individuals. ${first} pops.csv could not be read, as the box Individuals says; open it again, or another file, there to get populations. ${mixed}`,
+      `1 population, Unclassified: 4 individuals. ${first} pops.csv could not be read, as the box Individuals says; open it again, or another file, in the Individuals tab to get populations. ${mixed}`,
     );
     expect(
       popgen2OnePopulationLine(

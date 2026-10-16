@@ -551,11 +551,11 @@ const PCA_LD_FILTER: LdFilterWords = Object.freeze({
 /** The LD pruning of popgen2.html's PCA, named by the method `name`,
     "PCA" or "PCoA", in the words of a refusal, as the reason of the
     pruning with no distance names it; the Variants tab has none, and the
-    file is opened again in the box Variants. */
+    file is opened again in the Variants tab. */
 function pca2LdPruning(name: string): LdFilterWords {
   return {
     name: `The LD pruning of the ${name}`,
-    openAgain: "open it again in the box Variants",
+    openAgain: "open it again in the Variants tab",
     turnOff: "turn the LD pruning off",
   };
 }
@@ -597,7 +597,7 @@ const PLACES: Readonly<Record<PcaPage, PlaceWords>> = Object.freeze({
     limitFilters: "the filters of individuals in the Variants tab",
     variantFilters: "the filters of the Variants tab",
     openAgain: (fileName: string) =>
-      `open ${fileName} again in the box Variants`,
+      `open ${fileName} again in the Variants tab`,
     pruningOff: () => "turn the LD pruning off",
   }),
 });
@@ -1159,7 +1159,7 @@ export function refusalText(
     page === "popgen2"
       ? fileRefusalText(message, p, {
           cannot: `the ${name} cannot be calculated`,
-          where: " in the box Variants",
+          where: " in the Variants tab",
         })
       : null;
   if (ofFile !== null) {
@@ -1171,7 +1171,7 @@ export function refusalText(
     change:
       page === "popgen"
         ? CHANGE_SETTINGS
-        : "Change the settings, or open the variants file again in the box Variants",
+        : "Change the settings, or open the variants file again in the Variants tab",
     again: "to run it again",
     emptyPass: () => nothingKept,
   });
@@ -1185,7 +1185,7 @@ function emptyText(p: Project, consequence: string, page: PcaPage): string {
   if (page === "popgen" || p.variants === null) {
     return emptySourceText(p, consequence);
   }
-  return `${escaped(p.variants.name)} has no variants, so ${consequence}. Open another variants file in the box Variants.`;
+  return `${escaped(p.variants.name)} has no variants, so ${consequence}. Open another variants file in the Variants tab.`;
 }
 
 /** The words of the PCoA's pairs of individuals with no distance: `pairs`
@@ -1270,11 +1270,11 @@ export function statisticsFailedText(
 }
 
 /** The words of popnei's refusal of the statistics of each individual on
-    popgen2.html, which the one pass calculates: those of the box Variants, with the file opened again there. */
+    popgen2.html, which the one pass calculates: those of the box Variants, with the file opened again in the Variants tab. */
 function popgen2StatisticsRefusal(message: string, p: Project): string {
   return passRefusalText(message, p, {
     cannot: "the statistics of each individual cannot be calculated",
-    where: " in the box Variants",
+    where: " in the Variants tab",
   });
 }
 
