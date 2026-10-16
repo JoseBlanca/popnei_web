@@ -1423,7 +1423,7 @@ async function dropFolder(page: Page): Promise<void> {
   });
 }
 
-test("IN6 D2 a folder, then two files, dropped on the box of the individuals file: their words in the box and said, nothing opened; a CSV dropped opens it and takes the words away; a folder again, and Remove takes the words away; axe on the words", async ({
+test("IN6 D2 a folder, then two files, dropped on the zone of the box Individuals: their words in the box and said, nothing opened; a CSV dropped there opens it and takes the words away; a folder again, dropped on the zone at the end of the Individuals tab, its words in the box, and Remove takes them away; axe on the words", async ({
   page,
   makeAxeBuilder,
 }) => {

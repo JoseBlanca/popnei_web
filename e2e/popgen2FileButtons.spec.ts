@@ -153,9 +153,10 @@ test("FB1 before a file, at 1280 pixels: each box ends with its button, the two 
   // Words in the box Variants alone, so that its lines are taller than
   // those of the box Individuals.
   await dropFolder(page, firstOpenButton(page, "variants"));
-  await expect(
-    variants.getByText(/not a folder\.$/u, { exact: false }),
-  ).toBeVisible();
+  const folderWords = variants.getByText(/not a folder\.$/u, {
+    exact: false,
+  });
+  await expect(folderWords).toBeVisible();
 
   const variantsBox = await boxOf(variants);
   const individualsBox = await boxOf(individuals);
@@ -165,6 +166,9 @@ test("FB1 before a file, at 1280 pixels: each box ends with its button, the two 
   const individualsButton = await boxOf(firstOpenButton(page, "individuals"));
   expect(individualsButton.y).toBe(variantsButton.y);
   expect(individualsButton.height).toBe(variantsButton.height);
+  // The words of the folder above the button of the box Variants.
+  const words = await boxOf(folderWords);
+  expect(words.y + words.height).toBeLessThanOrEqual(variantsButton.y);
   // At the bottom: under the button, only the padding of its zone and of
   // its box, the same in both boxes.
   const variantsUnder =
@@ -248,14 +252,35 @@ for (const width of [1280, 320]) {
       panel.getByRole("grid", { name: "The table of panel_pops.csv" }),
     );
     expect(another.y).toBeGreaterThanOrEqual(table.y + table.height);
-    // Side by side when they fit, one under the other when they do not.
-    if (another.width + remove.width + 64 <= (await boxOf(panel)).width) {
+    if (width === 1280) {
+      // Side by side: the same top, Remove after the other.
       expect(remove.y).toBe(another.y);
       expect(remove.x).toBeGreaterThan(another.x + another.width);
     } else {
-      expect(remove.y).toBeGreaterThanOrEqual(another.y + another.height);
+      // One under the other: Remove below the zone that holds the other
+      // button, the innermost part of the tab that holds both it and the
+      // zone's hidden button "Paste an individuals file", which the zone
+      // alone holds.
+      const zone = await boxOf(
+        panel
+          .locator("div")
+          .filter({
+            has: page.getByRole("button", {
+              name: "Open another individuals file…",
+              exact: true,
+            }),
+          })
+          .filter({
+            has: page.getByRole("button", {
+              name: "Paste an individuals file",
+              exact: true,
+            }),
+          })
+          .last(),
+      );
+      expect(zone.y + zone.height).toBeGreaterThan(another.y + another.height);
+      expect(remove.y).toBeGreaterThanOrEqual(zone.y + zone.height);
     }
-    if (width === 1280) expect(remove.y).toBe(another.y);
     expect(await scrollsSideways(page)).toBe(false);
     await anotherOpenButton(page, "individuals").scrollIntoViewIfNeeded();
     await expectAxeBothSchemes(page, makeAxeBuilder);
