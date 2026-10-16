@@ -234,7 +234,7 @@ test("OV2 bad.vcf is refused at the opening, with popnei's words in the box and 
   // The words in place of what the file would have told.
   await expect(lines(page)).toHaveText([
     "bad.vcf",
-    "popnei could not read bad.vcf: the source is not a VCF: it starts with \u201cThis is a line o\u201d. Open another file.",
+    "popnei could not read bad.vcf: the source is not a VCF: it starts with \u201cThis is a line o\u201d. Open another file with Open another variants file… in the Variants tab.",
   ]);
   // The Variants tab, with no statistics to show, says so in one line.
   await expect(
@@ -257,7 +257,7 @@ test("OV2 bad_position.vcf.gz opens, and its count is refused at the line of the
     "Individuals: 200",
     "Variants: not counted",
     "FILTER failures: not counted",
-    "popnei could not read bad_position.vcf.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position. Correct the file, or fetch it again, and open it again.",
+    "popnei could not read bad_position.vcf.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position. Correct the file, or fetch it again, and open it again with Open another variants file… in the Variants tab.",
   ]);
   // popnei's refusal comes again for the same file, so no Start again.
   await expect(
@@ -586,7 +586,7 @@ test("OV2 a gzipped VCF cut short opens, and its count says it could not be read
 
   await expect(
     info(page).getByText(
-      "cut_short.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
+      "cut_short.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again with Open another variants file… in the Variants tab.",
     ),
   ).toBeVisible();
   await expect(
@@ -803,13 +803,13 @@ test("OV2 the refusals of an opening and of a count are said in the status regio
   await pick(page, join(FIXTURES, "bad.vcf"));
   await expect(page.getByRole("status")).toHaveText([
     "",
-    /popnei could not read bad\.vcf: the source is not a VCF: it starts with \u201cThis is a line o\u201d\. Open another file\.$/u,
+    /popnei could not read bad\.vcf: the source is not a VCF: it starts with \u201cThis is a line o\u201d\. Open another file with Open another variants file… in the Variants tab\.$/u,
   ]);
 
   await pick(page, join(FIXTURES, "bad_position.vcf.gz"));
   await expect(page.getByRole("status")).toHaveText([
     "",
-    /popnei could not read bad_position\.vcf\.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position\. Correct the file, or fetch it again, and open it again\.$/u,
+    /popnei could not read bad_position\.vcf\.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position\. Correct the file, or fetch it again, and open it again with Open another variants file… in the Variants tab\.$/u,
   ]);
 });
 

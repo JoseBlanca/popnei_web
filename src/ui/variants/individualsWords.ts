@@ -25,6 +25,7 @@ import {
   individualsBoxNeeds,
   populationsToRun,
   shown,
+  WITH_ANOTHER_INDIVIDUALS,
 } from "../../core/project.ts";
 import type { IndividualsSource, Project } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
@@ -258,10 +259,10 @@ export function noColumnQualifiedText(p: Project): string | null {
   const name = escaped(individuals.name);
   if (populationColumnChoices(read).length === 0) {
     if (read.table.columns.length > 1) {
-      return `${name} has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again.`;
+      return `${name} has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again ${WITH_ANOTHER_INDIVIDUALS}.`;
     }
     return read.found === null
-      ? `${name} has no column to choose as the column of the populations besides the names of the individuals. Add a column of the populations to it and open it again.`
+      ? `${name} has no column to choose as the column of the populations besides the names of the individuals. Add a column of the populations to it and open it again ${WITH_ANOTHER_INDIVIDUALS}.`
       : `${name} was read as a single column, the names of the individuals, so it has no column of the populations to choose. If its columns are separated by another character, choose that separator in the Individuals tab.`;
   }
   return defaultPopulationsColumn(read) === null

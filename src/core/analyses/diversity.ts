@@ -46,6 +46,7 @@ import {
   popgen2Populations,
   popgen2PopulationsKept,
   popgen2PopulationsToRun,
+  WITH_ANOTHER_INDIVIDUALS,
 } from "../project.ts";
 import { filtersApplied } from "../filtersApplied.ts";
 import {
@@ -1107,9 +1108,10 @@ function onePopulationPrivateText(p: Project, page: DiversityPage): string {
       return `${first} Open an individuals file that assigns the individuals to populations in the box Individuals to count them.`;
     // The box of a file open has no button that opens one since 16
     // October 2026: it is at the end of the Individuals tab, as the line
-    // of the one population says (onePopulation.ts).
+    // of the one population says (onePopulation.ts), and so is it for
+    // a file read whose column classifies nobody.
     case "refused":
-      return `${first} ${escaped(p.individuals?.name ?? "")} could not be read, as the box Individuals says; open it again, or another file, in the Individuals tab to count them.`;
+      return `${first} ${escaped(p.individuals?.name ?? "")} could not be read, as the box Individuals says; open it again, or another file, ${WITH_ANOTHER_INDIVIDUALS} to count them.`;
     case "noColumn":
     case "noSuchColumn":
     case "notOffered":
@@ -1117,7 +1119,7 @@ function onePopulationPrivateText(p: Project, page: DiversityPage): string {
       return `${first} Choose a column of the populations in the box Individuals to count them.`;
     case "noneClassified": {
       const column = shown(cause.column);
-      return `${first} ${column} gives none of the individuals of ${escaped(p.variants?.name ?? "")} a population. Choose another column of the populations in the box Individuals, or fill in ${column} in ${escaped(p.individuals?.name ?? "")} and open it again, to count them.`;
+      return `${first} ${column} gives none of the individuals of ${escaped(p.variants?.name ?? "")} a population. Choose another column of the populations in the box Individuals, or fill in ${column} in ${escaped(p.individuals?.name ?? "")} and open it again ${WITH_ANOTHER_INDIVIDUALS}, to count them.`;
     }
   }
 }

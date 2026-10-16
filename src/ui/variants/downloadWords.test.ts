@@ -155,7 +155,7 @@ describe("DL6 D2 the words of the download", () => {
         error: { kind: "reopenFailed", name: "low_qual.vcf.gz", message: "x" },
       }),
     ).toBe(
-      "low_qual.vcf.gz could not be read again; it may have changed on the disk since it was opened. Open it again.",
+      "low_qual.vcf.gz could not be read again; it may have changed on the disk since it was opened. Open it again with Open another variants file… in the Variants tab.",
     );
     expect(
       failed({

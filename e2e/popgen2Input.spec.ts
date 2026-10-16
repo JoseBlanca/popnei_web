@@ -997,7 +997,7 @@ test("IN6 D2 a CSV of semicolons read with the comma: the refusal of its row in 
     individualsBox(page).getByText(/^decimals\.csv could not be read: /u),
   ).toBeVisible({ timeout: 20_000 });
   await expect(individualsBox(page)).toContainText(
-    "Choose another separator in the Individuals tab, or open a corrected file.",
+    "Choose another separator in the Individuals tab, or open a corrected file with Open another individuals file… in the same tab.",
   );
   await expect(individualsBox(page)).toContainText("line 2");
   await expect(

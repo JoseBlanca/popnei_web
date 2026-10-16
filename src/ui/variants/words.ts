@@ -17,6 +17,7 @@ import {
   grouped,
   isHidden,
   variantsOpenNeeds,
+  WITH_ANOTHER_VARIANTS,
 } from "../../core/project.ts";
 import type { Project, VariantSource } from "../../core/project.ts";
 import type {
@@ -385,7 +386,7 @@ export function openFailure(p: Project): OpenFailure | null {
       }
       if (message.startsWith(PLOIDY_OF_NO_VARIANTS)) {
         return {
-          text: `${name} has no variants. Open another variants file.`,
+          text: `${name} has no variants. Open another file ${WITH_ANOTHER_VARIANTS}.`,
           remedy: null,
         };
       }
@@ -443,7 +444,7 @@ export function countedText(numVars: number, numChroms: number): string {
 export function refusalText(message: string, p: Project): string {
   return passRefusalText(message, p, {
     cannot: "the variants cannot be counted, nor their statistics calculated",
-    where: "",
+    where: ` ${WITH_ANOTHER_VARIANTS}`,
   });
 }
 
@@ -458,7 +459,7 @@ export function failedText(error: AnalysisError, p: Project): string {
   const failure = error.error;
   switch (failure.kind) {
     case "reopenFailed":
-      return `${escaped(failure.name)} could not be read again; it may have changed on the disk since it was opened. Open it again.`;
+      return `${escaped(failure.name)} could not be read again; it may have changed on the disk since it was opened. Open it again ${WITH_ANOTHER_VARIANTS}.`;
     case "workerFailed":
     case "defect":
       // The entry gives what the worker said to the error bar, on the

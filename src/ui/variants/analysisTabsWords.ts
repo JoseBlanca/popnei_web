@@ -19,6 +19,7 @@ import {
   grouped,
   shown,
   MAX_LISTED_POPULATIONS,
+  WITH_ANOTHER_INDIVIDUALS,
 } from "../../core/project.ts";
 
 /** The label of each tab, in the order of the row. */
@@ -74,11 +75,11 @@ export function greyedText(tab: AnalysisTabId, reason: TabGreyed): string {
       return `${TWO_POPULATIONS}: ${escaped(reason.name)} could not be read; the box Individuals says why and what to do.`;
     case "noColumnToChoose":
       if (!reason.oneColumn) {
-        return `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again in the Individuals tab.`;
+        return `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again ${WITH_ANOTHER_INDIVIDUALS}.`;
       }
       return reason.textFile
         ? `${TWO_POPULATIONS}, and ${escaped(reason.name)} was read as a single column, the names of the individuals. If its columns are separated by another character, choose that separator in the Individuals tab.`
-        : `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column to choose besides the names of the individuals. Add a column of the populations to it and open it again in the Individuals tab.`;
+        : `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column to choose besides the names of the individuals. Add a column of the populations to it and open it again ${WITH_ANOTHER_INDIVIDUALS}.`;
     case "noColumn":
       return `${TWO_POPULATIONS}, and no column of the populations is chosen. Choose one in the box Individuals.`;
     case "tooManyValues":
@@ -99,7 +100,7 @@ function fewPopulationsText(
 ): string {
   const variants = escaped(reason.variantsName);
   const individuals = escaped(reason.individualsName);
-  const choose = `Choose another column of the populations in the box Individuals, or add the populations to ${individuals} and open it again.`;
+  const choose = `Choose another column of the populations in the box Individuals, or add the populations to ${individuals} and open it again ${WITH_ANOTHER_INDIVIDUALS}.`;
   if (reason.numPopulations === 1) {
     return `${shown(reason.column)} gives 1 population among the individuals of ${variants}. ${choose}`;
   }

@@ -520,14 +520,14 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
         }),
       ),
     ).toBe(
-      "panel_pops.csv could not be read: line 2 has 2 cells where the header has 1, read with the comma as the separator. Choose another separator in the Individuals tab, or open a corrected file.",
+      "panel_pops.csv could not be read: line 2 has 2 cells where the header has 1, read with the comma as the separator. Choose another separator in the Individuals tab, or open a corrected file with Open another individuals file… in the same tab.",
     );
     expect(
       individualsBoxNeeds(
         refused({ kind: "unclosedQuote", line: 5, separator: ";" }),
       ),
     ).toBe(
-      "panel_pops.csv could not be read: the quote that opens a cell on line 5 is never closed, read with the semicolon as the separator. Choose another separator in the Individuals tab, or open a corrected file.",
+      "panel_pops.csv could not be read: the quote that opens a cell on line 5 is never closed, read with the semicolon as the separator. Choose another separator in the Individuals tab, or open a corrected file with Open another individuals file… in the same tab.",
     );
   });
 
@@ -560,7 +560,7 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
         refused({ kind: "readerNotLoaded", message: "fetch failed" }),
       ),
     ).toBe(
-      "panel_pops.csv could not be read: the reader of tables could not be loaded. Check the connection and open the file again.",
+      "panel_pops.csv could not be read: the reader of tables could not be loaded. Check the connection and open the file again with Open another individuals file… in the Individuals tab.",
     );
   });
 
@@ -570,7 +570,7 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
         refused({ kind: "unreadable", message: "NotReadableError" }),
       ),
     ).toBe(
-      "panel_pops.csv could not be read: the browser could not read it; it may have been changed, moved or deleted since it was picked. Open it again.",
+      "panel_pops.csv could not be read: the browser could not read it; it may have been changed, moved or deleted since it was picked. Open it again with Open another individuals file… in the Individuals tab.",
     );
   });
 
@@ -603,7 +603,7 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
     "individualsBoxNeeds ends a refusal whose words say what to do in Excel with Then open it again: %o",
     (error, words) => {
       expect(individualsBoxNeeds(refused(error, "xlsx"))).toBe(
-        `panel_pops.csv could not be read: ${words}. Then open it again.`,
+        `panel_pops.csv could not be read: ${words}. Then open it again with Open another individuals file… in the Individuals tab.`,
       );
     },
   );
@@ -623,7 +623,7 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
         ),
       ),
     ).toBe(
-      "panel_pops.csv could not be read: its first sheet, Hoja1, has values as far as row 1,048,576 and column XFD, more than the 20,000,000 cells an individuals file can have; delete the values outside the table. Then open it again.",
+      "panel_pops.csv could not be read: its first sheet, Hoja1, has values as far as row 1,048,576 and column XFD, more than the 20,000,000 cells an individuals file can have; delete the values outside the table. Then open it again with Open another individuals file… in the Individuals tab.",
     );
   });
 
@@ -673,7 +673,7 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
     "individualsBoxNeeds ends every other refusal with Open a corrected file: %o in a file of %s",
     (error, format, words) => {
       expect(individualsBoxNeeds(refused(error, format))).toBe(
-        `panel_pops.csv could not be read: ${words}. Open a corrected file.`,
+        `panel_pops.csv could not be read: ${words}. Open a corrected file with Open another individuals file… in the Individuals tab.`,
       );
     },
   );
@@ -697,7 +697,7 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
     "individualsBoxNeeds says the page stopped while it read the file, after a crash or a defect: %o",
     (error) => {
       expect(individualsBoxNeeds(workerFailed(error))).toBe(
-        "panel_pops.csv could not be read: the page stopped while it read it. Open the file again.",
+        "panel_pops.csv could not be read: the page stopped while it read it. Open the file again with Open another individuals file… in the Individuals tab.",
       );
     },
   );

@@ -432,7 +432,7 @@ describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of pop
     expect(chosen()).toBe(0);
     expect(said).toHaveLength(1);
     expect(said[0]).toMatch(
-      /^panel_pops\.csv could not be read: .*\. Choose another separator in the Individuals tab, or open a corrected file\.$/u,
+      /^panel_pops\.csv could not be read: .*\. Choose another separator in the Individuals tab, or open a corrected file with Open another individuals file… in the same tab\.$/u,
     );
   });
 
@@ -472,7 +472,7 @@ describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of pop
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(chosen()).toBe(0);
     expect(said).toEqual([
-      "panel_pops.csv could not be read: the page stopped while it read it. Open the file again.",
+      "panel_pops.csv could not be read: the page stopped while it read it. Open the file again with Open another individuals file… in the Individuals tab.",
     ]);
   });
 
@@ -485,7 +485,7 @@ describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of pop
     expect(chosen()).toBe(1);
     expect(columnOf(store.getState().project)).toBe("popcat");
     expect(said).toEqual([
-      "panel_pops.csv could not be read: the page stopped while it read it. Open the file again.",
+      "panel_pops.csv could not be read: the page stopped while it read it. Open the file again with Open another individuals file… in the Individuals tab.",
       "panel_pops.csv read: 200 rows, the populations from popcat.",
     ]);
   });

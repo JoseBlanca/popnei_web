@@ -3529,7 +3529,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     ).toEqual([
       {
         code: "privateAllelesNeedTwoPopulations",
-        text: `${NO_PRIVATE_ONE} pop gives none of the individuals of panel.nei a population. Choose another column of the populations in the box Individuals, or fill in pop in pops.csv and open it again, to count them.`,
+        text: `${NO_PRIVATE_ONE} pop gives none of the individuals of panel.nei a population. Choose another column of the populations in the box Individuals, or fill in pop in pops.csv and open it again with Open another individuals file… in the Individuals tab, to count them.`,
       },
     ]);
   });
@@ -3551,7 +3551,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     expect(diversityOnPopgen2.warnings(oneResult(), refused, null)).toEqual([
       {
         code: "privateAllelesNeedTwoPopulations",
-        text: `${NO_PRIVATE_ONE} pops.csv could not be read, as the box Individuals says; open it again, or another file, in the Individuals tab to count them.`,
+        text: `${NO_PRIVATE_ONE} pops.csv could not be read, as the box Individuals says; open it again, or another file, with Open another individuals file… in the Individuals tab to count them.`,
       },
     ]);
   });
@@ -3692,9 +3692,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
         "popgen2",
         true,
       ),
-    ).toBe(
-      "panel.nei has no variants. Open another variants file in the Variants tab.",
-    );
+    ).toBe("panel.nei has no variants. Open another file in the Variants tab.");
     expect(
       refusalText(
         "`pops` names no population once filtered",
@@ -3740,7 +3738,7 @@ describe("PT1 D1 the definition of popgen2.html", () => {
     expect(
       popgen2OnePopulationLine(refusedProject(), 4, DIVERSITY_ONE_POPULATION),
     ).toBe(
-      `1 population, Unclassified: 4 individuals. ${first} pops.csv could not be read, as the box Individuals says; open it again, or another file, in the Individuals tab to get populations. ${mixed}`,
+      `1 population, Unclassified: 4 individuals. ${first} pops.csv could not be read, as the box Individuals says; open it again, or another file, with Open another individuals file… in the Individuals tab to get populations. ${mixed}`,
     );
     expect(
       popgen2OnePopulationLine(

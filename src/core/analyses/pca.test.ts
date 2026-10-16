@@ -901,9 +901,7 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
         pcoa,
         "popgen2",
       ),
-    ).toBe(
-      "panel.nei has no variants. Open another variants file in the Variants tab.",
-    );
+    ).toBe("panel.nei has no variants. Open another file in the Variants tab.");
     expect(
       refusalText(
         "the source could not be read: incomplete deflate stream",

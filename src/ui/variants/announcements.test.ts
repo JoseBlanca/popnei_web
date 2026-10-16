@@ -132,7 +132,7 @@ describe("what the status region of the new page says", () => {
         });
       }),
     ).toEqual([
-      "popnei could not read panel.vcf.gz: the source is not a VCF. Open another file.",
+      "popnei could not read panel.vcf.gz: the source is not a VCF. Open another file with Open another variants file… in the Variants tab.",
     ]);
   });
 
@@ -217,7 +217,7 @@ describe("what the status region of the new page says", () => {
     });
     await settled();
     expect(announcementsOf(before, store.getState())).toEqual([
-      "popnei could not read panel.vcf.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position. Correct the file, or fetch it again, and open it again.",
+      "popnei could not read panel.vcf.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position. Correct the file, or fetch it again, and open it again with Open another variants file… in the Variants tab.",
     ]);
   });
 

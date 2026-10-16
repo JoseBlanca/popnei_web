@@ -506,7 +506,9 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     const words = paragraphs(box());
     expect(words[0]).toBe("pops.csv");
     expect(words[1]).toMatch(/^pops\.csv could not be read: /u);
-    expect(words[1]).toMatch(/Open a corrected file\.$/u);
+    expect(words[1]).toMatch(
+      /Open a corrected file with Open another individuals file… in the Individuals tab\.$/u,
+    );
   });
 
   test("a file read before a variants file: the list on None, and the counts to come", async () => {

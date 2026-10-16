@@ -2089,15 +2089,30 @@ export function variantsStepNeeds(p: Project): string | null {
     : variantsReadNeeds(p.variants, VARIANTS_STEP_ENDS);
 }
 
+/** How a variants file is opened on popgen2.html while one is open,
+    read or not: by the button at the end of the Variants tab, since the
+    box Variants holds a button only while no file is open
+    (docs/plans/file-buttons.md, 16 October 2026). The words of the box
+    that ask for a file name it, since the box has none then. */
+export const WITH_ANOTHER_VARIANTS =
+  "with Open another variants file… in the Variants tab";
+
+/** How an individuals file is opened on popgen2.html while one is open,
+    read or not: by the button at the end of the Individuals tab, as
+    `WITH_ANOTHER_VARIANTS` is for the variants file. */
+export const WITH_ANOTHER_INDIVIDUALS =
+  "with Open another individuals file… in the Individuals tab";
+
 /** The ends of a reason of the variants file on the page that opens it,
     popgen2.html, which has no project to save before a reload; shown in
-    the box Variants, whose button "Open another variants file…" is at the
-    end of the Variants tab since 16 October 2026, under the tab's line
-    that sends the user to the box. */
+    the box Variants, which has no button once a file is open, so that
+    each end that opens a file names the button at the end of the
+    Variants tab. After a reload no file is open, and the box holds its
+    button again. */
 const VARIANTS_OPEN_ENDS: ReasonEnds = {
   message: withoutBackquotes,
-  refused: "Open another file.",
-  again: "Open it again.",
+  refused: `Open another file ${WITH_ANOTHER_VARIANTS}.`,
+  again: `Open it again ${WITH_ANOTHER_VARIANTS}.`,
   reload: (fileName) => `Reload the page and open ${fileName} again.`,
 };
 
@@ -2105,9 +2120,10 @@ const VARIANTS_OPEN_ENDS: ReasonEnds = {
  * The reason of the variants file being read or not read, in the words
  * of the page that opens it, popgen2.html, or `null` when the project has
  * no variants file or its file is read: those of `variantsStepNeeds`,
- * with "Open another file." after a refusal of popnei, "Open it again."
- * after a failure that a new load mends, and a reload with no project to
- * save after one that only a new page mends.
+ * with another file, after a refusal of popnei, or the same file again,
+ * after a failure that a new load mends, opened by the button at the end
+ * of the Variants tab, `WITH_ANOTHER_VARIANTS`; and a reload with no
+ * project to save after one that only a new page mends.
  */
 export function variantsOpenNeeds(p: Project): string | null {
   return p.variants === null
@@ -2522,7 +2538,7 @@ export function individualsBoxNeeds(p: Project): string | null {
       if (error.kind === "worker") {
         return MENDED_BY_RELOAD.has(error.error.kind)
           ? `${refused}the page could not start the part that reads files. Reload the page and open the file again.`
-          : `${refused}the page stopped while it read it. Open the file again.`;
+          : `${refused}the page stopped while it read it. Open the file again ${WITH_ANOTHER_INDIVIDUALS}.`;
       }
       const words = individualsBoxWords(
         error,
@@ -2559,7 +2575,7 @@ function individualsBoxWords(
     case "tooLarge":
       return `it is ${megabytes(error.size)}, more than the ${grouped(error.max / BYTES_IN_MB)} MB an individuals file can have; check that it is the individuals file and not the variants file.`;
     case "readerNotLoaded":
-      return "the reader of tables could not be loaded. Check the connection and open the file again.";
+      return `the reader of tables could not be loaded. Check the connection and open the file again ${WITH_ANOTHER_INDIVIDUALS}.`;
     case "sheetTooLarge":
       return `its first sheet, ${shown(error.sheet)}, has values as far as row ${grouped(error.lastRow)} and column ${error.lastColumn}, more than the ${grouped(error.max)} cells an individuals file can have; delete the values outside the table.`;
     case "empty":
@@ -2584,19 +2600,20 @@ function individualsBoxWords(
 }
 
 /** The end of a refusal of the reader in the box of the individuals file
-    of popgen2.html, which opens files by the zone of the box and sets the
-    options of a CSV under the Individuals tab: another separator
-    for the two refusals a wrong one most often causes; the file opened
-    again for one the browser could not read; after the words that say
-    what to do in Excel, "Then open it again."; none for the three whose
-    words say all; a corrected file for every other. */
+    of popgen2.html, which has no button once a file is open, read or
+    not: the file is opened by the button at the end of the Individuals
+    tab, `WITH_ANOTHER_INDIVIDUALS`, where the options of a CSV are too.
+    Another separator for the two refusals a wrong one most often causes;
+    the file opened again for one the browser could not read; after the
+    words that say what to do in Excel, "Then open it again"; none for
+    the three whose words say all; a corrected file for every other. */
 function boxRefusedEnd(error: IndividualsFileError): string {
   switch (error.kind) {
     case "raggedRow":
     case "unclosedQuote":
-      return "Choose another separator in the Individuals tab, or open a corrected file.";
+      return "Choose another separator in the Individuals tab, or open a corrected file with Open another individuals file… in the same tab.";
     case "unreadable":
-      return "Open it again.";
+      return `Open it again ${WITH_ANOTHER_INDIVIDUALS}.`;
     case "files":
     case "oldExcel":
     case "encrypted":
@@ -2604,7 +2621,7 @@ function boxRefusedEnd(error: IndividualsFileError): string {
     case "cellError":
     case "headerError":
     case "sheetTooLarge":
-      return "Then open it again.";
+      return `Then open it again ${WITH_ANOTHER_INDIVIDUALS}.`;
     case "variantsFile":
     case "tooLarge":
     case "readerNotLoaded":
@@ -2617,7 +2634,7 @@ function boxRefusedEnd(error: IndividualsFileError): string {
     case "notText":
     case "cutShort":
     case "notWorkbook":
-      return "Open a corrected file.";
+      return `Open a corrected file ${WITH_ANOTHER_INDIVIDUALS}.`;
   }
 }
 

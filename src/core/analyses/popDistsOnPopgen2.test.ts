@@ -436,9 +436,7 @@ describe("DT1 D1 the definition of the distances of popgen2.html", () => {
         "popgen2",
         true,
       ),
-    ).toBe(
-      "panel.nei has no variants. Open another variants file in the Variants tab.",
-    );
+    ).toBe("panel.nei has no variants. Open another file in the Variants tab.");
     // In the plural, and said once (the review of the Distances tab, 12
     // October 2026).
     expect(refusalText("something else went wrong.", p, "popgen2", true)).toBe(

@@ -4959,7 +4959,7 @@ for (const theme of ["light", "dark"] as const) {
         await pickOnNewPage(page, "no_variants.vcf");
         await expect(
           newPageCount(page).getByText(
-            "no_variants.vcf has no variants. Open another variants file.",
+            "no_variants.vcf has no variants. Open another file with Open another variants file… in the Variants tab.",
           ),
         ).toBeVisible();
         await save(page, `popgen2-no-variants${at}-${theme}`);

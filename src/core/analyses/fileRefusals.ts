@@ -44,9 +44,11 @@ export interface FileRefusalPlace {
       counted, nor their statistics calculated", "the PCA cannot be
       calculated". */
   readonly cannot: string;
-  /** Where the file is opened again, after "open it again" and "Open
-      another variants file": "" in the box Variants itself, " in the
-      box Variants" elsewhere. */
+  /** Where and how the file is opened again, after "open it again" and
+      "Open another file", with its leading space: " in the Variants tab"
+      in the tabs of the analyses, and in the box Variants, which has no
+      button once a file is open, the button at the end of that tab,
+      " with Open another variants file… in the Variants tab". */
   readonly where: string;
 }
 
@@ -74,7 +76,7 @@ export function fileRefusalText(
   if (message.startsWith(EMPTY_SOURCE)) {
     // The page reads every variant, whatever its FILTER column, so a
     // pass of none is a file of none.
-    return `${fileName} has no variants. Open another variants file${where}.`;
+    return `${fileName} has no variants. Open another file${where}.`;
   }
   if (
     message.startsWith(SOURCE_UNREADABLE) ||

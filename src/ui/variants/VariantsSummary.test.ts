@@ -290,7 +290,7 @@ describe("the one button of the box of the variants file", () => {
     expect(buttonsOf()).toEqual([]);
     const active = document.activeElement;
     expect(active?.textContent).toBe(
-      "Line 9 of panel.nei has a genotype of ploidy 1 among genotypes of ploidy 2, and the application reads one ploidy per file. Remove those variants or individuals from the file and open it again.",
+      "Line 9 of panel.nei has a genotype of ploidy 1 among genotypes of ploidy 2, and the application reads one ploidy per file. Remove those variants or individuals from the file and open it again with Open another variants file… in the Variants tab.",
     );
     expect(active?.getAttribute("tabindex")).toBe("-1");
   });

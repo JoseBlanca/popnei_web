@@ -3860,7 +3860,7 @@ describe("WS1 D3 the additions to project.ts", () => {
           }),
         ),
       ).toBe(
-        "popnei could not read panel.nei: the file has no header line. Open another file.",
+        "popnei could not read panel.nei: the file has no header line. Open another file with Open another variants file… in the Variants tab.",
       );
     });
 
@@ -3876,7 +3876,7 @@ describe("WS1 D3 the additions to project.ts", () => {
           }),
         ),
       ).toBe(
-        "popnei could not read panel.nei: the source is not a VCF: it starts with \u201cThis is a\u201d. Open another file.",
+        "popnei could not read panel.nei: the source is not a VCF: it starts with \u201cThis is a\u201d. Open another file with Open another variants file… in the Variants tab.",
       );
       expect(withoutBackquotes("`a` and `b`, and ` alone")).toBe(
         "\u201ca\u201d and \u201cb\u201d, and  alone",
@@ -3897,7 +3897,7 @@ describe("WS1 D3 the additions to project.ts", () => {
     test.each([
       [
         { kind: "workerFailed", message: "out of memory" },
-        "the calculation stopped unexpectedly. Open it again.",
+        "the calculation stopped unexpectedly. Open it again with Open another variants file… in the Variants tab.",
       ],
       [
         { kind: "couldNotStart", reason: "no ready message, twice" },
@@ -3937,7 +3937,7 @@ describe("WS1 D3 the additions to project.ts", () => {
           }),
         ),
       ).toBe(
-        "panel.nei could not be read; it may have changed on the disk since it was picked. Open it again.",
+        "panel.nei could not be read; it may have changed on the disk since it was picked. Open it again with Open another variants file… in the Variants tab.",
       );
     });
   });

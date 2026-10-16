@@ -1,11 +1,18 @@
 import { describe, expect, test } from "vitest";
 
-import { emptyProject, loadVariants } from "../../core/project.ts";
+import {
+  emptyProject,
+  loadVariants,
+  WITH_ANOTHER_INDIVIDUALS,
+  WITH_ANOTHER_VARIANTS,
+} from "../../core/project.ts";
 import type { Project, SourceError } from "../../core/project.ts";
 import { keyFromWire } from "../../core/keys.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import type { AnalysisStatus } from "../../core/store.ts";
 import type { JobResult, VcfReadOptions } from "../../worker/protocol.ts";
+import { PAGE_TAB_LABELS } from "./analysisTabsWords.ts";
+import { OPEN_ANOTHER_INDIVIDUALS_FILE } from "./individualsWords.ts";
 import {
   chromosomesLine,
   chromosomesLineOf,
@@ -28,6 +35,7 @@ import {
   OPENING_ZONE_NAME,
   FAILURES_NOT_COUNTED,
   failuresLineOf,
+  OPEN_ANOTHER_LABEL,
 } from "./words.ts";
 import { hasChainButton, startAgainMends } from "./chain.ts";
 
@@ -126,7 +134,7 @@ describe("the words of the page that opens a variants file", () => {
         ),
       ),
     ).toEqual({
-      text: "empty.vcf has no variants. Open another variants file.",
+      text: "empty.vcf has no variants. Open another file with Open another variants file… in the Variants tab.",
       remedy: null,
     });
     expect(
@@ -134,7 +142,7 @@ describe("the words of the page that opens a variants file", () => {
         refused("bad.vcf", "the source is not a VCF: it starts with `x`"),
       ),
     ).toEqual({
-      text: "popnei could not read bad.vcf: the source is not a VCF: it starts with \u201cx\u201d. Open another file.",
+      text: "popnei could not read bad.vcf: the source is not a VCF: it starts with \u201cx\u201d. Open another file with Open another variants file… in the Variants tab.",
       remedy: null,
     });
     expect(openFailure(PASSED)).toEqual({
@@ -146,7 +154,7 @@ describe("the words of the page that opens a variants file", () => {
   test("a gzipped VCF cut short before its ploidy is read, and a bgzipped one, have the words their count gives", () => {
     const cut = "the source could not be read: incomplete deflate stream";
     expect(openFailure(refused("panel.vcf.gz", cut))?.text).toBe(
-      "panel.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
+      "panel.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again with Open another variants file… in the Variants tab.",
     );
     expect(openFailure(refused("panel.vcf.gz", cut))?.text).toBe(
       refusalText(cut, EVERY),
@@ -179,7 +187,7 @@ describe("the words of the page that opens a variants file", () => {
         EVERY,
       ),
     ).toBe(
-      "popnei could not read panel.vcf.gz: line 3 of the VCF, the column of a: \u201cx\u201d is not an allele number, which is a run of digits. Correct the file, or fetch it again, and open it again.",
+      "popnei could not read panel.vcf.gz: line 3 of the VCF, the column of a: \u201cx\u201d is not an allele number, which is a run of digits. Correct the file, or fetch it again, and open it again with Open another variants file… in the Variants tab.",
     );
   });
 
@@ -220,7 +228,9 @@ describe("the refusals of the count", () => {
   test("a file of no variant read with every variant says to open another", () => {
     expect(
       refusalText("the pass gave no variant and its source holds none", EVERY),
-    ).toBe("panel.vcf.gz has no variants. Open another variants file.");
+    ).toBe(
+      "panel.vcf.gz has no variants. Open another file with Open another variants file… in the Variants tab.",
+    );
   });
 
   test("a gzipped file cut short says it could not be read to its end, and to fetch it again", () => {
@@ -230,7 +240,7 @@ describe("the refusals of the count", () => {
         PASSED,
       ),
     ).toBe(
-      "panel.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
+      "panel.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again with Open another variants file… in the Variants tab.",
     );
   });
 
@@ -241,7 +251,7 @@ describe("the refusals of the count", () => {
         PASSED,
       ),
     ).toBe(
-      "A variant of chromosome chr2 in panel.vcf.gz is at position 0, where the VCF format puts a telomere and not a variant, so the variants cannot be counted, nor their statistics calculated. Remove that line from the file and open it again.",
+      "A variant of chromosome chr2 in panel.vcf.gz is at position 0, where the VCF format puts a telomere and not a variant, so the variants cannot be counted, nor their statistics calculated. Remove that line from the file and open it again with Open another variants file… in the Variants tab.",
     );
   });
 
@@ -252,7 +262,7 @@ describe("the refusals of the count", () => {
         PASSED,
       ),
     ).toBe(
-      "A variant of chromosome 1 in panel.vcf.gz is at a position beyond 2,147,483,647, the largest the VCF format allows, so the variants cannot be counted, nor their statistics calculated. Correct the position in the file and open it again.",
+      "A variant of chromosome 1 in panel.vcf.gz is at a position beyond 2,147,483,647, the largest the VCF format allows, so the variants cannot be counted, nor their statistics calculated. Correct the position in the file and open it again with Open another variants file… in the Variants tab.",
     );
   });
 
@@ -269,7 +279,7 @@ describe("the refusals of the count", () => {
     const damaged =
       "the batch 1 of the vars file could not be read, so the file is damaged and has to be fetched or copied again: Ipc error: Expected compressed length of 480000 got 479861";
     expect(refusalText(damaged, nei)).toBe(
-      "panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
+      "panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again with Open another variants file… in the Variants tab.",
     );
   });
 
@@ -279,13 +289,13 @@ describe("the refusals of the count", () => {
     const haploid =
       "line 9 of the VCF, the column of s000: its genotype is of the ploidy 1 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies";
     expect(refusalText(haploid, EVERY)).toBe(
-      "Line 9 of panel.vcf.gz has a genotype of ploidy 1 among genotypes of ploidy 2, and the application reads one ploidy per file. Remove those variants or individuals from the file and open it again.",
+      "Line 9 of panel.vcf.gz has a genotype of ploidy 1 among genotypes of ploidy 2, and the application reads one ploidy per file. Remove those variants or individuals from the file and open it again with Open another variants file… in the Variants tab.",
     );
   });
 
   test("any other refusal says popnei could not read the file, with popnei's words", () => {
     expect(refusalText("out of memory", EVERY)).toBe(
-      "popnei could not read panel.vcf.gz: out of memory. Open the file again, or another file.",
+      "popnei could not read panel.vcf.gz: out of memory. Open the file again with Open another variants file… in the Variants tab, or another file.",
     );
   });
 
@@ -296,7 +306,7 @@ describe("the refusals of the count", () => {
         PASSED,
       ),
     ).toBe(
-      "popnei could not read panel.vcf.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position. Correct the file, or fetch it again, and open it again.",
+      "popnei could not read panel.vcf.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position. Correct the file, or fetch it again, and open it again with Open another variants file… in the Variants tab.",
     );
   });
 
@@ -563,5 +573,16 @@ describe("NU8 R1 the line of the variants, in the box, and of the chromosomes, a
     const locked: AnalysisStatus<JobResult> = { kind: "locked", reason: "x" };
     expect(variantsLineOf(locked, false)).toBe("Variants: not counted");
     expect(chromosomesLineOf(locked, false)).toBe("Chromosomes: not counted");
+  });
+});
+
+describe("the button the words of a failure name once a file is open", () => {
+  test("the words of the boxes name the buttons and the tabs by their labels on the page", () => {
+    expect(WITH_ANOTHER_VARIANTS).toBe(
+      `with ${OPEN_ANOTHER_LABEL} in the ${PAGE_TAB_LABELS.variants} tab`,
+    );
+    expect(WITH_ANOTHER_INDIVIDUALS).toBe(
+      `with ${OPEN_ANOTHER_INDIVIDUALS_FILE} in the ${PAGE_TAB_LABELS.individuals} tab`,
+    );
   });
 });

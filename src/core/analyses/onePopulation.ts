@@ -18,6 +18,7 @@ import {
   grouped,
   popgen2OnePopulationCause,
   shown,
+  WITH_ANOTHER_INDIVIDUALS,
 } from "../project.ts";
 import type { OnePopulationCause, Project } from "../project.ts";
 import { defect } from "./words.ts";
@@ -118,7 +119,7 @@ function onePopulationWhy(
   const fileName = escaped(p.individuals?.name ?? "");
   switch (cause.kind) {
     case "refused":
-      return `${fileName} could not be read, as the box Individuals says; open it again, or another file, in the Individuals tab to get populations.`;
+      return `${fileName} could not be read, as the box Individuals says; open it again, or another file, ${WITH_ANOTHER_INDIVIDUALS} to get populations.`;
     case "noSuchColumn":
       return `${fileName} has no column ${shown(cause.column)}; choose a column of the populations in the box Individuals.`;
     case "tooMany":

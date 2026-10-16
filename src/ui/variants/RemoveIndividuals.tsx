@@ -6,8 +6,9 @@
  * the populations runs (docs/specs/steps/popgen2-input.md, "While the
  * diversity runs"), and the history starts afresh at its press ("What it
  * sends and reads"). The two buttons go with the file, and the row that
- * holds them gives the focus to "Open individuals file…" of the box,
- * which comes back (PageTabs.tsx).
+ * holds them, when it had the focus, gives it to "Open individuals
+ * file…", which the box Individuals holds again once no individuals file
+ * is open, and holds only then (PageTabs.tsx).
  */
 import { usePopgen2Store } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";

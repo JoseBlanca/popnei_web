@@ -333,7 +333,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
         }),
       ),
     ).toBe(
-      "panel_pops.csv has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again.",
+      "panel_pops.csv has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again with Open another individuals file… in the Individuals tab.",
     );
   });
 
@@ -350,7 +350,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
         }),
       ),
     ).toBe(
-      "panel_pops.csv has no column to choose as the column of the populations besides the names of the individuals. Add a column of the populations to it and open it again.",
+      "panel_pops.csv has no column to choose as the column of the populations besides the names of the individuals. Add a column of the populations to it and open it again with Open another individuals file… in the Individuals tab.",
     );
   });
 
@@ -910,7 +910,7 @@ describe("IN5 D1 what the status region says of a read of the individuals file",
     const words = individualsReadAnnouncement(p, keptOf(p));
     expect(words).toBe(individualsBoxNeeds(p));
     expect(words).toMatch(
-      /^panel_pops\.csv could not be read: .*\. Choose another separator in the Individuals tab, or open a corrected file\.$/u,
+      /^panel_pops\.csv could not be read: .*\. Choose another separator in the Individuals tab, or open a corrected file with Open another individuals file… in the same tab\.$/u,
     );
   });
 });
