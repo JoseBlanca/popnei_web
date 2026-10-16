@@ -630,13 +630,19 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     await download.evaluate((element) => {
       element.scrollIntoView({ block: "end" });
     });
-    const scrolled = await page.evaluate(() => window.scrollY);
-    expect(scrolled).toBeGreaterThan(0);
     await download.click();
     const dialog = page.getByRole("dialog", {
       name: "Download filtered variants",
     });
     await expect(dialog).toBeVisible();
+    // Where the page stands with the dialog open, read after the click:
+    // the click of Playwright scrolls a button not whole in the window
+    // until it is, and in WebKit the end of the button stood at 600.125
+    // of the window's 600 px after scrollIntoView, on the fractions of a
+    // pixel of the heights of the plots at 1280 px (16 October 2026), so
+    // the click moved the page 1 px before the error was thrown.
+    const scrolled = await page.evaluate(() => window.scrollY);
+    expect(scrolled).toBeGreaterThan(0);
 
     await page.evaluate(() => {
       setTimeout(() => {
