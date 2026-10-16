@@ -433,3 +433,21 @@ test("FB2 two files dropped on the zone at the end of the Individuals tab have t
     )
     .toHaveLength(1);
 });
+
+test("FB3 a variants file popnei could not read: the Variants tab holds its line and, one gap under it, the zone and its button, with no empty room between", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openPage(page);
+  await pickFile(page, "variants", join(FIXTURES, "bad.vcf"));
+  const line = filePanel(page, "variants").getByText(
+    "bad.vcf could not be read; the box Variants says why.",
+    { exact: true },
+  );
+  await expect(line).toBeVisible({ timeout: 20_000 });
+  const lineBox = await boxOf(line);
+  const button = await boxOf(anotherOpenButton(page, "variants"));
+  // The gap of the tab, 1.5rem, and the zone's border and padding, 1 px
+  // and 1rem: 41 px at the browser's 16 px.
+  expect(button.y - (lineBox.y + lineBox.height)).toBeLessThanOrEqual(42);
+});

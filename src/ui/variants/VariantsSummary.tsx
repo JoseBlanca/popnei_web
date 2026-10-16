@@ -1,6 +1,6 @@
 /**
- * The lines of the variants file on popgen2.html, in its box above the
- * zone that opens one (docs/specs/steps/popgen2-input.md, "The box of
+ * The lines of the variants file on popgen2.html, in its box, above the
+ * zone that opens one before a file is open (docs/specs/steps/popgen2-input.md, "The box of
  * the variants file"; docs/plans/open-variants.md, "Two widgets" and "Round 3"; the owner's
  * layouts and decisions of 6 and 11 October 2026). It says what matters
  * most of the file open, line by line: its name, its individuals, its
@@ -19,8 +19,9 @@
  * of the pass running with the page's one Stop, or Start again.
  *
  * The box keeps its height through the read and the count, a value not
- * known yet said in its place, so that the open button under it does not
- * move from under the pointer as a read or a count ends. Only a problem
+ * known yet said in its place, so that the row of tabs under the boxes
+ * does not jump as a read or a count ends; the button that opens another
+ * file is at the end of the Variants tab since 16 October 2026. Only a problem
  * adds to it, after the lines: a file popnei could not read, in place of
  * all the lines but the first; a count refused; a file refused by its
  * name, or several files at once, after the lines of the file still open,

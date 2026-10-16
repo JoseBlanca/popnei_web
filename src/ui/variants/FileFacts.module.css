@@ -28,3 +28,10 @@
   gap: var(--space-6);
   min-inline-size: 0;
 }
+
+/* Empty for a file popnei could not read, whose facts and statistics
+   draw nothing: it takes no row, which put a second gap of the tab,
+   24 pixels, between the tab's line and its zone. */
+.withFacts:empty {
+  display: none;
+}
