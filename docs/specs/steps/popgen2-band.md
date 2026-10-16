@@ -1037,8 +1037,8 @@ pass held by `e2e/holdWorker.ts`:
 - after the band's Stop, the focus on the heading "Popnei";
 - a button of the page with its top at 47 px of the window, under the
   band's 51, pressed with the mouse at 53 px: it does what it says, the
-  file chooser of "Open another variants file…" opens, and the page
-  does not scroll;
+  menu "Download…" of the first plot of the Variants tab opens, and the
+  page does not scroll;
 - the one pass about to start, its start held: "Statistics of panel.nei" with
   Stop, which keeps it from starting;
 - with the download's dialog open and an error thrown: the band's alert
