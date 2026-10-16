@@ -132,6 +132,31 @@ async function plotsDrawn(page: Page): Promise<string[]> {
     .evaluateAll((plots) => plots.map((plot) => plot.outerHTML));
 }
 
+/** The drawing of the six plots once it no longer changes from one frame
+    to the next two. A plot is drawn first at the height of its element
+    rounded to whole pixels and again, in a later frame, at the height the
+    ResizeObserver gives, with its fraction: 209 and then 209.375 px at
+    1280 px, where the plots are 335 px wide on the panel of the look of
+    16 October 2026; WebKit read them between the two draws. */
+async function plotsSettled(page: Page): Promise<string[]> {
+  let last = await plotsDrawn(page);
+  await expect
+    .poll(async () => {
+      await page.evaluate(
+        () =>
+          new Promise((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(resolve));
+          }),
+      );
+      const now = await plotsDrawn(page);
+      const same = now.join("") === last.join("");
+      last = now;
+      return same;
+    })
+    .toBe(true);
+  return last;
+}
+
 async function expectNoViolations(
   makeAxeBuilder: () => { analyze(): Promise<{ violations: unknown[] }> },
 ): Promise<void> {
@@ -205,7 +230,7 @@ test("SF7 D2 a click gives no notice, changes no plot and sends nothing to the w
   await expect(
     info(page).getByText("FILTER failures: 300", { exact: true }),
   ).toBeVisible();
-  const plots = await plotsDrawn(page);
+  const plots = await plotsSettled(page);
   const before = await sent(page);
   expect(before).toBeGreaterThan(0);
 
