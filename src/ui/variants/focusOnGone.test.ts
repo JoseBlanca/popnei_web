@@ -26,14 +26,26 @@ interface HarnessProps {
   readonly back: boolean;
   /** Words of the part's button, which change with no leaving. */
   readonly words: string;
+  /** Whether a field that takes the focus by itself, `autoFocus`, is on
+      the page; absent, it is not. */
+  readonly autoFocused?: boolean;
 }
+
+/** The refs the harness was given, one per drawing. */
+const refs: React.RefCallback<HTMLElement>[] = [];
 
 /** A heading, the part that may leave with its button, and a button that
     may come back, which takes the focus when it is there. */
-function Harness({ part, back, words }: HarnessProps): React.JSX.Element {
+function Harness({
+  part,
+  back,
+  words,
+  autoFocused = false,
+}: HarnessProps): React.JSX.Element {
   const partRef = useFocusOnGone(
     () => document.getElementById("back") ?? document.getElementById("heading"),
   );
+  refs.push(partRef);
   return createElement(
     "main",
     null,
@@ -46,6 +58,12 @@ function Harness({ part, back, words }: HarnessProps): React.JSX.Element {
         createElement("button", { id: "inPart" }, words),
       ),
     createElement("button", { id: "other" }, "Other"),
+    autoFocused &&
+      createElement("input", {
+        id: "auto",
+        autoFocus: true,
+        "aria-label": "Name",
+      }),
   );
 }
 
@@ -54,6 +72,7 @@ let root: Root;
 
 beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  refs.length = 0;
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -116,5 +135,31 @@ describe("useFocusOnGone, in StrictMode", () => {
     byId("other").focus();
     await draw({ part: true, back: false, words: "Open file…" });
     expect(document.activeElement).toBe(byId("other"));
+  });
+
+  test("the part leaving with the focus on no element moves no focus", async () => {
+    await draw({ part: true, back: false, words: "Open file…" });
+    expect(document.activeElement).toBe(document.body);
+    await draw({ part: false, back: false, words: "Open file…" });
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  test("the part leaving with the focus as a field that takes it by itself comes, in the same change, leaves the focus on that field", async () => {
+    await draw({ part: true, back: false, words: "Open file…" });
+    byId("inPart").focus();
+    await draw({
+      part: false,
+      back: false,
+      words: "Open file…",
+      autoFocused: true,
+    });
+    expect(document.activeElement).toBe(byId("auto"));
+  });
+
+  test("the ref is the same function at every drawing, so that React detaches it only when the part leaves", async () => {
+    await draw({ part: true, back: false, words: "Open file…" });
+    await draw({ part: true, back: false, words: "Open another file…" });
+    expect(refs.length).toBeGreaterThan(1);
+    for (const ref of refs) expect(ref).toBe(refs[0]);
   });
 });
