@@ -120,6 +120,17 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
   ["--color-border", "--color-box", 3],
   ["--color-border", "--color-panel", 3],
   ["--color-focus", "--color-panel", 3],
+  // The buttons of the band and of the zone that opens a file, with their
+  // borders, the focus ring on every ground of the look, and the error in
+  // the band: 3.29:1 and 3.74:1 for the border in the light theme, 3.96:1
+  // and 4.74:1 in the dark, the lowest of the pairs added here (16
+  // October 2026).
+  ["--color-border", "--color-band", 3],
+  ["--color-border", "--color-zone", 3],
+  ["--color-focus", "--color-box", 3],
+  ["--color-focus", "--color-band", 3],
+  ["--color-focus", "--color-zone", 3],
+  ["--color-danger", "--color-band", 3],
   // The text of a button filled with the accent.
   ["--color-on-accent", "--color-accent", 4.5],
   ["--color-border", "--color-background", 3],
