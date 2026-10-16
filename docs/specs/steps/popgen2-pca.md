@@ -1008,7 +1008,8 @@ follows the counts before the thresholds.
 
 **A greyed tab** is drawn in the colour of a control that cannot be
 used, the tabs that open in the colour of the text, so that the two
-stand apart, 3.39:1 in the light theme and 3.26:1 in the dark; it never
+stand apart, 3.13:1 in the light theme and 3.03:1 in the dark in the
+look of 16 October 2026 (3.39:1 and 3.26:1 before it); it never
 has the weight of the words that marks the tab shown, nor its bar in the
 colour of the tab shown. Each label is as wide as it is in bold, so that
 the labels do not move when the tab shown changes. (Since 9 October

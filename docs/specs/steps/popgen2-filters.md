@@ -137,10 +137,13 @@ them and does not repeat them.
   an individual, lies above it. It is grey when it is off, at 1, and
   when it is on at a value that keeps every value of the plot. The grey
   is the bluish grey of the token `--chart-threshold-keeps-all` of
-  `src/ui/tokens.css`, a grey with some of the blue of the bars, #54758c
-  in the light theme and #6387a1 in the dark, as the piece
-  `popnei-0.2.2` drew it on 8 October 2026; the line is dotted and the
-  handle hollow, an outline over the background, where a threshold that
+  `src/ui/tokens.css`, a grey with some of the blue of the bars, #4f6f86
+  in the light theme and #6387a1 in the dark, 4.72:1 and 4.68:1 on the
+  page's background, where the box of its number stands; the piece
+  `popnei-0.2.2` drew it on 8 October 2026, and the look of 16 October
+  2026 darkened the light one from #54758c to keep its 4.5:1 on the
+  page's new blue-grey (`docs/specs/charts/histogram.md`). The line is
+  dotted and the handle hollow, an outline over the panel, where a threshold that
   removes something has a red dashed line and a filled handle, so that
   the two differ by their shape for a reader who does not tell the
   colours apart. It is not the grey of a control that cannot be used:

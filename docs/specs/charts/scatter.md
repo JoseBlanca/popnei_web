@@ -736,7 +736,7 @@ the export draws into it (below).
 .chart-hover          { fill: none; stroke: var(--color-text); stroke-width: 2px; }
 .chart-overlay        { fill: none; pointer-events: all; }
 .chart-tooltip        { position: absolute; … }   /* takes the pointer, 1.4.13 */
-.chart-legend-background { fill: var(--color-background); fill-opacity: 0.85; stroke: none; }
+.chart-legend-background { fill: var(--color-panel); fill-opacity: 0.85; stroke: none; }
 ```
 
 The colours of the groups are the same in both themes (`css.md`, "Light
@@ -795,7 +795,9 @@ screen draws it:
   row of 16 pixels per entry, its text ending before its mark and its
   mark at the right edge of the frame, so that it needs no measure of
   the text (`histogram.md`, "The SVG it builds"), with the title first;
-- behind the rows, a rectangle of the background of the plot at an
+- behind the rows, a rectangle of the background of the plot, the colour
+  of the panel on which the plots of popgen2.html stand since the look of
+  16 October 2026, `--color-panel`, and not of the page, at an
   opacity of 0.85, `rect.chart-legend-background`, so that the points
   under the legend do not cross its text, as the background of the
   screen's legend keeps them from it; its width is reckoned from the

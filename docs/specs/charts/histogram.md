@@ -393,9 +393,11 @@ panel, where the red one is filled.
 The bars need a colour that the tokens do not have yet, `--chart-bar`,
 since the seven colours of Okabe and Ito name populations and a bar is
 none. Meanwhile #0072b2, the blue of Okabe and Ito, in the light theme,
-5.19:1 on the background #ffffff, and #56b4e9, their sky blue, in the
-dark theme, 7.71:1 on #16181b; each is above the 3:1 that the marks of a
-plot need (WCAG 2.2, 1.4.11), so a filled bar is told from an outlined
+5.19:1 on the panel #ffffff, and #56b4e9, their sky blue, in the dark
+theme, 7.03:1 on the panel #19212c, the panel of the tab on which the
+plots of popgen2.html stand since the look of 16 October 2026 (7.71:1 on
+the dark background #16181b before it); each is above the 3:1 that the
+marks of a plot need (WCAG 2.2, 1.4.11), so a filled bar is told from an outlined
 one in both themes, and the outline in `--chart-axis` carries the edge of
 both. The threshold line on a filled bar would be 1.26:1 in the light
 theme, red on blue; it always has the background on its right, since a
