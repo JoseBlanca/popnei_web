@@ -3,8 +3,9 @@
 The screen spec of the page that opens the files of `popgen2.html` once
 it takes a second file, the individuals file: two boxes at the top, the
 variants file's and the individuals file's, each ending with the button
-that opens its file, and under them two tabs, "Variants" and
-"Individuals". It develops the design
+that opens its file while none is open, and under them two tabs,
+"Variants" and "Individuals", each ending with the button that opens
+another once one is. It develops the design
 `docs/designs/input-page.md`, approved by the owner on 9 October 2026
 with its five answers, and section 4 of `docs/functionality.md`, "The
 files of the individuals". Written on 9 October 2026, and built on the
@@ -67,6 +68,20 @@ line of the unclassified under it, and "Remove panel_pops.csv", with
 its lock while an analysis that reads the populations runs, move to the
 top of the Individuals tab (below, "The box of the individuals file",
 "The Individuals tab").
+
+Revised again on 16 October 2026 for the owner's second request of that
+day, `docs/plans/file-buttons.md`, built on the branch `file-buttons`:
+each box holds the button that opens its file only while no file of its
+kind is open, at its bottom, so that the two buttons of the boxes side by
+side stand at the same height. Once a file is open, read or refused, its
+box takes no dropped file, and the button that opens another is at the
+end of its tab: "Open another variants file…" under "Download filtered
+variants…" in the Variants tab, and "Open another individuals file…" at
+the end of the Individuals tab, with "Remove panel_pops.csv" beside it,
+moved there from the top of the tab. The words of a failure in a box
+then name that button and its tab (below, "The box of the variants
+file", "The box of the individuals file", "The Variants tab", "The
+Individuals tab", "Its words", "Accessibility").
 
 The two tabs were called "Variants file" and "Individuals file" until 9
 October 2026, when the row of five tabs of `popgen2-pca.md` renamed them
@@ -132,9 +147,19 @@ moved under the tab and otherwise unchanged; their terms are used here.
   the light worker answers, and its `found` is how a text file was read,
   its encoding, separator and decimal mark (`docs/specs/core/project.md`,
   `IndividualsRead`).
-- **A zone** is the widget that opens a file, `FileZone.tsx`: a box that
-  takes a dropped or pasted file, with its button that opens the
-  browser's file picker inside it.
+- **A zone** is the widget that opens a file, `FileZone.tsx`: a frame of
+  dashes that takes a dropped or pasted file, with its button that opens
+  the browser's file picker inside it. A paste goes to a hidden button of
+  the zone, named "Paste a variants file" or "Paste an individuals file",
+  which the Tab key reaches before the zone's button. The page holds one
+  zone for each kind of file at a time: in the box of that file while no
+  file of its kind is open, and at the end of its tab once one is, read
+  or refused (since 16 October 2026). **A file not opened** is one the
+  zone turned away before any read: a folder, a piece of text, several
+  files at once, a variants file whose name is not of a VCF or a `.nei`
+  file, or an individuals file given while the diversity runs (below,
+  "While the diversity runs"). A file opened and then refused by its
+  reader is not one of them: it is the file open, and its box says why.
 - **A boundary of errors** is a part of the page that, when its code
   throws, shows its name and an error in its place and leaves the rest
   of the page working (`ErrorBoundary`); the box of the variants file
@@ -154,15 +179,16 @@ moved under the tab and otherwise unchanged; their terms are used here.
 ## What changes for the user
 
 - An individuals file can be opened, a CSV, a TSV or an xlsx, by its
-  button, by a drop on its box, or by a paste with the focus in its box,
-  before or after the variants file, and removed.
+  button, by a drop on its zone, or by a paste with the focus in its
+  zone, before or after the variants file, and removed.
 - The box of the individuals file shows the column of the populations,
   chosen by the page and changed by the user, and one line that counts
   the individuals the filters keep, classified and unclassified; the
   Individuals tab shows how many the filters keep in each population.
 - What the page showed under the box of the variants file is now under
   the Variants tab. The button that opens a variants file moves
-  from the end of the page into its box.
+  from the end of the page into its box, and, since 16 October 2026, to
+  the end of the Variants tab once a file is open.
 - The Individuals tab shows how the file was read and its table.
 - An individual of the variants file that the individuals file does not
   have is unclassified, not an error.
@@ -175,11 +201,14 @@ From the top: the heading "Popnei", from 10 October 2026 at the left of
 the band at the top of the window (`docs/specs/steps/popgen2-band.md`);
 the two boxes, the variants file's
 first; the row of the two tabs, "Variants" and "Individuals";
-the part of the tab shown. From a width of 720 px the two boxes stand
-side by side, each half the width; below it, one above the other, each
-the width of the page less its 16 px margins, at 320 px included. The
-Variants tab is shown when the page opens, and the page never
-changes the tab by itself.
+the part of the tab shown, which for the tab of a file open ends with
+the zone that opens another. From a width of 720 px the two boxes stand
+side by side, each half the width, and stretch to the same height, the
+height of the taller; below it, one above the other, each the width of
+the page less its 16 px margins, at 320 px included, each as tall as
+what it holds. The Variants tab is shown when the page opens, and the
+page never changes the tab by itself, so a user who opens a file by a
+box's button is left on the tab they were on.
 
 ### The box of the variants file
 
@@ -194,22 +223,38 @@ pass runs; the bar of the one pass with its Stop and Start again; and
 what went wrong, with the words of a file not opened. The size of the
 file, its chromosomes and its ploidy, in the box until 11 October 2026,
 are at the top of the Variants tab (below, "The Variants tab"), as the
-owner asked that day. It ends with the zone that opens a variants file,
-`OpenVariants.tsx`: its button,
-"Open variants file…" before a file and "Open another variants file…"
-after, and the drop and the paste it takes. Before a file is open
-the box holds the zone alone, under its heading "Variants". Both
-zones, the variants file's and the individuals file's, stay outside the
-boundary of errors that is made anew for each file (the `ErrorBoundary`
-keyed by the load id in `VariantsPage.tsx`): a zone inside it would be
-drawn anew at each opening, and the button the user pressed, which then
-holds the focus, would be replaced by another, leaving the focus on
-nothing. The zone of the variants file has a boundary of its own, whose
-heading is "Opening a variants file", made anew at each turn of the
-tabs: a throw in the zone takes away the one way to open a file, and a
-turn of the tab gives it back without a reload, as a turn of the step
-does on `popgen.html`. The focus is then on the tab, so no button that
-holds it is replaced.
+owner asked that day.
+
+**Before a file is open** the box holds, under its heading "Variants",
+the zone that opens a variants file, `OpenVariants.tsx`, with its button
+"Open variants file…", at the bottom of the box: the box is a column
+whose last part takes the room left above it, so that from 720 px, the
+two boxes being of one height, "Open variants file…" and "Open
+individuals file…" stand at the same height whatever the lines above
+them. The words of a file not opened stand above the zone. An opening by
+the button puts the focus on the box's heading (below, "Accessibility").
+
+**Once a file is open**, read or refused, since 16 October 2026, the box
+holds no zone and takes no dropped file: a file dropped on its heading
+or its lines is stopped as one dropped anywhere outside a zone, and
+nothing is opened (`docs/specs/entry.md`, "A file dropped outside a
+zone"), as the owner decided that day, so that a file is dropped where
+its button is. The pointer shows, as the file is dragged over the box,
+that nothing can be dropped there, and nothing is said. The button that opens another, "Open another variants
+file…", is at the end of the Variants tab (below), and the box's words
+that ask for another file name it and its tab, "Open another file with
+Open another variants file… in the Variants tab." (below, "Its words").
+The words of a file not opened by the zone of the tab are shown in the
+box too, after its lines.
+
+The lines of the file are in a boundary of errors made anew for each
+file (the `ErrorBoundary` keyed by the load id in `VariantsPage.tsx`),
+whose heading is "File information". The zone before a file has a
+boundary of its own, whose heading is "Opening a variants file", made
+anew at each turn of the tabs: a throw in the zone takes away the one
+way to open a file, and a turn of the tab gives it back without a
+reload, as a turn of the step does on `popgen.html`. The focus is then
+on the tab, so no button that holds it is replaced.
 
 ### The box of the individuals file
 
@@ -224,16 +269,28 @@ Its heading is "Individuals" ("Individuals file" until 11 October
 | refused, or the read failed | its name, and the words of the refusal, below, "Its words" |
 | read | its name, the list "Column of the populations", and the summary line or the warning that stands in its place, below |
 
-It ends with the zone that opens an individuals file, a `FileZone`, as
-the variants file's: "Open individuals file…" with no file, "Open
-another individuals file…" with one, taking a dropped or a pasted file.
-The button "Remove panel_pops.csv", in the box until 16 October 2026,
-is the first control of the Individuals tab (below). The zone takes any
-file: table_io says what each is from its bytes, so the page turns no
-file away by its name. A drop or a paste of a folder, of a piece of text
-or of several files says, in the box, "Open an individuals file, a CSV,
-a TSV or an xlsx, not a folder.", "…, not a piece of text.", "Open one
+With no individuals file the box ends with the zone that opens one, a
+`FileZone`, as the variants file's: "Open individuals file…", at the
+bottom of the box, at the height of "Open variants file…" while that one
+is shown beside it; an opening by it puts the focus on the box's heading.
+Once a file is open, read or refused, the box holds no zone and takes no
+dropped file, as the box Variants (above), and "Open another individuals
+file…" is at the end of the Individuals tab, with "Remove
+panel_pops.csv" beside it (below, "The Individuals tab"); Remove was the
+first control of that tab on 16 October 2026, and in the box before. The
+two zones are one opening, so they take the same files, say the same
+words of a file not opened, and wait together while the diversity runs.
+The zone takes any file: table_io says what each is from its bytes, so
+the page turns no file away by its name. A drop or a paste of a folder,
+of a piece of text or of several files says, in the box, and under the
+zone of the tab when a file is open, "Open an individuals file, a CSV, a
+TSV or an xlsx, not a folder.", "…, not a piece of text.", "Open one
 individuals file at a time.", as the zone of the variants file does.
+
+The lines of the file are in a boundary of errors made anew for each
+file, whose heading is "What the individuals file holds", and the zone
+before a file in one of its own, "Opening an individuals file", made
+anew at each turn of the tabs, as the box Variants has them.
 
 **The list "Column of the populations"** is a select. Its first item is
 "None: every individual unclassified", then every column of the file
@@ -264,8 +321,8 @@ populations to choose. If its columns are separated by another
 character, choose that separator in the Individuals tab.", and for an
 xlsx, "panel_pops.xlsx has no column to choose as the column of the
 populations besides the names of the individuals. Add a column of the
-populations to it and open it again.", both when the table has the
-names alone; with more columns, all of true or false, "panel_pops.csv has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again." (since 9 October
+populations to it and open it again with Open another individuals file… in the Individuals tab.", both when the table has the
+names alone; with more columns, all of true or false, "panel_pops.csv has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again with Open another individuals file… in the Individuals tab." (since 9 October
 2026: "Choose it in the list" sent the user to a list that offers only
 "None").
 
@@ -350,15 +407,34 @@ warning does not depend on the variants file or the filters.
 ### The Variants tab
 
 What `popgen2-filters.md` and `popgen2-download.md` give under the box,
-unchanged, but for "Open another variants file…", now in the box: the
+unchanged, but for "Open another variants file…": the
 part "Filters of the variants", its four histograms and the FILTER box;
 the part "Filters of the individuals", its two histograms and the download of their table; the
-download of the filtered variants. With no variants file: "No variants
-file open. Open one in the box Variants." With a variants file popnei
+download of the filtered variants, "Download filtered variants…". With no variants file: "No variants
+file open. Open one in the box Variants.", and nothing else. With a variants file popnei
 could not read, which has no statistics, the one line "panel.nei could
 not be read; the box Variants says why.", as the Individuals tab says of
 an individuals file refused (since 11 October 2026; the tab was empty
 under its label until then).
+
+**The end of the tab.** With a file open, read or refused, the tab ends
+with the zone that opens another variants file, its button "Open another
+variants file…": under "Download filtered variants…" for a file read,
+and under the line of a file popnei could not read, with no empty room
+between them. It was in the box Variants until 16 October 2026 (above,
+"The box of the variants file"). It is outside the boundary of errors
+made anew for each file, so that after an opening by it the button is
+the same element and keeps the focus; and in a boundary of its own, the
+heading "Opening a variants file", made anew at each turn of the tabs,
+as the zone of the box. The words of a file it did not open stand under
+it, close to its button, as well as in the box, and are said once by
+the status region. The zone is at the end of the page, often at the
+bottom of the window, and the words lengthen the page under it, so they
+are brought into the window at each refusal, by the least scroll that
+shows them whole, with a margin under them, the same words refused twice
+in a row included, since the user may have scrolled away between them:
+before 16 October 2026 they stood only in the box, at page y 217, with
+the button at y 1725, at 1280 by 900 px in Chromium.
 
 **The size, the chromosomes and the ploidy** of the file open, which the
 box of the variants file showed until 11 October 2026, stand at the top
@@ -386,20 +462,38 @@ the statistics leaves the lines.
 | the individuals file | what the tab shows |
 |---|---|
 | none | "No individuals file open." |
-| being read | "Remove panel_pops.csv", then "Reading panel_pops.csv." |
-| refused, read as text | "Remove panel_pops.csv", then the options of the reader, below, and nothing else; the box holds the words |
-| refused as an xlsx, or before table_io read it: too large, not readable by the browser, the reader not downloaded, the worker stopped | "Remove panel_pops.csv", then "panel_pops.xlsx could not be read; the box Individuals says why." |
+| being read | "Reading panel_pops.csv." |
+| refused, read as text | the options of the reader, below, and the line "panel_pops.csv could not be read; the box Individuals says why."; the box holds the words |
+| refused as an xlsx, or before table_io read it: too large, not readable by the browser, the reader not downloaded, the worker stopped | "panel_pops.xlsx could not be read; the box Individuals says why." |
 | read | the parts below, in this order |
 
-With no individuals file the tab holds its words alone: the summary line
-of the box counts the individuals, all unclassified, and a table of one
-row would say no more.
+With a file in any state, what the table gives is followed by the end of
+the tab, below. With no individuals file the tab holds its words alone:
+the summary line of the box counts the individuals, all unclassified,
+and a table of one row would say no more; the zone that opens a file is
+then in the box.
 
-**Remove.** The first control of the tab, with a file in any state, is
-the button "Remove panel_pops.csv", in the box until 16 October 2026,
-when the owner moved it here with the detail of the file. Remove puts the
-focus on the zone's button in the box, "Open individuals file…" (below,
-"Accessibility").
+**The end of the tab.** With a file in any state, the tab ends with the
+zone that opens another individuals file, its button "Open another
+individuals file…", and beside it, outside the zone's frame, the button
+"Remove panel_pops.csv": the two actions on the file, together at the
+bottom, as the owner asked on 16 October 2026. Remove was the first
+control of the tab from the morning of that day, and in the box before.
+The zone is as wide as its button, so the two buttons stand side by
+side, the zone first, while they fit, as at 1280 px, and Remove under
+the zone on a narrow window, as at 320 px. The words of a file the zone
+did not open stand under the two, close to them, as well as in the box,
+said once by the status region and brought into the window as those of
+the Variants tab are (above). The zone, Remove and those words are each
+in a boundary of errors of their own, made anew at each turn of the
+tabs, the zone's with the heading "Opening an individuals file" and the
+two others with none, so that a throw in one leaves the others; and all
+three are outside the boundary made anew for each individuals file, so
+that after an opening by "Open another individuals file…" the button is
+the same element and keeps the focus. Remove takes the file away, and
+the two buttons go with it; the focus, when it was on either, goes to
+the box's "Open individuals file…", which comes back in the same change
+(below, "Accessibility").
 
 **The individuals per population.** With a variants file read and a
 column chosen whose values are 20 or fewer, the heading "Individuals per
@@ -482,14 +576,14 @@ from its name.
 What the tab shows is in a boundary of errors made anew for each
 individuals file opened, as the statistics of the variants file are for
 each variants file: a throw there leaves its heading alone in the tab,
-"How the individuals file was read and what it holds", and the boxes,
-the other tab and the row of the tabs working; the next file opened
-draws the tab again. Inside it, the individuals per population and the
-table of the file each have a boundary of their own: a throw in one
-leaves its heading alone in its place, "Individuals per population,
-after the filters of individuals" or "The table of panel_pops.csv", and
-Remove and the rest of the tab working, so that the user can still
-remove the file.
+"How the individuals file was read and what it holds", with the end of
+the tab under it, and the boxes, the other tab and the row of the tabs
+working, so that the user can still open another file or remove this
+one; the next file opened draws the tab again. Inside it, the
+individuals per population and the table of the file each have a
+boundary of their own: a throw in one leaves its heading alone in its
+place, "Individuals per population, after the filters of individuals"
+or "The table of panel_pops.csv", and the rest of the tab working.
 
 **The individuals not in the file.** When individuals of the variants
 file are not in the individuals file: the heading "Individuals in
@@ -550,9 +644,11 @@ greyed, so that no change leaves the running diversity behind
 runs"; the design's choice 2 (a)):
 
 - in the box Individuals: the list "Column of the populations", whose
-  popover does not open; and the zone that opens another individuals
-  file, whose button opens no picker and which takes no drop and no
-  paste;
+  popover does not open;
+- the zone that opens an individuals file, whose button opens no picker
+  and which takes no drop and no paste: in the box with no individuals
+  file, and at the end of the Individuals tab with one (since 16 October
+  2026; in the box with a file too until then);
 - in the Individuals tab: "Remove panel_pops.csv", in the box until 16
   October 2026, which moved with its lock; and the lists "Encoding",
   "Separator" and "Decimal mark" of a text file.
@@ -566,9 +662,10 @@ calculate it again.", also while the PCA is live, since the PCA does
 not read the populations (`popgen2-populations.md`, "While the
 diversity runs", corrected on 11 October 2026). A file dropped or
 pasted on the greyed zone opens nothing, nor does a file picked in a
-picker the button opened before the diversity started; the box shows,
-where it shows the words of a folder dropped, what happened to the file
-and what works, "other.csv was not opened: the populations cannot
+picker the button opened before the diversity started. What happened
+to the file and what works are shown where the words of a folder dropped
+are, in the box and, with a file open, under the zone of the Individuals
+tab too: "other.csv was not opened: the populations cannot
 change while the diversity runs. Stop the diversity in the Populations
 tab, then open other.csv again.", and the status region says them
 once. A folder or a piece of text dropped or pasted on the greyed zone
@@ -699,13 +796,14 @@ the project's (`docs/architecture.md`, section 7).
 | where | the words |
 |---|---|
 | the heading of each box | "Variants"; "Individuals" ("Variants file" and "Individuals file" until 11 October 2026) |
-| the buttons of the zones | "Open variants file…", "Open another variants file…"; "Open individuals file…", "Open another individuals file…" |
-| the button of removal, first in the Individuals tab | "Remove panel_pops.csv" |
+| the buttons of the zones | in the boxes, with no file of their kind, "Open variants file…"; "Open individuals file…"; at the end of the Variants and the Individuals tabs, with one, "Open another variants file…"; "Open another individuals file…" |
+| the hidden buttons of the zones that take a paste, for a screen reader | "Paste a variants file"; "Paste an individuals file" |
+| the button of removal, at the end of the Individuals tab beside "Open another individuals file…" | "Remove panel_pops.csv" |
 | the summary line of the box | "180 individuals classified in 3 populations, 20 unclassified"; "200 individuals classified in 3 populations"; "200 individuals, all unclassified"; "1 individual classified in 1 population"; "No individual is kept by the filters of individuals"; while the counts wait, "…" in place of each number, read "not counted yet" |
 | the heading of the counts, in the Individuals tab | "Individuals per population, after the filters of individuals" |
 | the row of the tabs, for a screen reader | "Files and analyses" |
-| the heading drawn in place of the zone of the variants file when its code throws, under the box's "Variants" | "Opening a variants file" |
-| the headings drawn in place of the lines of the individuals file and of its zone when their code throws, under the box's "Individuals" | "What the individuals file holds"; "Opening an individuals file" |
+| the heading drawn in place of the zone of the variants file when its code throws, in the box or at the end of the Variants tab | "Opening a variants file" |
+| the headings drawn in place of the lines of the individuals file and of its zone when their code throws, in the box, and for the zone at the end of the Individuals tab too | "What the individuals file holds"; "Opening an individuals file" |
 | the heading drawn in place of what the Individuals tab shows when its code throws | "How the individuals file was read and what it holds" |
 | the headings drawn in place of the counts and of the table of the file when their code throws | "Individuals per population, after the filters of individuals"; "The table of panel_pops.csv" |
 | the tabs | "Variants"; "Individuals" |
@@ -717,20 +815,22 @@ the project's (`docs/architecture.md`, section 7).
 | the line of the rows not used, in the Individuals tab | "Individuals in panel_pops.csv but not in panel.nei: 18" |
 | the top of the Variants tab | "File size: 261 KB"; "Chromosomes: 1"; "Ploidy: 2"; their name for a screen reader, and the heading drawn in their place when their code throws, "About the file" |
 | the Variants tab of a file that could not be opened | "panel.nei could not be read; the box Variants says why." |
-| the refusals, in the box | "panel_pops.csv could not be read: " and the words of the reader spec after the colon (`docs/specs/worker/individuals.md`, "The refusals and their words"), ending as below |
-| the end of `raggedRow` and `unclosedQuote` | "Choose another separator in the Individuals tab, or open a corrected file." |
-| the end of `variantsFile` | "it is a variants file; open it with Open variants file in the box Variants." in place of the reader's words after the colon |
+| the words of a failure of the variants file, in the box | those of `variantsOpenNeeds` of `src/core/project.ts` and `failedText` of `src/ui/variants/words.ts`, whose endings that ask for a file name the button and its tab since 16 October 2026, `WITH_ANOTHER_VARIANTS` of `src/core/project.ts`: "panel.nei has no variants. Open another file with Open another variants file… in the Variants tab."; "panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again with Open another variants file… in the Variants tab."; "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again with Open another variants file… in the Variants tab."; the words of a reload unchanged, "Reload the page and open panel.nei again." |
+| the refusals, in the box | "panel_pops.csv could not be read: " and the words of the reader spec after the colon (`docs/specs/worker/individuals.md`, "The refusals and their words"), ending as below. The box of a file refused holds no button, and the page never changes the tab shown, so since 16 October 2026 each ending that asks for a file names the button and its tab, "with Open another individuals file… in the Individuals tab" (`WITH_ANOTHER_INDIVIDUALS` of `src/core/project.ts`, which a test ties to the labels of the button and the tab); the words of a reload do not, since no file is open after it and the box holds its button again |
+| the end of `raggedRow` and `unclosedQuote` | "Choose another separator in the Individuals tab, or open a corrected file with Open another individuals file… in the same tab." |
+| the end of `variantsFile` | in place of the reader's words after the colon, with no variants file open, "it is a variants file; open it with Open variants file… in the box Variants."; with one open, read or refused, "it is a variants file; open it with Open another variants file… in the Variants tab." |
 | the end of `tooLarge` | "check that it is the individuals file and not the variants file." |
 | `sheetTooLarge` after the colon | "its first sheet, Hoja1, has values as far as row 1,048,576 and column XFD, more than the 20,000,000 cells an individuals file can have; delete the values outside the table.", the reader's words with the name of the file of this page |
-| `readerNotLoaded` | "panel_pops.csv could not be read: the reader of tables could not be loaded. Check the connection and open the file again." |
-| the end of `unreadable` | "Open it again." |
-| the end of `files`, `oldExcel`, `encrypted`, `emptySheet`, `cellError`, `headerError`, `sheetTooLarge`, whose words say what to do in Excel | "Then open it again." |
+| `readerNotLoaded` | "panel_pops.csv could not be read: the reader of tables could not be loaded. Check the connection and open the file again with Open another individuals file… in the Individuals tab." |
+| the end of `unreadable` | "Open it again with Open another individuals file… in the Individuals tab." |
+| the end of `files`, `oldExcel`, `encrypted`, `emptySheet`, `cellError`, `headerError`, `sheetTooLarge`, whose words say what to do in Excel | "Then open it again with Open another individuals file… in the Individuals tab." |
 | a worker that could not start, or a page of another build than its workers | "panel_pops.csv could not be read: the page could not start the part that reads files. Reload the page and open the file again." |
-| the end of every other refusal of a file | "Open a corrected file." |
-| a read that failed in the worker, a crash | "panel_pops.csv could not be read: the page stopped while it read it. Open the file again." |
+| the end of every other refusal of a file | "Open a corrected file with Open another individuals file… in the Individuals tab." |
+| a read that failed in the worker, a crash | "panel_pops.csv could not be read: the page stopped while it read it. Open the file again with Open another individuals file… in the Individuals tab." |
 | the line over the table of the file, and while a sort is drawn | "200 rows, 2 columns"; "200 rows, 2 columns. Sorting…" |
 | the status region, a file read | "panel_pops.csv read: 200 rows, the populations from popcat."; with no column chosen, "panel_pops.csv read: 200 rows, no column chosen for the populations."; with rows not used, at the end, "18 individuals in panel_pops.csv are not in panel.nei, as the Individuals tab says." |
 | the status region, a file refused | the words of the box |
+| the box, and under the zone of the tab when a file is open, a file not opened | the words of a folder, a piece of text or several files, above; for a variants file of another name, "other.txt was not opened: a variants file is a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a .nei file. If it is one of them, rename it." |
 | the box, and the status region, a file dropped, pasted or picked while the diversity runs | "other.csv was not opened: the populations cannot change while the diversity runs. Stop the diversity in the Populations tab, then open other.csv again."; a folder, a piece of text, or several files, the words they get when the zone does not wait (12 October 2026) |
 | the status region, the names copied | the old step's, "4 names copied." |
 
@@ -747,25 +847,52 @@ filters of the individuals.
 
 The criteria are those of WCAG 2.2 at level AA.
 
-**The order of the Tab key** (2.4.3, "Focus order"): in the box of the
-variants file, Stop or Start again, then its zone; in the box of the
-individuals file, the list, then its zone;
-the row of the tabs, one stop, whose left and right arrow keys move
-between the two labels and show each as they reach it, and Home and End
-go to the first and the last; then the controls of the tab shown, in the
-order of `popgen2-filters.md` for the Variants tab, and for the
-Individuals tab Remove, the three selects, the copy button, and the table, one stop, a grid
-whose arrow keys move from cell to cell and whose headers sort with
-Enter. Each zone is two stops, the zone itself, which takes a paste and
-is named "Paste a variants file" or "Paste an individuals file", then
-its button. The hidden tab is never reached.
+**The order of the Tab key** (2.4.3, "Focus order"). Each zone is two
+stops: its hidden button that takes a paste, "Paste a variants file" or
+"Paste an individuals file", then its button; there is one zone of each
+kind of file on the page at a time, and so one of each hidden button. In
+the box of the variants file, its zone while no file is open; once a
+file is open, no stop, but Stop or Start again while the box shows one
+of them; in the box of
+the individuals file, its zone while no file is open, and the list
+"Column of the populations" once a file is read; the row of the tabs,
+one stop, whose left and right arrow keys move between the labels and
+show each as they reach it, and Home and End go to the first and the
+last; then the controls of the tab shown. For the Variants tab, those of
+`popgen2-filters.md`, ending with "Download filtered variants…", and
+then, with a file open, its zone, "Open another variants file…" last.
+For the Individuals tab, the three selects of a text file, the copy
+button, the table, one stop, a grid whose arrow keys move from cell to
+cell and whose headers sort with Enter, and its menu "Download…"; then,
+with a file in any state, the zone, "Open another individuals file…",
+and Remove last. The hidden tab is never reached. Before 16 October
+2026 the zones were in the boxes in every state, and Remove was the
+first stop of the Individuals tab.
 
-**Where the focus goes.** An opening by the button leaves the focus on
-the button, which becomes "Open another …". Remove, in the Individuals
-tab, puts the focus on the zone's button in the box, "Open individuals
-file…", since Remove goes with the file and the tab then holds no
-control. A turn of
-the tab moves no focus but React Aria's on the labels.
+**Where the focus goes** (2.4.3). A part of the page that holds the
+focus and leaves it hands it on, so that the next press of the Tab key
+goes on from where the user was and not from the top of the page
+(`useFocusOnGone` of `src/ui/variants/focusOnGone.ts`):
+
+- An opening by the button of a box, "Open variants file…" or "Open
+  individuals file…", takes the zone away with the file it opens; the
+  focus goes to the box's heading, "Variants" or "Individuals", which
+  takes it but is not a stop of the Tab key (`tabIndex` -1). The tab
+  shown does not change.
+- An opening by "Open another variants file…" or "Open another
+  individuals file…", at the end of a tab, leaves the focus on that
+  button, which stays the same element, since it is outside the parts
+  drawn anew for each file.
+- Remove, at the end of the Individuals tab, takes away the file and,
+  with it, the two buttons at the end of the tab; when the focus was on
+  either, it goes to "Open individuals file…" of the box, which comes
+  back in the same change.
+- When the lines of a variants file go with the focus in them, on Stop
+  or Start again, as another file opens, the focus goes to the box's
+  heading; when the statistics of the Variants tab go with it, to the
+  button that opens a variants file then shown.
+
+A turn of the tab moves no focus but React Aria's on the labels.
 
 **What is said without moving the focus** (4.1.3, "Status messages").
 The end of a read of the individuals file, its words above, once, said
@@ -780,8 +907,10 @@ individual … is …" for one, since that line, in the box until 11
 October 2026, now stands in a tab the user may not be looking at; not
 after the warning of no individual in the file, which says as much; a
 refusal, its words, once; the words of a zone given a folder, a piece of
-text or several files, as the zone of the variants file says them; the
-names copied. A change of the counts after
+text or several files, as the zone of the variants file says them,
+once, though a file not opened by the zone of a tab has its words both
+in the box and under that zone, since the focus stays on the button and
+a screen reader would not read either by itself; the names copied. A change of the counts after
 a change of a threshold or of the column is not said: the user acted on
 the threshold or the list, which says what changed, and a sentence at
 each count would fill the region while a threshold is moved.
@@ -916,17 +1045,57 @@ core and of the entry in their module specs.
 - 320 px wide: no sideways scroll of the page, the boxes one above the
   other, the two labels of the tabs visible;
 - axe on each state of the box and of the tab, in light and in dark;
-- from 11 October 2026, the diversity held running: the list and the
-  zone of the box, Remove and the three lists of the reader in the tab
-  greyed, each with
+- from 11 October 2026, the diversity held running: the list of the
+  box, and, since 16 October 2026, the zone at the end of the tab with
+  its hidden paste button, Remove and the three lists of the reader in
+  the tab greyed, each with
   `aria-disabled="true"`, reached by the Tab key, its reason as its
   tooltip and description; the list's popover does not open; a file
-  dropped and one pasted on the zone open nothing and show the reason;
+  dropped and one pasted on the zone open nothing and show the reason,
+  in the box and under the zone;
   the button opens no picker; the PCA held running instead: none of
   them greyed (`popgen2-populations.md`, "How it is checked");
-- from 16 October 2026, Remove reached by the Tab key in the tab, with
-  the focus on the zone's button of the box after it; greyed while the
-  diversity is held running, its reason read as its description.
+- from 16 October 2026, Remove reached by the Tab key at the end of the
+  tab, with the focus on "Open individuals file…" of the box after it;
+  greyed while the diversity is held running, its reason read as its
+  description;
+- from 16 October 2026, the buttons of the files,
+  `e2e/popgen2FileButtons.spec.ts`, whose flows are named FB1 to FB3
+  as their titles start: FB1, before a file, each box ending
+  with its button, the two buttons at the same height and the two boxes
+  of the same height at 1280 px, the words of a folder dropped on the
+  box Variants above its button; with both files open, the boxes of the
+  same height with no zone and no button that opens a file in them; at
+  1280 and 320 px, the Variants tab ending with "Open another variants
+  file…" under "Download filtered variants…", and the Individuals tab
+  with "Open another individuals file…" and Remove side by side at 1280
+  px and one under the other at 320 px, with no sideways scroll; a file
+  dropped on the zone of each tab opens it; the focus on the box's
+  heading after an opening by the button of either box, on "Open
+  individuals file…" of the box after Remove pressed by the keyboard,
+  and kept on "Open another variants file…" after an opening by it; axe
+  light and dark. FB2, a file not opened by the zone of a tab, a
+  file named `.csv` picked with "Open another variants file…", the page
+  scrolled to its end, and two individuals files dropped at once, the
+  zone's bottom at the window's bottom: its words under the zone, brought into
+  the window near the button from below it, in the box too, and said
+  once by the one status region, again after a wait and after axe. FB3,
+  a variants file popnei could not read: the line of the Variants tab,
+  then, one gap under it, the zone and its button, with no empty room
+  between;
+- from 16 October 2026, the drops stopped, `e2e/strayDrops.spec.ts`,
+  EN30: on popgen2.html a file dropped on the page's heading and on the
+  heading of the box Individuals with no file is stopped and the page
+  stays, and one dropped on the zone of the box Variants opens; with
+  both files open, a file dropped on the heading or the lines of either
+  box is stopped, nothing is opened and the page stays, and one dropped
+  on the zone at the end of the Variants tab opens;
+- from 16 October 2026, a tab greyed while it is shown,
+  `e2e/popgen2Tabs.spec.ts`, with Distances, greyed by "None" in the
+  list of the column, in place of the PCA tab, which another variants
+  file can no longer grey while it is shown (`popgen2-pca.md`, "The row
+  of tabs"); and the flows that open a second file while another tab is
+  shown drop it on the zone of its tab.
 
 The flows of the old page's Individuals step are run again, since its
 reader changed.
@@ -938,7 +1107,11 @@ values; the Individuals tab with a CSV and with an xlsx; from 11 October
 `popgen2-individuals-box-locked`; from 16 October 2026 the box and the
 tab with no individuals file, with some individuals unclassified, with
 all classified, with the warning of too many values, while the counts
-wait, and with Remove greyed; light and dark; 1280 and 320 px.
+wait, and with Remove greyed; light and dark; 1280 and 320 px. Seen
+by the session on 16 October 2026 in Chromium, at 1280 and 320 px,
+light and dark: the empty page, both files open, the end of each tab,
+and a variants file and an individuals file not opened with a file
+open; not seen in WebKit or Firefox.
 
 **By hand**, in the plan: the memory of the light worker and of the page
 after reading a CSV of 20 MB of short cells, in Chromium and WebKit,
@@ -953,15 +1126,35 @@ headers of the counts; the words "File size:" at the top of the Variants
 tab, and its three values in columns; "…" for a count that waits; the
 status region silent at a change of the counts; the tab shown first and
 never changed by the page; the order of the parts of the Individuals tab; the zone of the individuals file taking any file,
-with no check of its name; Remove putting the focus on the zone. On 16
+with no check of its name; Remove putting the focus on "Open
+individuals file…" of the box. On 16
 October 2026: the words of the summary line; the populations it counts,
 those with an individual kept; the line of why the counts wait drawn
 under the table of the tab as well as in the box; the tab with no
 individuals file holding its words alone, with no table of one row.
+Later that day, with the buttons moved to the tabs
+(`docs/plans/file-buttons.md`): the zone at the end of a tab, kept so
+that a file can be dropped where the user decides to change it, in place
+of a plain button; "Open another individuals file…" first and Remove
+after it, outside the zone's frame; the focus on the box's heading after
+an opening by a box's button; the words of a file not opened by a tab's
+zone shown under that zone as well as in the box, and brought into the
+window; the words of a failure in a box naming the button and its tab.
+That the box of a file open takes no drop is the owner's decision of
+that day, not a choice of the session.
+
+Left as they are on 16 October 2026: with both files open, a defect in
+the row of tabs leaves no button that opens a file until a reload, which
+the error bar asks for; the boxes could show their zones again while the
+row is down, which would change what the owner decided the box of a file
+open holds. The lines of the tabs "… could not be read; the box
+Variants says why." and "…; the box Individuals says why." send the
+user to the box, whose words then name the button at the end of the
+same tab.
 
 ## Left for the running application
 
-The spacing of the boxes and their heights side by side, the look of the bar of the tab shown, the width of
+The spacing of the boxes, the look of the bar of the tab shown, the width of
 the columns of the counts, the place of the line of no column under the
 list.
 

@@ -1029,13 +1029,19 @@ would otherwise leave the user without the reason (since 9 October
 2026, by the review of the first work package of the plan). The next arrow key moves the focus on,
 and shows the tab it reaches if that one is not greyed.
 
-**A tab that becomes greyed while it is shown**, the PCA tab while
-another variants file is opened, stays shown, greyed, with its bar kept
+**A tab that becomes greyed while it is shown**, the Distances tab
+when "None" is chosen in the list "Column of the populations" of the
+box Individuals, stays shown, greyed, with its bar kept
 in the greyed colour and its words not in bold, so that the user can
 tell which tab they are on; and its content is its reason, in the words
 of its tooltip, in place of the options, which stay drawn, hidden, with
 what the user left in them. When the tab is no longer greyed, its
-content comes back as it was.
+content comes back as it was. Until 16 October 2026 the PCA tab was the
+example, greyed while another variants file was opened by the button of
+the box Variants; since then that button is at the end of the Variants
+tab (`popgen2-input.md`, "The Variants tab"), so the PCA tab is not
+shown while another variants file opens, and the flows of a tab greyed
+while shown use Distances.
 
 **At 320 px** the five labels wrap to two lines in the Mac's system
 font, as the row's style lets them, and to three in a wider font, as
@@ -1285,7 +1291,7 @@ its place when they come and go. The lock is the first of these:
 | the PCA, of a file of more than 9,381 individuals, which the opening already tells | the old panel's, "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." |
 | the one pass is running, or is about to start | "Run once panel.nei is read to the end: the reading under way in the box Variants and the PCA cannot run at once." |
 | the one pass was stopped by the user, or failed in a way its box offers Start again for | "Run once panel.nei is read to the end: Start again its reading in the box Variants." |
-| the one pass refused by popnei, or the file could no longer be read, where the box offers no Start again (`startAgainMends` of `src/ui/variants/chain.ts`) | "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again there, or open another." |
+| the one pass refused by popnei, or the file could no longer be read, where the box offers no Start again (`startAgainMends` of `src/ui/variants/chain.ts`) | "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again, or another, in the Variants tab." |
 | more than 9,381 individuals kept, the PCoA | the old panel's, with "Keep at most 9,381 with the filters of individuals in the Variants tab" |
 | the filters of the individuals keep none | the store's, ending "Loosen them." |
 | the LD pruning on with no distance | "Type the LD distance in Parameters, or turn the LD pruning off."; the reason in full stands under the field of the distance ("Its filters"); "Type the LD distance above, …" until 16 October 2026, when the options went into the section "Parameters" |
@@ -1608,12 +1614,12 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | Distances, no individuals file | "The distances between populations need at least two populations. Open an individuals file that assigns the individuals to them." |
 | Distances, the individuals file being read | "The distances between populations need at least two populations: panel_pops.csv is being read." |
 | Distances, the individuals file refused or failed | "The distances between populations need at least two populations: panel_pops.csv could not be read; the box Individuals says why and what to do." |
-| Distances, no column to choose but the names of the individuals | "The distances between populations need at least two populations, and panel_pops.csv was read as a single column, the names of the individuals. If its columns are separated by another character, choose that separator in the Individuals tab."; for an xlsx, "…, and panel_pops.xlsx has no column to choose besides the names of the individuals. Add a column of the populations to it and open it again in the box Individuals."; read with more columns than the names, all of true or false, "The distances between populations need at least two populations, and panel_pops.csv has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again in the box Individuals." |
+| Distances, no column to choose but the names of the individuals | "The distances between populations need at least two populations, and panel_pops.csv was read as a single column, the names of the individuals. If its columns are separated by another character, choose that separator in the Individuals tab."; for an xlsx, "…, and panel_pops.xlsx has no column to choose besides the names of the individuals. Add a column of the populations to it and open it again with Open another individuals file… in the Individuals tab."; read with more columns than the names, all of true or false, "The distances between populations need at least two populations, and panel_pops.csv has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again with Open another individuals file… in the Individuals tab." |
 | Distances, a column of more values than a column of populations can have | "The distances between populations need at least two populations, and country has 35 values, more than the 20 a column of populations can have. Choose another column in the box Individuals." |
-| Distances, no column, or a column of fewer than two populations among the individuals of the variants file | "The distances between populations need at least two populations, and popcat gives 1 population among the individuals of panel.nei. Choose another column of the populations in the box Individuals, or add the populations to panel_pops.csv and open it again."; with no column, "…, and no column of the populations is chosen. Choose one in the box Individuals." |
+| Distances, no column, or a column of fewer than two populations among the individuals of the variants file | "The distances between populations need at least two populations, and popcat gives 1 population among the individuals of panel.nei. Choose another column of the populations in the box Individuals, or add the populations to panel_pops.csv and open it again with Open another individuals file… in the Individuals tab."; with no column, "…, and no column of the populations is chosen. Choose one in the box Individuals." |
 | Distances, the filters leave fewer than two | "The distances between populations need at least two populations, and the filters keep individuals of 1 population. Loosen the filters of the individuals in the Variants tab."; with none, "…, and the filters keep no individual of any population. …" |
 | Distances, no individual of the variants file in the individuals file | "The distances between populations need at least two populations, and no individual of panel.nei is in panel_pops.csv. Check that panel_pops.csv names the individuals as panel.nei does." |
-| Distances, the individuals in the file, but none with a value in the column | "The distances between populations need at least two populations, and no individual of panel.nei has a value in popcat. Choose another column of the populations in the box Individuals, or add the populations to panel_pops.csv and open it again." |
+| Distances, the individuals in the file, but none with a value in the column | "The distances between populations need at least two populations, and no individual of panel.nei has a value in popcat. Choose another column of the populations in the box Individuals, or add the populations to panel_pops.csv and open it again with Open another individuals file… in the Individuals tab." |
 | the heading of the tab | "PCA"; "PCoA" |
 | the drop-down list of the method, its items and the line under it | "PCA of the genotypes"; "PCoA of the Kosman distances"; "The PCoA suits data with many missing genotypes." |
 | the filters | "Filters of the variants for the PCA"; "PCA filters can be stricter than the general analysis ones."; "Maximum proportion of missing genotypes for the PCA"; "Maximum major allele frequency for the PCA"; "Prune the variants by linkage disequilibrium (LD)" |
@@ -1626,9 +1632,9 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | under the field of the distance, once the user emptied it | "The LD pruning of the PCA needs the distance within which variants are compared. Type a distance in base pairs, 100,000 to start with, or turn the LD pruning off."; "PCoA" under the PCoA |
 | beside Run, while the distance is empty | "Type the LD distance in Parameters, or turn the LD pruning off." |
 | the section of the options | "Parameters" |
-| an error, a refusal of the variants file itself, which the one pass would have met first | the words of the box Variants (`src/core/analyses/fileRefusals.ts`), with "in the box Variants" after "open it again" and "Open another variants file", and "so the PCA cannot be calculated" where the box says the variants cannot be counted: "panel.nei has no variants. Open another variants file in the box Variants."; "panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again in the box Variants.", for a gzipped file cut short or a damaged batch of a `.nei` file; a variant at position 0, a position beyond 2,147,483,647, a genotype of another ploidy, and a line of the VCF popnei cannot read, each ending "and open it again in the box Variants." |
-| an error, the statistics of each individual refused | "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the PCA was not run.", or "… so the PCA cannot run." when its own Run did not wait for them, followed by the row above with "so the statistics of each individual cannot be calculated", or, for another refusal, "popnei could not read panel.nei: ‹popnei's words›. Open the file again in the box Variants, or another file." |
-| an error, a failure that is not popnei's refusal, in this page's words where the old panel's name the Variants step or a project to save (`popgen2FailureText` of `src/ui/analyses/words.ts`; since 9 October 2026, by task 6.1 of the plan, from the review of work package 2, which found the old words on this page) | the variants file changed on the disk since the one pass read it, a failure and not a refusal, "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants."; an error of the application's own, "The application met an error of its own: ‹its words›. Run it again."; the calculations that could not start, "The application could not start its calculations. Reload the page and open panel.nei again."; the page out of date, "The page is out of date. Reload the page and open panel.nei again."; the worker that stopped, the PCA's own words of the memory, `crashText` of core with the page |
+| an error, a refusal of the variants file itself, which the one pass would have met first | the words of the box Variants (`src/core/analyses/fileRefusals.ts`), with "in the Variants tab" after "open it again" and "Open another file" where the box names the button too (since 16 October 2026; "in the box Variants" until then), and "so the PCA cannot be calculated" where the box says the variants cannot be counted: "panel.nei has no variants. Open another file in the Variants tab."; "panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again in the Variants tab.", for a gzipped file cut short or a damaged batch of a `.nei` file; a variant at position 0, a position beyond 2,147,483,647, a genotype of another ploidy, and a line of the VCF popnei cannot read, each ending "and open it again in the Variants tab." |
+| an error, the statistics of each individual refused | "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the PCA was not run.", or "… so the PCA cannot run." when its own Run did not wait for them, followed by the row above with "so the statistics of each individual cannot be calculated", or, for another refusal, "popnei could not read panel.nei: ‹popnei's words›. Open the file again in the Variants tab, or another file." |
+| an error, a failure that is not popnei's refusal, in this page's words where the old panel's name the Variants step or a project to save (`popgen2FailureText` of `src/ui/analyses/words.ts`; since 9 October 2026, by task 6.1 of the plan, from the review of work package 2, which found the old words on this page) | the variants file changed on the disk since the one pass read it, a failure and not a refusal, "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the Variants tab."; an error of the application's own, "The application met an error of its own: ‹its words›. Run it again."; the calculations that could not start, "The application could not start its calculations. Reload the page and open panel.nei again."; the page out of date, "The page is out of date. Reload the page and open panel.nei again."; the worker that stopped, the PCA's own words of the memory, `crashText` of core with the page |
 | the note of the colours, a column to colour by that the individuals file lacks | "panel_pops.csv has no column height, by which the points were coloured, so they are coloured by the column of the populations chosen in the box Individuals."; with no column of the populations chosen, or with None, "…, so every point is unclassified. Choose a column of the populations in the box Individuals, or another column to colour the points by."; with no individuals file, "No individuals file is open in the box Individuals, so the points cannot be coloured by height." |
 | the end of a run, in the status region | "PCA of panel.nei calculated."; "PCoA of panel.nei calculated."; a refusal or a failure, "The PCA of panel.nei could not be calculated: " followed by the words of its error |
 | the status region, the PCA held by a crash of another analysis | "The PCA did not start: it starts after the next change of the filters or of its options, or when Run is pressed in the PCA tab."; "The PCoA …" |
@@ -1671,12 +1677,13 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
   the same genotypes are drawn, 0.22.
 
 **The errors**, those of the old panel (`docs/specs/analyses/pca.md`,
-"Its words") with "the Variants tab" for "the Variants step", "the box
-Variants file" for "Load … in the Variants step", "the thresholds of the
+"Its words") with "the Variants tab" for "the Variants step", "open …
+again in the Variants tab" for "Load … in the Variants step" ("in the
+box Variants file" until 16 October 2026), "the thresholds of the
 individuals in the Variants tab" for "the filters of individuals in the
 Variants step", and the row of the LD order, which names the PCA or
 the PCoA by the method, ending "Sort the file, with bcftools sort for a
-VCF, and open it again in the box Variants, or turn the LD pruning
+VCF, and open it again in the Variants tab, or turn the LD pruning
 off.", the end of the lock of the LD pruning with no distance. The row
 of no variant left: "No variant of
 panel.nei is left after the filters of the PCA, so there is no variant
@@ -1910,9 +1917,13 @@ engines that start on the owner's Mac, on `panel.nei`,
   not greyed. A greyed tab reached by the arrow keys shows its tooltip,
   hides it with Escape, does not open by a click, Enter, Space or the
   arrows, and carries `aria-disabled="true"` and its reason as its
-  description; the tab shown keeps `aria-selected="true"`. The PCA tab
-  shown, then another variants file opened: the tab stays shown,
-  greyed, with the reason in its place. At 320 px, the five labels on
+  description; the tab shown keeps `aria-selected="true"`. The
+  Distances tab shown, then "None" chosen in the box Individuals: the
+  tab stays shown, greyed, with the reason in its place, and comes back
+  when a column is chosen; another variants file opened in the Variants
+  tab: the PCA tab greyed with its reason, a click on it refused, and
+  open again once the file is open (the PCA tab was the one shown
+  greyed until 16 October 2026). At 320 px, the five labels on
   two lines in the Mac's system font, three in DejaVu Sans, and no
   sideways scroll.
 - **The section "Parameters"**, in the PCA, Populations and Distances

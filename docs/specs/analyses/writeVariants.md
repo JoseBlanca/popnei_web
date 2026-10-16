@@ -682,7 +682,7 @@ counts nothing else; it computes no statistic.
   holds none" (node, popnei 0.2.2, 8 October 2026, a `.nei` file of no
   variant written from `panel.nei`), so the download waits for
   statistics that never come, and the box of the file says "panel.nei
-  has no variants. Open another variants file." The design's sentence
+  has no variants. Open another file with Open another variants file… in the Variants tab." The design's sentence
   for such a file is not reached.
 - **A file the browser cannot keep.** A `Blob` that the browser's storage
   could not take is made at once and fails only when it is read, in
@@ -885,7 +885,7 @@ project, which popgen2.html does not save.
 |---|---|
 | popnei refused the write, `refused` | "low_qual.filtered.vcf.gz could not be written: popnei stopped with "‹its message›". If the message speaks of memory, the file may be too large for this tab: leave out more variants or individuals with the filters, or write the file with popnei in Python, which writes files of any size. If it names a line of the VCF, correct the file, or fetch it again, and open it again." |
 | the worker stopped with no answer, or the `Blob` could not be read, `workerFailed` | "low_qual.filtered.vcf.gz could not be written: the writing stopped unexpectedly, perhaps because the file did not fit in the memory of this tab. Leave out more variants or individuals with the filters and download again, or write the file with popnei in Python, which writes files of any size." |
-| the browser can no longer read the variants file, `reopenFailed` | the words of the box of the file for it, `failedText` of `src/ui/variants/words.ts`: "low_qual.vcf.gz could not be read again; it may have changed on the disk since it was opened. Open it again." |
+| the browser can no longer read the variants file, `reopenFailed` | the words of the box of the file for it, `failedText` of `src/ui/variants/words.ts`: "low_qual.vcf.gz could not be read again; it may have changed on the disk since it was opened. Open it again with Open another variants file… in the Variants tab." |
 | `couldNotStart` | "The application could not start its calculations. Reload the page and open low_qual.vcf.gz again." |
 | `protocolMismatch` | "The page is out of date. Reload the page and open low_qual.vcf.gz again." |
 | a defect of our own code, `defect` | "The page met an error of its own while writing low_qual.filtered.vcf.gz: ‹message›. Download again." |

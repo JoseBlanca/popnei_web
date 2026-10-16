@@ -464,6 +464,17 @@ file. Until then the box held the table and Remove, and the page
 opened taller than the window before the user reached the tabs. Built
 on the branch `popgen2-tidy` and not yet tried by the owner.
 
+Later the same day the owner asked for the buttons that change a file
+open to stand in its tab: each box holds its button, "Open variants
+file…" or "Open individuals file…", only while no file of its kind is
+open; once one is, "Open another variants file…" is at the end of the
+Variants tab, under "Download filtered variants…", and "Open another
+individuals file…" at the end of the Individuals tab, with "Remove
+panel_pops.csv" beside it, no longer at the top. The box of a file open
+takes no dropped file; another file is dropped on the framed area
+around the button at the end of its tab. Built
+on the branch `file-buttons` and not yet tried by the owner.
+
 ### The format
 
 Most users make these files in Excel, whose default file is `.xlsx`, and

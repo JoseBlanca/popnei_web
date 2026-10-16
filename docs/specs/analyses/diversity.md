@@ -1924,8 +1924,9 @@ change nothing of the request, the key or the numbers.
 - **The words**, where the old ones name a place of `popgen.html`:
   "the Variants tab" for "the Variants step"; "panel_pops.csv", the name
   of the individuals file, for "the metadata file"; "in the box
-  Individuals" for "in the Individuals step"; "Open it again in the box
-  Variants" for "load it again in the Variants step"; "the thresholds
+  Individuals" for "in the Individuals step"; "open it again in the
+  Variants tab" for "load it again in the Variants step" ("in the box
+  Variants" until 16 October 2026); "the thresholds
   of the individuals" for "the filters of individuals"; and the
   failures that are not popnei's refusals in the words of
   `popgen2FailureText` of `src/ui/analyses/words.ts`, as the PCA tab has
@@ -1956,11 +1957,17 @@ change nothing of the request, the key or the numbers.
   an individuals file that assigns the individuals to populations in the
   box Individuals to count them."; of the one population with a file
   and "None", the same first sentence and "Choose a column of the
-  populations in the box Individuals to count them."; with a column
+  populations in the box Individuals to count them."; with a file that
+  could not be read, the same first sentence and "panel_pops.csv could
+  not be read, as the box Individuals says; open it again, or another
+  file, with Open another individuals file… in the Individuals tab to
+  count them." (since 16 October 2026, when it said "Open an
+  individuals file … in the box Individuals", where a file open has no
+  button); with a column
   that classifies nobody, the same first sentence and "popcat gives
   none of the individuals of panel.nei a population. Choose another
   column of the populations in the box Individuals, or fill in popcat
-  in panel_pops.csv and open it again, to count them."; of one classified population, with or without
+  in panel_pops.csv and open it again with Open another individuals file… in the Individuals tab, to count them."; of one classified population, with or without
   unclassified individuals left out, when the runner sends that one
   alone and asks for no private alleles, "Of the populations of popcat,
   only p0 has individuals kept, and an allele is private when one

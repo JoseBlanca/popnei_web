@@ -1031,14 +1031,14 @@ filters of individuals", which that page does not have.
     fewer individuals with the thresholds of the individuals in the
     Variants tab, and run it again; or calculate it with popnei in
     Python, outside the browser. If it stops again at a small distance,
-    open ld.nei again in the box Variants.";
+    open ld.nei again in the Variants tab.";
   - the other refusals of popnei, as the diversity's of that page: the
     refusals of the variants file itself in the words of the box
     Variants, `fileRefusalText`; the filters keeping no variant, "The
     thresholds of the Variants tab kept none of the variants of ld.nei,
     so there is no variant to calculate the LD decay over. Loosen
     them."; the others by `refusalWords` with "Change the settings, or
-    open the variants file again in the box Variants"; each ended by
+    open the variants file again in the Variants tab"; each ended by
     "The LD decay is then calculated again by itself.", since such a
     refusal leaves it live, while it is live: after Stop recalculating
     the sentence goes (the review of the LD decay, 12 October 2026);

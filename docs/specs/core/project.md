@@ -1144,29 +1144,38 @@ never find one of the other not yet made (above, "The populations").
   their ends, which are this page's: "panel_pops.csv could not be read: "
   and the words of the reader's spec after the colon, then
   "Choose another separator in the Individuals tab, or open a corrected
-  file." for `raggedRow` and `unclosedQuote` (the tab "Individuals
+  file with Open another individuals file… in the same tab." for
+  `raggedRow` and `unclosedQuote` (the tab "Individuals
   file" until 9 October 2026, when the row of five tabs of
   `docs/specs/steps/popgen2-pca.md` renamed it "Individuals"); for
-  `variantsFile`, "it is a variants file; open it with Open variants
-  file in the box Variants." ("…in the box Variants file." until 11
-  October 2026, when the box was renamed) in place of the reader's words; for
+  `variantsFile`, in place of the reader's words, "it is a variants
+  file; open it with Open variants file… in the box Variants." while no
+  variants file is open, and "it is a variants file; open it with Open
+  another variants file… in the Variants tab." while one is, read or
+  refused ("…in the box Variants file." until 11 October 2026, when the
+  box was renamed); for
   `tooLarge`, "it is 312.4 MB, more than the 20 MB an individuals file
   can have; check that it is the individuals file and not the variants
   file."; for `sheetTooLarge`, "its first sheet, Hoja1, has values as
   far as row 1,048,576 and column XFD, more than the 20,000,000 cells an
   individuals file can have; delete the values outside the table.", the
   reader's words with this page's name of the file; for `readerNotLoaded`, "the reader of tables could not be
-  loaded. Check the connection and open the file again."; for a failure of the worker, by the kind of its `RunError`:
+  loaded. Check the connection and open the file again with Open another individuals file… in the Individuals tab."; for a failure of the worker, by the kind of its `RunError`:
   a crash or a defect, "the page stopped while it read it. Open the file
-  again.", and a worker that could not start or a page of another build
+  again with Open another individuals file… in the Individuals tab.", and a worker that could not start or a page of another build
   than its workers, `couldNotStart` and `protocolMismatch`, "the page
   could not start the part that reads files. Reload the page and open
   the file again.", since the client answers every later read the same
-  way; for `unreadable`, the reader's words and "Open it again."; for
+  way; for `unreadable`, the reader's words and "Open it again with Open another individuals file… in the Individuals tab."; for
   `files`, `oldExcel`, `encrypted`, `emptySheet`, `cellError`,
   `headerError` and `sheetTooLarge`, whose words already say what to do
-  in Excel, the words and "Then open it again."; and "Open a corrected
-  file." after every other refusal. "Reading panel_pops.csv." while it is read. `null` with
+  in Excel, the words and "Then open it again with Open another individuals file… in the Individuals tab."; and "Open a
+  corrected file with Open another individuals file… in the Individuals tab." after every other refusal. Each ending
+  that asks for a file names the button and its tab, a constant of the
+  module, `WITH_ANOTHER_INDIVIDUALS`, since the box of a file open, read
+  or refused, has no button and the page never changes the tab shown
+  (since 16 October 2026, `docs/plans/file-buttons.md`); the words of a
+  reload do not, since no file is open after it. "Reading panel_pops.csv." while it is read. `null` with
   no file or a file read. A `notGiven` file cannot be on that page,
   which opens no project file, and is a defect there, thrown.
 

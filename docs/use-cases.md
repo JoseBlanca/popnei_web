@@ -192,9 +192,11 @@ and to write them up.
    `popgen2.html` the box of the individuals file says it in one line,
    "180 individuals classified in 3 populations, 20 unclassified", and
    the table of the individuals of each population is at the top of the
-   Individuals tab, with the button that removes the file, as the owner
-   decided on 16 October 2026; until then the table and the button
-   stood in the box.
+   Individuals tab, as the owner decided on 16 October 2026; until then
+   it stood in the box. The buttons that change the file, "Open another
+   individuals file…" and "Remove panel_pops.csv", stand together at the
+   end of that tab, as the owner decided later the same day; the box
+   holds a button only to open the first file.
 3. They compute the diversity of each population: the expected and the
    observed heterozygosity, the inbreeding coefficient, the proportion of
    polymorphic variants, the number of alleles and of private alleles,

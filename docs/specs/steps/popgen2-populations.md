@@ -246,7 +246,7 @@ individuals. No individual is assigned to a population, so the
 diversity is of every individual kept as one population." When the
 cause is the individuals file or its column, a second sentence says it
 and how to get populations: "panel_pops.csv could not be read, as the
-box Individuals says; open it again, or another file, there to get
+box Individuals says; open it again, or another file, with Open another individuals file… in the Individuals tab to get
 populations."; "country has 35 values, more than the 20 a column of
 populations can have; choose another column in the box Individuals to
 get populations."; "panel_pops.csv has no column popcat; choose a
@@ -328,7 +328,7 @@ disabled, or beside Stop recalculating while the diversity is live:
 |---|---|
 | the one pass is running, or about to start | "Run once panel.nei is read to the end: the reading under way in the box Variants and the diversity cannot run at once." |
 | the one pass stopped by the user, or failed in a way its box offers Start again for | "Run once panel.nei is read to the end: Start again its reading in the box Variants." |
-| the one pass refused by popnei, or the file no longer readable | "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again there, or open another." |
+| the one pass refused by popnei, or the file no longer readable | "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again, or another, in the Variants tab." |
 | the individuals file being read | "The diversity waits for panel_pops.csv to be read." |
 | the filters of the individuals keep no individual at all | the store's words of `keptNoneReason`, as the PCA tab gives them, "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them." |
 | the filters of the individuals keep no individual of any population | the old panel's words of `populationsKeptNeeds`, with "the Variants tab" |
@@ -353,9 +353,11 @@ choice 2 (a), approved by the owner on 11 October 2026:
   "Stop the diversity in the Populations tab to change the filters;
   then press Run there to calculate it again.";
 - the three options of the diversity, with the same words;
-- in the box Individuals, the list "Column of the populations", the
-  zone that opens another individuals file, by its button, a drop or a
-  paste, and "Remove panel_pops.csv"; and, in the Individuals tab, the
+- in the box Individuals, the list "Column of the populations"; the
+  zone that opens an individuals file, by its button, a drop or a
+  paste, in the box with no individuals file and at the end of the
+  Individuals tab with one; and, in the Individuals tab, "Remove
+  panel_pops.csv" and the
   three lists of how a text file is read, "Encoding", "Separator" and
   "Decimal mark": each with "Stop the diversity in the Populations tab
   to change the populations; then press Run there to calculate it
@@ -592,7 +594,7 @@ words of a PNG refused (`docs/architecture.md`, section 7).
 | the heading of the spectrum | "Site frequency spectrum" |
 | the line of the populations | the old panel's, with "the Variants tab"; "7 unclassified individuals kept are left out, as the Individuals tab says."; "1 population, Unclassified: 200 individuals. No individual is assigned to a population, so the diversity is of every individual kept as one population." |
 | the locks | the table of "Run and Stop" |
-| the line in the place of the bar | the table of "Run and Stop"; after a crash of the worker ended the PCA's live state, until the next change or a Run, "The diversity starts after the next change of the filters, of its options or of the populations, or when Run is pressed.", with Run beside Stop recalculating (`popgen2-pca.md`, "A failure that ends a live state", corrected on 11 October 2026); after a Stop, "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.", or with the result shown, or popnei's refusal (from 12 October 2026, the review of the LD decay), "… After the next change, Run calculates it and starts it again after each change."; after a failure that ended the live state, "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.", or, after a variants file the browser can no longer read, which offers no Run, "… since its calculation failed. Once the variants file is opened again in the box Variants, Run calculates it and starts it again after each change." (12 October 2026, the review of the LD decay); the end of a refusal's words, "The diversity is then calculated again by itself.", only while it is live |
+| the line in the place of the bar | the table of "Run and Stop"; after a crash of the worker ended the PCA's live state, until the next change or a Run, "The diversity starts after the next change of the filters, of its options or of the populations, or when Run is pressed.", with Run beside Stop recalculating (`popgen2-pca.md`, "A failure that ends a live state", corrected on 11 October 2026); after a Stop, "Stopped: the diversity no longer starts by itself after a change. Run calculates it and starts it again after each change.", or with the result shown, or popnei's refusal (from 12 October 2026, the review of the LD decay), "… After the next change, Run calculates it and starts it again after each change."; after a failure that ended the live state, "The diversity no longer starts by itself after a change, since its calculation failed. Run calculates it and starts it again after each change.", or, after a variants file the browser can no longer read, which offers no Run, "… since its calculation failed. Once the variants file is opened again in the Variants tab, Run calculates it and starts it again after each change." (12 October 2026, the review of the LD decay); the end of a refusal's words, "The diversity is then calculated again by itself.", only while it is live |
 | the button while live and not running | "Stop recalculating" |
 | the filters, the options of the diversity, while it runs, as tooltip and description | "Stop the diversity in the Populations tab to change the filters; then press Run there to calculate it again." |
 | the column, the zone, Remove and the lists of the reader, while it runs | "Stop the diversity in the Populations tab to change the populations; then press Run there to calculate it again." |
@@ -964,7 +966,7 @@ refused it for lack of memory. Once a smaller largest distance is
 typed, or fewer individuals are kept, Run comes back: it calculates the
 LD decay and starts it again after each change."; after a variants file
 the browser can no longer read, "… since its calculation failed. Once
-the variants file is opened again in the box Variants, Run calculates
+the variants file is opened again in the Variants tab, Run calculates
 it and starts it again after each change."; and with a result shown,
 "… since its calculation failed. After the next change, Run calculates
 it and starts it again after each change."

@@ -245,7 +245,7 @@ disabled, or beside Stop recalculating while the distances are live:
 |---|---|
 | the one pass is running, or about to start | "Run once panel.nei is read to the end: the reading under way in the box Variants and the distances cannot run at once." |
 | the one pass stopped by the user, or failed in a way its box offers Start again for | "Run once panel.nei is read to the end: Start again its reading in the box Variants." |
-| the one pass refused by popnei, or the file no longer readable | "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again there, or open another." |
+| the one pass refused by popnei, or the file no longer readable | "Run once panel.nei is read to the end: it could not be read, as the box Variants says. Open it again, or another, in the Variants tab." |
 | the filters of the individuals keep no individual at all | the store's words of `keptNoneReason`, as the other tabs give them |
 | fewer than two of the populations have the minimum of individuals | "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the individuals needed per variant in Parameters, or merge populations in panel_pops.csv."; with none, "No population has 20 individuals or more, and …"; when the thresholds of the individuals took a population below the minimum, "Only p0 has 20 individuals or more among the individuals the thresholds keep, and … Lower the individuals needed per variant in Parameters, merge populations in panel_pops.csv, or loosen the thresholds of the individuals in the Variants tab." |
 
@@ -266,9 +266,11 @@ the diversity (`popgen2-populations.md`, "While the diversity runs"):
   the distances in the Distances tab to change the filters; then press
   Run there to calculate them again.";
 - the field of the minimum of individuals, with the same words;
-- in the box Individuals, the list "Column of the populations", the
-  zone that opens another individuals file, by its button, a drop or a
-  paste, and "Remove panel_pops.csv"; and, in the Individuals tab, the
+- in the box Individuals, the list "Column of the populations"; the
+  zone that opens an individuals file, by its button, a drop or a
+  paste, in the box with no individuals file and at the end of the
+  Individuals tab with one; and, in the Individuals tab, "Remove
+  panel_pops.csv" and the
   three lists of how a text file is read: each with "Stop the distances
   in the Distances tab to change the populations; then press Run there
   to calculate them again."

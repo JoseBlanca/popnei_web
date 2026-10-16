@@ -300,3 +300,37 @@ Not settled after the review of phase 2:
   variants file name the Variants tab and not the button, "Open another
   file in the Variants tab.", "open it again in the Variants tab";
   they name a place where the button is.
+
+Phase 3, the documents, 16 October 2026, in one commit:
+
+- `docs/specs/steps/popgen2-input.md`: the zone, one of each kind of
+  file at a time, in its box before a file and at the end of its tab
+  after; the boxes, with no zone and no drop once their file is open;
+  the end of each tab, Remove beside the zone; the words of a file not
+  opened, in the box and under the tab's zone, said once; the endings
+  that name the button and its tab; the order of the Tab key and where
+  the focus goes; the flows FB1 to FB3, EN30 and those of a tab greyed
+  while shown; the heights of the boxes no longer left open. The row of
+  the tab of a text file refused now says the line it shows, "… could not
+  be read; the box Individuals says why.", which the table had left out.
+- `docs/specs/entry.md`, "A file dropped outside a zone": a box of a file
+  open is outside any zone, and one paste button of each kind of file.
+- `docs/designs/input-page.md`: a dated note of the change, the design
+  kept as approved. `docs/use-cases.md`, case 4 step 2, and
+  `docs/functionality.md`: where the buttons and Remove are.
+- The specs whose quoted words name a place, matched to the code:
+  `popgen2-pca.md` (the lock of Run, the reasons of Distances, the
+  refusals of the variants file and the failures, the tab greyed while
+  shown, now Distances), `popgen2-populations.md`,
+  `popgen2-distances.md`, `popgen2-download.md`, `analyses/diversity.md`
+  (with the case of a refused individuals file, which it lacked),
+  `analyses/ldDecay.md`, `analyses/popDists.md`,
+  `analyses/writeVariants.md` and `core/project.md`.
+- The first reader answered the five questions as meant; fixed from its
+  report: the stops of the Tab key in the box Variants with a file open,
+  what the user sees of a drop stopped on a box, a sentence of the lock
+  that did not parse, and the old "Remove putting the focus on the zone".
+
+Left as found: the words of a write popnei refused, in the dialog of
+the download, end "… and open it again." and name no place;
+`docs/designs/analyses-pca.md` keeps the words of its day.

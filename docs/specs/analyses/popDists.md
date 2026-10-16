@@ -1004,7 +1004,7 @@ that send the user to "the Variants step", "the Individuals step" and
 - **The words of popnei's refusals**: those of the variants file itself
   in the words of the box Variants, `fileRefusalText`, as the
   diversity's; the others with "Change the settings, or open the variants
-  file again in the box Variants", and the filters keeping no variant,
+  file again in the Variants tab", and the filters keeping no variant,
   "The thresholds of the Variants tab kept none of the variants of
   panel.nei, so there is no variant to calculate the distances between
   populations over. Loosen them."; each but those that ask to open the

@@ -148,7 +148,7 @@ that it is disabled, with a line beside it that says why:
 A file that holds no variant is refused by popnei's one pass, "the pass
 gave no variant and its source holds none" (popnei 0.2.2 under node, on
 a `.nei` file of no variant written from `panel.nei`, 8 October 2026), so
-the box says "panel.nei has no variants. Open another variants file.",
+the box says "panel.nei has no variants. Open another file with Open another variants file… in the Variants tab.",
 and the button is disabled with the second line above. The design gave
 such a file a sentence of its own, "panel.nei holds no variants, so
 there is nothing to download."; with popnei 0.2.2 the page never reaches

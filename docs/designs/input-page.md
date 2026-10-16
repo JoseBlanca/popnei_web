@@ -226,6 +226,19 @@ and it ends with the button "Open individuals file…", which also takes a
 file dropped on it, and, with a file, "Remove panel_pops.csv", which puts
 the page back to no file.
 
+Changed on 16 October 2026, at the owner's request of that day
+(`docs/plans/file-buttons.md`; `docs/specs/steps/popgen2-input.md`):
+each box holds its button, "Open variants file…" or "Open individuals
+file…", only while no file of its kind is open, at the bottom of the
+box, the two at the same height side by side. Once a file is open, read
+or refused, its box holds no button and takes no dropped file, and the
+button that opens another is at the end of its tab: "Open another
+variants file…" under "Download filtered variants…" in the Variants
+tab, and "Open another individuals file…" at the end of the Individuals
+tab with "Remove panel_pops.csv" beside it. Remove had moved from the box
+to the top of that tab earlier the same day. The paragraphs around this
+note keep the design as it was approved on 9 October 2026.
+
 The list has, first, "None: every individual unclassified", and then
 every column but the first, which names the individuals, by its name in
 the file. A choice is a command that sets the grouping, as on the old

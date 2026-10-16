@@ -781,6 +781,18 @@ beside them changes nothing a user could miss. `stopStrayDrops(window)`
 of `src/ui/strayDrops.ts`, which `startPage` calls with the listeners of
 the errors.
 
+On popgen2.html, since 16 October 2026, the box of a file that is open,
+read or refused, holds no zone, so a file dropped on it, on its heading
+or its lines, is outside any zone and stopped in the same way, and
+nothing is opened, as the owner decided that day: another file is
+dropped on the zone at the end of its tab, beside the button that opens
+it (`docs/specs/steps/popgen2-input.md`, "The box of the variants
+file"). Before a file of its kind is open, the box holds the zone, and a
+drop on the zone opens the file. So the page has one zone of each kind
+of file at a time, and one hidden button of each that takes a paste,
+"Paste a variants file" and "Paste an individuals file", which the Tab
+key reaches just before the zone's button.
+
 ### The errors nothing else shows
 
 An error of our own code that no error boundary of React sees, one
