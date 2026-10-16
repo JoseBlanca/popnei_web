@@ -705,11 +705,24 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
         running ? /^Popnei PCA running/u : /^Popnei$/u,
       );
 
-      // From the end of the page, Shift+Tab back to the band.
-      await page.evaluate(() => {
-        (document.activeElement as HTMLElement | null)?.blur();
+      // From the end of the page, Shift+Tab back to the band: from its
+      // last control, "Open another variants file…" at the end of the
+      // Variants tab, focused here, since with the focus taken away
+      // Chromium went on from the Variants tab clicked and WebKit from
+      // the end of the page. It is where a round of the page stops.
+      const last = page.getByRole("button", {
+        name: "Open another variants file…",
       });
+      await last.focus();
+      await last.evaluate((element) => {
+        element.setAttribute("data-first-reached", "");
+        element.setAttribute("data-last-reached", "");
+      });
+      // Until the band, which has a control only while something runs,
+      // or until the first control reached comes round again, the whole
+      // page gone through: each control is counted once.
       const seen: string[] = [];
+      let reachedBand = false;
       for (let presses = 0; presses < 200; presses += 1) {
         await page.keyboard.press("Shift+Tab");
         const where = await page.evaluate(() => {
@@ -717,9 +730,18 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
           const header = document.querySelector("#defects header");
           if (focused === null || focused === document.body || header === null)
             return null;
+          const first = document.querySelector("[data-first-reached]");
+          if (first === null) focused.setAttribute("data-first-reached", "");
+          // Firefox keeps the first control of the page as the active
+          // element while its own bar has the focus.
+          const last = document.querySelector("[data-last-reached]");
+          last?.removeAttribute("data-last-reached");
+          focused.setAttribute("data-last-reached", "");
           const rect = focused.getBoundingClientRect();
           return {
             inBand: header.contains(focused),
+            again: first === focused,
+            stayed: last === focused,
             top: rect.top,
             bandBottom: header.getBoundingClientRect().bottom,
             name:
@@ -727,19 +749,31 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
               focused.textContent.slice(0, 40),
           };
         });
-        if (where === null) continue;
-        if (where.inBand) break;
+        if (where === null || where.stayed) continue;
+        if (where.inBand) {
+          reachedBand = true;
+          break;
+        }
+        if (where.again) break;
         seen.push(where.name);
         expect(
           where.top,
           `${where.name} under the band`,
         ).toBeGreaterThanOrEqual(where.bandBottom - 1);
       }
-      // With a PCA running the controls it reads are greyed, and fewer
-      // are reached: from the Variants tab, "Open individuals file…" and
-      // its paste, the box Variants of a file open holding no control
-      // since 16 October 2026.
-      expect(seen.length).toBeGreaterThan(running ? 2 : 10);
+      // The band has a control only while something runs, Stop.
+      expect(reachedBand).toBe(running);
+      // The controls before "Open another variants file…", each once:
+      // the paste of the Variants tab's zone, Download filtered
+      // variants…, the menus of the statistics and of their plots, then
+      // the Variants tab and the box Individuals' "Open individuals
+      // file…" and "Paste an individuals file", the box Variants of a
+      // file open holding none since 16 October 2026. With a PCA
+      // running, Download filtered variants… is greyed and not reached,
+      // and the Tab key then reaches the band; with nothing running it
+      // goes round the page. 21 and 22 in Chromium and WebKit on 16
+      // October 2026.
+      expect(seen).toHaveLength(running ? 21 : 22);
       if (running) await bandButton(page, "Stop the PCA").click();
       await workersListening(page);
     });
