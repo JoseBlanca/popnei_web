@@ -25,7 +25,7 @@ popgen2.html shows.
   `--font-heading`, `--weight-heading`, `--shadow-box`,
   `--zone-border-style`, `--tab-bar`, `--page-margin-inline`,
   `--panel-padding`, `--panel-border`, `--panel-join`,
-  `--color-tab-under`, `--shadow-tab-selected`; used in `base.css`,
+  `--color-tab-under`, `--shadow-tab-selected`, `--page-padding`; used in `base.css`,
   `Band.module.css`, `VariantsPage.module.css`, `FileZone.module.css`,
   `Tabs.module.css`, `Table.module.css` and `SortableTable.module.css`.
 - `src/ui/tokens.test.ts`: the contrast of the pairs, and the two dark
@@ -40,9 +40,12 @@ The look is a set of token values only. The values of 2b replace the
 defaults in `tokens.css`, both themes, the dark one written twice as
 `css.md` asks. The shadows and the borders of the tab and the panel name
 other tokens, `var(--color-accent)`, `var(--color-rule)`, so they follow
-the theme with no dark copy. The panel's padding at the sides shrinks to
-none at 320 px, `clamp(0rem, 6vw - 1.25rem, 1.5rem)`, since with 24 px
-taken there the heatmap of the distances lost the values in its cells.
+the theme with no dark copy. Under 40em, 640 px, the width under which
+the row of the page's tabs may wrap, the panel runs to the window's
+edges with the page's 16 px inside, and the tab shown is not joined to
+it, its bar under it (`Tabs.module.css`); above, the panel has 24 px
+inside at its sides. A first form, the panel's side padding shrinking
+to none at 320 px, left its words touching its border.
 
 The font stays the system's: whether to serve one is the owner's to
 decide, after the look.
@@ -97,3 +100,27 @@ decide, after the look.
     of the FILTER box read the plots between their first draw, at a
     rounded height, and their second, at 209.375 px (434e0efb). Both
     passed on main, whose plots at 1280 px have whole heights.
+- The review of the look, 16 October 2026, ux, accessibility and
+  browser; each finding fixed in its own commit:
+  - The comment of a panel kept drawn and hidden, cut off from its rule
+    by the panel's rule, back above it (7cb0a7d1).
+  - ux F1: under 40em the panel runs to the window's edges, no border
+    nor corners at its sides, the page's 16 px inside, a token now,
+    `--page-padding`; from 40em 24 px inside. The plot of the spectrum
+    at 320 px is again 288 px (9c97345d).
+  - ux F2: under 40em the tab shown is not joined to its panel, its bar
+    3 px under it. The five labels take 477 px in the Mac's font and
+    541 px in DejaVu Sans, in Chromium and WebKit; the row has 608 px
+    at 640, 591 with a scrollbar of 17 px (68750ca0).
+  - ux F3: the tables, their headers and fades, the PCA's legend and the
+    words over its 3D view, and the ring of a slider's handle in the
+    panel's colour; the fields, buttons and controls keep the page's,
+    tinted on purpose. A new flow reads every element of the panels at
+    320 px, light and dark (9680256b).
+  - accessibility F1: in forced colours the bars are borders in
+    Highlight and GrayText, a tab not shown has none, and a flow checks
+    them in Chromium (c260a691).
+  - After the fixes the flows of popgen2.html, 268 with the five new
+    ones, passed in Chromium, 268 of 268, and in WebKit, 266 with the
+    two of forced colours skipped, which Playwright emulates in Chromium
+    alone. Firefox was not run.
