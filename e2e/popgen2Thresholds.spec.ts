@@ -139,9 +139,16 @@ async function drag(
   if (box === null) throw new Error("no thumb");
   const y = box.y + box.height / 2;
   const x = box.x + box.width / 2;
+  // The end of the drag kept inside the window: Firefox does not follow
+  // a drag whose pointer leaves it, and with the column centred since the
+  // look of 16 October 2026 the line of a plot on the right stands about
+  // 960 px across a window of 1280, so 400 px more left the window and the
+  // drag ended where the pointer did, in GitHub's Firefox.
+  const width = page.viewportSize()?.width ?? Number.POSITIVE_INFINITY;
+  const end = Math.min(Math.max(x + dx, 1), width - 1);
   await page.mouse.move(x, y);
   await page.mouse.down();
-  await page.mouse.move(x + dx, y, { steps });
+  await page.mouse.move(end, y, { steps });
   await page.mouse.up();
 }
 
