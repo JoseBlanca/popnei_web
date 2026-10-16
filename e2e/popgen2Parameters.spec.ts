@@ -304,7 +304,7 @@ test.describe("popgen2-tidy phase 3: the sections Parameters", () => {
     });
   });
 
-  test("while the distances run, the measure is reached by the Tab key inside the open section and stays open, the minimum greyed", async ({
+  test("while the distances run, the Tab key reaches inside the open section the greyed minimum and then the measure, which stays open; after the run the section is still open", async ({
     page,
   }) => {
     test.setTimeout(90_000);
@@ -327,12 +327,23 @@ test.describe("popgen2-tidy phase 3: the sections Parameters", () => {
       name: "Individuals with a called genotype needed in each population, per variant",
     });
     await expect(minimum).toHaveAttribute("aria-disabled", "true");
-    await minimum.focus();
+    // From the button of the section, the Tab key reaches the greyed
+    // minimum, which tells its reason, and then the measure.
+    await trigger.focus();
+    await page.keyboard.press("Tab");
+    await expect(minimum).toBeFocused();
     await page.keyboard.press("Tab");
     const hudson = shown(page).getByRole("radio", { name: "Hudson's Fst" });
     await expect(hudson).toBeFocused();
     await expect(hudson).not.toHaveAttribute("aria-disabled", "true");
     await release(page, "popDists");
+    // The run ended, the section is still open and the minimum no longer
+    // greyed.
+    await expect(button(shown(page), "Stop")).toHaveCount(0, {
+      timeout: RESULT_TIMEOUT,
+    });
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await expect(minimum).not.toHaveAttribute("aria-disabled", "true");
   });
 
   test("a section opened stays open while the user moves to another tab and back, and the others stay closed", async ({

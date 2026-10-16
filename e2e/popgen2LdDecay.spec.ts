@@ -319,7 +319,7 @@ async function isBelow(below: Locator, above: Locator): Promise<boolean> {
 }
 
 test.describe("LT1 D5 the LD decay in the Populations tab", () => {
-  test("LT1 D5 ld.nei and ld_pops.csv: Run with the largest distance at 100,000 and no option typed; locked with the distance emptied, and above 12,500,000 bp for two populations; at 100000 pop_a and pop_b 50, 432, 29,367, 7,548 and 7,340, no warning, the time of the last run; the missing data at 0.05 gives 7,639 and 7,416 with no Run pressed; axe locked and done, light and dark", async ({
+  test("LT1 D5 ld.nei and ld_pops.csv: Run offered with the largest distance at 100,000 and no option typed; locked with the distance emptied, and above 12,500,000 bp for two populations; 100000 typed again, pop_a and pop_b 50, 432, 29,367, 7,548 and 7,340, no warning, the time of the last run; the missing data at 0.05 gives 7,639 and 7,416 with no Run pressed; axe locked and done, light and dark", async ({
     page,
     makeAxeBuilder,
   }) => {

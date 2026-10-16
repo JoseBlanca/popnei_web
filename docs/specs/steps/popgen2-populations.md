@@ -1165,8 +1165,9 @@ another variants file.
 `e2e/fixtures/ld.nei` and `ld_pops.csv`, the thresholds as a new page
 has them, the missing data at 0.1, which keeps all 500 variants:
 
-- **The numbers**: Run with no option typed, the distance at 100000:
-  the rows pop_a and pop_b, 50
+- **The numbers**: Run offered with no option typed, the distance at
+  100000; the distance emptied, then above what the memory allows, then
+  100000 typed again, and Run: the rows pop_a and pop_b, 50
   individuals, 432 variants, 29,367 pairs and half distances "7,548"
   and "7,340"; no warning; "The last run, pairs up to 100,000 base
   pairs, took less than a second."; the
