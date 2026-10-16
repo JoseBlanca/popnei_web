@@ -118,10 +118,8 @@
   --page-padding: var(--space-4);
   --panel-padding: clamp(0.75rem, 3vw, 1.5rem) var(--space-6);
   --panel-border: 1px solid var(--color-rule);
-  /* the selected tab of the page's row joined to its panel: the panel
-     moved up against the row, the line under the tab, and the bar and
-     sides drawn inside it */
-  --panel-join: calc(-1 * var(--space-3));
+  /* the selected tab of the page's row joined to its panel: the line
+     under the tab, and the bar and sides drawn inside it */
   --color-tab-under: var(--color-panel);
   --shadow-tab-selected:
     inset 0 3px 0 var(--color-accent), inset 1px 0 0 var(--color-rule),

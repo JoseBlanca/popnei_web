@@ -6,6 +6,13 @@
   inline-size: 100%;
 }
 
+/* The tabs of the page's row (pageRow of Tabs.tsx): from 40em the panel
+   stands against the row, joined to the tab shown, so no gap between
+   them; under 40em, below, the gap of the other rows. */
+.pageTabs {
+  gap: 0;
+}
+
 .list {
   display: flex;
   flex-wrap: wrap;
@@ -97,10 +104,10 @@
   min-inline-size: 0;
 }
 
-/* The content of a tab of the page's row, on a panel of its own where
-   the look gives it one (tokens.css, the look of the page). */
-.pageRow ~ .panel {
-  margin-block-start: var(--panel-join);
+/* The content of a tab of the page's row (pageRow of Tabs.tsx), on a
+   panel of its own where the look gives it one (tokens.css, the look of
+   the page), its top open against the row. */
+.pagePanel {
   padding: var(--panel-padding);
   border: var(--panel-border);
   border-radius: var(--radius-md);
@@ -148,7 +155,8 @@
      background of its own, and its bar a line of 3 px under it in the
      accent, as in the rows inside a result; a tab greyed while shown has
      it in the greyed colour (the last rule of this block). The panel
-     is not pulled up against the row, and has its line at its top.
+     stands apart from the row, by the gap of the other rows, and has
+     its line at its top.
 
    The five labels take 477 px in the Mac's system font and 541 px in
    DejaVu Sans, the font of GitHub's Linux runners (Chromium and WebKit,
@@ -156,8 +164,15 @@
    17 px that takes room, so it is on one line wherever the tab is
    joined. The review of the look, 16 October 2026. */
 @media (width < 40em) {
-  .pageRow ~ .panel {
-    margin-block-start: 0;
+  .pageTabs {
+    gap: var(--space-3);
+  }
+
+  /* The negative margin equals the padding of the page's column, so the
+     panel reaches the window's edges only while it stands directly in
+     that column, as the tabs of popgen2.html do (VariantsPage.module.css);
+     inside another padded element it would stop short of them. */
+  .pagePanel {
     margin-inline: calc(-1 * var(--page-padding));
     padding-inline: var(--page-padding);
     border-inline: 0;

@@ -86,7 +86,10 @@ export interface TabsProps<Id extends string> {
       popgen2.html: the tabs that open are drawn in the colour of the
       text, so that a greyed tab stands apart from them, and each label is
       as wide as in bold, so that the labels do not move when the tab
-      shown changes. False when absent, as the plot and the table of the
+      shown changes; the content of the tab shown is on a panel joined to
+      it, which on a window under 40em runs over the page's padding to
+      the window's edges, so such a row stands directly in the page's
+      padded column (Tabs.module.css). False when absent, as the plot and the table of the
       bins of popgen.html have it, which keep their look. */
   readonly pageRow?: boolean;
 }
@@ -158,7 +161,11 @@ export function Tabs<Id extends string>({
         }
         onChange(chosen.id);
       }}
-      className={classOf(styles, "tabs")}
+      className={
+        pageRow
+          ? `${classOf(styles, "tabs")} ${classOf(styles, "pageTabs")}`
+          : classOf(styles, "tabs")
+      }
     >
       <TabStopToShown listRef={listRef} />
       <TabList
@@ -229,7 +236,11 @@ export function Tabs<Id extends string>({
           key={tab.id}
           id={tab.id}
           shouldForceMount={keepHidden}
-          className={classOf(styles, "panel")}
+          className={
+            pageRow
+              ? `${classOf(styles, "panel")} ${classOf(styles, "pagePanel")}`
+              : classOf(styles, "panel")
+          }
         >
           {tab.content}
         </TabPanel>
