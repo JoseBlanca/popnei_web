@@ -880,10 +880,11 @@ wide. Each has its own "Download…", as every table and plot of the page
 
 While the diversity runs, what it reads is greyed with the reason, so
 that nothing it reads changes under it: the thresholds and the FILTER
-box of the Variants tab, its own options, and, in the box headed
-"Individuals", the column of the populations, the opening of another individuals file
-and its Remove, with "Stop the diversity in the Populations tab to
-change the populations; then press Run there to calculate it again."
+box of the Variants tab, its own options, the column of the populations
+in the box headed "Individuals", and, at the end of the Individuals
+tab, the opening of another individuals file and its Remove, with "Stop
+the diversity in the Populations tab to change the populations; then
+press Run there to calculate it again."
 While the PCA alone runs, that box stays open, since the PCA reads no
 populations. A change of the options of the PCA while the
 diversity runs is not greyed, and the PCA then waits for the diversity.
