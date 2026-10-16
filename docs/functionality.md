@@ -614,7 +614,10 @@ give the principal components that go into the GWAS as covariates.
   distance alone the rule of no default that depends on the genome of
   27 September 2026: 100,000 bp is a start that suits many genomes and
   not all, the line under the field says so, and the LD decay of the
-  Populations tab shows how far LD extends in the user's data. The
+  Populations tab shows how far LD extends in the user's data: the line
+  asks for a distance where its curve has flattened, well beyond the
+  half distance, which is far shorter than a window of pruning should
+  be. The
   option not taken was to keep the field empty and the PCA locked until
   the user typed a distance, which stopped every user before their
   first PCA for a number many do not know. A field the user empties is

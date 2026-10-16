@@ -11,6 +11,7 @@
  * core's, in src/core/analyses/pca.ts.
  */
 
+import { PCA2_LD_MAX_DIST } from "../../../core/analyses/pca.ts";
 import type { PcaColours, PcaRow } from "../../../core/analyses/pca.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import type { IndividualsKept } from "../../../core/individualsKept.ts";
@@ -305,12 +306,13 @@ export function decompositionLine(variantsName: string): string {
 }
 
 /** The line under the field of the distance of the LD pruning of
-    popgen2.html: what the distance is, that its default of 100,000 base
-    pairs is a start that does not hold for every genome, and where to
-    see how far LD extends (docs/specs/steps/popgen2-pca.md, "Its
-    filters"; the owner, 16 October 2026). */
-export const DISTANCE_HINT =
-  "The window within which pairs of variants are compared. 100,000 bp is a start that suits many genomes but not all; the LD decay of the Populations tab shows how far LD extends in your data.";
+    popgen2.html: that its default, `PCA2_LD_MAX_DIST`, is a start that
+    does not hold for every genome, where to see how far LD extends, and
+    which distance of the LD decay to choose, well beyond the half
+    distance, which is far shorter than a window of pruning should be
+    (docs/specs/steps/popgen2-pca.md, "Its filters"; the owner, 16
+    October 2026). */
+export const DISTANCE_HINT = `${grouped(PCA2_LD_MAX_DIST)} bp is a start that suits many genomes but not all. The LD decay of the Populations tab shows how far LD extends in your data: choose a distance where its curve has flattened, well beyond the half distance.`;
 
 /** The words of the 3D view (docs/specs/analyses/pca.md, "Its words"). */
 export const LOADING_3D = "Loading the 3D view…";

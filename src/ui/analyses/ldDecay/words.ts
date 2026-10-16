@@ -12,6 +12,7 @@
 import type { LdDecayRow } from "../../../core/analyses/ldDecay.ts";
 import type { LdBinRow } from "../../../core/analyses/ldDecayPanel.ts";
 import {
+  LD_DECAY2_MAX_DIST,
   MAX_MAX_ALLOWED_MAF,
   MIN_MAX_ALLOWED_MAF,
   MIN_MAX_DIST,
@@ -50,9 +51,9 @@ export const MAX_DIST_LINE =
   "How far to look for pairs. Choose a distance beyond which you expect little LD in your species. The result gives each population's half distance, where its fitted curve falls to half its r² at distance 0; a half distance close to the largest distance means it was not far enough.";
 
 /** The line under the field of the largest distance of popgen2.html,
-    which starts at 100,000 base pairs (the owner, 16 October 2026). */
-export const MAX_DIST_LINE_2 =
-  "How far to look for pairs. 100,000 bp is a start that suits many genomes but not all. The result gives each population's half distance, where its fitted curve falls to half its r² at distance 0; a half distance close to the largest distance means it was not far enough.";
+    which starts at `LD_DECAY2_MAX_DIST`, 100,000 base pairs (the owner,
+    16 October 2026). */
+export const MAX_DIST_LINE_2 = `How far to look for pairs. ${grouped(LD_DECAY2_MAX_DIST)} bp is a start that suits many genomes but not all. The result gives each population's half distance, where its fitted curve falls to half its r² at distance 0; a half distance close to the largest distance means it was not far enough.`;
 
 /** The words that end the notice of a change of the largest distance,
     and name the header's Undo. */

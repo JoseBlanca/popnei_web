@@ -59,7 +59,7 @@ const NO_DISTANCE_FULL =
 
 /** The line under the field of the distance, on how to choose it. */
 const DISTANCE_HINT =
-  "The window within which pairs of variants are compared. 100,000 bp is a start that suits many genomes but not all; the LD decay of the Populations tab shows how far LD extends in your data.";
+  "100,000 bp is a start that suits many genomes but not all. The LD decay of the Populations tab shows how far LD extends in your data: choose a distance where its curve has flattened, well beyond the half distance.";
 
 /** The label of the field of the distance. */
 const DISTANCE =

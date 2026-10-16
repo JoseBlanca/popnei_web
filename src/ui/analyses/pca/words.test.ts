@@ -6,6 +6,8 @@
  * runs, each by the method.
  */
 import { describe, expect, test } from "vitest";
+import { PCA2_LD_MAX_DIST } from "../../../core/analyses/pca.ts";
+import { grouped } from "../../../core/project.ts";
 
 import {
   DISTANCE_HINT,
@@ -75,9 +77,15 @@ describe("AP6 D1 the words of the PCA tab", () => {
 });
 
 describe("the line under the distance of the LD pruning (the owner, 16 October 2026)", () => {
-  test("says what the distance is, that 100,000 bp is a start that suits many genomes and not all, and where to see how far LD extends", () => {
+  test("says that 100,000 bp is a start that suits many genomes and not all, where to see how far LD extends, and which distance of the LD decay to choose", () => {
     expect(DISTANCE_HINT).toBe(
-      "The window within which pairs of variants are compared. 100,000 bp is a start that suits many genomes but not all; the LD decay of the Populations tab shows how far LD extends in your data.",
+      "100,000 bp is a start that suits many genomes but not all. The LD decay of the Populations tab shows how far LD extends in your data: choose a distance where its curve has flattened, well beyond the half distance.",
+    );
+  });
+
+  test("the distance it names is the default of the page", () => {
+    expect(DISTANCE_HINT.startsWith(`${grouped(PCA2_LD_MAX_DIST)} bp `)).toBe(
+      true,
     );
   });
 });

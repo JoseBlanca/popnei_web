@@ -7,6 +7,8 @@
  */
 
 import { describe, expect, test } from "vitest";
+import { LD_DECAY2_MAX_DIST } from "../../../core/analyses/ldDecay.ts";
+import { grouped } from "../../../core/project.ts";
 import { individualsKept } from "../../../core/individualsKept.ts";
 import { panelOf } from "../panels.ts";
 import type { Project } from "../../../core/project.ts";
@@ -106,6 +108,12 @@ describe("PA8 D1 the tables of the LD decay", () => {
     // 16 October 2026).
     expect(MAX_DIST_LINE_2).toBe(
       "How far to look for pairs. 100,000 bp is a start that suits many genomes but not all. The result gives each population's half distance, where its fitted curve falls to half its r² at distance 0; a half distance close to the largest distance means it was not far enough.",
+    );
+  });
+
+  test("the line under the largest distance of popgen2.html names the default of the page", () => {
+    expect(MAX_DIST_LINE_2).toContain(
+      ` ${grouped(LD_DECAY2_MAX_DIST)} bp is a start `,
     );
   });
 

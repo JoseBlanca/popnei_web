@@ -1209,11 +1209,17 @@ Then three, in this order:
   locked until the user typed a distance, made every user stop before
   their first PCA for a number many of them would not know. The Variants
   tab has no LD pruning, so the PCA's is its own alone. Under the
-  distance, a line says what it is and that the start is not right for
-  every genome: "The window within which pairs of variants are compared.
-  100,000 bp is a start that suits many genomes but not all; the LD
-  decay of the Populations tab shows how far LD extends in your data."
-  Until 16 October 2026 it said "Choose the distance beyond which the r²
+  distance, a line says that the start is not right for every genome,
+  and which number of the LD decay to read: "100,000 bp is a start that
+  suits many genomes but not all. The LD decay of the Populations tab
+  shows how far LD extends in your data: choose a distance where its
+  curve has flattened, well beyond the half distance." The half distance
+  of the LD decay, where its curve falls to half its r² at distance 0,
+  is far shorter than a window of pruning should be, so the line sends
+  the user past it. On 16 October 2026 it first said "The window within
+  which pairs of variants are compared. 100,000 bp is a start …; the LD
+  decay of the Populations tab shows how far LD extends in your data.",
+  whose first sentence repeated the label; until then it said "Choose the distance beyond which the r²
   between two variants falls to its background level in your species,
   as studies of its LD decay report." The field emptied by the user is
   no distance, which locks Run: the field calls `onEmptied` of the
@@ -1602,7 +1608,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | a filter whose slider would have no range | "0, as in the Variants tab. The PCA cannot be stricter than the Variants tab here." |
 | the Variants tab stricter than the PCA's own | "The Variants tab keeps at most 0.03, stricter than the 0.05 set here, so the PCA uses 0.03." |
 | the lock and the help of the one pass | the table of "Run and Stop" |
-| under the field of the distance | "The window within which pairs of variants are compared. 100,000 bp is a start that suits many genomes but not all; the LD decay of the Populations tab shows how far LD extends in your data." |
+| under the field of the distance | "100,000 bp is a start that suits many genomes but not all. The LD decay of the Populations tab shows how far LD extends in your data: choose a distance where its curve has flattened, well beyond the half distance." |
 | under the field of the distance, once the user emptied it | "The LD pruning of the PCA needs the distance within which variants are compared. Type a distance in base pairs, 100,000 to start with, or turn the LD pruning off."; "PCoA" under the PCoA |
 | beside Run, while the distance is empty | "Type the LD distance in Parameters, or turn the LD pruning off." |
 | the section of the options | "Parameters" |
