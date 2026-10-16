@@ -297,8 +297,8 @@ function ColumnAndCounts({ project }: ColumnAndCountsProps): React.JSX.Element {
           store.apply(step.description, step.command);
         }}
       />
-      {shown.summary !== null && <SummaryLineShown line={shown.summary} />}
-      {shown.lines.map((line) => (
+      {shown.kind === "counts" && <SummaryLineShown line={shown.summary} />}
+      {shown.boxLines.map((line) => (
         <CountsLineShown key={line.text} line={line} />
       ))}
     </>

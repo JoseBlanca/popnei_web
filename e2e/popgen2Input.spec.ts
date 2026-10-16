@@ -813,7 +813,7 @@ test("IN6 D2 a column of 21 values chosen: its warning, no summary line, and no 
   );
   await expect(
     individualsBox(page).getByText(
-      "Warning: accession has 21 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
+      "Warning: accession has 21 different values, too many for a column of populations: the individuals are counted only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -882,7 +882,7 @@ test("IN6 D2 the missing rate of the individuals at 0.03, the pass held: … and
   ]);
   await expectSummary(
     page,
-    "…not counted yet individuals classified in 3 populations",
+    "…not counted yet individuals classified in …not counted yet populations",
   );
   await expect(
     individualsBox(page).getByText(

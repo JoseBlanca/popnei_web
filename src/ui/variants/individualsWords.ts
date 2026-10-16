@@ -54,7 +54,11 @@ export const UNCLASSIFIED_ROW = "Unclassified";
     "…" while the count waits for the one pass, and the line of why it
     waits. */
 export interface NoFileCounts {
+  /** The summary line, "200 individuals, all unclassified", with `null`
+      for the count while it waits. */
   readonly summary: SummaryLine;
+  /** The lines under it: while the count waits, the line of why; none
+      otherwise. */
   readonly lines: readonly CountsLine[];
 }
 
@@ -93,15 +97,10 @@ export function noFileCounts(
  * waits for the one pass, which the box draws as "…" and a screen reader
  * reads as "not counted yet": "180 individuals classified in 3
  * populations, 20 unclassified" is one part, "… individuals classified in
- * 3 populations" two (docs/specs/steps/popgen2-input.md, "The summary
+ * … populations" four (docs/specs/steps/popgen2-input.md, "The summary
  * line"; the owner, 16 October 2026).
  */
 export type SummaryLine = readonly (string | null)[];
-
-/** The words of `line`, with "…" for each count that waits. */
-export function summaryText(line: SummaryLine): string {
-  return line.map((part) => part ?? WAITING_COUNT).join("");
-}
 
 /** The summary line when the filters of the individuals keep nobody. */
 export const NO_INDIVIDUAL_KEPT =
@@ -142,10 +141,18 @@ function summaryOf(
     );
     const numIndividuals =
       p.variants?.read.kind === "read" ? p.variants.read.individuals.length : 0;
-    const line = ` individuals classified in ${counted(counts.populations.length, "population")}`;
+    // The populations wait too: once counted they are those with an
+    // individual kept, which the filters may lower.
     return numIndividuals > classifiedBefore
-      ? [null, `${line}, `, null, " unclassified"]
-      : [null, line];
+      ? [
+          null,
+          " individuals classified in ",
+          null,
+          " populations, ",
+          null,
+          " unclassified",
+        ]
+      : [null, " individuals classified in ", null, " populations"];
   }
   let classified = 0;
   let numPops = 0;
@@ -313,27 +320,47 @@ export function passWaitOf(
 /** A line under the list: words, or a warning, whose words follow the
     "Warning: " that the widget writes. */
 export interface CountsLine {
+  /** Words, or a warning. */
   readonly kind: "line" | "warning";
+  /** Its words, after "Warning: " for a warning. */
   readonly text: string;
 }
 
 /** The table of the counts the Individuals tab draws, in the box until
-    16 October 2026: none; a row per population;
-    or, when the column classifies none of the individuals of the
-    variants file, as None does, the one row "Unclassified", with the
-    individuals kept, as with no individuals file. */
-export type CountsTable = "none" | "populations" | "unclassified";
+    16 October 2026: a row per population; or, when the column
+    classifies none of the individuals of the variants file, as None
+    does, the one row "Unclassified", with the individuals kept, as with
+    no individuals file. */
+export type CountsTable = "populations" | "unclassified";
 
-/** What the box and the Individuals tab show of the counts: in the box,
-    the summary line, or none, and the lines under it, or in its place,
-    in their order, the warnings among them; in the tab, the table drawn
-    and the lines under it. */
-export interface CountsShown {
-  readonly table: CountsTable;
-  readonly summary: SummaryLine | null;
-  readonly lines: readonly CountsLine[];
-  readonly tabLines: readonly CountsLine[];
-}
+/** What the box and the Individuals tab show of the counts: no counts,
+    the box saying why and the tab drawing no table; or the counts, the
+    summary line in the box and the table in the tab. */
+export type CountsShown =
+  | {
+      /** No summary line and no table: before the variants file is
+          read, with a column of more than 20 values, or with no
+          individual of the variants file in the individuals file. */
+      readonly kind: "noCounts";
+      /** The lines the box draws in place of the summary line, in their
+          order, the warnings among them. */
+      readonly boxLines: readonly CountsLine[];
+    }
+  | {
+      /** The summary line in the box and the table in the tab. */
+      readonly kind: "counts";
+      /** The table the tab draws. */
+      readonly table: CountsTable;
+      /** The summary line of the box. */
+      readonly summary: SummaryLine;
+      /** The lines the box draws under the summary line: while the
+          counts wait, the line of why; none otherwise. */
+      readonly boxLines: readonly CountsLine[];
+      /** The lines the tab draws under the table: while the counts
+          wait, the line of why; otherwise the line of the unclassified
+          kept, if any. */
+      readonly tabLines: readonly CountsLine[];
+    };
 
 /**
  * What the box and the Individuals tab show of `counts`, the counts of
@@ -357,21 +384,17 @@ export function countsShown(
   const tooMany = tooManyWarning(counts);
   if (!counts.variantsRead || p.variants === null) {
     return {
-      table: "none",
-      summary: null,
-      lines: [
+      kind: "noCounts",
+      boxLines: [
         ...tooMany,
         {
           kind: "line",
           text: "The individuals are counted once a variants file is open.",
         },
       ],
-      tabLines: [],
     };
   }
-  if (tooMany.length > 0) {
-    return { table: "none", summary: null, lines: tooMany, tabLines: [] };
-  }
+  if (tooMany.length > 0) return { kind: "noCounts", boxLines: tooMany };
   const variantsName = escaped(p.variants.name);
   const fileName = escaped(p.individuals?.name ?? "");
   return firstShown(counts, wait, variantsName, fileName, p);
@@ -397,7 +420,7 @@ function tooManyWarning(counts: PopulationCounts): CountsLine[] {
   return [
     {
       kind: "warning",
-      text: `${shown(counts.column)} has ${grouped(counts.numValues)} different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.`,
+      text: `${shown(counts.column)} has ${grouped(counts.numValues)} different values, too many for a column of populations: the individuals are counted only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.`,
     },
   ];
 }
@@ -420,10 +443,8 @@ function firstShown(
         ? `the one individual of ${variantsName} is not in ${fileName}, so it is unclassified`
         : `none of the ${grouped(numIndividuals)} individuals of ${variantsName} is in ${fileName}, so all of them are unclassified`;
     return {
-      table: "none",
-      summary: null,
-      tabLines: [],
-      lines: [
+      kind: "noCounts",
+      boxLines: [
         {
           kind: "warning",
           text: `${whom}. The first column of ${fileName} has to hold their names as ${variantsName} writes them: ${variantsName} starts with ${shown(none.firstOfVariants)}, and ${fileName} with ${shown(none.firstOfFile)}.`,
@@ -442,12 +463,19 @@ function firstShown(
       kind: "line",
       text: waitingText(wait, variantsName),
     };
-    return { table, summary, lines: [waiting], tabLines: [waiting] };
+    return {
+      kind: "counts",
+      table,
+      summary,
+      boxLines: [waiting],
+      tabLines: [waiting],
+    };
   }
   return {
+    kind: "counts",
     table,
     summary,
-    lines: [],
+    boxLines: [],
     tabLines:
       table === "unclassified" || unclassified.kept === 0
         ? []
@@ -638,7 +666,7 @@ export function individualsReadAnnouncement(
   ];
   const counts = populationCounts(p, kept);
   if (counts !== null) {
-    const warnings = countsShown(p, counts, "running").lines.filter(
+    const warnings = countsShown(p, counts, "running").boxLines.filter(
       (line) => line.kind === "warning",
     );
     said.push(...warnings.map((warning) => `Warning: ${warning.text}`));

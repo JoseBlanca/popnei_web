@@ -60,7 +60,7 @@ export function IndividualsCounts(): React.JSX.Element | null {
   const counts = populationCounts(project, kept);
   if (counts === null || project.variants === null) return null;
   const shown = countsShown(project, counts, wait);
-  if (shown.table === "none") return null;
+  if (shown.kind === "noCounts") return null;
   const rows: TableRow[] =
     shown.table === "populations"
       ? counts.populations.map(({ pop, kept: numKept }) => ({

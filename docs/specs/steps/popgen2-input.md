@@ -309,10 +309,13 @@ of one row, "Unclassified", from 11 to 16 October 2026.
 one pass not finished, once the variants file has given its individuals
 (the opening reads them before the pass starts), the summary line is
 drawn with "…" in place of each number it cannot give yet, each read by
-a screen reader as "not counted yet": "… individuals classified in 3
-populations, … unclassified", the populations then being those with an
-individual in both files, and ", … unclassified" only when an individual
-of the variants file has no population before the filters; "…
+a screen reader as "not counted yet": "… individuals classified in …
+populations, … unclassified", and ", … unclassified" only when an
+individual of the variants file has no population before the filters;
+the number of populations waits too, since once counted it is those
+with an individual kept, and a population the filters empty would make
+"in 3 populations" become "in 2" (until 16 October 2026 it gave the
+populations before the filters); "…
 individuals, all unclassified" when none is classified. Under it, the
 line of why:
 
@@ -338,7 +341,7 @@ which gives the column and its values before the variants file.
 
 **A column of more than 20 values** gives no summary line, and no table
 in the tab: "Warning: accession has 1,845 different values, too many
-for a column of populations: the individuals are counted here only for a
+for a column of populations: the individuals are counted only for a
 column of 20 different values or fewer. If it is not the column of the
 populations, choose another in the list." The values
 are counted in the individuals file, missing ones left out, so the

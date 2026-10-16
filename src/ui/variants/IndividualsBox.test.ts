@@ -607,7 +607,7 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     await choose(store, "accession");
     expect(countRows()).toEqual([]);
     expect(box().textContent).toContain(
-      "Warning: accession has 21 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
+      "Warning: accession has 21 different values, too many for a column of populations: the individuals are counted only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
     );
     expect(box().textContent).not.toContain("classified in");
     expect(countsPart()).toBeNull();
@@ -649,7 +649,7 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     ]);
     expect(paragraphs(box())).toEqual([
       "pops.csv",
-      "…not counted yet individuals classified in 2 populations, …not counted yet unclassified",
+      "…not counted yet individuals classified in …not counted yet populations, …not counted yet unclassified",
       "The individuals the filters keep are counted once panel.nei is read to the end.",
     ]);
     expect(paragraphs(countsPart() ?? tab())).toEqual([

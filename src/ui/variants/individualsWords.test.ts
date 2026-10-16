@@ -52,11 +52,19 @@ import {
   notInFileHeading,
   removeLabel,
   rowsNotUsedText,
-  summaryText,
   tableLabel,
   tableSizeText,
 } from "./individualsWords.ts";
-import type { PassWait } from "./individualsWords.ts";
+import type { CountsShown, PassWait } from "./individualsWords.ts";
+
+/** `shown` when it has the summary line and the table; a failure of the
+    test otherwise. */
+function countsDrawn(
+  shown: CountsShown,
+): Extract<CountsShown, { readonly kind: "counts" }> {
+  if (shown.kind !== "counts") throw new Error(`no counts: ${shown.kind}`);
+  return shown;
+}
 
 const FILE_ID = "0123456789abcdef0123456789abcdef";
 
@@ -363,9 +371,10 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
   test("both files read, every individual classified: the summary line of the box, the table of the tab, and no line", () => {
     const p = project();
     expect(countsShown(p, countsOf(p), "running")).toEqual({
+      kind: "counts",
       table: "populations",
       summary: ["200 individuals classified in 3 populations"],
-      lines: [],
+      boxLines: [],
       tabLines: [],
     });
     expect(COUNTS_HEADING).toBe(
@@ -375,9 +384,9 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
 
   test("the summary line of one individual in one population, of a population the filters empty, and of filters that keep nobody", () => {
     const one = project({ variantsIndividuals: ["s000"] });
-    expect(countsShown(one, countsOf(one), "running").summary).toEqual([
-      "1 individual classified in 1 population",
-    ]);
+    expect(
+      countsDrawn(countsShown(one, countsOf(one), "running")).summary,
+    ).toEqual(["1 individual classified in 1 population"]);
     const p0Names = PANEL_POPS.rows
       .filter((row) => row[1] === "p0")
       .map((row) => String(row[0]));
@@ -389,36 +398,23 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
     );
     const counts = countsOf(emptied, withoutP0);
     expect(counts.populations.map(({ kept }) => kept)).toEqual([0, 84, 68]);
-    expect(countsShown(emptied, counts, "running").summary).toEqual([
-      "152 individuals classified in 2 populations",
-    ]);
+    expect(
+      countsDrawn(countsShown(emptied, counts, "running")).summary,
+    ).toEqual(["152 individuals classified in 2 populations"]);
     const nobody = keptOf(
       emptied,
       statsOf(() => 0.5),
     );
     expect(countsShown(emptied, countsOf(emptied, nobody), "running")).toEqual({
+      kind: "counts",
       table: "populations",
       summary: [NO_INDIVIDUAL_KEPT],
-      lines: [],
+      boxLines: [],
       tabLines: [],
     });
     expect(NO_INDIVIDUAL_KEPT).toBe(
       "No individual is kept by the filters of individuals",
     );
-  });
-
-  test("the summary line as text, with … for each count that waits", () => {
-    expect(summaryText(["200 individuals classified in 3 populations"])).toBe(
-      "200 individuals classified in 3 populations",
-    );
-    expect(
-      summaryText([
-        null,
-        " individuals classified in 3 populations, ",
-        null,
-        " unclassified",
-      ]),
-    ).toBe("… individuals classified in 3 populations, … unclassified");
   });
 
   test("some unclassified of both causes: the count, each cause and three names, then the rest counted", () => {
@@ -432,9 +428,10 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       ),
     });
     expect(countsShown(p, countsOf(p), "running")).toEqual({
+      kind: "counts",
       table: "populations",
       summary: ["193 individuals classified in 3 populations, 7 unclassified"],
-      lines: [],
+      boxLines: [],
       tabLines: [
         {
           kind: "line",
@@ -454,7 +451,9 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
         ),
       ),
     });
-    expect(countsShown(empty, countsOf(empty), "running").tabLines[0]).toEqual({
+    expect(
+      countsDrawn(countsShown(empty, countsOf(empty), "running")).tabLines[0],
+    ).toEqual({
       kind: "line",
       text: "Unclassified, left out of the analyses per population: 3 individuals kept with an empty cell in popcat.",
     });
@@ -462,7 +461,8 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       read: tableRead(panelPopsWith(["s031", "s044", "s102"])),
     });
     expect(
-      countsShown(missing, countsOf(missing), "running").tabLines[0],
+      countsDrawn(countsShown(missing, countsOf(missing), "running"))
+        .tabLines[0],
     ).toEqual({
       kind: "line",
       text: "Unclassified, left out of the analyses per population: 3 individuals kept that are not in panel_pops.csv: s031, s044 and s102.",
@@ -470,12 +470,16 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
     const five = project({
       read: tableRead(panelPopsWith(["s031", "s044", "s102", "s150", "s160"])),
     });
-    expect(countsShown(five, countsOf(five), "running").tabLines[0]).toEqual({
+    expect(
+      countsDrawn(countsShown(five, countsOf(five), "running")).tabLines[0],
+    ).toEqual({
       kind: "line",
       text: "Unclassified, left out of the analyses per population: 5 individuals kept that are not in panel_pops.csv: s031, s044, s102 and 2 more; the list of those not in panel_pops.csv, in this tab, names them all.",
     });
     const one = project({ read: tableRead(panelPopsWith(["s031"])) });
-    expect(countsShown(one, countsOf(one), "running").tabLines[0]).toEqual({
+    expect(
+      countsDrawn(countsShown(one, countsOf(one), "running")).tabLines[0],
+    ).toEqual({
       kind: "line",
       text: "Unclassified, left out of the analyses per population: 1 individual kept that is not in panel_pops.csv: s031.",
     });
@@ -486,7 +490,9 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
         ),
       ),
     });
-    expect(countsShown(both, countsOf(both), "running").tabLines[0]).toEqual({
+    expect(
+      countsDrawn(countsShown(both, countsOf(both), "running")).tabLines[0],
+    ).toEqual({
       kind: "line",
       text: "Unclassified, left out of the analyses per population: 2 individuals kept, 1 with an empty cell in popcat and 1 that is not in panel_pops.csv. Not in panel_pops.csv: s031.",
     });
@@ -502,10 +508,8 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       ),
     });
     expect(countsShown(p, countsOf(p), "running")).toEqual({
-      table: "none",
-      summary: null,
-      tabLines: [],
-      lines: [
+      kind: "noCounts",
+      boxLines: [
         {
           kind: "warning",
           text: "none of the 200 individuals of panel.nei is in panel_pops.csv, so all of them are unclassified. The first column of panel_pops.csv has to hold their names as panel.nei writes them: panel.nei starts with s000, and panel_pops.csv with S-000.",
@@ -517,9 +521,10 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
   test("None chosen: all unclassified in the summary line, the one row Unclassified in the tab, and no line", () => {
     const p = project({ grouping: { kind: "populations", column: null } });
     expect(countsShown(p, countsOf(p), "running")).toEqual({
+      kind: "counts",
       table: "unclassified",
       summary: ["200 individuals, all unclassified"],
-      lines: [],
+      boxLines: [],
       tabLines: [],
     });
   });
@@ -529,9 +534,10 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       read: tableRead(panelPopsWith([], (row) => [row[0] ?? null, null])),
     });
     expect(countsShown(p, countsOf(p), "running")).toEqual({
+      kind: "counts",
       table: "unclassified",
       summary: ["200 individuals, all unclassified"],
-      lines: [],
+      boxLines: [],
       tabLines: [],
     });
   });
@@ -546,9 +552,10 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       text: "The individuals the filters keep are counted once panel.nei is read to the end.",
     } as const;
     expect(countsShown(p, countsOf(p), "running")).toEqual({
+      kind: "counts",
       table: "unclassified",
       summary: [null, " individuals, all unclassified"],
-      lines: [waiting],
+      boxLines: [waiting],
       tabLines: [waiting],
     });
   });
@@ -559,13 +566,11 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       grouping: { kind: "populations", column: "pop" },
     });
     expect(countsShown(p, countsOf(p), "running")).toEqual({
-      table: "none",
-      summary: null,
-      tabLines: [],
-      lines: [
+      kind: "noCounts",
+      boxLines: [
         {
           kind: "warning",
-          text: "pop has 21 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
+          text: "pop has 21 different values, too many for a column of populations: the individuals are counted only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
         },
       ],
     });
@@ -574,10 +579,8 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
   test("before the variants file is read: the line of the counts to come, and the warning of too many values still", () => {
     const p = project({ variantsIndividuals: null });
     expect(countsShown(p, countsOf(p, null), "running")).toEqual({
-      table: "none",
-      summary: null,
-      tabLines: [],
-      lines: [
+      kind: "noCounts",
+      boxLines: [
         {
           kind: "line",
           text: "The individuals are counted once a variants file is open.",
@@ -590,13 +593,11 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       grouping: { kind: "populations", column: "pop" },
     });
     expect(countsShown(many, countsOf(many, null), "running")).toEqual({
-      table: "none",
-      summary: null,
-      tabLines: [],
-      lines: [
+      kind: "noCounts",
+      boxLines: [
         {
           kind: "warning",
-          text: "pop has 200 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
+          text: "pop has 200 different values, too many for a column of populations: the individuals are counted only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
         },
         {
           kind: "line",
@@ -626,9 +627,10 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       const counts = countsOf(p);
       expect(counts.known).toBe(false);
       expect(countsShown(p, counts, wait)).toEqual({
+        kind: "counts",
         table: "populations",
-        summary: [null, " individuals classified in 3 populations"],
-        lines: [{ kind: "line", text: words }],
+        summary: [null, " individuals classified in ", null, " populations"],
+        boxLines: [{ kind: "line", text: words }],
         tabLines: [{ kind: "line", text: words }],
       });
     },
@@ -639,12 +641,16 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       read: tableRead(panelPopsWith(["s031"])),
       individualFilters: missingAt(0.03),
     });
-    expect(countsShown(p, countsOf(p), "running").summary).toEqual([
-      null,
-      " individuals classified in 3 populations, ",
-      null,
-      " unclassified",
-    ]);
+    expect(countsDrawn(countsShown(p, countsOf(p), "running")).summary).toEqual(
+      [
+        null,
+        " individuals classified in ",
+        null,
+        " populations, ",
+        null,
+        " unclassified",
+      ],
+    );
   });
 
   test("a file name and a column with a character that would reverse the text are written escaped", () => {
@@ -653,12 +659,14 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       read: tableRead({ ...manyValues(21), columns: ["IID", "p\u202eop"] }),
       grouping: { kind: "populations", column: "p\u202eop" },
     });
-    expect(countsShown(renamed, countsOf(renamed), "running").lines).toEqual([
-      {
-        kind: "warning",
-        text: "p\\u202eop has 21 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
-      },
-    ]);
+    expect(countsShown(renamed, countsOf(renamed), "running").boxLines).toEqual(
+      [
+        {
+          kind: "warning",
+          text: "p\\u202eop has 21 different values, too many for a column of populations: the individuals are counted only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
+        },
+      ],
+    );
   });
 });
 
@@ -849,7 +857,7 @@ describe("IN5 D1 what the status region says of a read of the individuals file",
       variantsIndividuals: null,
     });
     expect(individualsReadAnnouncement(p, keptOf(p))).toBe(
-      "panel_pops.csv read: 21 rows, the populations from pop. Warning: pop has 21 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
+      "panel_pops.csv read: 21 rows, the populations from pop. Warning: pop has 21 different values, too many for a column of populations: the individuals are counted only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
     );
   });
 
