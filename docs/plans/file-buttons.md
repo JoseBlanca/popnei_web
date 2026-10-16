@@ -230,4 +230,73 @@ Not settled in phase 2:
   with "Open another file." or "open it again." and name no place; the
   button is at the end of the Variants tab, under the tab's line "…
   could not be read; the box Variants says why.". Left as they are,
-  since they name no wrong place.
+  since they name no wrong place. Settled by the review of phase 2,
+  below: they name the button and its tab.
+
+The review of phase 2, 16 October 2026, in nine commits:
+
+- The words of a failure in the boxes name the button and its tab once
+  a file is open, read or refused, since the box then has no button and
+  the page never changes the tab shown: "Open another file with Open
+  another variants file… in the Variants tab.", "Open a corrected file
+  with Open another individuals file… in the Individuals tab.", and so
+  for "Open it again", "Then open it again", "Open the file again", the
+  reader of tables not loaded, a row of the wrong length ("… or open a
+  corrected file with Open another individuals file… in the same
+  tab."), the box's line of a file with no column to choose, the
+  greyed Distances' reasons and the diversity's line of one population
+  (d216c249). Two constants of `src/core/project.ts`,
+  `WITH_ANOTHER_VARIANTS` and `WITH_ANOTHER_INDIVIDUALS`, hold the
+  words, and a test ties them to the labels of the buttons and the
+  tabs. The refusals of the variants file shared with the analyses say
+  "Open another file" where they said "Open another variants file", so
+  that the analyses now say "Open another file in the Variants tab.".
+  The words of a reload are unchanged, since after it no file is open
+  and the boxes hold their buttons.
+- Remove is beside the zone of the Individuals tab, outside its
+  boundary of errors, in one of its own with no heading; the zone is as
+  wide as its button, so the two buttons stand together, side by side at
+  1280 px and Remove under the zone at 320 px, Remove now outside the
+  dashed frame (c44ed25b).
+- The row of tabs is drawn again after a defect when either file's id
+  changes (61300104). With both files open and the row down, no button
+  opens a file until a reload, which the error bar asks for.
+- The words of a file refused in a tab are inside a boundary: the
+  Variants tab's in the zone's, the Individuals tab's, which stand
+  under the zone and Remove, in one of their own; and they scroll into
+  the window at each refusal, the same words twice included (029b8adc).
+- The tests: "said once" checked again after its poll and after axe,
+  with one status region holding the words (5fb6ea20); the flow of the
+  Individuals tab starts with the zone's bottom at the window's bottom,
+  so its words start below the window (77cb576f); the band's Tab key
+  counted from "Open another variants file…", each control once, 21 to
+  the band with a PCA running and 22 round the page with nothing
+  running, in Chromium and WebKit (8afceaae); three cases of
+  `focusOnGone.test.ts`, each failing without its guard (b953a015); the
+  forced colours of a greyed tab not shown checked again at 1280, 640,
+  639 and 320 px, with Distances greyed by the column None (d687f3c6).
+  Each new test or check was seen to fail on the code or a mutation
+  that it guards against, in jsdom or in Chromium, but the band's
+  counts, which were measured and not seen to fail.
+- Checks: type check, lint, format, Vitest 5,729 tests; Playwright on
+  the built site at d687f3c6, Chromium 925 passed, WebKit 923 passed and
+  2 skipped; the flows `e2e/popgen2*` in Chromium with
+  `POPNEI_WIDE_FONT=1`, 291 passed, AP5 D4 of
+  `popgen2Downloads.spec.ts` among them this time. Firefox not run, as
+  it does not launch on this Mac. Screens of a variants file and an
+  individuals file refused with a file open seen in Chromium at 1280 px
+  light and 320 px dark.
+
+Not settled after the review of phase 2:
+
+- With both files open, a defect in the row of tabs leaves no button
+  that opens a file until a reload. The boxes could show their zones
+  again while the row is down; not done, since it changes what the
+  owner decided the box of a file open holds.
+- The tabs' lines "… could not be read; the box Individuals says why."
+  and "… the box Variants says why." send the user to the box, whose
+  words now name the button at the end of the same tab.
+- The words of the tabs of the analyses that send the user to open a
+  variants file name the Variants tab and not the button, "Open another
+  file in the Variants tab.", "open it again in the Variants tab";
+  they name a place where the button is.
