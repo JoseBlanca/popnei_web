@@ -352,6 +352,26 @@ async function expectSaidOnce(page: Page, words: string): Promise<void> {
   );
 }
 
+/** Scrolls the page so that the bottom of the zone around `button`, the
+    nearest element with a dashed border, is at the bottom of the window:
+    what is drawn under the zone then starts below the window. Gives the
+    scroll of the page then. */
+async function zoneAtWindowBottom(button: Locator): Promise<number> {
+  return button.evaluate((element) => {
+    let zone: Element | null = element;
+    while (
+      zone !== null &&
+      getComputedStyle(zone).borderTopStyle !== "dashed"
+    ) {
+      zone = zone.parentElement;
+    }
+    if (zone === null) throw new Error("no dashed zone around the button");
+    const bottom = zone.getBoundingClientRect().bottom + window.scrollY;
+    window.scrollTo(0, bottom - window.innerHeight);
+    return window.scrollY;
+  });
+}
+
 /** Scrolls the page to its end. */
 async function scrollToEnd(page: Page): Promise<void> {
   await page.evaluate(() => {
@@ -418,7 +438,7 @@ test("FB2 a file refused in the Variants tab, picked with Open another variants 
   await expect(page.getByText(words, { exact: true })).toHaveCount(0);
 });
 
-test("FB2 two files dropped on the zone at the end of the Individuals tab have their words under it, in the window near the button, as well as in the box, and said once", async ({
+test("FB2 two files dropped on the zone at the end of the Individuals tab have their words under it, brought into the window near the button from below it, as well as in the box, and said once", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -429,7 +449,10 @@ test("FB2 two files dropped on the zone at the end of the Individuals tab have t
   await openIndividuals(page);
   await fileTab(page, "individuals").click();
   const button = anotherOpenButton(page, "individuals");
-  await scrollToEnd(page);
+  // The zone's bottom at the window's bottom: the words, drawn under the
+  // zone, start below the window unless the page scrolls to them.
+  const before = await zoneAtWindowBottom(button);
+  expect(before).toBeGreaterThan(0);
   const pops = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
   await dropFiles(page, button, [
     { name: "a.csv", text: pops },
@@ -441,6 +464,7 @@ test("FB2 two files dropped on the zone at the end of the Individuals tab have t
     button,
     48,
   );
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(before);
   await expect(
     fileBox(page, "individuals").getByText(words, { exact: true }),
   ).toHaveCount(1);
