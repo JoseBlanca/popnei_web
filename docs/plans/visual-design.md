@@ -75,3 +75,25 @@ decide, after the look.
 - Proposals 1 to 3, round 1, and 2b and 3b, round 2, as token sets over
   the real page, compared on a private artifact page on 16 October 2026.
   The owner chose 2b.
+- The flows of popgen2.html on the look, 16 October 2026: 6 failed of
+  263 in Chromium and 7 in WebKit; after the fixes below, 263 passed of
+  263 in each. Firefox does not start on this machine and was not run.
+  - At 1280 px the band's flow saw a sideways scroll of 8 px for one
+    frame, the plot drawn at 720 px still in the centred column before
+    it was drawn again: the check polled (d5384ce5).
+  - axe: the greyed options of the PCA at 4.37:1 on the dark panel. The
+    dark disabled text #7d8997, 4.55:1 on the panel, and the dark text
+    #e8edf3, to keep 3.03:1 between them; the pairs on the panel and
+    the box in the test of the tokens (dab276b4).
+  - The exported bar plot's flow recorded the tokens before the look:
+    updated (0097ee9a).
+  - The plot of the spectrum at 320 px is 286 px, the column less the
+    panel's border (ba5a2ad4).
+  - A tab greyed while shown had lost its bar; it has it at its top in
+    the greyed colour, and the flows read the bar from the shadow
+    (0a7e235b).
+  - WebKit: the flow of the error over the download dialog read the
+    scroll before Playwright's click moved it 1 px (f1082182); the flow
+    of the FILTER box read the plots between their first draw, at a
+    rounded height, and their second, at 209.375 px (434e0efb). Both
+    passed on main, whose plots at 1280 px have whole heights.
