@@ -222,7 +222,7 @@ test.describe("in the forced colours of Windows", () => {
     "forced colours are emulated in Chromium alone",
   );
 
-  test("the tab shown of the page's row has a bar of 3 px in Highlight, at its top from 640 px and under it at 320 px; a tab greyed while shown has it in GrayText, apart from a greyed tab not shown", async ({
+  test("the tab shown of the page's row has a bar of 3 px in Highlight, at its top from 640 px and under it at 639 and 320 px, by the separate rules of forced colours on a narrow window; a tab greyed while shown has it in GrayText, apart from a greyed tab not shown", async ({
     page,
   }) => {
     await page.emulateMedia({ forcedColors: "active" });
@@ -239,6 +239,8 @@ test.describe("in the forced colours of Windows", () => {
 
     for (const [width, side] of [
       [1280, "top"],
+      [640, "top"],
+      [639, "bottom"],
       [320, "bottom"],
     ] as const) {
       await page.setViewportSize({ width, height: 900 });
@@ -262,6 +264,8 @@ test.describe("in the forced colours of Windows", () => {
     await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
     for (const [width, side] of [
       [1280, "top"],
+      [640, "top"],
+      [639, "bottom"],
       [320, "bottom"],
     ] as const) {
       await page.setViewportSize({ width, height: 900 });
