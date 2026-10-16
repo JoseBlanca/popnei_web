@@ -28,6 +28,7 @@ import type { Download, Locator, Page } from "@playwright/test";
 import { calcVariantsSummary, init, openVars, openVcf } from "popnei";
 
 import { expect, test } from "./axe.ts";
+import { pickFile } from "./openFiles.ts";
 import { writeBigVcf } from "./bigVcf.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
 import { holdSummary, release } from "./holdWorker.ts";
@@ -94,13 +95,11 @@ function textAfter(page: Page, stem: string): Locator {
 
 /** Picks `path`, a fixture or a path, with the open button. */
 async function pick(page: Page, path: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("button", { name: /^Open (another )?variants file…$/u })
-    .click();
-  await (
-    await chooser
-  ).setFiles(path.startsWith("/") ? path : join(FIXTURES, path));
+  await pickFile(
+    page,
+    "variants",
+    path.startsWith("/") ? path : join(FIXTURES, path),
+  );
 }
 
 /** Opens popgen2.html and `path`, and waits for the button enabled, the
@@ -828,5 +827,7 @@ test("DL7 D2 a file dropped on the page or pasted while the dialog is open opens
       .getByText(/^low_qual\.vcf\.gz/u)
       .first(),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: PASTE })).toHaveCount(1);
+  // The box's and the one of the zone at the end of the Variants tab,
+  // since 16 October 2026.
+  await expect(page.getByRole("button", { name: PASTE })).toHaveCount(2);
 });

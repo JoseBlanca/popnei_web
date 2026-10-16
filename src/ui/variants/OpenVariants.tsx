@@ -2,26 +2,28 @@
  * The opening of the variants file on popgen2.html
  * (docs/plans/open-variants.md, "Round 3"; the owner's decision of 6
  * October 2026): one widget, a zone that also takes a dropped or pasted
- * file, with the button "Open variants file…". A VCF is opened with no
+ * file, with the button "Open variants file…" at the end of the box
+ * Variants before a file is open, and "Open another variants file…" at
+ * the end of the Variants tab once one is; or, around the box of a file
+ * open, a zone with no button and no frame, which takes a dropped or
+ * pasted file by the same path (docs/plans/file-buttons.md, 16 October
+ * 2026). A VCF is opened with no
  * ploidy, which popnei reads from the file, and with every variant,
  * whatever its FILTER column, which a filter is to choose among later;
  * so the page asks nothing of how a file is read. The words of a file it
- * did not open go to the page, which shows them in the box of the file
- * above the zone.
+ * did not open go to the page, which shows them in the box of the file.
  *
  * It reads the project from the store and opens the file as a new history
  * (`openVariantsFile` of popgen2Store.ts).
  */
 import type { VariantLoad } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";
-import { classOf } from "../classOf.ts";
 import { useFiles } from "../files.tsx";
 import { openVariantsFile } from "../popgen2Store.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
 import { PICKER_ENDINGS, formatOfName } from "../steps/variants/words.ts";
 import { useAppState, useStore } from "../store.tsx";
 import { FileZone } from "../widgets/FileZone.tsx";
-import styles from "./Variants.module.css";
 import {
   FOLDER_DROPPED,
   OPEN_ANOTHER_LABEL,
@@ -55,19 +57,36 @@ export interface Refusal {
   readonly forLoad: string | null;
 }
 
-/** What the opening is drawn with. */
-export interface OpenVariantsProps {
-  /** The element of the open button, for the page to move the focus to
-      it when the summary goes. */
-  readonly buttonRef: React.RefObject<HTMLButtonElement | null>;
+/** What the opening is drawn with: its button, or what its zone with no
+    button holds. */
+export type OpenVariantsProps = OpenVariantsBaseProps &
+  (
+    | {
+        /** The element of the open button, for the page to move the
+            focus to it. */
+        readonly buttonRef: React.RefObject<HTMLButtonElement | null>;
+        readonly children?: never;
+      }
+    | {
+        readonly buttonRef?: never;
+        /** What the zone with no button holds, the box of the file
+            open. */
+        readonly children: React.ReactNode;
+      }
+  );
+
+/** What every opening is drawn with. */
+interface OpenVariantsBaseProps {
   /** Called with the words of a file not opened, and with `null` when an
       opening makes them out of date. */
   readonly onRefusal: (refusal: Refusal | null) => void;
 }
 
-/** The section that opens the variants file. */
+/** The zone that opens the variants file, with its button, or around
+    `children` with none. */
 export function OpenVariants({
   buttonRef,
+  children,
   onRefusal,
 }: OpenVariantsProps): React.JSX.Element {
   const store = useStore();
@@ -108,19 +127,29 @@ export function OpenVariants({
     openVariantsFile(store, load);
   };
 
-  return (
-    // In the box of the variants file, whose heading names it.
-    <div className={classOf(styles, "section")}>
+  const onNotFiles = (dropped: keyof typeof NOT_FILES_WORDS): void => {
+    refuse(NOT_FILES_WORDS[dropped]);
+  };
+  if (buttonRef === undefined) {
+    return (
       <FileZone
         pasteLabel={PASTE_LABEL}
-        buttonLabel={variants === null ? OPEN_LABEL : OPEN_ANOTHER_LABEL}
-        accept={PICKER_ENDINGS}
+        buttonLabel={null}
         onFiles={onFiles}
-        onNotFiles={(dropped) => {
-          refuse(NOT_FILES_WORDS[dropped]);
-        }}
-        buttonRef={buttonRef}
-      />
-    </div>
+        onNotFiles={onNotFiles}
+      >
+        {children}
+      </FileZone>
+    );
+  }
+  return (
+    <FileZone
+      pasteLabel={PASTE_LABEL}
+      buttonLabel={variants === null ? OPEN_LABEL : OPEN_ANOTHER_LABEL}
+      accept={PICKER_ENDINGS}
+      onFiles={onFiles}
+      onNotFiles={onNotFiles}
+      buttonRef={buttonRef}
+    />
   );
 }

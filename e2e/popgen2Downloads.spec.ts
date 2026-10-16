@@ -38,6 +38,7 @@ import { INDIVIDUAL_BINS, binValuesRounded } from "../src/core/histogram.ts";
 import type { VariantStatsPart } from "../src/worker/protocol.ts";
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { pickFile } from "./openFiles.ts";
 import { writeBigVcf } from "./bigVcf.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 
@@ -194,10 +195,6 @@ function stats(page: Page): Locator {
   return page.getByRole("region", { name: "Statistics of the file" });
 }
 
-function variantsBox(page: Page): Locator {
-  return page.getByRole("region", { name: "Variants", exact: true });
-}
-
 function individualsBox(page: Page): Locator {
   return page.getByRole("region", { name: "Individuals", exact: true });
 }
@@ -210,23 +207,17 @@ function menuButton(scope: Locator | Page, what: string): Locator {
 /** Picks the fixture or the path `file` with the button of the box of the
     variants file. */
 async function pick(page: Page, file: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await variantsBox(page)
-    .getByRole("button", { name: /^Open (another )?variants file…$/u })
-    .click();
-  await (
-    await chooser
-  ).setFiles(file.startsWith("/") ? file : join(FIXTURES, file));
+  await pickFile(
+    page,
+    "variants",
+    file.startsWith("/") ? file : join(FIXTURES, file),
+  );
 }
 
 /** Picks the fixture `name` with the button of the box of the individuals
     file. */
 async function pickIndividuals(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await individualsBox(page)
-    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "individuals", join(FIXTURES, name));
 }
 
 /** Opens popgen2.html and panel.nei, and waits for the one pass to end,

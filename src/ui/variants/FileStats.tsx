@@ -263,15 +263,16 @@ function Stats({
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
-    // The open button is one element whatever the zone holds.
-    const button = openButton.current;
     return () => {
       // The section goes, another file opened or dropped, while the focus
-      // is in it: the focus goes to the open button, not to the top of
-      // the page. The cleanup of a layout effect runs while the section
-      // is still in the page.
+      // is in it: the focus goes to the open button, "Open another
+      // variants file…" at the end of the tab, which stays from one file
+      // to the next, not to the top of the page. The cleanup of a layout
+      // effect runs while the section is still in the page; the button
+      // is read then, since it came after this section was drawn.
       if (section?.contains(document.activeElement) === true) {
-        button?.focus();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- read at the cleanup on purpose: the button is attached after this section is drawn
+        openButton.current?.focus();
       }
     };
   }, [openButton]);

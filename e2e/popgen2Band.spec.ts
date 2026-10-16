@@ -36,6 +36,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { pickFile } from "./openFiles.ts";
 import { openParameters } from "./parameters.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 
@@ -160,11 +161,7 @@ function bandButton(page: Page, name: string): Locator {
 }
 
 async function pick(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("button", { name: /^Open (another )?variants file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "variants", join(FIXTURES, name));
 }
 
 function tab(page: Page, name: "Variants" | "PCA"): Locator {
@@ -755,33 +752,31 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
     await expect(variantsBox(page)).toContainText("Variants: 1,200", {
       timeout: RESULT_TIMEOUT,
     });
-    const open = page.getByRole("button", {
-      name: "Open another variants file…",
-    });
+    // The menu "Download…" of the first plot, near the top of the
+    // Variants tab, which the page can scroll to any height; "Open
+    // another variants file…", which the flow pressed until 16 October
+    // 2026, is at the end of the page since, and the page cannot scroll
+    // it so high.
+    const open = page
+      .getByRole("button", { name: /^Download the plot of /u })
+      .first();
+    await expect(open).toBeVisible({ timeout: RESULT_TIMEOUT });
     const bandBottom = (await band(page).boundingBox())?.height ?? 0;
     expect(bandBottom).toBe(51);
     // The button's top at 47 px of the window, under the band's 51, and
-    // the focus elsewhere, as after the file was picked it is on it.
+    // the focus elsewhere.
     await page.evaluate(() => {
       (document.activeElement as HTMLElement | null)?.blur();
     });
-    await page.evaluate(
-      ([top]) => {
-        const button = [...document.querySelectorAll("button")].find(
-          (b) => b.textContent === "Open another variants file…",
-        );
-        if (button === undefined) throw new Error("no button");
-        window.scrollBy(0, button.getBoundingClientRect().top - top);
-      },
-      [47] as const,
-    );
+    await open.evaluate((button, top) => {
+      window.scrollBy(0, button.getBoundingClientRect().top - top);
+    }, 47);
     const box = await open.boundingBox();
     expect(Math.round(box?.y ?? 0)).toBe(47);
 
     const before = await page.evaluate(() => window.scrollY);
-    const chooser = page.waitForEvent("filechooser", { timeout: 5000 });
-    await page.mouse.click((box?.x ?? 0) + 20, 53);
-    await chooser;
+    await page.mouse.click((box?.x ?? 0) + 10, 53);
+    await expect(page.getByRole("menu")).toBeVisible();
     expect(await page.evaluate(() => window.scrollY)).toBe(before);
   });
 
@@ -955,13 +950,7 @@ test.describe("NU5 D3 the band of popgen2.html", () => {
       await page.goto("popgen2.html");
       await expect.poll(() => lineText(page)).toBe("Popnei");
       const alone = (await band(page).boundingBox())?.height;
-      const chooser = page.waitForEvent("filechooser");
-      await page
-        .getByRole("button", { name: /^Open (another )?variants file…$/u })
-        .click();
-      await (
-        await chooser
-      ).setFiles({
+      await pickFile(page, "variants", {
         name: LONG_NAME,
         mimeType: "application/octet-stream",
         buffer: readFileSync(join(FIXTURES, "panel.nei")),

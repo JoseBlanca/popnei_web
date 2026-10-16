@@ -1,13 +1,7 @@
 /* The tokens are those of src/ui/tokens.css. */
 
-/* The opening: the zone, at the end of the box of the variants file. */
-.section {
-  display: grid;
-  align-content: start;
-}
-
 /* The lines of the file, in the box of the variants file
-   (VariantsPage.module.css), above its zone. */
+   (VariantsPage.module.css). */
 .summary {
   display: grid;
   gap: var(--space-2);

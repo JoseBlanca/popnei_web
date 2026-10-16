@@ -25,6 +25,7 @@ import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { dropOnBox, pickFile } from "./openFiles.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -155,16 +156,6 @@ async function expectShown(page: Page, text: string): Promise<void> {
   await expect(shownPanel(page)).toHaveText(text, { useInnerText: true });
 }
 
-/** The box of the variants file, named by its heading. */
-function variantsBox(page: Page): Locator {
-  return page.getByRole("region", { name: "Variants", exact: true });
-}
-
-/** The box of the individuals file, named by its heading. */
-function individualsBox(page: Page): Locator {
-  return page.getByRole("region", { name: "Individuals", exact: true });
-}
-
 /** Opens popgen2.html. */
 async function openPage(page: Page): Promise<void> {
   await page.goto("popgen2.html");
@@ -173,24 +164,16 @@ async function openPage(page: Page): Promise<void> {
   ).toBeVisible();
 }
 
-/** Picks the fixture `name` with the button of the box of the variants
-    file. */
+/** Picks the fixture `name` as the variants file, with the button that
+    opens one now (openFiles.ts). */
 async function pick(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await variantsBox(page)
-    .getByRole("button", { name: /^Open (another )?variants file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "variants", join(FIXTURES, name));
 }
 
-/** Picks the fixture `name` with the button of the box of the
-    individuals file. */
+/** Picks the fixture `name` as the individuals file, with the button
+    that opens one now (openFiles.ts). */
 async function pickIndividuals(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await individualsBox(page)
-    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "individuals", join(FIXTURES, name));
 }
 
 /** Serves every calculation worker with the opening of the file `name`
@@ -460,7 +443,9 @@ test("AP1 D4 the PCA tab shown, another variants file opened: the tab stays show
     shownPanel(page).getByRole("heading", { level: 2, name: "PCA" }),
   ).toBeVisible();
 
-  await pick(page, "panel.vcf.gz");
+  // Dropped on the box, which keeps the PCA tab shown; the button that
+  // opens another file is in the Variants tab (16 October 2026).
+  await dropOnBox(page, "variants", join(FIXTURES, "panel.vcf.gz"));
   const reason = "The PCA needs a variants file: panel.vcf.gz is being opened.";
   await expectGreyed(page, "PCA", reason);
   await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
@@ -475,7 +460,7 @@ test("AP1 D4 the PCA tab shown, another variants file opened: the tab stays show
   await expectAxeBothSchemes(page, makeAxeBuilder);
 
   await page.unrouteAll({ behavior: "wait" });
-  await pick(page, "panel.nei");
+  await dropOnBox(page, "variants", join(FIXTURES, "panel.nei"));
   await expectOpen(page, "PCA");
   await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
   await expect(
@@ -492,7 +477,7 @@ test("at 320 pixels the PCA tab shown, another variants file opened: the tab kee
   await pick(page, "panel.nei");
   await expectOpen(page, "PCA");
   await tab(page, "PCA").click();
-  await pick(page, "panel.vcf.gz");
+  await dropOnBox(page, "variants", join(FIXTURES, "panel.vcf.gz"));
   await expectGreyed(
     page,
     "PCA",
@@ -521,7 +506,7 @@ test("at 1280 pixels the PCA tab greyed while shown has its greyed bar at its to
   await pick(page, "panel.nei");
   await expectOpen(page, "PCA");
   await tab(page, "PCA").click();
-  await pick(page, "panel.vcf.gz");
+  await dropOnBox(page, "variants", join(FIXTURES, "panel.vcf.gz"));
   await expectGreyed(
     page,
     "PCA",

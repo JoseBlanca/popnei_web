@@ -19,6 +19,17 @@
  * between populations, `DistancesTab`, in one of its own, which keeps
  * the heading "Distances between populations".
  *
+ * The tabs of the two files end, once a file is open, with the zone that
+ * opens another: the Variants tab with "Open another variants file…"
+ * under "Download filtered variants…", the Individuals tab with "Open
+ * another individuals file…" and Remove side by side, which wrap on a
+ * narrow window (docs/plans/file-buttons.md, 16 October 2026). Each is
+ * outside the boundary made again for each file, so that the button
+ * pressed is the same element after the opening and keeps the focus; and
+ * the row of the individuals file, which goes with the file at Remove,
+ * gives the focus to "Open individuals file…" of the box, which comes
+ * back.
+ *
  * Its own component, so that the page draws it inside a boundary of
  * errors: a defect thrown by `analysisTabs` costs the row alone, and the
  * two boxes of the files stay.
@@ -47,12 +58,23 @@ import {
   ANALYSES_TABS_LABEL,
   PAGE_TAB_LABELS,
 } from "./analysisTabsWords.ts";
+import { useFocusOnGone } from "./focusOnGone.ts";
 import { IndividualsTab } from "./IndividualsTab.tsx";
 import { INDIVIDUALS_TAB_CONTENT_NAME } from "./individualsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
+import { OpenIndividuals } from "./OpenIndividuals.tsx";
+import type { IndividualsOpening } from "./OpenIndividuals.tsx";
+import { OpenVariants } from "./OpenVariants.tsx";
+import type { Refusal } from "./OpenVariants.tsx";
+import { RemoveIndividuals } from "./RemoveIndividuals.tsx";
 import { StatsSection } from "./StatsSection.tsx";
 import styles from "./VariantsPage.module.css";
-import { NO_VARIANTS_FILE_TAB, notReadTabText } from "./words.ts";
+import { OPENING_INDIVIDUALS_ZONE_NAME } from "./individualsWords.ts";
+import {
+  NO_VARIANTS_FILE_TAB,
+  OPENING_ZONE_NAME,
+  notReadTabText,
+} from "./words.ts";
 
 /** What the row of tabs is drawn with. */
 export interface PageTabsProps {
@@ -60,11 +82,19 @@ export interface PageTabsProps {
   readonly tab: PageTab;
   /** Called with the tab the user chose. */
   readonly onTabChange: (tab: PageTab) => void;
-  /** The button that opens a variants file, in its box. */
+  /** The button that opens a variants file: in its box before a file is
+      open, at the end of the Variants tab after, which the statistics
+      give the focus to when they go. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
-  /** The button that opens an individuals file, in its box, which Remove
-      of the Individuals tab gives the focus to. */
+  /** Called with the words of a variants file not opened, and with
+      `null` when an opening makes them out of date. */
+  readonly onVariantsRefusal: (refusal: Refusal | null) => void;
+  /** The button that opens an individuals file: in its box before a file
+      is open, which takes the focus when Remove goes, and at the end of
+      the Individuals tab after. */
   readonly individualsOpenButton: React.RefObject<HTMLButtonElement | null>;
+  /** The page's one opening of the individuals file. */
+  readonly individualsOpening: IndividualsOpening;
   /** Told when the section of the statistics of a load is drawn, and when
       it goes. */
   readonly onStatsShown: StatsShown;
@@ -75,7 +105,9 @@ export function PageTabs({
   tab,
   onTabChange,
   openButton,
+  onVariantsRefusal,
   individualsOpenButton,
+  individualsOpening,
   onStatsShown,
 }: PageTabsProps): React.JSX.Element {
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
@@ -87,6 +119,12 @@ export function PageTabs({
   const individualsId = useAppState(
     (s) => s.project.individuals?.fileId ?? null,
   );
+  const individualsName = useAppState(
+    (s) => s.project.individuals?.name ?? null,
+  );
+  // Remove pressed: the row goes with the file, and the focus goes to the
+  // box's button, which comes back in the same change.
+  const individualsEnd = useFocusOnGone(() => individualsOpenButton.current);
   // The same object while the reasons are the same, so that a threshold
   // moved does not draw the row again.
   const tabReasons = useAppState((s) =>
@@ -107,38 +145,64 @@ export function PageTabs({
         {
           id: "variants",
           label: PAGE_TAB_LABELS.variants,
-          content: (
-            <>
-              {fileId === null && (
-                <p className={classOf(styles, "boxLine")}>
-                  {NO_VARIANTS_FILE_TAB}
-                </p>
-              )}
-              {notRead !== null && (
-                <p className={classOf(styles, "boxLine")}>
-                  {notReadTabText(notRead)}
-                </p>
-              )}
-              <StatsSection openButton={openButton} onShown={onStatsShown} />
-            </>
-          ),
+          content:
+            fileId === null ? (
+              <p className={classOf(styles, "boxLine")}>
+                {NO_VARIANTS_FILE_TAB}
+              </p>
+            ) : (
+              <div className={classOf(styles, "tabWithEnd")}>
+                {notRead !== null && (
+                  <p className={classOf(styles, "boxLine")}>
+                    {notReadTabText(notRead)}
+                  </p>
+                )}
+                <StatsSection openButton={openButton} onShown={onStatsShown} />
+                {/* Drawn again at a turn of the tabs after a throw, as the
+                    zone of the box. */}
+                <ErrorBoundary
+                  heading={OPENING_ZONE_NAME}
+                  level={2}
+                  resetOn={tab}
+                >
+                  <OpenVariants
+                    buttonRef={openButton}
+                    onRefusal={onVariantsRefusal}
+                  />
+                </ErrorBoundary>
+              </div>
+            ),
         },
         {
           id: "individuals",
           label: PAGE_TAB_LABELS.individuals,
           content: (
-            // Another load is another boundary, which has caught
-            // nothing, as the statistics of the variants file have.
-            <ErrorBoundary
-              key={individualsId ?? "none"}
-              heading={INDIVIDUALS_TAB_CONTENT_NAME}
-              level={2}
-            >
-              <IndividualsTab
-                shown={tab === "individuals"}
-                openButton={individualsOpenButton}
-              />
-            </ErrorBoundary>
+            <div className={classOf(styles, "tabWithEnd")}>
+              {/* Another load is another boundary, which has caught
+                  nothing, as the statistics of the variants file have. */}
+              <ErrorBoundary
+                key={individualsId ?? "none"}
+                heading={INDIVIDUALS_TAB_CONTENT_NAME}
+                level={2}
+              >
+                <IndividualsTab shown={tab === "individuals"} />
+              </ErrorBoundary>
+              {individualsName !== null && (
+                <div ref={individualsEnd}>
+                  <ErrorBoundary
+                    heading={OPENING_INDIVIDUALS_ZONE_NAME}
+                    level={2}
+                    resetOn={tab}
+                  >
+                    <OpenIndividuals
+                      opening={individualsOpening}
+                      buttonRef={individualsOpenButton}
+                      actions={<RemoveIndividuals name={individualsName} />}
+                    />
+                  </ErrorBoundary>
+                </div>
+              )}
+            </div>
           ),
         },
         analysisTab(

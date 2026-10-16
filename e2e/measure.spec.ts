@@ -193,6 +193,7 @@ import type { VcfPositions } from "./bigVcf.ts";
 import { drawPoints } from "./measure/points.ts";
 import type { DrawAsked, DrawTimes } from "./measure/points.ts";
 import type { Commit } from "./measure/profilingRoot.ts";
+import { pickFile } from "./openFiles.ts";
 import "./allowsPage.ts";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -2901,14 +2902,11 @@ test("AP5 D5 the table of individuals_10000.xlsx under the tab Individuals of po
   test.setTimeout(300_000);
   const loadBefore = machineLoad();
   await page.goto("popgen2.html");
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("region", { name: "Individuals", exact: true })
-    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
-    .click();
-  await (
-    await chooser
-  ).setFiles(join(import.meta.dirname, "fixtures", "individuals_10000.xlsx"));
+  await pickFile(
+    page,
+    "individuals",
+    join(import.meta.dirname, "fixtures", "individuals_10000.xlsx"),
+  );
   await page.getByRole("tab", { name: "Individuals", exact: true }).click();
   const table = page.getByRole("grid", {
     name: "The table of individuals_10000.xlsx",
@@ -3812,11 +3810,7 @@ async function pcaAfterPass(
     // The memory settles after the load before it is taken.
     await page.waitForTimeout(2000);
     const pickedAt = Date.now();
-    const chooser = page.waitForEvent("filechooser");
-    await page
-      .getByRole("button", { name: /^Open (another )?variants file…$/u })
-      .click();
-    await (await chooser).setFiles(vcf);
+    await pickFile(page, "variants", vcf);
     let pass: Logged | undefined;
     await expect
       .poll(
@@ -5259,11 +5253,7 @@ async function downloadOnce(
     await page.addInitScript(recordBlobSizes);
     if (options.kept) await page.addInitScript(keepWorkers);
     await page.goto("popgen2.html");
-    const chooser = page.waitForEvent("filechooser");
-    await page
-      .getByRole("button", { name: /^Open (another )?variants file…$/u })
-      .click();
-    await (await chooser).setFiles(file);
+    await pickFile(page, "variants", file);
     const stats = page.getByRole("region", { name: "Statistics of the file" });
     const button = stats.getByRole("button", {
       name: "Download filtered variants…",
@@ -5979,11 +5969,7 @@ async function pcaTwice(
     await page.addInitScript(instrument);
     await page.goto("popgen2.html");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    const chooser = page.waitForEvent("filechooser");
-    await page
-      .getByRole("button", { name: /^Open (another )?variants file…$/u })
-      .click();
-    await (await chooser).setFiles(vcf);
+    await pickFile(page, "variants", vcf);
     let pass: Logged | undefined;
     await expect
       .poll(
@@ -6181,11 +6167,7 @@ async function stopPca(browser: Browser, vcf: string): Promise<StopTimes> {
     await page.addInitScript(recordBandTimes);
     await page.goto("popgen2.html");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    const chooser = page.waitForEvent("filechooser");
-    await page
-      .getByRole("button", { name: /^Open (another )?variants file…$/u })
-      .click();
-    await (await chooser).setFiles(vcf);
+    await pickFile(page, "variants", vcf);
     let pass: Logged | undefined;
     await expect
       .poll(

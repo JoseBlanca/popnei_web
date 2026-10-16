@@ -25,6 +25,7 @@ import type AxeBuilder from "@axe-core/playwright";
 import type { Download, Locator, Page, Route } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { dropOnBox, pickFile } from "./openFiles.ts";
 import { openParameters } from "./parameters.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 
@@ -141,14 +142,10 @@ async function openPage(page: Page): Promise<void> {
   ).toBeVisible();
 }
 
-/** Picks the fixture `name` with the button of the box Variants. */
+/** Picks the fixture `name` with the button that opens one now
+    (openFiles.ts). */
 async function pick(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("region", { name: "Variants", exact: true })
-    .getByRole("button", { name: /^Open (another )?variants file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "variants", join(FIXTURES, name));
 }
 
 /** The box of the individuals file. */
@@ -159,13 +156,9 @@ function individualsBox(page: Page): Locator {
 /** Opens the individuals file `file`, a fixture by its name or a file
     the flow makes. */
 async function pickIndividuals(page: Page, file: string | Made): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await individualsBox(page)
-    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
-    .click();
-  await (
-    await chooser
-  ).setFiles(
+  await pickFile(
+    page,
+    "individuals",
     typeof file === "string"
       ? join(FIXTURES, file)
       : {
@@ -561,8 +554,11 @@ test.describe("DT1 D5 the Distances tab", () => {
       individualsBox(page).getByRole("button", {
         name: "Column of the populations",
       }),
+      // The box of a file open takes a paste, by its hidden button;
+      // "Open another individuals file…" is in the Individuals tab since
+      // 16 October 2026.
       individualsBox(page).getByRole("button", {
-        name: "Open another individuals file…",
+        name: "Paste an individuals file",
       }),
     ]) {
       await expect(control).toHaveAttribute("aria-disabled", "true");
@@ -700,7 +696,8 @@ test.describe("DT1 D5 the Distances tab", () => {
     await expect(line).toHaveCount(0);
 
     // The distances are live: the other file is calculated by itself.
-    await pickIndividuals(page, "panel_split.csv");
+    // Dropped on the box, which keeps the Distances tab shown.
+    await dropOnBox(page, "individuals", join(FIXTURES, "panel_split.csv"));
     await expect
       .poll(() => heatmapRows(page), { timeout: RESULT_TIMEOUT })
       .toEqual(["p0b", "p0a", "p2", "p1"]);

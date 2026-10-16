@@ -160,7 +160,7 @@ async function drawPage(
           AutoRunsProvider,
           { value: autoRuns },
           createElement(VariantsSummary, {
-            openButton,
+            focusTarget: openButton,
             onCountButton: () => undefined,
             refusal: null,
           }),

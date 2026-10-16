@@ -39,6 +39,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { pickFile } from "./openFiles.ts";
 import { openParameters } from "./parameters.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 import { pcaTabSeen, watchPcaTab } from "./pcaSeen.ts";
@@ -123,11 +124,7 @@ async function runsPosted(page: Page): Promise<number> {
 }
 
 async function pick(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("button", { name: /^Open (another )?variants file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "variants", join(FIXTURES, name));
 }
 
 function tab(page: Page, name: "Variants" | "PCA"): Locator {

@@ -10,41 +10,37 @@
  * the list "Column of the populations" with the summary line, "180
  * individuals classified in 3 populations, 20 unclassified", and the
  * lines under it, the warnings that say the counts cannot be trusted
- * among them. It ends with the zone that opens an individuals file, its
- * button, a drop or a paste. The individuals per population and the
- * button that removes the file are in the Individuals tab.
+ * among them. The words of the last file not opened follow them.
  *
- * While an analysis that reads the populations runs, the list and the
- * zone wait, greyed with the reason of the lock of the populations, so
- * that no change leaves the running analysis behind; a file dropped,
- * pasted or picked then opens nothing, and the box shows that it was not
- * opened and what to do where it shows the words of a folder dropped
- * (popgen2-input.md, "While the diversity runs").
+ * With no file, the box ends with the zone that opens one, its button,
+ * "Open individuals file…", at the bottom of the box, at the height of
+ * the button of the box Variants; an opening by that button, which goes
+ * with the zone, gives the focus to the box's heading. With a file, the
+ * whole box takes a file dropped or pasted, with no button and no frame
+ * drawn, and "Open another individuals file…" and Remove are at the end
+ * of the Individuals tab (docs/plans/file-buttons.md, 16 October 2026).
+ * The zones are those of the page's one opening, `useIndividualsOpening`,
+ * which waits while an analysis that reads the populations runs, and
+ * the list of the column waits with it, so that no change leaves the
+ * running analysis behind.
  *
  * The lines of the file are in a boundary of errors made again for each
- * file, as those of the variants file are; the zone is outside it, so
- * that the button the user pressed, which holds the focus, is not
- * replaced at each opening, and has a boundary of its own, made again at
- * each turn of the tabs, as the zone of the variants file has. The box
- * holds the words of the last drop or paste it did not open, until the
- * next opening or removal; those of a file refused by the lock, until the
- * lock ends, so that they do not come back at the next run.
+ * file, as those of the variants file are; the zone has a boundary of its
+ * own, drawn again at each turn of the tabs after a throw, as the zone of
+ * the variants file has; around the box of a file open, its boundary
+ * draws the box's heading alone in its place.
  */
-import { useId, useState } from "react";
+import { useId, useRef } from "react";
 
 import { populationCounts } from "../../core/populations.ts";
 import type { PageTab } from "../../core/popgen2Tabs.ts";
 import { escaped, individualsBoxNeeds } from "../../core/project.ts";
 import type { IndividualsSource, Project } from "../../core/project.ts";
 import { classOf } from "../classOf.ts";
-import { useFiles } from "../files.tsx";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
-import { useAnnouncer } from "../shell/announcer.tsx";
-import { PICKER_ENDINGS } from "../steps/individuals/words.ts";
-import type { StepCommand } from "../steps/variants/commands.ts";
-import { useAppState, usePopgen2Store, useStore } from "../store.tsx";
-import { FileZone } from "../widgets/FileZone.tsx";
-import { usePopulationsLock, usePopulationsRunning } from "./filtersLock.ts";
+import { useAppState, useStore } from "../store.tsx";
+import { usePopulationsLock } from "./filtersLock.ts";
+import { useFocusOnGone } from "./focusOnGone.ts";
 import { Problem } from "../widgets/Problem.tsx";
 import { Select } from "../widgets/Select.tsx";
 import styles from "./IndividualsBox.module.css";
@@ -53,111 +49,58 @@ import {
   usePassWait,
   waitingCount,
 } from "./IndividualsCounts.tsx";
+import { OpenIndividuals } from "./OpenIndividuals.tsx";
+import type { IndividualsOpening } from "./OpenIndividuals.tsx";
 import pageStyles from "./VariantsPage.module.css";
 import {
   chosenColumnItem,
   columnItemCommand,
   columnItems,
-  openIndividualsCommand,
 } from "./individualsCommands.ts";
 import {
   COLUMN_LIST_LABEL,
   INDIVIDUALS_BOX_NAME,
-  INDIVIDUALS_FOLDER_DROPPED,
   INDIVIDUALS_LINES_NAME,
-  INDIVIDUALS_SEVERAL_DROPPED,
-  INDIVIDUALS_TEXT_DROPPED,
   OPENING_INDIVIDUALS_ZONE_NAME,
-  OPEN_ANOTHER_INDIVIDUALS_FILE,
-  OPEN_INDIVIDUALS_FILE,
-  PASTE_INDIVIDUALS_FILE,
   countsShown,
   noColumnQualifiedText,
   noFileCounts,
-  notOpenedWhileRunningText,
 } from "./individualsWords.ts";
 import type { SummaryLine } from "./individualsWords.ts";
-
-/** What the box says of a drop, or a paste, that is not of one file. */
-const NOT_FILES_WORDS = {
-  folder: INDIVIDUALS_FOLDER_DROPPED,
-  text: INDIVIDUALS_TEXT_DROPPED,
-  several: INDIVIDUALS_SEVERAL_DROPPED,
-} as const;
-
-/** A drop or a paste the box did not open, with its words: of something
-    that is not one file; or refused by the lock of the populations,
-    whose words go with the lock; and the load id of the individuals file
-    open when it was refused, or null with none, since an opening or a
-    removal takes the words away. */
-interface Refusal {
-  readonly kind: "notOneFile" | "locked";
-  readonly text: string;
-  readonly fileId: string | null;
-}
 
 /** What the box is drawn with. */
 export interface IndividualsBoxProps {
   /** The tab shown, whose turn draws the zone again after a throw. */
   readonly tab: PageTab;
-  /** The zone's button, which Remove in the Individuals tab gives the
-      focus to. */
+  /** The page's one opening of the individuals file. */
+  readonly opening: IndividualsOpening;
+  /** The zone's button, before a file is open, which Remove in the
+      Individuals tab gives the focus to. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
 }
 
 /** The box of the individuals file. */
 export function IndividualsBox({
   tab,
+  opening,
   openButton,
 }: IndividualsBoxProps): React.JSX.Element {
   const headingId = useId();
-  const store = usePopgen2Store();
-  const files = useFiles();
-  const announcer = useAnnouncer();
-  // The last drop or paste not opened, until the next opening or
-  // removal, or, refused by the lock, until the lock ends.
-  const [refusal, setRefusal] = useState<Refusal | null>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
   const individuals = useAppState((s) => s.project.individuals);
-  const fileId = individuals?.fileId ?? null;
-  const lock = usePopulationsLock();
-  const running = usePopulationsRunning();
-  // The lock ended, or a file was opened or removed, Remove being in the
-  // Individuals tab: the words of the refusal go, set while drawing, as
-  // React keeps a state that follows another.
-  if (
-    refusal !== null &&
-    ((refusal.kind === "locked" && lock === null) || refusal.fileId !== fileId)
-  ) {
-    setRefusal(null);
-  }
-
-  // An opening and a removal start the history afresh (popgen2-input.md, "What it sends and reads").
-  const send = (step: StepCommand): void => {
-    store.applyAfresh(step.command);
-  };
-
-  const refuse = (kind: Refusal["kind"], text: string): void => {
-    setRefusal({ kind, text, fileId });
-    // The focus stays where it was, so a screen reader would not read the
-    // words by themselves.
-    announcer.announce(text);
-  };
-
-  const onFiles = (picked: readonly File[]): void => {
-    const [file, ...others] = picked;
-    if (file === undefined) return;
-    if (others.length > 0) {
-      refuse("notOneFile", INDIVIDUALS_SEVERAL_DROPPED);
-      return;
-    }
-    // Any file: the reader says what it is from its bytes, not its name.
-    setRefusal(null);
-    send(openIndividualsCommand(files.addFile(file), file.name));
-  };
-
-  return (
-    <section aria-labelledby={headingId} className={classOf(pageStyles, "box")}>
-      <h2 id={headingId} className={classOf(pageStyles, "boxHeading")}>
+  // An opening by the box's button: the button goes with its zone, and
+  // the focus goes to the box's heading.
+  const zoneEnd = useFocusOnGone(() => heading.current);
+  const lines = (
+    <>
+      {/* It takes the focus after an opening by the box's button, and is
+          not a stop of the Tab key. */}
+      <h2
+        ref={heading}
+        id={headingId}
+        tabIndex={-1}
+        className={classOf(pageStyles, "boxHeading")}
+      >
         {INDIVIDUALS_BOX_NAME}
       </h2>
       {/* Another load is another boundary, which has caught nothing. */}
@@ -168,46 +111,42 @@ export function IndividualsBox({
       >
         <FileLines individuals={individuals} />
       </ErrorBoundary>
-      {refusal !== null && <Problem>{refusal.text}</Problem>}
-      {/* Its own boundary, made again at each turn of the tabs, as the
-          zone of the variants file has. */}
-      <ErrorBoundary
-        key={tab}
-        heading={OPENING_INDIVIDUALS_ZONE_NAME}
-        level={3}
+      {opening.refusal !== null && <Problem>{opening.refusal}</Problem>}
+    </>
+  );
+
+  if (individuals !== null) {
+    return (
+      <section
+        aria-labelledby={headingId}
+        className={`${classOf(pageStyles, "box")} ${classOf(pageStyles, "boxDrop")}`}
       >
-        <FileZone
-          pasteLabel={PASTE_INDIVIDUALS_FILE}
-          buttonLabel={
-            individuals === null
-              ? OPEN_INDIVIDUALS_FILE
-              : OPEN_ANOTHER_INDIVIDUALS_FILE
-          }
-          accept={PICKER_ENDINGS}
-          onFiles={onFiles}
-          onNotFiles={(dropped) => {
-            refuse("notOneFile", NOT_FILES_WORDS[dropped]);
-          }}
-          buttonRef={openButton}
-          waiting={
-            lock === null || running === null
-              ? null
-              : {
-                  reason: lock,
-                  onRefused: (name) => {
-                    if (name === null) {
-                      refuse("notOneFile", INDIVIDUALS_SEVERAL_DROPPED);
-                    } else {
-                      refuse(
-                        "locked",
-                        notOpenedWhileRunningText(name, running),
-                      );
-                    }
-                  },
-                }
-          }
-        />
-      </ErrorBoundary>
+        {/* A throw in the zone leaves the box its heading. */}
+        <ErrorBoundary heading={INDIVIDUALS_BOX_NAME} level={2} resetOn={tab}>
+          <OpenIndividuals opening={opening}>
+            <div className={classOf(pageStyles, "boxInner")}>{lines}</div>
+          </OpenIndividuals>
+        </ErrorBoundary>
+      </section>
+    );
+  }
+  return (
+    <section
+      aria-labelledby={headingId}
+      className={`${classOf(pageStyles, "box")} ${classOf(pageStyles, "boxInner")}`}
+    >
+      {lines}
+      <div ref={zoneEnd} className={classOf(pageStyles, "boxEnd")}>
+        {/* Its own boundary, drawn again at each turn of the tabs after a
+            throw, as the zone of the variants file has. */}
+        <ErrorBoundary
+          heading={OPENING_INDIVIDUALS_ZONE_NAME}
+          level={3}
+          resetOn={tab}
+        >
+          <OpenIndividuals opening={opening} buttonRef={openButton} />
+        </ErrorBoundary>
+      </div>
     </section>
   );
 }

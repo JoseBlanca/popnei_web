@@ -66,9 +66,9 @@ import {
 
 /** What the box is drawn with. */
 export interface VariantsSummaryProps {
-  /** The open button of the page, which takes the focus when the lines
-      of a load go while the focus is in them. */
-  readonly openButton: React.RefObject<HTMLButtonElement | null>;
+  /** The element that takes the focus when the lines of a load go while
+      the focus is in them, the heading of the box. */
+  readonly focusTarget: React.RefObject<HTMLElement | null>;
   /** Called with the element of Stop or Start again while one is shown,
       and with `null` when it goes, for the entry to tell whether the
       focus is on it as the count ends. */
@@ -80,7 +80,7 @@ export interface VariantsSummaryProps {
 
 /** The box of the file; nothing before a file is opened or refused. */
 export function VariantsSummary({
-  openButton,
+  focusTarget,
   onCountButton,
   refusal,
 }: VariantsSummaryProps): React.JSX.Element | null {
@@ -97,7 +97,7 @@ export function VariantsSummary({
         // the focus they held.
         <Load
           key={variants.fileId}
-          openButton={openButton}
+          focusTarget={focusTarget}
           onCountButton={onCountButton}
           variants={variants}
           refused={refusalText !== null}
@@ -110,7 +110,7 @@ export function VariantsSummary({
 
 /** What the lines of one load of the file are drawn with. */
 interface LoadProps {
-  readonly openButton: React.RefObject<HTMLButtonElement | null>;
+  readonly focusTarget: React.RefObject<HTMLElement | null>;
   readonly onCountButton: (node: HTMLButtonElement | null) => void;
   /** The file. */
   readonly variants: VariantSource;
@@ -120,7 +120,7 @@ interface LoadProps {
 
 /** The lines of one load of the file, in each state of its read. */
 function Load({
-  openButton,
+  focusTarget,
   onCountButton,
   variants,
   refused,
@@ -130,19 +130,20 @@ function Load({
   const failure = openFailure(project);
   useLayoutEffect(() => {
     const lines = linesRef.current;
-    // The open button is one element whatever the zone holds.
-    const button = openButton.current;
     return () => {
       // The lines go, a new file opened or dropped, while the focus
       // is in them, on Stop, on Start again or on the lines of the
-      // count: the focus goes to the open button, not to the top of the
-      // page. The cleanup of a layout effect runs while the lines are
-      // still in the page.
+      // count: the focus goes to the heading of the box, which stays,
+      // not to the top of the page. The cleanup of a layout effect runs
+      // while the lines are still in the page; the heading is read
+      // then, since the box's heading of a file open is not the one of
+      // the box with none.
       if (lines?.contains(document.activeElement) === true) {
-        button?.focus();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- read at the cleanup on purpose: the heading to focus is the one in the page then
+        focusTarget.current?.focus();
       }
     };
-  }, [openButton]);
+  }, [focusTarget]);
   const { read } = variants;
   return (
     <div ref={linesRef} className={classOf(styles, "lines")}>
@@ -299,7 +300,7 @@ function Count({
                 onGone={() => {
                   // The button went, the count done or failed for good, and
                   // the lines stay: when the lines go, their own cleanup has
-                  // already moved the focus to the open button. The words of
+                  // already moved the focus to the heading of the box. The words of
                   // a failure are drawn by the time the effects of the
                   // drawing run, after this cleanup.
                   focusAfterGone.current = true;

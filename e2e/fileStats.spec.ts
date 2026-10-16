@@ -28,6 +28,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { pickFile } from "./openFiles.ts";
 import { writeBigVcf } from "./bigVcf.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
 import { dropFiles } from "./dropFiles.ts";
@@ -51,11 +52,7 @@ async function openPage(page: Page): Promise<void> {
 
 /** Picks `path` with the open button, through the file picker. */
 async function pick(page: Page, path: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("button", { name: /^Open (another )?variants file…$/u })
-    .click();
-  await (await chooser).setFiles(path);
+  await pickFile(page, "variants", path);
 }
 
 /** The section of the statistics. */
@@ -135,7 +132,8 @@ async function drawn(page: Page): Promise<void> {
   });
 }
 
-/** The open button, under the statistics. */
+/** The open button: in the box with no file, at the end of the Variants
+    tab, under the statistics, with one. */
 function openButton(page: Page): Locator {
   return page.getByRole("button", {
     name: /^Open (another )?variants file…$/u,
@@ -663,7 +661,7 @@ test("FS2 at 320 pixels, the download of the plots failed, the error bar wraps t
   ).toBe(true);
 });
 
-test("FS3 the open button is alone in the box of the variants file before a file is opened, and under the lines of the file and above the statistics once one is, where it opens the file picker", async ({
+test("FS3 the open button is alone in the box of the variants file before a file is opened, and once one is, Open another variants file… is under the statistics, at the end of the Variants tab, where it opens the file picker", async ({
   page,
 }) => {
   await openPage(page);
@@ -689,13 +687,13 @@ test("FS3 the open button is alone in the box of the variants file before a file
     .boundingBox();
   const statsAt = await stats(page).boundingBox();
   const buttonAt = await openButton(page).boundingBox();
-  // The lines of the file, then the open button, both in the box of the
-  // variants file, then the statistics under the tab.
+  // The lines of the file in the box, the statistics under the tab,
+  // then the open button at the end of the tab (16 October 2026).
   expect((box?.y ?? NaN) + (box?.height ?? NaN)).toBeLessThanOrEqual(
-    buttonAt?.y ?? NaN,
-  );
-  expect((buttonAt?.y ?? NaN) + (buttonAt?.height ?? NaN)).toBeLessThanOrEqual(
     statsAt?.y ?? NaN,
+  );
+  expect((statsAt?.y ?? NaN) + (statsAt?.height ?? NaN)).toBeLessThanOrEqual(
+    buttonAt?.y ?? NaN,
   );
   await expect(openButton(page)).toHaveText("Open another variants file…");
   // Under the plots drawn, the button opens the file picker.

@@ -506,8 +506,10 @@ describe("IN3 the page in two boxes and the row of tabs", () => {
     });
     await settled();
     const panel = container.querySelector('[role="tabpanel"]:not([inert])');
+    // The line, then, at the end of the tab, the button that opens
+    // another file.
     expect(panel === null ? null : shownText(panel)).toBe(
-      "panel.nei could not be read; the box Variants says why.",
+      "panel.nei could not be read; the box Variants says why.Open another variants file…",
     );
   });
 
@@ -609,7 +611,7 @@ describe("IN3 the page in two boxes and the row of tabs", () => {
     ]);
   });
 
-  test("the zone is outside the boundary made for each file: its button is the same element after a throw in the box of one file and the opening of the next", async () => {
+  test("the zone at the end of the Variants tab is outside the boundaries made for each file: its button is the same element after a throw in the box of one file and the opening of the next", async () => {
     const { store, requests } = await drawPage();
     await open(store, "a".repeat(32), "first.nei");
     const button = buttonOf("Open another variants file…");
@@ -625,7 +627,10 @@ describe("IN3 the page in two boxes and the row of tabs", () => {
     expect(buttonOf("Open another variants file…")).toBe(button);
     await open(store, "b".repeat(32), "second.nei");
     expect(buttonOf("Open another variants file…")).toBe(button);
-    expect(region("Variants")?.contains(button)).toBe(true);
+    expect(region("Variants")?.contains(button)).toBe(false);
+    expect(
+      container.querySelector('[role="tabpanel"]')?.contains(button ?? null),
+    ).toBe(true);
   });
 });
 

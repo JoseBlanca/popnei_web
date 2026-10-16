@@ -20,6 +20,7 @@ import type { Locator, Page } from "@playwright/test";
 import type AxeBuilder from "@axe-core/playwright";
 
 import { expect, test } from "./axe.ts";
+import { pickFile } from "./openFiles.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 import { parametersButton } from "./parameters.ts";
 
@@ -47,22 +48,12 @@ const PCA_LOCKED =
 
 /** Picks the variants file `name`, a fixture. */
 async function pick(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("region", { name: "Variants", exact: true })
-    .getByRole("button", { name: /^Open (another )?variants file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "variants", join(FIXTURES, name));
 }
 
 /** Opens the individuals file `name`, a fixture. */
 async function pickIndividuals(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("region", { name: "Individuals", exact: true })
-    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "individuals", join(FIXTURES, name));
 }
 
 /** The tab of the row named `name`. */

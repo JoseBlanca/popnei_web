@@ -23,6 +23,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { pickFile } from "./openFiles.ts";
 import { dropFiles } from "./dropFiles.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 
@@ -59,14 +60,10 @@ async function openPage(page: Page): Promise<void> {
   ).toBeVisible();
 }
 
-/** Picks the fixture `name` with the button of the box of the variants
-    file. */
+/** Picks the fixture `name` as the variants file, with the button that
+    opens one now (openFiles.ts). */
 async function pick(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await variantsBox(page)
-    .getByRole("button", { name: /^Open (another )?variants file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "variants", join(FIXTURES, name));
 }
 
 /** Opens popgen2.html and the fixture `name`, and waits for its one pass
@@ -356,18 +353,21 @@ for (const width of [320, 1280]) {
   });
 }
 
-test("IN3 D2 an opening by the button leaves the focus on it, now Open another variants file…, in the box of the variants file", async ({
+test("IN3 D2 an opening by the button of the box puts the focus on the box's heading, where it stays through the pass, and the box holds no button that opens a file (16 October 2026)", async ({
   page,
 }) => {
   await openPage(page);
   await pick(page, "panel.vcf.gz");
-  const button = variantsBox(page).getByRole("button", {
-    name: "Open another variants file…",
+  const heading = variantsBox(page).getByRole("heading", {
+    name: "Variants",
+    exact: true,
   });
-  await expect(button).toBeVisible();
-  await expect(button).toBeFocused();
+  await expect(heading).toBeFocused();
+  await expect(
+    variantsBox(page).getByRole("button", { name: /^Open .*file…$/u }),
+  ).toHaveCount(0);
   await expect(page.locator("svg.chart")).toHaveCount(6, { timeout: 20_000 });
-  await expect(button).toBeFocused();
+  await expect(heading).toBeFocused();
 });
 
 test("IN3 D2 axe on the page with each tab shown, light and dark, with no file and with a file", async ({
@@ -421,15 +421,12 @@ interface Made {
 }
 
 /** Opens the individuals file `file`, a fixture by its name or a file
-    the flow makes, with the button of its box. */
+    the flow makes, with the button that opens one
+    now (openFiles.ts). */
 async function pickIndividuals(page: Page, file: string | Made): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await individualsBox(page)
-    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
-    .click();
-  await (
-    await chooser
-  ).setFiles(
+  await pickFile(
+    page,
+    "individuals",
     typeof file === "string"
       ? join(FIXTURES, file)
       : {
@@ -1051,8 +1048,9 @@ test("IN6 D2 a CSV named .xlsx is read as text, with its options under the tab; 
   });
   await expect(panel.getByRole("button", { name: "Separator" })).toBeVisible();
 
+  // With the button at the end of the Individuals tab, shown.
   const chooser = page.waitForEvent("filechooser");
-  await individualsBox(page)
+  await panel
     .getByRole("button", { name: "Open another individuals file…" })
     .click();
   await (
@@ -1251,7 +1249,7 @@ test("IN6 D2 axe on the box and the tab with no file, a file being read, a file 
   await expectAxeBothSchemes(page, makeAxeBuilder);
 });
 
-test("TIDY2 Remove is the first stop of the Tab key in the Individuals tab; Enter removes the file and puts the focus on the zone's button of the box", async ({
+test("TIDY2 Open another individuals file… and Remove are the last stops of the Tab key in the Individuals tab, before the row of tabs is left; Enter on Remove removes the file and puts the focus on the zone's button of the box", async ({
   page,
 }) => {
   await openPage(page);
@@ -1260,10 +1258,20 @@ test("TIDY2 Remove is the first stop of the Tab key in the Individuals tab; Ente
   await expectSummary(page, "200 individuals classified in 3 populations");
   await tab(page, "Individuals").click();
   await expect(tab(page, "Individuals")).toBeFocused();
+  const panel = page.getByRole("tabpanel", { name: "Individuals" });
+  const another = panel.getByRole("button", {
+    name: "Open another individuals file…",
+  });
+  const remove = panel.getByRole("button", { name: "Remove panel_pops.csv" });
+  // Through the tab to its end: the hidden button of the zone's paste,
+  // then its button, then Remove, the last stop of the tab.
+  let presses = 0;
+  while (!(await another.evaluate((b) => b === document.activeElement))) {
+    await page.keyboard.press("Tab");
+    presses += 1;
+    expect(presses).toBeLessThanOrEqual(40);
+  }
   await page.keyboard.press("Tab");
-  const remove = page
-    .getByRole("tabpanel", { name: "Individuals" })
-    .getByRole("button", { name: "Remove panel_pops.csv" });
   await expect(remove).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(
@@ -1367,7 +1375,7 @@ test("IN6 D3 at the missing rate of the individuals 0.03, the counts and the unc
   expect(sum).toBe(116);
 });
 
-/** Drops a folder on the zone of the box of the individuals file: a
+/** Drops a folder on the box of the individuals file: a
     script cannot put a folder into a DataTransfer, so the item of a file
     says, when React Aria asks for its entry of the file system, that it
     is a folder, as the entry of a folder dragged from the desktop does. */
@@ -1390,9 +1398,14 @@ async function dropFolder(page: Page): Promise<void> {
     transfer.items.add(new File([], "metadata"));
     return transfer;
   });
-  const target = individualsBox(page).getByRole("button", {
-    name: /^Open (another )?individuals file…$/u,
+  // On the zone's button with no file, on the box's heading with one.
+  const button = individualsBox(page).getByRole("button", {
+    name: "Open individuals file…",
   });
+  const target =
+    (await button.count()) > 0
+      ? button
+      : individualsBox(page).getByRole("heading", { name: "Individuals" });
   for (const type of ["dragenter", "dragover", "drop"]) {
     await target.dispatchEvent(type, { dataTransfer });
   }
@@ -1417,7 +1430,7 @@ test("IN6 D2 a folder, then two files, dropped on the box of the individuals fil
     "Open an individuals file, a CSV, a TSV or an xlsx, not a folder.";
   const several = "Open one individuals file at a time.";
   const zoneButton = individualsBox(page).getByRole("button", {
-    name: /^Open (another )?individuals file…$/u,
+    name: "Open individuals file…",
   });
 
   await dropFolder(page);
@@ -1439,7 +1452,9 @@ test("IN6 D2 a folder, then two files, dropped on the box of the individuals fil
   await dropFiles(page, zoneButton, [{ name: "panel_pops.csv", text: pops }]);
   await expect(columnList(page)).toContainText("popcat", { timeout: 20_000 });
   await expect(individualsBox(page).getByText(several)).toHaveCount(0);
-  await expect(zoneButton).toHaveText("Open another individuals file…");
+  // With a file open, the box holds no button that opens one, and takes
+  // a drop anywhere on it, its heading among.
+  await expect(zoneButton).toHaveCount(0);
 
   await dropFolder(page);
   await expect(individualsBox(page).getByText(folder)).toBeVisible();

@@ -27,6 +27,7 @@ import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { pickFile } from "./openFiles.ts";
 import { writeBigVcf } from "./bigVcf.ts";
 import { dropFiles } from "./dropFiles.ts";
 import { holdSummary, release } from "./holdWorker.ts";
@@ -72,11 +73,7 @@ function stats(page: Page): Locator {
 
 /** Picks the fixture `name` with the open button. */
 async function pick(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("button", { name: /^Open (another )?variants file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "variants", join(FIXTURES, name));
 }
 
 /** Opens popgen2.html and the fixture `name`, and waits for its one pass

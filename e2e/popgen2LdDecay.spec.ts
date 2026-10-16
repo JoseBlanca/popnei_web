@@ -26,6 +26,7 @@ import type AxeBuilder from "@axe-core/playwright";
 import type { Download, Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { pickFile } from "./openFiles.ts";
 import { openParameters } from "./parameters.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
 
@@ -119,14 +120,10 @@ async function openPage(page: Page): Promise<void> {
   ).toBeVisible();
 }
 
-/** Picks the fixture `name` with the button of the box Variants. */
+/** Picks the fixture `name` with the button that opens one now
+    (openFiles.ts). */
 async function pick(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("region", { name: "Variants", exact: true })
-    .getByRole("button", { name: /^Open (another )?variants file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "variants", join(FIXTURES, name));
 }
 
 /** An individuals file made by the flow: its name and its text. */
@@ -136,16 +133,12 @@ interface Made {
 }
 
 /** Opens the individuals file `file`, a fixture by its name or one made
-    by the flow, with the button of its box. */
+    by the flow, with the button that opens one
+    now (openFiles.ts). */
 async function pickIndividuals(page: Page, file: string | Made): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("region", { name: "Individuals", exact: true })
-    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
-    .click();
-  await (
-    await chooser
-  ).setFiles(
+  await pickFile(
+    page,
+    "individuals",
     typeof file === "string"
       ? join(FIXTURES, file)
       : {

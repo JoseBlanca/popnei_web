@@ -18,6 +18,7 @@ import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { pickFile } from "./openFiles.ts";
 import { openParameters } from "./parameters.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 
@@ -110,23 +111,18 @@ async function timelineLength(page: Page): Promise<number> {
   );
 }
 
-/** Picks the fixture `name` with the button of the box `box`. */
+/** Picks the fixture `name` as the file of the box `box`, with the
+    button that opens one now (openFiles.ts). */
 async function pick(
   page: Page,
   box: "Variants" | "Individuals",
   name: string,
 ): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("region", { name: box, exact: true })
-    .getByRole("button", {
-      name:
-        box === "Variants"
-          ? /^Open (another )?variants file…$/u
-          : /^Open (another )?individuals file…$/u,
-    })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(
+    page,
+    box === "Variants" ? "variants" : "individuals",
+    join(FIXTURES, name),
+  );
 }
 
 /** The tab of the row named `name`. */

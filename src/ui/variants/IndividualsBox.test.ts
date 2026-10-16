@@ -324,10 +324,13 @@ async function openVariants(
 }
 
 /** Opens the individuals file `name` through the input of the zone of
-    its box, as the button's picker gives it. */
+    its box, or, with a file open, of the zone at the end of its tab, as
+    the button's picker gives it. */
 async function pickIndividuals(name: string): Promise<void> {
-  const input = box().querySelector<HTMLInputElement>('input[type="file"]');
-  if (input === null) throw new Error("the box has no input of a file");
+  const input =
+    box().querySelector<HTMLInputElement>('input[type="file"]') ??
+    tab().querySelector<HTMLInputElement>('input[type="file"]');
+  if (input === null) throw new Error("the page has no input of a file");
   Object.defineProperty(input, "files", {
     value: [new File(["IID,pop\n"], name)],
     configurable: true,
@@ -404,6 +407,9 @@ function buttons(element: HTMLElement): string[] {
   return [...element.querySelectorAll("button")].map((b) => b.textContent);
 }
 
+/** The words of the two buttons at the end of the Individuals tab. */
+const TAB_END = ["Open another individuals file…", "Remove pops.csv"];
+
 /** The words of the item each select of `element` has chosen, in their
     order, read from the hidden select React Aria draws beside each. */
 function selectsOf(element: HTMLElement): string[] {
@@ -465,14 +471,14 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(buttons(box()).some((b) => b.startsWith("Remove"))).toBe(false);
   });
 
-  test("a file opened by the zone, its read pending: its name and Reading, the zone's button Open another, and Remove in the tab and not in the box", async () => {
+  test("a file opened by the zone, its read pending: its name and Reading in the box, with no button that opens a file; Open another and Remove at the end of the tab", async () => {
     const { store } = await drawPage();
     await pickIndividuals("pops.csv");
     expect(store.getState().project.individuals?.fileId).toBe(FILE_ID);
     expect(paragraphs(box())).toEqual(["pops.csv", "Reading pops.csv."]);
-    expect(buttons(box())).toContain("Open another individuals file…");
+    expect(buttons(box()).filter((b) => b.startsWith("Open"))).toEqual([]);
     expect(buttons(box()).some((b) => b.startsWith("Remove"))).toBe(false);
-    expect(buttons(tab())[0]).toBe("Remove pops.csv");
+    expect(buttons(tab()).slice(-2)).toEqual(TAB_END);
   });
 
   test("a file refused: its name and the words of the refusal", async () => {
@@ -902,10 +908,10 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
     expect(paragraphs(tab())).toEqual(["No individuals file open."]);
   });
 
-  test("the first read under way: Remove, then Reading alone, no options", async () => {
+  test("the first read under way: Reading alone, no options, then Open another and Remove", async () => {
     await drawPage();
     await pickIndividuals("pops.csv");
-    expect(buttons(tab())).toEqual(["Remove pops.csv"]);
+    expect(buttons(tab()).filter((b) => b !== "")).toEqual(TAB_END);
     expect(paragraphs(tab())).toEqual(["Reading pops.csv."]);
     expect(tab().querySelectorAll("select")).toHaveLength(0);
   });
@@ -920,12 +926,12 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
       "Detected: comma",
       "Detected: point",
     ]);
-    expect(buttons(tab()).slice(0, 4)).toEqual([
-      "Remove pops.csv",
+    expect(buttons(tab()).slice(0, 3)).toEqual([
       "Detected: UTF-8",
       "Detected: comma",
       "Detected: point",
     ]);
+    expect(buttons(tab()).slice(-2)).toEqual(TAB_END);
     expect(tab().textContent).toContain(
       "Individuals in panel.nei but not in pops.csv, before the filters",
     );
@@ -963,7 +969,7 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
     await recorded(store, readOf(POPS));
     await choose(store, "popcat");
     const remove = buttonNamed(tab(), "Remove pops.csv");
-    const separator = tab().querySelectorAll("button")[2];
+    const separator = tab().querySelectorAll("button")[1];
     expect(separator?.textContent).toBe("Detected: comma");
     await act(async () => {
       const command = csvOptionCommand("separator", "pops.csv", {
@@ -974,7 +980,7 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
       store.applyAfresh(command.command);
       await Promise.resolve();
     });
-    expect(tab().querySelectorAll("button")[2]).toBe(separator);
+    expect(tab().querySelectorAll("button")[1]).toBe(separator);
     await recorded(store, {
       kind: "failed",
       error: {
@@ -986,7 +992,7 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
       },
       format: "text",
     });
-    expect(tab().querySelectorAll("button")[2]).toBe(separator);
+    expect(tab().querySelectorAll("button")[1]).toBe(separator);
     expect(buttonNamed(tab(), "Remove pops.csv")).toBe(remove);
   });
 
@@ -1019,7 +1025,10 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
       format: "xlsx",
     });
     expect(tab().querySelectorAll("select")).toHaveLength(0);
-    expect(buttons(tab())).toEqual(["Remove pops.xlsx"]);
+    expect(buttons(tab()).filter((b) => b !== "")).toEqual([
+      "Open another individuals file…",
+      "Remove pops.xlsx",
+    ]);
     expect(paragraphs(tab())).toEqual([
       "pops.xlsx could not be read; the box Individuals says why.",
     ]);
@@ -1143,7 +1152,7 @@ describe("AP3 D3 the changes of the individuals file are no steps of Undo; the c
     expect(state.historyMoves).toBe(moves + 1);
   });
 
-  test("Remove, in the tab, leaves nothing to undo, and puts the focus on the zone's button in the box", async () => {
+  test("Remove, at the end of the tab, leaves nothing to undo, and puts the focus it had on the zone's button in the box", async () => {
     const { store } = await drawPage();
     await pickIndividuals("pops.csv");
     await recorded(store, readOf(POPS));
@@ -1153,6 +1162,7 @@ describe("AP3 D3 the changes of the individuals file are no steps of Undo; the c
     );
     if (remove === undefined) throw new Error("no Remove");
     await act(async () => {
+      remove.focus();
       remove.click();
       await Promise.resolve();
     });
@@ -1343,21 +1353,18 @@ describe("PT3 D2 the box Individuals and the Individuals tab greyed while the di
     expect(greyed(box())).toEqual([]);
     expect(greyed(tab())).toEqual([]);
     await running(store, "diversity");
-    expect(greyed(box())).toEqual([
-      "popcat",
-      "Paste an individuals file",
-      "Open another individuals file…",
-    ]);
+    expect(greyed(box())).toEqual(["Paste an individuals file", "popcat"]);
     for (const button of box().querySelectorAll(
       'button[aria-disabled="true"]',
     )) {
       expect(descriptionOf(button)).toContain(POPULATIONS_LOCKED);
     }
     expect(greyed(tab())).toEqual([
-      "Remove pops.csv",
       "Detected: UTF-8",
       "Detected: comma",
       "Detected: point",
+      "Paste an individuals file",
+      ...TAB_END,
     ]);
     for (const button of tab().querySelectorAll(
       'button[aria-disabled="true"]',
@@ -1401,7 +1408,7 @@ describe("PT3 D2 the box Individuals and the Individuals tab greyed while the di
     await pickInSelect(tab(), 1, ";");
     await act(async () => {
       buttonNamed(tab(), "Remove pops.csv").click();
-      buttonNamed(box(), "Open another individuals file…").click();
+      buttonNamed(tab(), "Open another individuals file…").click();
       await Promise.resolve();
     });
     expect(clicks).not.toHaveBeenCalled();

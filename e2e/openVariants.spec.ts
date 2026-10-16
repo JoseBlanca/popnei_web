@@ -25,6 +25,7 @@ import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { pickFile } from "./openFiles.ts";
 import { STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
 import { announced, recordAnnouncements } from "./announced.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
@@ -61,24 +62,40 @@ function lines(page: Page): Locator {
   return info(page).getByRole("paragraph");
 }
 
-/** The button that opens the file picker, whatever its words. */
+/** The button that opens the file picker, whatever its words: in the
+    box with no file, at the end of the Variants tab with one (16 October
+    2026). */
 function openButton(page: Page): Locator {
-  return opening(page).getByRole("button", {
+  return page.getByRole("button", {
     name: /^Open (another )?variants file…$/,
   });
 }
 
-/** Picks `path` with the button, as a user does, through the file picker
-    of the system. */
-async function pick(page: Page, path: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await openButton(page).click();
-  await (await chooser).setFiles(path);
+/** The heading of the box of the variants file, which takes the focus
+    after an opening by the box's button, and when the lines of a file
+    go with it. */
+function boxHeading(page: Page): Locator {
+  return opening(page).getByRole("heading", { name: "Variants", exact: true });
 }
 
-/** Drops `files` on the open button, as a drag from the desktop does. */
+/** Picks `path` with the button that opens one now, as a user does,
+    through the file picker of the system. */
+async function pick(page: Page, path: string): Promise<void> {
+  await pickFile(page, "variants", path);
+}
+
+/** Drops `files` on the box of the variants file, as a drag from the
+    desktop does: on its button with no file, on its heading with one,
+    since the whole box of a file open takes a drop. */
 async function drop(page: Page, files: readonly DroppedFile[]): Promise<void> {
-  await dropFiles(page, openButton(page), files);
+  const button = opening(page).getByRole("button", {
+    name: "Open variants file…",
+  });
+  await dropFiles(
+    page,
+    (await button.count()) > 0 ? button : boxHeading(page),
+    files,
+  );
 }
 
 async function expectNoViolations(
@@ -218,9 +235,9 @@ test("OV2 bad.vcf is refused at the opening, with popnei's words in the box and 
     "popnei could not read bad.vcf: the source is not a VCF: it starts with \u201cThis is a line o\u201d. Open another file.",
   ]);
   // The Variants tab, with no statistics to show, says so in one line.
-  await expect(page.getByRole("tabpanel", { name: "Variants" })).toHaveText(
-    "bad.vcf could not be read; the box Variants says why.",
-  );
+  await expect(
+    page.getByRole("tabpanel", { name: "Variants" }).getByRole("paragraph"),
+  ).toHaveText("bad.vcf could not be read; the box Variants says why.");
   await expectNoViolations(makeAxeBuilder);
 });
 
@@ -410,13 +427,13 @@ test("OV2 a count stopped says so, Start again counts the variants, and the box 
   await expectNoViolations(makeAxeBuilder);
 
   // A file dropped with the mouse removes those lines with the focus:
-  // the focus goes to the open button, not to the top.
+  // the focus goes to the heading of the box, not to the top.
   const nei = await readFile(join(FIXTURES, "panel.nei"));
   await drop(page, [{ name: "panel.nei", bytes: [...nei] }]);
   await expect(
     info(page).getByText("panel.nei", { exact: true }),
   ).toBeVisible();
-  await expect(openButton(page)).toBeFocused();
+  await expect(boxHeading(page)).toBeFocused();
 });
 
 /** Waits for the six plots of the statistics of the file and the
@@ -535,7 +552,7 @@ test("OV2 a file being read is announced once, by its name", async ({
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("OV2 a file dropped while the focus is on Start again moves the focus to the open button, not to the top of the page", async ({
+test("OV2 a file dropped while the focus is on Start again moves the focus to the heading of the box, not to the top of the page", async ({
   page,
 }, testInfo) => {
   test.setTimeout(120_000);
@@ -555,7 +572,7 @@ test("OV2 a file dropped while the focus is on Start again moves the focus to th
   await expect(
     info(page).getByText("panel.nei", { exact: true }),
   ).toBeVisible();
-  await expect(openButton(page)).toBeFocused();
+  await expect(boxHeading(page)).toBeFocused();
 });
 
 test("OV2 a gzipped VCF cut short opens, and its count says it could not be read to its end", async ({

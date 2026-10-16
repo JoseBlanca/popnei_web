@@ -34,6 +34,7 @@ import type { Download, Locator, Page, Route } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { pickFile } from "./openFiles.ts";
 import { openParameters } from "./parameters.ts";
 import { dropFiles } from "./dropFiles.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
@@ -188,14 +189,10 @@ async function openPage(page: Page): Promise<void> {
   ).toBeVisible();
 }
 
-/** Picks the fixture `name` with the button of the box Variants. */
+/** Picks the fixture `name` with the button that opens one now
+    (openFiles.ts). */
 async function pick(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("region", { name: "Variants", exact: true })
-    .getByRole("button", { name: /^Open (another )?variants file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "variants", join(FIXTURES, name));
 }
 
 /** The box of the individuals file. */
@@ -204,15 +201,12 @@ function individualsBox(page: Page): Locator {
 }
 
 /** Opens the individuals file `file`, a fixture by its name or a file
-    the flow makes, with the button of its box. */
+    the flow makes, with the button that opens one
+    now (openFiles.ts). */
 async function pickIndividuals(page: Page, file: string | Made): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await individualsBox(page)
-    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
-    .click();
-  await (
-    await chooser
-  ).setFiles(
+  await pickFile(
+    page,
+    "individuals",
     typeof file === "string"
       ? join(FIXTURES, file)
       : {
@@ -1027,17 +1021,27 @@ function individualsTab(page: Page): Locator {
     of the paste and its button. */
 function populationControls(page: Page): readonly Locator[] {
   const box = individualsBox(page);
+  // The box of a file open is a zone that takes a paste, whose hidden
+  // button comes first, before the list; "Open another individuals
+  // file…" is at the end of the Individuals tab since 16 October 2026.
   return [
-    box.getByRole("button", { name: /Column of the populations$/u }),
     box.getByRole("button", { name: "Paste an individuals file", exact: true }),
-    box.getByRole("button", { name: "Open another individuals file…" }),
+    box.getByRole("button", { name: /Column of the populations$/u }),
   ];
 }
 
-/** Remove, the first control of the Individuals tab shown, in the box
-    until 16 October 2026. */
+/** Remove, the last control of the Individuals tab shown, beside "Open
+    another individuals file…" since 16 October 2026. */
 function removeButton(page: Page): Locator {
   return shown(page).getByRole("button", { name: "Remove panel_pops.csv" });
+}
+
+/** "Open another individuals file…", at the end of the Individuals tab
+    shown, before Remove. */
+function tabOpenButton(page: Page): Locator {
+  return shown(page).getByRole("button", {
+    name: "Open another individuals file…",
+  });
 }
 
 /** The three lists of how a text file is read, in the Individuals tab
@@ -1128,7 +1132,7 @@ async function bothOpened(
 }
 
 test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () => {
-  test("PT3 D3 the diversity held running: the filters, its options, the column, the zone, Remove and the reader's lists greyed with their reasons, reached by the Tab key; the list opens no popover, the button no picker; a drop and a paste open nothing and show the file not opened, said; the PCA's options open; after the diversity's result everything open; axe light and dark", async ({
+  test("PT3 D3 the diversity held running: the filters, its options, the column, the box's paste, the reader's lists, Open another individuals file… and Remove greyed with their reasons, reached by the Tab key; the list opens no popover, the button no picker; a drop and a paste open nothing and show the file not opened, said; the PCA's options open; after the diversity's result everything open; axe light and dark", async ({
     page,
     makeAxeBuilder,
   }) => {
@@ -1161,28 +1165,24 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
         new RegExp(POPULATIONS_LOCKED.replaceAll(".", "\\."), "u"),
       );
     }
-    const [list, paste, open] = controls;
-    if (list === undefined || paste === undefined || open === undefined) {
-      throw new Error("the box has not its three controls");
+    const [paste, list] = controls;
+    if (list === undefined || paste === undefined) {
+      throw new Error("the box has not its two controls");
     }
     // The mouse, left on Run, is off every control, whose tooltip it
     // would open.
     await page.mouse.move(0, 0);
-    await list.focus();
-    await expect(page.getByRole("tooltip")).toHaveText(POPULATIONS_LOCKED);
-    for (const next of [paste, open]) {
-      await page.keyboard.press("Tab");
-      await expect(next).toBeFocused();
-    }
+    await paste.focus();
+    await page.keyboard.press("Tab");
+    await expect(list).toBeFocused();
     await expect(page.getByRole("tooltip")).toHaveText(POPULATIONS_LOCKED);
 
-    // The list opens no popover; the button no picker.
+    // The list opens no popover.
     // Playwright waits for a control marked aria-disabled to be enabled
     // before it clicks; the user's click is not held so.
     await list.click({ force: true });
     await expect(page.getByRole("listbox")).toHaveCount(0);
     await expect(page.getByRole("tooltip")).toHaveText(POPULATIONS_LOCKED);
-    expect(await opensNoPicker(page, open)).toBe(true);
 
     // A file dropped, and one pasted, open nothing and show that the
     // file was not opened and what to do, said once each.
@@ -1191,7 +1191,11 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
     });
     await expect(reason).toHaveCount(0);
     const other = "IID,pop\ns000,q\n";
-    await dropFiles(page, open, [{ name: "other.csv", text: other }]);
+    await dropFiles(
+      page,
+      individualsBox(page).getByRole("heading", { name: "Individuals" }),
+      [{ name: "other.csv", text: other }],
+    );
     await expect(reason).toBeVisible();
     await expect
       .poll(async () =>
@@ -1210,12 +1214,14 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
     await expect(list).toContainText("popcat");
     expect(await runsOf(page, "diversity")).toBe(1);
 
-    // Remove and the lists of the reader in the Individuals tab, each a
-    // stop of the Tab key, Remove the first after the tab's label; Remove
-    // removes nothing.
+    // The lists of the reader, "Open another individuals file…" and
+    // Remove in the Individuals tab, each a stop of the Tab key, the
+    // first list the first after the tab's label, Remove the last after
+    // the button; the button opens no picker, and Remove removes nothing.
     await individualsTab(page).click();
     const remove = removeButton(page);
-    for (const control of [remove, ...readerLists(page)]) {
+    const open = tabOpenButton(page);
+    for (const control of [...readerLists(page), open, remove]) {
       await expect(control).toHaveAttribute("aria-disabled", "true");
       await expect(control).toHaveAccessibleDescription(
         new RegExp(POPULATIONS_LOCKED.replaceAll(".", "\\."), "u"),
@@ -1224,10 +1230,12 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
     await page.mouse.move(0, 0);
     await expect(individualsTab(page)).toBeFocused();
     await page.keyboard.press("Tab");
+    await expect(readerLists(page)[0] ?? remove).toBeFocused();
+    await open.focus();
+    await page.keyboard.press("Tab");
     await expect(remove).toBeFocused();
     await expect(page.getByRole("tooltip")).toHaveText(POPULATIONS_LOCKED);
-    await page.keyboard.press("Tab");
-    await expect(readerLists(page)[0] ?? remove).toBeFocused();
+    expect(await opensNoPicker(page, open)).toBe(true);
     await remove.click({ force: true });
     await expect(remove).toBeVisible();
     await expect(list).toContainText("popcat");
@@ -1253,7 +1261,11 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
     }
     await expect(reason).toHaveCount(0);
     await individualsTab(page).click();
-    for (const control of [removeButton(page), ...readerLists(page)]) {
+    for (const control of [
+      removeButton(page),
+      tabOpenButton(page),
+      ...readerLists(page),
+    ]) {
       await expect(control).not.toHaveAttribute("aria-disabled");
     }
     await workersListening(page);
@@ -1270,10 +1282,10 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
     await button(page, "Run").click();
     await expect(button(page, "Stop")).toBeVisible();
     await page.mouse.move(0, 0);
-    // The list by its focus, and Remove, first in the Individuals tab,
-    // by the Tab key from the tab's label, as a user of the keyboard
-    // reaches them, which shows their tooltips.
-    const [list] = populationControls(page);
+    // The list by its focus, and Remove, last in the Individuals tab,
+    // by the Tab key from the button before it, as a user of the
+    // keyboard reaches them, which shows their tooltips.
+    const [, list] = populationControls(page);
     if (list === undefined) throw new Error("the box has no list");
     for (const control of [list, removeButton(page)]) {
       if (control === list) {
@@ -1281,6 +1293,7 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
       } else {
         await individualsTab(page).click();
         await page.mouse.move(0, 0);
+        await tabOpenButton(page).focus();
         await page.keyboard.press("Tab");
       }
       await expect(control).toBeFocused();
@@ -1306,12 +1319,14 @@ test.describe("PT3 D3 the box Individuals greyed while the diversity runs", () =
       await expect(control).not.toHaveAttribute("aria-disabled");
     }
     await individualsTab(page).click();
-    for (const control of [removeButton(page), ...readerLists(page)]) {
+    for (const control of [
+      removeButton(page),
+      tabOpenButton(page),
+      ...readerLists(page),
+    ]) {
       await expect(control).not.toHaveAttribute("aria-disabled");
     }
-    const open = populationControls(page)[2];
-    if (open === undefined) throw new Error("no button of the zone");
-    await opensPicker(page, open);
+    await opensPicker(page, tabOpenButton(page));
     await workersListening(page);
   });
 });

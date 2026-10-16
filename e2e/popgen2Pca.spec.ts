@@ -35,6 +35,7 @@ import type { Download, Locator, Page, Route } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { dropOnBox, pickFile } from "./openFiles.ts";
 import { openParameters } from "./parameters.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 
@@ -94,11 +95,7 @@ async function expectAxeBothSchemes(
 
 /** Picks the variants file `name`, a fixture, with the open button. */
 async function pick(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("button", { name: /^Open (another )?variants file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "variants", join(FIXTURES, name));
 }
 
 /** The box of the individuals file. */
@@ -106,14 +103,10 @@ function individualsBox(page: Page): Locator {
   return page.getByRole("region", { name: "Individuals", exact: true });
 }
 
-/** Opens the individuals file `name`, a fixture, with the button of its
-    box. */
+/** Opens the individuals file `name`, a fixture, with the button that
+    opens one now (openFiles.ts). */
 async function pickIndividuals(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await individualsBox(page)
-    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(page, "individuals", join(FIXTURES, name));
 }
 
 /** The label of the tab `name`. */
@@ -799,7 +792,8 @@ test("AP6 D3 while a PCA runs Ctrl+Z changes nothing; the column of the populati
   await expect(column).toContainText("None");
   await expect(stop(page)).toBeVisible();
 
-  await pick(page, "panel.vcf.gz");
+  // Dropped on the box, which keeps the PCA tab shown (16 October 2026).
+  await dropOnBox(page, "variants", join(FIXTURES, "panel.vcf.gz"));
   await expect(stop(page)).toHaveCount(0);
   await release(page, "allSoFar");
   await release(page, "result");
@@ -981,7 +975,8 @@ test("AP6 D3 the PCA tab shown, another variants file opened: its reason in plac
   await expect(run(page)).toBeEnabled({ timeout: 30_000 });
   await typeDistance(page, "50000");
 
-  await pick(page, "panel.vcf.gz");
+  // Dropped on the box, which keeps the PCA tab shown (16 October 2026).
+  await dropOnBox(page, "variants", join(FIXTURES, "panel.vcf.gz"));
   const reason = "The PCA needs a variants file: panel.vcf.gz is being opened.";
   await expect(shown(page).getByText(reason, { exact: true })).toBeVisible();
   await expect(distance(page)).toBeHidden();
@@ -989,7 +984,7 @@ test("AP6 D3 the PCA tab shown, another variants file opened: its reason in plac
   await expectAxeBothSchemes(page, makeAxeBuilder);
 
   await page.unrouteAll({ behavior: "wait" });
-  await pick(page, "panel.nei");
+  await dropOnBox(page, "variants", join(FIXTURES, "panel.nei"));
   await expect(distance(page)).toBeVisible({ timeout: 30_000 });
   await expect(distance(page)).toHaveValue("50000");
   await expect(run(page)).toBeEnabled({ timeout: 30_000 });

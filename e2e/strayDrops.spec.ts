@@ -4,7 +4,10 @@
  * the drag over a heading and its drop have their defaults prevented,
  * which is what keeps the browser from opening the file in the tab in
  * place of the page, and the page stays as it was; a file dropped on the
- * zone of the variants file still opens. A script cannot make the
+ * zone of the variants file still opens. On popgen2.html the box of a
+ * file with no file open stops a drop outside its zone, and the box of a
+ * file open takes a drop anywhere on it, its heading among
+ * (docs/plans/file-buttons.md, 16 October 2026). A script cannot make the
  * browser open a file it drops, so the flow reads whether the page
  * prevented the defaults, as the browser does before it opens the file.
  */
@@ -68,7 +71,7 @@ function heading(page: Page, name: string): Locator {
   return page.getByRole("heading", { level: 1, name, exact: true });
 }
 
-test("EN30 popgen2.html: a file dropped on the page's heading and on the heading of the box Individuals is stopped and the page stays; one dropped on the zone of the variants file opens", async ({
+test("EN30 popgen2.html: a file dropped on the page's heading and on the heading of the box Individuals with no file is stopped and the page stays; one dropped on the zone of the variants file opens", async ({
   page,
 }) => {
   await page.goto("popgen2.html");
@@ -93,13 +96,46 @@ test("EN30 popgen2.html: a file dropped on the page's heading and on the heading
     [{ name: "panel.nei", bytes: await panelBytes() }],
   );
   await expect(
-    variants.getByRole("button", { name: "Open another variants file…" }),
-  ).toBeVisible({ timeout: 20_000 });
-  await expect(
     page
       .getByRole("region", { name: "File information" })
       .getByText("Variants: 1,200", { exact: true }),
   ).toBeVisible({ timeout: 20_000 });
+  await expect(
+    page.getByRole("button", { name: "Open another variants file…" }),
+  ).toBeVisible();
+  expect(await strayDrop(heading(page, "Popnei"))).toEqual(STOPPED);
+});
+
+test("EN30 popgen2.html: with a file open, a file dropped on the heading of its box is taken by the box and opens, where the page's heading still stops one", async ({
+  page,
+}) => {
+  await page.goto("popgen2.html");
+  await expect(heading(page, "Popnei")).toBeVisible();
+  const variants = page.getByRole("region", { name: "Variants", exact: true });
+  await dropFiles(
+    page,
+    variants.getByRole("button", { name: "Open variants file…" }),
+    [{ name: "panel.nei", bytes: await panelBytes() }],
+  );
+  await expect(variants.getByText("panel.nei", { exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+  const boxHeading = variants.getByRole("heading", {
+    name: "Variants",
+    exact: true,
+  });
+  // The box's zone prevents the defaults itself, and takes the drop,
+  // which other.csv, not a variants file, then gets the words of.
+  const taken = await strayDrop(boxHeading);
+  expect(taken.dragoverPrevented).toBe(true);
+  expect(taken.dropPrevented).toBe(true);
+  await expect(variants.getByText(/^other\.csv/u)).toBeVisible();
+  await dropFiles(page, boxHeading, [
+    { name: "second.nei", bytes: await panelBytes() },
+  ]);
+  await expect(variants.getByText("second.nei", { exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
   expect(await strayDrop(heading(page, "Popnei"))).toEqual(STOPPED);
 });
 

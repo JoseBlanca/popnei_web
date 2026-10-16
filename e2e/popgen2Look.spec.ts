@@ -13,6 +13,7 @@ import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { dropOnBox, pickFile } from "./openFiles.ts";
 import { PARAMETERS, openParameters, parametersButton } from "./parameters.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -37,20 +38,18 @@ function button(page: Page, name: string): Locator {
   return shown(page).getByRole("button", { name, exact: true });
 }
 
-/** Picks the fixture `name` with the button of the box `box`. */
+/** Picks the fixture `name` as the file of the box `box`, with the
+    button that opens one now (openFiles.ts). */
 async function pickInto(
   page: Page,
   box: "Variants" | "Individuals",
   name: string,
 ): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("region", { name: box, exact: true })
-    .getByRole("button", {
-      name: new RegExp(`^Open (another )?${box.toLowerCase()} file…$`, "u"),
-    })
-    .click();
-  await (await chooser).setFiles(join(FIXTURES, name));
+  await pickFile(
+    page,
+    box === "Variants" ? "variants" : "individuals",
+    join(FIXTURES, name),
+  );
 }
 
 /** What is drawn in the page's background colour, the body's, inside the
@@ -303,7 +302,8 @@ test.describe("in the forced colours of Windows", () => {
     // shown.
     await page.setViewportSize({ width: 1280, height: 900 });
     await tab(page, "PCA").click();
-    await pickInto(page, "Variants", "panel.vcf.gz");
+    // Dropped on the box, which keeps the PCA tab shown (16 October 2026).
+    await dropOnBox(page, "variants", join(FIXTURES, "panel.vcf.gz"));
     await expect(tab(page, "PCA")).toHaveAttribute("aria-disabled", "true");
     await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
     for (const [width, side] of [

@@ -14,6 +14,7 @@ import type { Locator, Page, Route } from "@playwright/test";
 import { writeBigVcf } from "./bigVcf.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
 import { holdSummary, release, workersListening } from "./holdWorker.ts";
+import { pickFile } from "./openFiles.ts";
 import { openParameters } from "./parameters.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -4390,14 +4391,11 @@ test("popgen.html, its code not loaded", async ({ page }) => {
 
 /** Picks `file`, a fixture or a path, with the button of popgen2.html. */
 async function pickOnNewPage(page: Page, file: string): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("region", { name: "Variants", exact: true })
-    .getByRole("button", { name: /^Open (another )?variants file…$/ })
-    .click();
-  await (
-    await chooser
-  ).setFiles(file.startsWith("/") ? file : join(FIXTURES, file));
+  await pickFile(
+    page,
+    "variants",
+    file.startsWith("/") ? file : join(FIXTURES, file),
+  );
 }
 
 /** The box of the file open on popgen2.html, which holds the count of
@@ -4419,19 +4417,15 @@ function newPageStats(page: Page): Locator {
 }
 
 /** Opens the individuals file `file` on popgen2.html, a fixture by its
-    name or a CSV made by the screen, with the button of its box. */
+    name or a CSV made by the screen, with the button that opens one
+    now (openFiles.ts). */
 async function pickIndividualsOnNewPage(
   page: Page,
   file: string | { readonly name: string; readonly text: string },
 ): Promise<void> {
-  const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("region", { name: "Individuals", exact: true })
-    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
-    .click();
-  await (
-    await chooser
-  ).setFiles(
+  await pickFile(
+    page,
+    "individuals",
     typeof file === "string"
       ? join(FIXTURES, file)
       : {
