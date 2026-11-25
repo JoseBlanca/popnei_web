@@ -705,8 +705,14 @@ packages from their releases (section 5).
 - **The step of an application is in the URL hash**, `popgen.html#analyses`,
   so that the back button of the browser moves between steps.
 - **The host is GitHub Pages**, decided by the owner on 24 September
-  2026, deployed by a GitHub Actions workflow that builds the site with
-  Vite and publishes the `dist/` folder. Its limits, 1 GB for a site and a
+  2026. Since 25 November 2026 the site is served by the lab's web site,
+  at `https://plantgenomics.es/popnei/app/`, with `popgen2.html` as its
+  page, and no longer from this repository's own GitHub Pages: a tag
+  `site-v<version>` runs `.github/workflows/release.yml`, which builds the
+  site for that address with `scripts/pack-site.sh` and attaches it to a
+  GitHub Release, and the lab's site names the tarball of the release in
+  its `sites.yaml`. The tests still build and serve the site under
+  `/popnei_web/`, the base of `vite.config.ts`. Its limits, 1 GB for a site and a
   soft 100 GB a month of traffic, are far above what the applications,
   the wasm package and the example datasets need.
 - **GitHub Pages cannot set HTTP headers, and threads in wasm need two.**

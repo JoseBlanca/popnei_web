@@ -741,18 +741,17 @@ the walking skeleton. On every push and pull request:
   one job for each engine did not on 9 October 2026, when Chromium's 679
   tests took 14.7 minutes and WebKit's would have taken about 27.
 
-On a push to `main`, when both passed:
-
-- **deploy**: `npm run build`, then
-  `actions/configure-pages`, `actions/upload-pages-artifact` with `dist/`,
-  and `actions/deploy-pages`, with the permissions `contents: read`,
-  `pages: write` and `id-token: write`, as Vite's guide to GitHub Pages
-  gives them.
+The site is not published by this workflow (its job deploy, to this
+repository's GitHub Pages, was removed on 25 November 2026). A tag
+`site-v<version>`, put on a commit of `main` whose run passed, runs
+`.github/workflows/release.yml`: it checks the types and runs the unit
+tests, builds the site for `https://plantgenomics.es/popnei/app/` with
+`scripts/pack-site.sh`, and attaches the tarball to a GitHub Release,
+which the lab's site serves (docs/technology.md, section 4).
 
 The workflow has one `concurrency` group for each branch, with
-`cancel-in-progress: false`, as GitHub's starter workflow for Pages: the
-runs of a branch go one at a time in the order of the pushes, so an older
-run whose e2e finishes later cannot publish over a newer one. Each job
+`cancel-in-progress: false`: the runs of a branch go one at a time in
+the order of the pushes, and none is cancelled halfway. Each job
 has a `timeout-minutes`, 20 for e2e and 10 for the others, so that a
 browser that hangs stops the run instead of holding a runner for six
 hours.

@@ -1,6 +1,7 @@
 # The continuous integration of the site, as .claude/skills/coding/testing.md
 # gives it: every push and pull request is checked and tested in the three
-# engines, and a push to main that passed both is published on GitHub Pages.
+# engines. The site is not published from here: a tag site-v<version>
+# releases it for plantgenomics.es (release.yml).
 # It needs no Rust: the reader of the individuals file, a CSV, a TSV or an
 # xlsx, is table_io's package, which npm ci installs from its GitHub Release
 # as it installs popnei's.
@@ -19,9 +20,7 @@ permissions:
   contents: read
 
 # One run at a time for each branch, in the order of the pushes, and none
-# cancelled halfway. On the deploy job alone, an older run whose e2e
-# finished later could publish over a newer one; here it waits for it, as
-# in GitHub's starter workflow for Pages.
+# cancelled halfway.
 concurrency:
   group: site-${{ github.ref }}
   cancel-in-progress: false
@@ -97,30 +96,3 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 14
-
-  deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [check, e2e]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - uses: actions/configure-pages@v6
-      - run: npm run build
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: dist
-      - id: deployment
-        uses: actions/deploy-pages@v5
