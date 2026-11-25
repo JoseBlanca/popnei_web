@@ -1,0 +1,46 @@
+# A release of the site for the lab's web site, plantgenomics.es, which
+# serves it at /popnei/app/. A tag site-v<version> on a commit of main
+# builds the site for that address with scripts/pack-site.sh and attaches
+# the tarball to a GitHub Release of the tag. The lab's site names the
+# tarball by its URL in its sites.yaml, so a new version reaches it when
+# that URL is changed there to the new tag.
+#
+#   git tag site-v0.1.0 && git push origin site-v0.1.0
+#
+# The tag is put on a commit whose run of site.yml passed: the tests are
+# not run again here, only the checks that take a minute.
+
+name: release
+
+on:
+  push:
+    tags: ["site-v*"]
+
+permissions:
+  contents: write
+
+env:
+  # The address the lab's site serves the application from.
+  SITE_BASE: /popnei/app/
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: scripts/pack-site.sh "$SITE_BASE" popnei_web-site.tar.gz
+      - run: >-
+          gh release create "$GITHUB_REF_NAME" popnei_web-site.tar.gz
+          --title "$GITHUB_REF_NAME"
+          --notes "The site built for plantgenomics.es$SITE_BASE.
+          Unpack it in the folder of that address."
+        env:
+          GH_TOKEN: ${{ github.token }}
